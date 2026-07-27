@@ -64,6 +64,18 @@ export function createPaneStore<
   // Maps each view (e.g. 'player', 'editor') to the pane it's currently assigned to (e.g. 'left', 'right', 'hidden')
   type ViewToPaneMap = Record<ElementType, PaneKey>
 
+  const isPaneKey = (value: unknown): value is PaneKey =>
+    typeof value === 'string' && paneKeys.some((pane) => pane === value)
+
+  const createInitialParents = (): ViewToPaneMap => {
+    const initial: ViewToPaneMap = {} as ViewToPaneMap
+    for (const view of viewKeys) {
+      const pane = Object.entries(defaults ?? {}).find(([, value]) => value === view)?.[0]
+      initial[view as ElementType] = isPaneKey(pane) ? pane : hiddenPane
+    }
+    return initial
+  }
+
   // Capitalize a string at runtime (e.g. 'player' → 'Player')
   const capitalize = <T extends string>(str: T): Capitalize<T> =>
     (str.charAt(0).toUpperCase() + str.slice(1)) as Capitalize<T>
@@ -77,16 +89,7 @@ export function createPaneStore<
     `sa-panes-${id}`,
     () => {
       // Create initial parents with Defaults set
-      const assignedViews = new Set<ElementType>()
-      const initial: ViewToPaneMap = {} as ViewToPaneMap
-      for (const view of viewKeys) {
-        const pane = Object.entries(defaults ?? {}).find(([, v]) => v === view)?.[0] as
-          | PaneKey
-          | undefined
-        if (pane) assignedViews.add(view)
-        initial[view as ElementType] = pane ?? hiddenPane
-      }
-      const parents = ref<ViewToPaneMap>(initial)
+      const parents = ref<ViewToPaneMap>(createInitialParents())
 
       // Create refs for each view's DOM element (e.g. ePlayer, eEditor)
       const elementRefs = Object.fromEntries(
@@ -226,6 +229,21 @@ export function createPaneStore<
     {
       persist: {
         pick: ['parents'], // Persist the view-to-pane mapping
+        afterHydrate: ({ store }) => {
+          const hydratedParents: unknown = store.$state.parents
+          const migratedParents = createInitialParents()
+
+          if (typeof hydratedParents === 'object' && hydratedParents !== null) {
+            for (const view of viewKeys) {
+              const pane = Reflect.get(hydratedParents, view)
+              if (isPaneKey(pane)) migratedParents[view as ElementType] = pane
+            }
+          }
+
+          store.$patch((state) => {
+            state.parents = migratedParents
+          })
+        },
       },
     },
   )

@@ -34,6 +34,7 @@
         :dim="dTimeline"
         :landscape="isLandscape"
       />
+      <VtgPane v-if="viewVisible.vtg" ref="cVtg" data-type="vtg" data-role="vtg-view" />
     </div>
     <AppNavigationMenu />
     <PaneSplitter
@@ -56,6 +57,7 @@ import AppNavigationMenu from '@/components/layout/AppNavigationMenu.vue'
 import Player from '@/components/SpiroAnim/AnimPlayer.vue'
 import Editor from '@/components/SpiroAnim/AnimEditor.vue'
 import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
+import VtgPane from '@/features/vtg/components/VtgPane.vue'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useScrollSelectScale } from '@/composables/useScrollSelectScale'
@@ -78,18 +80,30 @@ const { leftWidth, leftHeight, rightWidth, rightHeight, leftPerc } = storeToRefs
 const paneStore = useMainPaneStore()
 const { registerComponentEl } = paneStore
 
-const { parents, paneVisible, viewVisible, ePlayer, eEditor, eTimeline, eLeft, eRight, eHidden } =
-  storeToRefs(paneStore)
+const {
+  parents,
+  paneVisible,
+  viewVisible,
+  ePlayer,
+  eEditor,
+  eTimeline,
+  eVtg,
+  eLeft,
+  eRight,
+  eHidden,
+} = storeToRefs(paneStore)
 
 // Component references
 const cPlayer = ref<ComponentPublicInstance>()
 const cEditor = ref<ComponentPublicInstance>()
 const cTimeline = ref<ComponentPublicInstance>()
+const cVtg = ref<ComponentPublicInstance>()
 
 // Supply root elements from components to Pane Store
 registerComponentEl(cPlayer, ePlayer)
 registerComponentEl(cEditor, eEditor)
 registerComponentEl(cTimeline, eTimeline)
+registerComponentEl(cVtg, eVtg)
 
 const parentDim = computed(() => ({ width: viewWidth.value, height: viewHeight.value }))
 

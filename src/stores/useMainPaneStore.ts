@@ -9,7 +9,7 @@ import { createPaneStore } from '@/stores/createPaneStore'
  * Example:
  * <PlayerComponent ref="ePlayer" data-type="player" />
  */
-export const viewKeysMain = ['player', 'editor', 'timeline'] as const
+export const viewKeysMain = ['player', 'editor', 'timeline', 'vtg'] as const
 
 /**
  * Defines the available panes that views can be moved between.
@@ -27,6 +27,7 @@ export const viewKeysMain = ['player', 'editor', 'timeline'] as const
  *    <PlayerComponent ref="ePlayer" data-type="player" />
  *    <EditorComponent ref="eEditor" data-type="editor" />
  *    <TimelineComponent ref="eTimeline" data-type="timeline" />
+ *    <VtgComponent ref="eVtg" data-type="vtg" />
  *    ```
  *
  * 2. Each **pane container** must use the appropriate `ref` so the system can insert views:
@@ -58,6 +59,7 @@ export const viewKeysMain = ['player', 'editor', 'timeline'] as const
  *   <PlayerComponent v-if="parents.player !== 'hidden'" ref="ePlayer" data-type="player" />
  *   <EditorComponent v-if="parents.editor !== 'hidden'" ref="eEditor" data-type="editor" />
  *   <TimelineComponent v-if="parents.timeline !== 'hidden'" ref="eTimeline" data-type="timeline" />
+ *   <VtgComponent v-if="parents.vtg !== 'hidden'" ref="eVtg" data-type="vtg" />
  * </div>
  * ```
  */

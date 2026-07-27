@@ -10,7 +10,7 @@ import { rootFinal } from '@/math/animation/PlayerFunc'
 import { tmpProp } from '@/domain/animation/tmpProp'
 //import { encodeReadable } from '@/func/AnimReadableFunc'
 
-const possib = ['play', 'time', 'edit'] as const
+const possib = ['play', 'time', 'edit', 'vtg'] as const
 
 // Build all combo's for the two panes (also used in router/index.ts)
 export const paneSplits: string[] = possib.flatMap((a) =>
@@ -21,6 +21,7 @@ const shortTo = {
   play: 'player',
   edit: 'editor',
   time: 'timeline',
+  vtg: 'vtg',
 } as const
 
 type shortKey = keyof typeof shortTo

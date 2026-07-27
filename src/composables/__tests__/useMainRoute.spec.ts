@@ -54,17 +54,28 @@ describe('useMainRoute', () => {
     expect(paneSplits).toEqual([
       '/play-time',
       '/play-edit',
+      '/play-vtg',
       '/time-play',
       '/time-edit',
+      '/time-vtg',
       '/edit-play',
       '/edit-time',
+      '/edit-vtg',
+      '/vtg-play',
+      '/vtg-time',
+      '/vtg-edit',
     ])
   })
 
   it('maps a single hidden view to the left pane and expands it fully', async () => {
     const { paneStore, playerStore, splitterStore } = await mountRoute('/editor')
 
-    expect(paneStore.parents).toEqual({ player: 'hidden', editor: 'left', timeline: 'right' })
+    expect(paneStore.parents).toEqual({
+      player: 'hidden',
+      editor: 'left',
+      timeline: 'right',
+      vtg: 'hidden',
+    })
     expect(splitterStore.leftPerc).toBe(100)
     expect(playerStore.raw().ROOT.value).toMatchObject({ bpm: 60, props: [{}, {}] })
   })
@@ -74,7 +85,12 @@ describe('useMainRoute', () => {
 
     const { paneStore, splitterStore } = await mountRoute('/edit-time')
 
-    expect(paneStore.parents).toEqual({ player: 'hidden', editor: 'left', timeline: 'right' })
+    expect(paneStore.parents).toEqual({
+      player: 'hidden',
+      editor: 'left',
+      timeline: 'right',
+      vtg: 'hidden',
+    })
     expect(splitterStore.leftPerc).toBe(50)
   })
 
@@ -83,5 +99,17 @@ describe('useMainRoute', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/play-time')
+  })
+
+  it('maps the VTG route to a full-width pane', async () => {
+    const { paneStore, splitterStore } = await mountRoute('/vtg')
+
+    expect(paneStore.parents).toEqual({
+      player: 'hidden',
+      editor: 'hidden',
+      timeline: 'right',
+      vtg: 'left',
+    })
+    expect(splitterStore.leftPerc).toBe(100)
   })
 })

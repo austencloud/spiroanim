@@ -32,9 +32,14 @@ describe('useMainPaneStore', () => {
   it('exports the view and pane keys with their default assignments', () => {
     const { app, store } = mountStore()
 
-    expect(viewKeysMain).toEqual(['player', 'editor', 'timeline'])
+    expect(viewKeysMain).toEqual(['player', 'editor', 'timeline', 'vtg'])
     expect(paneKeysMain).toEqual(['left', 'right', 'hidden'])
-    expect(store.parents).toEqual({ player: 'left', editor: 'hidden', timeline: 'right' })
+    expect(store.parents).toEqual({
+      player: 'left',
+      editor: 'hidden',
+      timeline: 'right',
+      vtg: 'hidden',
+    })
 
     app.unmount()
   })
@@ -44,7 +49,12 @@ describe('useMainPaneStore', () => {
 
     store.rotatePane('left')
 
-    expect(store.parents).toEqual({ player: 'hidden', editor: 'left', timeline: 'right' })
+    expect(store.parents).toEqual({
+      player: 'hidden',
+      editor: 'left',
+      timeline: 'right',
+      vtg: 'hidden',
+    })
     app.unmount()
   })
 
@@ -53,7 +63,12 @@ describe('useMainPaneStore', () => {
 
     store.setViewInPane('player', 'right')
 
-    expect(store.parents).toEqual({ player: 'right', editor: 'hidden', timeline: 'left' })
+    expect(store.parents).toEqual({
+      player: 'right',
+      editor: 'hidden',
+      timeline: 'left',
+      vtg: 'hidden',
+    })
     app.unmount()
   })
 
@@ -79,7 +94,7 @@ describe('useMainPaneStore', () => {
     const { app, store } = mountStore()
     await nextTick()
 
-    expect(store.viewVisible).toEqual({ player: true, editor: false, timeline: true })
+    expect(store.viewVisible).toEqual({ player: true, editor: false, timeline: true, vtg: false })
 
     store.paneVisible.left = false
     await nextTick()
@@ -98,7 +113,12 @@ describe('useMainPaneStore', () => {
 
     const { app, store } = mountStore(true)
 
-    expect(store.parents).toEqual({ player: 'hidden', editor: 'left', timeline: 'right' })
+    expect(store.parents).toEqual({
+      player: 'hidden',
+      editor: 'left',
+      timeline: 'right',
+      vtg: 'hidden',
+    })
     expect(store.paneVisible.left).toBe(true)
     expect(store.paneVisible.right).toBe(true)
     app.unmount()

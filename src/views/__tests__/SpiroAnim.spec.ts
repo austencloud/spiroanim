@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSplitterStore } from '@/stores/useSplitterStore'
+import { useMainPaneStore } from '@/stores/useMainPaneStore'
 
 describe('SpiroAnim view', () => {
   beforeEach(() => {
@@ -86,6 +87,10 @@ describe('SpiroAnim view', () => {
 
     const splitter = useSplitterStore('main')
     expect(splitter.leftPerc).toBe(50)
+
+    useMainPaneStore().setViewInPane('vtg', 'left')
+    await flushPromises()
+    expect(wrapper.get('[data-role="left-pane"]').text()).toContain('VTG')
 
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)
