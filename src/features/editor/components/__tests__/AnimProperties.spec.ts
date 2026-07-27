@@ -74,7 +74,6 @@ describe('AnimProperties', () => {
     })
 
     expect(wrapper.get('.scrollbar').classes()).toContain('scrollbar--main-left')
-    expect(wrapper.get('.properties-grid').classes()).toContain('properties-grid--single-column')
 
     paneStore.setViewInPane('editor', 'right')
     await nextTick()

@@ -33,4 +33,31 @@ describe('PlayerControls', () => {
 
     wrapper.unmount()
   })
+
+  it('keeps only Center Camera in the former right-side action stack', () => {
+    const wrapper = mount(PlayerControls, {
+      props: { store: 'right-side-actions' },
+      global: {
+        stubs: {
+          BaseIcon: true,
+          Progress: {
+            template: '<div><slot name="play" /><slot name="mode" /></div>',
+          },
+        },
+      },
+    })
+
+    expect(wrapper.find('.btnCenter').exists()).toBe(true)
+    expect(wrapper.find('.btnTracer').exists()).toBe(false)
+    expect(wrapper.find('.btnPicture').exists()).toBe(false)
+
+    const tooltipText = wrapper
+      .findAllComponents(AppTooltip)
+      .map((tooltip) => tooltip.props('text'))
+    expect(tooltipText).toContain('Center Camera')
+    expect(tooltipText).not.toContain('Tracer Mode')
+    expect(tooltipText).not.toContain('Save Image')
+
+    wrapper.unmount()
+  })
 })

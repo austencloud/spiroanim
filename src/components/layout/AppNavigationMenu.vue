@@ -33,6 +33,38 @@
       :aria-labelledby="triggerId"
       @keydown="onMenuKeydown"
     >
+      <button
+        v-if="showFullscreen"
+        class="menu-link menu-action fullscreen-menu-item"
+        type="button"
+        role="menuitem"
+        @click="toggleFullscreenMode"
+      >
+        <BaseIcon :path="fullscreenIcon" :size="22" />
+        <span>{{ fullscreenLabel }}</span>
+      </button>
+      <section class="menu-group" role="group" aria-labelledby="spiroanim-heading">
+        <h2 id="spiroanim-heading">SpiroAnim</h2>
+        <button
+          class="menu-link menu-action tracer-menu-item"
+          type="button"
+          role="menuitem"
+          :aria-pressed="TRACER"
+          @click="toggleTracerMode"
+        >
+          <BaseIcon :path="tracerIcon" :size="22" />
+          <span>{{ tracerLabel }}</span>
+        </button>
+        <button
+          class="menu-link menu-action save-image-menu-item"
+          type="button"
+          role="menuitem"
+          @click="savePlayerImage"
+        >
+          <BaseIcon :path="mdiPanoramaVariant" :size="22" />
+          <span>Save Image</span>
+        </button>
+      </section>
       <section class="menu-group" role="group" aria-labelledby="navigation-heading">
         <h2 id="navigation-heading">Navigation</h2>
         <RouterLink
@@ -53,13 +85,23 @@
 </template>
 
 <script setup lang="ts">
-import { mdiChevronDown, mdiHomeOutline, mdiInformationOutline } from '@mdi/js'
-import { onClickOutside } from '@vueuse/core'
+import {
+  mdiChevronDown,
+  mdiFirework,
+  mdiFireworkOff,
+  mdiFullscreen,
+  mdiFullscreenExit,
+  mdiHomeOutline,
+  mdiInformationOutline,
+  mdiPanoramaVariant,
+} from '@mdi/js'
+import { onClickOutside, useFullscreen } from '@vueuse/core'
 import { useId } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import { usePlayerStore } from '@/stores/usePlayerStore'
 
 interface MenuLink {
   icon: string
@@ -78,9 +120,37 @@ const triggerElement = ref<HTMLButtonElement>()
 const menuElement = ref<HTMLElement>()
 const triggerId = useId()
 const menuId = useId()
+const {
+  isFullscreen,
+  isSupported: isFullscreenSupported,
+  toggle: toggleFullscreen,
+} = useFullscreen()
+const showFullscreen = computed(() => isFullscreenSupported.value)
+const fullscreenIcon = computed(() => (isFullscreen.value ? mdiFullscreenExit : mdiFullscreen))
+const fullscreenLabel = computed(() =>
+  isFullscreen.value ? 'Exit Full Screen' : 'Enter Full Screen',
+)
+const { TRACER, saveImage } = storeToRefs(usePlayerStore('main'))
+const tracerIcon = computed(() => (TRACER.value ? mdiFirework : mdiFireworkOff))
+const tracerLabel = computed(() => (TRACER.value ? 'Tracer: On' : 'Tracer: Off'))
 
 function closeMenu() {
   isOpen.value = false
+}
+
+function toggleFullscreenMode() {
+  void toggleFullscreen()
+  closeMenu()
+}
+
+function toggleTracerMode() {
+  TRACER.value = !TRACER.value
+  closeMenu()
+}
+
+function savePlayerImage() {
+  saveImage.value = Symbol()
+  closeMenu()
 }
 
 function toggleMenu() {
@@ -242,6 +312,14 @@ onClickOutside(rootElement, closeMenu)
   font-weight: 700;
   text-decoration: none;
   border-radius: var(--radius-sm);
+}
+
+.menu-action {
+  width: 100%;
+  font: inherit;
+  text-align: start;
+  background: transparent;
+  border: 0;
 }
 
 .menu-link:hover,

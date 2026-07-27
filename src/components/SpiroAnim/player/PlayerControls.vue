@@ -46,33 +46,6 @@
       </button>
     </template>
   </AppTooltip>
-  <AppTooltip class="btnTracer" text="Tracer Mode">
-    <template #activator="{ props: tooltipProps }">
-      <button
-        v-bind="tooltipProps"
-        class="icon-button"
-        type="button"
-        :aria-pressed="TRACER"
-        aria-label="Tracer mode"
-        @click="clickTracer"
-      >
-        <BaseIcon :path="tracerIcon" size="30" />
-      </button>
-    </template>
-  </AppTooltip>
-  <AppTooltip class="btnPicture" text="Save Image">
-    <template #activator="{ props: tooltipProps }">
-      <button
-        v-bind="tooltipProps"
-        class="icon-button"
-        type="button"
-        aria-label="Save image"
-        @click="clickPicture"
-      >
-        <BaseIcon :path="pictureIcon" size="30" />
-      </button>
-    </template>
-  </AppTooltip>
 
   <label class="speed">
     <span>Speed</span>
@@ -91,9 +64,6 @@ import BaseIcon from '@/components/icons/BaseIcon.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
 import {
   mdiImageFilterCenterFocusWeak,
-  mdiFirework,
-  mdiFireworkOff,
-  mdiPanoramaVariant,
   mdiPauseCircleOutline,
   mdiPlayCircleOutline,
   mdiVectorSelection,
@@ -110,7 +80,7 @@ const props = defineProps<{
 
 const playerStore = usePlayerStore(props.store)
 const { ROOT, CURRENT } = playerStore.raw()
-const { cameraCenter, saveImage, TRACER, PLAYING, SELECTION, INDEX, UTIMES, UPDATE, SELECTED } =
+const { cameraCenter, PLAYING, SELECTION, INDEX, UTIMES, UPDATE, SELECTED } =
   storeToRefs(playerStore)
 
 const speedOptions = [4, 3, 2, 1, 0.5, 0.25, 0.1] as const
@@ -121,10 +91,6 @@ watch(speed, (val) => {
   ROOT.value.speed = val
   triggerRef(ROOT)
 })
-
-const clickTracer = () => (TRACER.value = !TRACER.value)
-
-const clickPicture = () => (saveImage.value = Symbol())
 
 const clickPlay = () => {
   PLAYING.value = !PLAYING.value
@@ -142,29 +108,14 @@ const clickMode = () => {
   }
 }
 
-const pictureIcon = mdiPanoramaVariant
-const tracerIcon = computed(() => (TRACER.value ? mdiFirework : mdiFireworkOff))
 const playIcon = computed(() => (PLAYING.value ? mdiPauseCircleOutline : mdiPlayCircleOutline))
 const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelectionMultiple))
 </script>
 
 <style scoped>
-.btnCenter,
-.btnTracer,
-.btnPicture {
+.btnCenter {
   position: absolute;
   right: 2px;
-}
-
-.btnCenter {
-  bottom: 115px;
-}
-
-.btnTracer {
-  bottom: 80px;
-}
-
-.btnPicture {
   bottom: 45px;
 }
 

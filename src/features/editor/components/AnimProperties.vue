@@ -5,11 +5,7 @@
     :class="{ 'scrollbar--main-left': isInsideMainLeftPane }"
     :style="scrollStyle"
   >
-    <div
-      class="properties-grid"
-      :class="{ 'properties-grid--single-column': cols === 1 }"
-      :style="gridStyle"
-    >
+    <div class="properties-grid" :style="gridStyle">
       <div class="sticky">
         <div class="container-cntrl">
           <div class="cntrl">
@@ -314,11 +310,6 @@ const gridStyle = computed<CSSProperties>(() => ({
 .scrollbar--main-left .properties-grid > .sticky:first-child {
   /* Reserve the navigation button's width without shortening the toolbar borders or grid track. */
   padding-inline-start: var(--size-editor-toolbar-height);
-}
-
-.scrollbar--main-left .properties-grid--single-column :is(.prop-options, .selection-options) {
-  /* In one column, the selection controls wrap below the toolbar beside the fullscreen control. */
-  padding-inline-start: calc(var(--size-editor-toolbar-height) + var(--space-2));
 }
 
 .expansion-panel {

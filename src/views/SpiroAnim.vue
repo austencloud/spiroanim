@@ -35,7 +35,6 @@
         :landscape="isLandscape"
       />
     </div>
-    <FullScreen />
     <AppNavigationMenu />
     <PaneSplitter
       data-role="splitter-main"
@@ -52,7 +51,6 @@
 
 import PaneSplitter from '@/components/layout/PaneSplitter.vue'
 import PaneRotate from '@/components/layout/PaneRotate.vue'
-import FullScreen from '@/components/layout/FullScreen.vue'
 import AppNavigationMenu from '@/components/layout/AppNavigationMenu.vue'
 
 import Player from '@/components/SpiroAnim/AnimPlayer.vue'
