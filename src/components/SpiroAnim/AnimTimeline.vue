@@ -7,6 +7,7 @@
         :key="`u${time}`"
         :style="thumbStyle"
         class="timeline-cell"
+        :class="{ 'timeline-cell--selected': isThumbnailSelected(index) }"
       >
         <span
           v-for="(color, prop) in circles[index]"
@@ -154,6 +155,14 @@ const { value: cursorAnimated, animating: cursorAnimating } = usePingPongValue(
 
 // Calculates the aspect ratio from values in the store
 const aspectRatio = computed(() => ASPECT.value[0] / ASPECT.value[1])
+
+const selectedRange = computed<readonly [number, number]>(() => {
+  if (!SELECTION.value) return [INDEX.value, INDEX.value]
+
+  const start = SELECTED.value[0] ?? 0
+  const end = SELECTED.value[1] ?? start
+  return start <= end ? [start, end] : [end, start]
+})
 
 onMounted(() => {
   // Shared orbit logic
@@ -500,6 +509,11 @@ function circleCSS(prop: number, color: number): CSSProperties {
   }
 }
 
+function isThumbnailSelected(index: number): boolean {
+  const range = selectedRange.value
+  return index >= range[0] && index <= range[1]
+}
+
 const scrollStyle = computed<CSSProperties>(() => ({
   width: `${dim.width}px`,
   height: `${dim.height}px`,
@@ -562,6 +576,10 @@ const cursorStyle = computed<CSSProperties>(() => ({
   position: absolute;
   z-index: 502;
   opacity: 75%;
+  visibility: hidden;
+}
+.timeline-cell--selected .circle {
+  visibility: visible;
 }
 .thumbStart {
   position: absolute;

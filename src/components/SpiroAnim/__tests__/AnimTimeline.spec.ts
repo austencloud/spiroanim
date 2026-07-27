@@ -94,7 +94,9 @@ describe('AnimTimeline', () => {
 
     const thumbs = wrapper.findAll('img.thumb')
     expect(thumbs).toHaveLength(3)
-    expect(wrapper.findAll('.circle')).toHaveLength(3)
+    expect(
+      wrapper.findAll('.timeline-cell').map((cell) => cell.classes('timeline-cell--selected')),
+    ).toEqual([true, false, false])
     expect(wrapper.text()).toContain('2: 1')
     expect(thumbs[0]!.attributes()).toMatchObject({
       alt: 'Animation thumbnail 1',
@@ -105,13 +107,25 @@ describe('AnimTimeline', () => {
     await thumbs[0]!.trigger('keydown', { key: 'Enter' })
     expect(store.raw().CURRENT.value).toBe(0)
 
-    vi.spyOn(performance, 'now').mockReturnValueOnce(100).mockReturnValueOnce(200)
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(100)
+      .mockReturnValueOnce(700)
+      .mockReturnValueOnce(800)
+    await thumbs[1]!.trigger('click')
+    expect(store.SELECTION).toBe(false)
+    expect(
+      wrapper.findAll('.timeline-cell').map((cell) => cell.classes('timeline-cell--selected')),
+    ).toEqual([false, true, false])
+
     await thumbs[1]!.trigger('click')
     await thumbs[1]!.trigger('click')
 
     expect(store.raw().CURRENT.value).toBe(1000)
     expect(store.SELECTION).toBe(true)
     expect(store.SELECTED).toEqual([1, 2])
+    expect(
+      wrapper.findAll('.timeline-cell').map((cell) => cell.classes('timeline-cell--selected')),
+    ).toEqual([false, true, true])
 
     wrapper.unmount()
     await flushPromises()
@@ -140,8 +154,8 @@ describe('AnimTimeline', () => {
     const thumbs = wrapper.findAll<HTMLImageElement>('img.thumb')
     scroll.scrollTop = 20
     vi.spyOn(scroll, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 50, 600, 100))
-    vi.spyOn(thumbs[1]!.element, 'getBoundingClientRect').mockReturnValue(
-      new DOMRect(0, 250, 300, 100),
+    vi.spyOn(thumbs[1]!.element, 'getBoundingClientRect').mockImplementation(
+      () => new DOMRect(0, 270 - scroll.scrollTop, 300, 100),
     )
     scrollIntoView.mockClear()
 
