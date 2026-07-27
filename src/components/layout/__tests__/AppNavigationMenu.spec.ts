@@ -13,8 +13,8 @@ const fullscreenState = vi.hoisted(() => ({
   toggle: vi.fn<() => Promise<void>>(async () => undefined),
 }))
 
-vi.mock('@vueuse/core', () => ({
-  onClickOutside: vi.fn<() => void>(),
+vi.mock('@vueuse/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@vueuse/core')>()),
   useFullscreen: () => fullscreenState,
 }))
 
