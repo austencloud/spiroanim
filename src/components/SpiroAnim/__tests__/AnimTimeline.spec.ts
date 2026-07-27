@@ -3,6 +3,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import AnimTimeline from '@/components/SpiroAnim/AnimTimeline.vue'
+import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 interface WorkerRequest {
@@ -165,6 +167,47 @@ describe('AnimTimeline', () => {
 
     expect(scroll.scrollTop).toBe(220)
     expect(scrollIntoView).not.toHaveBeenCalled()
+
+    wrapper.unmount()
+    await flushPromises()
+  })
+
+  it('shows markers only for selected props while the editor is visible', async () => {
+    const storeId = 'timeline-prop-selection'
+    const store = usePlayerStore(storeId)
+    const runtime = store.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      props: [
+        { color: 0, anim: [{ beats: 1 }] },
+        { color: 1, anim: [{ beats: 1 }] },
+      ],
+    }
+    useMainPaneStore().setViewInPane('editor', 'right')
+
+    const properties = usePropertiesStore(storeId)
+    properties.pSELECTED[0] = true
+    properties.pSELECTED[1] = false
+    await nextTick()
+
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: storeId,
+        dim: { width: 600, height: 400, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    const markerVisibility = () =>
+      wrapper.findAll('.circle').map((circle) => circle.classes('circle--prop-visible'))
+
+    expect(markerVisibility()).toEqual([true, false])
+
+    properties.pSELECTED[0] = false
+    properties.pSELECTED[1] = true
+    await nextTick()
+
+    expect(markerVisibility()).toEqual([false, true])
 
     wrapper.unmount()
     await flushPromises()

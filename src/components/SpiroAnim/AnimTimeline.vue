@@ -10,10 +10,11 @@
         :class="{ 'timeline-cell--selected': isThumbnailSelected(index) }"
       >
         <span
-          v-for="(color, prop) in circles[index]"
-          :key="`u${time}-p${prop}`"
+          v-for="circle in circles[index]"
+          :key="`u${time}-p${circle.prop}`"
           class="circle"
-          :style="circleCSS(prop, color)"
+          :class="{ 'circle--prop-visible': isPropMarkerVisible(circle.prop) }"
+          :style="circleCSS(circle.prop, circle.color)"
         />
         <img
           ref="eThumbs"
@@ -52,6 +53,7 @@ import { COLSET } from '@/domain/animation/AnimStruct'
 import { msToBeat } from '@/math/animation/PlayerFunc'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
+import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { useAnimWorkerCamera } from '@/composables/useAnimWorkerCamera'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
@@ -71,6 +73,7 @@ const props = withDefaults(
 )
 
 const { parents: mainViews } = storeToRefs(useMainPaneStore())
+const { pSELECTED } = storeToRefs(usePropertiesStore(props.store))
 
 // Dimensions provided by parent component
 const dim: Readonly<typeof props.dim> = readonly(props.dim)
@@ -91,7 +94,13 @@ const { INDEX, UTIMES, PLAYING, UPDATE, SELECTION, SELECTED, PTIMES, ASPECT } =
 const eScroll = ref<HTMLElement>()
 const eCells = ref<HTMLElement[]>([])
 const eThumbs = ref<HTMLImageElement[]>([])
-const circles = ref<number[][]>([])
+
+interface TimelineCircle {
+  color: number
+  prop: number
+}
+
+const circles = ref<TimelineCircle[][]>([])
 
 const gridTemplateColumns = ref<CSSProperties['grid-template-columns']>('repeat(1, 100%)')
 const gridAutoRows = ref<CSSProperties['grid-auto-rows']>('100px')
@@ -289,13 +298,13 @@ onMounted(() => {
 
   // Update circles / colors data
   watchImmediate(ROOT, (data) => {
-    const result: number[][] = []
+    const result: TimelineCircle[][] = []
     if (!UTIMES.value?.length) return
 
     // Loop through each unique timestamp
     for (let i = 0; i < UTIMES.value.length; i++) {
       const time = UTIMES.value[i]!
-      const row: number[] = []
+      const row: TimelineCircle[] = []
 
       // For each prop, check if the time exists in its PTIMES entry
       for (let j = 0; j < PTIMES.value.length; j++) {
@@ -304,7 +313,7 @@ onMounted(() => {
           const prop = data.props[j]!
           const colIndex = prop.color ?? data.color
           // Prop colors are fixed animation content rather than theme UI colors.
-          row.push(COLSET[colIndex]![0])
+          row.push({ color: COLSET[colIndex]![0], prop: j })
         }
       }
       result.push(row)
@@ -514,6 +523,10 @@ function isThumbnailSelected(index: number): boolean {
   return index >= range[0] && index <= range[1]
 }
 
+function isPropMarkerVisible(prop: number): boolean {
+  return mainViews.value.editor === 'hidden' || pSELECTED.value[prop] === true
+}
+
 const scrollStyle = computed<CSSProperties>(() => ({
   width: `${dim.width}px`,
   height: `${dim.height}px`,
@@ -578,7 +591,7 @@ const cursorStyle = computed<CSSProperties>(() => ({
   opacity: 75%;
   visibility: hidden;
 }
-.timeline-cell--selected .circle {
+.timeline-cell--selected .circle--prop-visible {
   visibility: visible;
 }
 .thumbStart {
