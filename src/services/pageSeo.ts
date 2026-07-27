@@ -1,5 +1,6 @@
 import type { Router } from 'vue-router'
 
+import { isInstalledDisplayMode } from '@/composables/useAppDisplayMode'
 import { getPageSeo, SITE_ORIGIN, SOCIAL_IMAGE_URL } from '@/domain/seo/pageSeo'
 
 function setMetaContent(selector: string, attributes: Record<string, string>, content: string) {
@@ -12,12 +13,12 @@ function setMetaContent(selector: string, attributes: Record<string, string>, co
   element.content = content
 }
 
-function applyPageSeo(path: string) {
+export function applyPageSeo(path: string) {
   const seo = getPageSeo(path)
   const canonicalUrl = new URL(seo.canonicalPath, SITE_ORIGIN).href
   let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
 
-  document.title = seo.title
+  document.title = isInstalledDisplayMode() ? seo.appTitle : seo.title
   setMetaContent('meta[name="description"]', { name: 'description' }, seo.description)
   setMetaContent('meta[name="robots"]', { name: 'robots' }, seo.robots)
   setMetaContent('meta[property="og:title"]', { property: 'og:title' }, seo.title)

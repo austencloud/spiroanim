@@ -25,4 +25,19 @@ describe('PWA manifests', () => {
       short_name: 'SpiroAnim',
     })
   })
+
+  it('offers SpiroAnim and About shortcuts in both manifests', () => {
+    const shortcuts = [
+      { name: 'SpiroAnim', short_name: 'SpiroAnim', url: '/app' },
+      { name: 'About', short_name: 'About', url: '/about' },
+    ]
+
+    expect(pwaManifest.shortcuts).toEqual(
+      shortcuts.map((shortcut) => ({
+        ...shortcut,
+        icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+      })),
+    )
+    expect(devPwaManifest.shortcuts).toBe(pwaManifest.shortcuts)
+  })
 })

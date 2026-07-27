@@ -51,6 +51,12 @@ test('ships an installable manifest and every declared icon', async ({ request }
 
   expect(declaredSizes).toContain('192x192')
   expect(declaredSizes).toContain('512x512')
+  expect(manifest).toMatchObject({
+    shortcuts: [
+      { name: 'SpiroAnim', short_name: 'SpiroAnim', url: '/app' },
+      { name: 'About', short_name: 'About', url: '/about' },
+    ],
+  })
 
   const devManifestResponse = await request.get('/manifest-dev.webmanifest')
   expect(devManifestResponse.ok()).toBe(true)

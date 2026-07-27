@@ -41,21 +41,15 @@ export const pwaManifest = {
   ],
   shortcuts: [
     {
-      name: 'Open Player',
-      short_name: 'Player',
-      url: '/player',
+      name: 'SpiroAnim',
+      short_name: 'SpiroAnim',
+      url: '/app',
       icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
     },
     {
-      name: 'Open Editor',
-      short_name: 'Editor',
-      url: '/editor',
-      icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
-    },
-    {
-      name: 'Open Timeline',
-      short_name: 'Timeline',
-      url: '/timeline',
+      name: 'About',
+      short_name: 'About',
+      url: '/about',
       icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
     },
   ],

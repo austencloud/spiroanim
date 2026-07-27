@@ -6,8 +6,8 @@ the editor can reopen without a network connection after its first successful lo
 
 ## Product behavior
 
-- Installed launches open the landing page. Manifest shortcuts can open the player, editor, or
-  timeline directly.
+- Installed launches open the landing page. Manifest shortcuts open the SpiroAnim application or
+  the About page.
 - Pages loaded from `dev.spiroanim.com` select a second web manifest that labels installed apps as
   "SpiroAnim Dev". Every other hostname uses the production manifest and "SpiroAnim" launcher
   label. Both manifests are emitted by the Vite build, so this behavior does not depend on the

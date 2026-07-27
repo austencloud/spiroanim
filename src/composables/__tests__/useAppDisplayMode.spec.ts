@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
+import { isInstalledDisplayMode, useAppDisplayMode } from '@/composables/useAppDisplayMode'
 
 const originalStandalone = Object.getOwnPropertyDescriptor(navigator, 'standalone')
 
@@ -44,6 +44,7 @@ describe('useAppDisplayMode', () => {
     stubDisplayMode('standalone')
 
     expect(mountHarness().attributes('data-installed')).toBe('true')
+    expect(isInstalledDisplayMode()).toBe(true)
   })
 
   it('detects a desktop-class pointer and hover capability', () => {

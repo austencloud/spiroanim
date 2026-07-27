@@ -1,5 +1,12 @@
 import { useMediaQuery } from '@vueuse/core'
 
+const installedDisplayQueries = [
+  '(display-mode: standalone)',
+  '(display-mode: fullscreen)',
+  '(display-mode: minimal-ui)',
+  '(display-mode: window-controls-overlay)',
+] as const
+
 function detectIos(): boolean {
   if (typeof navigator === 'undefined') return false
 
@@ -16,11 +23,20 @@ function detectIosStandalone(): boolean {
   return Reflect.get(navigator, 'standalone') === true
 }
 
+export function isInstalledDisplayMode(): boolean {
+  const matchesInstalledDisplay =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    installedDisplayQueries.some((query) => window.matchMedia(query).matches)
+
+  return matchesInstalledDisplay || detectIosStandalone()
+}
+
 export function useAppDisplayMode() {
-  const standalone = useMediaQuery('(display-mode: standalone)')
-  const fullscreen = useMediaQuery('(display-mode: fullscreen)')
-  const minimalUi = useMediaQuery('(display-mode: minimal-ui)')
-  const windowControlsOverlay = useMediaQuery('(display-mode: window-controls-overlay)')
+  const standalone = useMediaQuery(installedDisplayQueries[0])
+  const fullscreen = useMediaQuery(installedDisplayQueries[1])
+  const minimalUi = useMediaQuery(installedDisplayQueries[2])
+  const windowControlsOverlay = useMediaQuery(installedDisplayQueries[3])
   const isDesktop = useMediaQuery('(hover: hover) and (pointer: fine)')
   const isIos = ref(false)
   const iosStandalone = ref(false)
