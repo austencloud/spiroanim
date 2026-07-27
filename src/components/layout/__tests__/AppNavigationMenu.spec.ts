@@ -1,11 +1,18 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { mdiFirework, mdiFireworkOff, mdiFullscreen, mdiFullscreenExit } from '@mdi/js'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import AppNavigationMenu from '@/components/layout/AppNavigationMenu.vue'
+import { initializePwaInstallPromptCapture } from '@/composables/usePwaInstall'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+
+class TestInstallPromptEvent extends Event {
+  readonly platforms = ['web']
+  readonly prompt = vi.fn<() => Promise<void>>(async () => undefined)
+  readonly userChoice = Promise.resolve({ outcome: 'accepted' as const, platform: 'web' })
+}
 
 const fullscreenState = vi.hoisted(() => ({
   isFullscreen: { value: false },
@@ -86,6 +93,29 @@ describe('AppNavigationMenu', () => {
     ])
 
     wrapper.unmount()
+  })
+
+  it('offers installation directly beneath About when the app can be installed', async () => {
+    const stopPromptCapture = initializePwaInstallPromptCapture()
+    const event = new TestInstallPromptEvent('beforeinstallprompt', { cancelable: true })
+    window.dispatchEvent(event)
+    const { wrapper } = await mountMenu()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+
+    const navigationItems = wrapper
+      .get('[aria-labelledby="navigation-heading"]')
+      .findAll('[role="menuitem"]')
+    expect(navigationItems.map((item) => item.text())).toEqual(['Home', 'About', 'Install App'])
+
+    await wrapper.get('.pwa-install--menu button').trigger('click')
+    await flushPromises()
+
+    expect(event.prompt).toHaveBeenCalledOnce()
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+
+    wrapper.unmount()
+    stopPromptCapture()
   })
 
   it('supports keyboard opening, movement, and dismissal', async () => {

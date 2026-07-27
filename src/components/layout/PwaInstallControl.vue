@@ -1,13 +1,20 @@
 <template>
-  <div v-if="canPromptInstall || canShowIosInstructions" class="pwa-install">
+  <div
+    v-if="canPromptInstall || canShowIosInstructions"
+    class="pwa-install"
+    :class="`pwa-install--${variant}`"
+    :role="variant === 'menu' ? 'none' : undefined"
+  >
     <button
       class="install-button"
       type="button"
+      :role="variant === 'menu' ? 'menuitem' : undefined"
       :aria-controls="canShowIosInstructions ? instructionsId : undefined"
       :aria-expanded="canShowIosInstructions ? showIosInstructions : undefined"
       @click="install"
     >
-      {{ canPromptInstall ? 'Install App' : 'Install from Safari' }}
+      <BaseIcon v-if="variant === 'menu'" :path="mdiDownloadOutline" :size="22" />
+      <span>{{ canPromptInstall ? 'Install App' : 'Install from Safari' }}</span>
     </button>
     <div v-if="showIosInstructions" :id="instructionsId" class="install-instructions" role="status">
       <p class="instructions-title">Add SpiroAnim to your Home Screen:</p>
@@ -25,12 +32,20 @@
 </template>
 
 <script setup lang="ts">
-import { mdiExport } from '@mdi/js'
+import { mdiDownloadOutline, mdiExport } from '@mdi/js'
 import { useId } from 'vue'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import { usePwaInstall } from '@/composables/usePwaInstall'
 
+interface Props {
+  variant?: 'landing' | 'menu'
+}
+
+const { variant = 'landing' } = defineProps<Props>()
+const emit = defineEmits<{
+  prompted: []
+}>()
 const { canPromptInstall, canShowIosInstructions, promptInstall } = usePwaInstall()
 const showIosInstructions = ref(false)
 const instructionsId = useId()
@@ -38,6 +53,7 @@ const instructionsId = useId()
 async function install() {
   if (canPromptInstall.value) {
     await promptInstall()
+    emit('prompted')
     return
   }
 
@@ -71,6 +87,43 @@ async function install() {
 .install-button:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--color-action-primary) 45%, var(--color-text));
   outline-offset: 3px;
+}
+
+.pwa-install--menu {
+  display: block;
+  margin-block-start: 0;
+}
+
+.pwa-install--menu .install-button {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  padding-inline: var(--space-3);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 700;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+}
+
+.pwa-install--menu .install-button:hover,
+.pwa-install--menu .install-button:focus-visible {
+  color: var(--color-action-primary);
+  background: color-mix(in srgb, var(--color-action-primary) 10%, transparent);
+}
+
+.pwa-install--menu .install-button:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: -2px;
+}
+
+.pwa-install--menu .install-instructions {
+  padding: var(--space-2) var(--space-3) var(--space-3);
 }
 
 .install-instructions {

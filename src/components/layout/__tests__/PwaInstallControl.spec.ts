@@ -56,6 +56,29 @@ describe('PwaInstallControl', () => {
     expect(wrapper.find('button').exists()).toBe(false)
   })
 
+  it('renders as a menu item when used in navigation', async () => {
+    const event = new TestInstallPromptEvent('beforeinstallprompt', { cancelable: true })
+
+    window.dispatchEvent(event)
+    const wrapper = mount(PwaInstallControl, {
+      props: { variant: 'menu' },
+      global: {
+        stubs: {
+          BaseIcon: {
+            props: ['path'],
+            template: '<svg :data-path="path" />',
+          },
+        },
+      },
+    })
+    await wrapper.vm.$nextTick()
+
+    const button = wrapper.get('button')
+    expect(button.attributes('role')).toBe('menuitem')
+    expect(button.text()).toBe('Install App')
+    expect(button.find('svg').exists()).toBe(true)
+  })
+
   it('explains Safari installation steps on iPad', async () => {
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,

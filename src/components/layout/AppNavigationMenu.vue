@@ -79,6 +79,7 @@
           <BaseIcon :path="item.icon" :size="22" />
           <span>{{ item.label }}</span>
         </RouterLink>
+        <PwaInstallControl variant="menu" @prompted="closeMenu" />
       </section>
     </div>
   </div>
@@ -101,6 +102,7 @@ import { RouterLink } from 'vue-router'
 
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 interface MenuLink {
