@@ -269,6 +269,7 @@ Report which commands ran and whether they passed. Use only scripts that exist i
 - On Windows, if PowerShell blocks `npm.ps1` or `npx.ps1`, use `npm.cmd` and `npx.cmd`. Do not change the system execution policy merely to run project commands.
 - Inside the Codex sandbox, Playwright Firefox may fail to spawn its tab subprocess. For Firefox commands run inside Codex only, set `MOZ_DISABLE_CONTENT_SANDBOX=1` for that command. Do not persist this variable, add it to normal project configuration, or use it for ordinary local or CI testing. Codex's outer sandbox remains active.
 - Verify Playwright browsers with `npx.cmd playwright install --list` before assuming an executable is missing.
+- Inside Codex, use `npm.cmd run test:e2e:codex` and `npm.cmd run test:pwa:codex` instead of the normal Playwright scripts. Playwright can hang while terminating a Vite server that it owns inside the Codex Windows sandbox. The Codex runners start Vite separately, let Playwright reuse it, apply the Firefox subprocess workaround, and explicitly clean up the server. Continue using the normal scripts outside Codex and in CI.
 
 # Git and Safety
 

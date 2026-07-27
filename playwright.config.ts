@@ -1,6 +1,9 @@
 import process from 'node:process'
 import { defineConfig, devices } from '@playwright/test'
 
+const usesExternalServer = process.env.PLAYWRIGHT_EXTERNAL_SERVER === '1'
+const runsInsideCodex = process.env.CODEX_SHELL === '1'
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -34,13 +37,17 @@ export default defineConfig({
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.CI ? 'http://localhost:4173' : 'http://localhost:5173',
+    baseURL: usesExternalServer
+      ? 'http://127.0.0.1:5173'
+      : process.env.CI
+        ? 'http://localhost:4173'
+        : 'http://localhost:5173',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
 
     /* Only on CI systems run the tests headless */
-    headless: !!process.env.CI,
+    headless: !!process.env.CI || runsInsideCodex,
   },
 
   /* Configure projects for major browsers */
@@ -108,6 +115,6 @@ export default defineConfig({
      */
     command: process.env.CI ? 'npm run preview' : 'npm run dev',
     port: process.env.CI ? 4173 : 5173,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: usesExternalServer || !process.env.CI,
   },
 })

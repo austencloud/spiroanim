@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
+import process from 'node:process'
+
+const usesExternalServer = process.env.PLAYWRIGHT_EXTERNAL_SERVER === '1'
 
 export default defineConfig({
   testDir: './e2e',
@@ -24,6 +27,6 @@ export default defineConfig({
   webServer: {
     command: 'node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173',
     port: 4173,
-    reuseExistingServer: false,
+    reuseExistingServer: usesExternalServer,
   },
 })
