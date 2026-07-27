@@ -103,6 +103,7 @@ import { RouterLink } from 'vue-router'
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
+import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 interface MenuLink {
@@ -127,7 +128,13 @@ const {
   isSupported: isFullscreenSupported,
   toggle: toggleFullscreen,
 } = useFullscreen()
-const showFullscreen = computed(() => isFullscreenSupported.value)
+const { isIos } = useAppDisplayMode()
+
+// 1.) iPhones do not support full screen.
+// 2.) Standalone app support for Apple devices still needs more work.
+// 3.) Fullscreen mode on iPad remains inconsistent, so keep it hidden.
+// Modern iPads identify as touch-enabled Macs; useAppDisplayMode handles that case.
+const showFullscreen = computed(() => isFullscreenSupported.value && !isIos.value)
 const fullscreenIcon = computed(() => (isFullscreen.value ? mdiFullscreenExit : mdiFullscreen))
 const fullscreenLabel = computed(() =>
   isFullscreen.value ? 'Exit Full Screen' : 'Enter Full Screen',

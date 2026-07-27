@@ -19,10 +19,17 @@ const fullscreenState = vi.hoisted(() => ({
   isSupported: { value: true },
   toggle: vi.fn<() => Promise<void>>(async () => undefined),
 }))
+const displayState = vi.hoisted(() => ({
+  isInstalledDisplay: { value: false },
+  isIos: { value: false },
+}))
 
 vi.mock('@vueuse/core', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@vueuse/core')>()),
   useFullscreen: () => fullscreenState,
+}))
+vi.mock('@/composables/useAppDisplayMode', () => ({
+  useAppDisplayMode: () => displayState,
 }))
 
 async function mountMenu() {
@@ -65,6 +72,8 @@ describe('AppNavigationMenu', () => {
     fullscreenState.isFullscreen.value = false
     fullscreenState.isSupported.value = true
     fullscreenState.toggle.mockClear()
+    displayState.isInstalledDisplay.value = false
+    displayState.isIos.value = false
   })
 
   it('opens page navigation with mobile-sized menu items', async () => {
@@ -233,6 +242,17 @@ describe('AppNavigationMenu', () => {
       'Home',
       'About',
     ])
+
+    wrapper.unmount()
+  })
+
+  it('hides the fullscreen item on iOS and iPadOS', async () => {
+    displayState.isIos.value = true
+    const { wrapper } = await mountMenu()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+
+    expect(wrapper.find('.fullscreen-menu-item').exists()).toBe(false)
 
     wrapper.unmount()
   })
