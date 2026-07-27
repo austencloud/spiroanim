@@ -70,6 +70,7 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
   const landing = await (await request.get('/')).text()
   const about = await (await request.get('/about')).text()
   const app = await (await request.get('/app')).text()
+  const notFound = await (await request.get('/404.html')).text()
 
   expect(landing).toContain('data-prerendered="true"')
   expect(landing).toContain('id="landing-title"')
@@ -77,6 +78,8 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
   expect(about).toContain('id="about-title"')
   expect(app).toContain('<div id="app"></div>')
   expect(app).not.toContain('data-prerendered="true"')
+  expect(notFound).toContain('<meta name="robots" content="noindex, nofollow">')
+  expect(notFound).toContain('<div id="app"></div>')
 })
 
 test('relaunches a routed application screen after the network goes offline', async ({

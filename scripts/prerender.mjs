@@ -66,6 +66,7 @@ const about = await render('/about')
 const appShell = clientShellHtml()
 
 await writeFile(path.join(clientDirectory, 'app-shell.html'), appShell)
+await writeFile(path.join(clientDirectory, '404.html'), appShell)
 await writeRoute('/', pageHtml(landing.appHtml, landing.seo))
 await writeRoute('/index', pageHtml(landing.appHtml, landing.seo))
 await writeRoute('/about', pageHtml(about.appHtml, about.seo), true)

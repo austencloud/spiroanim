@@ -20,6 +20,8 @@ the editor can reopen without a network connection after its first successful lo
 - After an update is accepted, every page already controlled by the previous service worker reloads
   when the replacement takes control. This prevents an old page from requesting fingerprinted
   assets after the replacement worker removes the previous precache.
+- If a routed chunk still becomes unavailable during a deployment transition, the client handles
+  Vite's `vite:preloadError` event and reloads once. A session-scoped guard prevents reload loops.
 - Offline support is available in production builds served over HTTPS (and in `npm run preview`),
   not from `npm run dev`; the development service worker is intentionally disabled.
 - A device must finish one online production launch and register the service worker before it can
@@ -94,7 +96,8 @@ Production hosting must:
 - serve both web manifests as `application/manifest+json`;
 - revalidate HTML files, `/manifest.webmanifest`, `/manifest-dev.webmanifest`, and `/sw.js` rather
   than caching them as immutable;
-- cache hashed `/assets/*` files with a long immutable lifetime.
+- do not apply an immutable browser-cache rule to the blanket `/assets/*` URL pattern unless the
+  host guarantees missing assets cannot fall back to HTML with the same cache policy.
 
 ### Cloudflare Pages cache configuration
 
@@ -108,12 +111,13 @@ The current rules require:
   worker immediately;
 - `/manifest.webmanifest` and `/manifest-dev.webmanifest` to use `no-cache, must-revalidate` so
   installation metadata stays current;
-- fingerprinted `/assets/*` files to use a one-year immutable cache because a content change
-  produces a new filename.
+- missing assets to return a real not-found response instead of successful HTML. The build emits a
+  standard `404.html` alongside explicit HTML shells for every supported application route.
 
-Cloudflare Pages' default immediate-revalidation behavior is retained for HTML. Do not apply a long
-immutable cache to HTML, the manifest, or the service worker. A stale HTML document can reference
-fingerprinted assets from an older deployment and leave the application unable to start.
+Cloudflare Pages' default immediate-revalidation behavior is retained for HTML and assets. Do not
+apply a long immutable cache to HTML, the manifest, the service worker, or a wildcard that can also
+match an HTML fallback. A stale document or cached fallback can reference or replace fingerprinted
+assets and leave the application unable to start.
 
 If hosting moves away from Cloudflare Pages, `public/_headers` may not be recognized. Configure the
 new platform to provide the same effective cache behavior using its headers, redirects, or server

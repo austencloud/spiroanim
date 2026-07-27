@@ -192,6 +192,8 @@ const rightStyle = computed<CSSProperties>(() => ({
 
 <style scoped>
 .spiro-workspace {
+  min-inline-size: 0;
+  min-block-size: 0;
   background:
     radial-gradient(
       ellipse at 8% 12%,

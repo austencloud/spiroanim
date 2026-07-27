@@ -9,6 +9,12 @@ import { createWebHistory } from 'vue-router'
 import { createSpiroAnimApp } from '@/createApp'
 import { initializePwaInstallPromptCapture } from '@/composables/usePwaInstall'
 import { installClientSeoUpdates } from '@/services/pageSeo'
+import {
+  installStaleAssetRecovery,
+  markStaleAssetRecoveryComplete,
+} from '@/services/staleAssetRecovery'
+
+installStaleAssetRecovery(window, window.location, window.sessionStorage)
 
 const container = document.querySelector<HTMLElement>('#app')
 const mode = container?.dataset.prerendered === 'true' ? 'hydrate' : 'client'
@@ -19,3 +25,4 @@ initializePwaInstallPromptCapture()
 
 await router.isReady()
 app.mount('#app')
+markStaleAssetRecoveryComplete(window.sessionStorage)
