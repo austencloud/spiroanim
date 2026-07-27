@@ -95,6 +95,7 @@ describe('PwaInstallControl', () => {
 
     expect(button.attributes('aria-expanded')).toBe('true')
     expect(wrapper.get('.instructions-title').text()).toContain('Home Screen')
+    expect(wrapper.find('.safari-share-icon').exists()).toBe(true)
     expect(wrapper.findAll('.install-instructions li').map((item) => item.text())).toEqual([
       expect.stringContaining('square with an arrow pointing up'),
       expect.stringContaining('Add to Home Screen'),

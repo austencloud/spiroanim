@@ -21,7 +21,10 @@
       <ol>
         <li>
           In Safari's toolbar, tap the
-          <span class="share-control"><BaseIcon :path="mdiExport" :size="20" /> Share</span>
+          <span class="share-control">
+            <BaseIcon class="safari-share-icon" :path="mdiExport" :size="20" />
+            Share
+          </span>
           button - the square with an arrow pointing up.
         </li>
         <li>Tap <strong>More</strong> if shown, then tap <strong>Add to Home Screen</strong>.</li>
@@ -159,5 +162,9 @@ async function install() {
 
 .share-control .base-icon {
   display: inline-block;
+}
+
+.safari-share-icon {
+  transform: rotate(-90deg);
 }
 </style>
