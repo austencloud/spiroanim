@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  DEV_PWA_HOSTNAME,
   DEV_PWA_MANIFEST_URL,
+  PRODUCTION_PWA_HOSTNAME,
   PWA_MANIFEST_URL,
   devPwaManifest,
   pwaManifest,
 } from '../pwaManifest.ts'
 
 describe('PWA manifests', () => {
-  it('labels dev host installs distinctly', () => {
-    expect(DEV_PWA_HOSTNAME).toBe('dev.spiroanim.com')
+  it('labels non-production host installs distinctly', () => {
+    expect(PRODUCTION_PWA_HOSTNAME).toBe('spiroanim.com')
     expect(DEV_PWA_MANIFEST_URL).toBe('/manifest-dev.webmanifest')
     expect(devPwaManifest).toMatchObject({
       name: 'SpiroAnim Dev',

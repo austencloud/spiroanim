@@ -10,10 +10,10 @@ worker so the editor can reopen without a network connection after its first suc
 
 - Installed launches open the landing page. Manifest shortcuts open the SpiroAnim application or
   the About page.
-- Pages loaded from `dev.spiroanim.com` select a second web manifest that labels installed apps as
-  "SpiroAnim Dev". Every other hostname uses the production manifest and "SpiroAnim" launcher
-  label. Both manifests are emitted by the Vite build, so this behavior does not depend on the
-  hosting provider or deployment branch metadata.
+- Pages loaded from `spiroanim.com` use the production manifest and "SpiroAnim" launcher label.
+  Every other hostname selects a second web manifest that labels installed apps as "SpiroAnim Dev".
+  Both manifests are emitted by the Vite build, so this behavior does not depend on the hosting
+  provider or deployment branch metadata.
 - Browser installation is offered on the landing page only when the browser exposes an install
   prompt. Safari on iOS receives numbered Add to Home Screen instructions that identify the Share
   control and account for the More and Open as Web App steps shown by current iPadOS versions.

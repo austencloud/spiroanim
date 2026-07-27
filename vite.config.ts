@@ -7,8 +7,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import AutoImport from 'unplugin-auto-import/vite'
 import { AutoImports } from './src/sys/auto-imports.ts'
 import {
-  DEV_PWA_HOSTNAME,
   DEV_PWA_MANIFEST_URL,
+  PRODUCTION_PWA_HOSTNAME,
   PWA_MANIFEST_URL,
   devPwaManifest,
   pwaManifest,
@@ -21,7 +21,7 @@ function emitPwaManifests(): Plugin {
       return [
         {
           tag: 'script',
-          children: `if (location.hostname === ${JSON.stringify(DEV_PWA_HOSTNAME)}) document.querySelector('link[rel="manifest"]')?.setAttribute('href', ${JSON.stringify(DEV_PWA_MANIFEST_URL)})`,
+          children: `if (location.hostname !== ${JSON.stringify(PRODUCTION_PWA_HOSTNAME)}) document.querySelector('link[rel="manifest"]')?.setAttribute('href', ${JSON.stringify(DEV_PWA_MANIFEST_URL)})`,
           injectTo: 'head',
         },
       ]

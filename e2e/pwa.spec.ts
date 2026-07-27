@@ -84,6 +84,7 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
 
   expect(landing).toContain('data-prerendered="true"')
   expect(landing).toContain('id="landing-title"')
+  expect(landing).not.toContain('dev.spiroanim.com')
   expect(about).toContain('data-prerendered="true"')
   expect(about).toContain('id="about-title"')
   expect(app).toContain('<div id="app"></div>')

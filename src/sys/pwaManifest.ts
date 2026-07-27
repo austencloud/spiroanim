@@ -1,6 +1,6 @@
 export const PWA_MANIFEST_URL = '/manifest.webmanifest'
 export const DEV_PWA_MANIFEST_URL = '/manifest-dev.webmanifest'
-export const DEV_PWA_HOSTNAME = 'dev.spiroanim.com'
+export const PRODUCTION_PWA_HOSTNAME = 'spiroanim.com'
 
 export const pwaManifest = {
   id: '/',
