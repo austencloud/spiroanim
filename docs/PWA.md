@@ -17,6 +17,9 @@ the editor can reopen without a network connection after its first successful lo
   control and account for the More and Open as Web App steps shown by current iPadOS versions.
 - Service-worker updates require user confirmation. Do not switch to automatic reload without
   accounting for active editor work.
+- After an update is accepted, every page already controlled by the previous service worker reloads
+  when the replacement takes control. This prevents an old page from requesting fingerprinted
+  assets after the replacement worker removes the previous precache.
 - Offline support is available in production builds served over HTTPS (and in `npm run preview`),
   not from `npm run dev`; the development service worker is intentionally disabled.
 - A device must finish one online production launch and register the service worker before it can

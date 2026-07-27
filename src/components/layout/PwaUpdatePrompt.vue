@@ -13,8 +13,25 @@
 <script setup lang="ts">
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 
+import { reloadOnServiceWorkerControllerReplacement } from '@/services/pwaUpdate'
+
+let reloadStarted = false
+
+function reloadPage() {
+  if (reloadStarted) return
+
+  reloadStarted = true
+  window.location.reload()
+}
+
+const stopControllerChangeReload =
+  typeof navigator === 'undefined' || !('serviceWorker' in navigator)
+    ? () => undefined
+    : reloadOnServiceWorkerControllerReplacement(navigator.serviceWorker, reloadPage)
+
 const { offlineReady, needRefresh, updateServiceWorker } = useRegisterSW({
   immediate: true,
+  onNeedReload: reloadPage,
   onRegisterError(error) {
     console.error('PWA service worker registration failed.', error)
   },
@@ -32,6 +49,8 @@ function dismiss() {
 async function applyUpdate() {
   await updateServiceWorker(true)
 }
+
+onBeforeUnmount(stopControllerChangeReload)
 </script>
 
 <style scoped>
