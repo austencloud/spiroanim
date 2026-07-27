@@ -11,46 +11,12 @@
 </template>
 
 <script setup lang="ts">
-import { useRegisterSW } from 'virtual:pwa-register/vue'
+import { usePwaUpdate } from '@/composables/usePwaUpdate'
 
-import { reloadOnServiceWorkerControllerReplacement } from '@/services/pwaUpdate'
-
-let reloadStarted = false
-
-function reloadPage() {
-  if (reloadStarted) return
-
-  reloadStarted = true
-  window.location.reload()
-}
-
-const stopControllerChangeReload =
-  typeof navigator === 'undefined' || !('serviceWorker' in navigator)
-    ? () => undefined
-    : reloadOnServiceWorkerControllerReplacement(navigator.serviceWorker, reloadPage)
-
-const { offlineReady, needRefresh, updateServiceWorker } = useRegisterSW({
-  immediate: true,
-  onNeedReload: reloadPage,
-  onRegisterError(error) {
-    console.error('PWA service worker registration failed.', error)
-  },
-})
-
+const { applyUpdate, dismiss, needRefresh, offlineReady } = usePwaUpdate()
 const message = computed(() =>
   needRefresh.value ? 'A new version of SpiroAnim is available.' : 'SpiroAnim is ready offline.',
 )
-
-function dismiss() {
-  offlineReady.value = false
-  needRefresh.value = false
-}
-
-async function applyUpdate() {
-  await updateServiceWorker(true)
-}
-
-onBeforeUnmount(stopControllerChangeReload)
 </script>
 
 <style scoped>

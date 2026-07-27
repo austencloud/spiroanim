@@ -1,5 +1,3 @@
-import type { ManifestOptions } from 'vite-plugin-pwa'
-
 export const PWA_MANIFEST_URL = '/manifest.webmanifest'
 export const DEV_PWA_MANIFEST_URL = '/manifest-dev.webmanifest'
 export const DEV_PWA_HOSTNAME = 'dev.spiroanim.com'
@@ -8,7 +6,7 @@ export const pwaManifest = {
   id: '/',
   scope: '/',
   start_url: '/',
-  name: 'Spiro Animator',
+  name: 'SpiroAnim',
   short_name: 'SpiroAnim',
   description: 'Create, edit, and play procedural spiro animations.',
   lang: 'en',
@@ -65,10 +63,10 @@ export const pwaManifest = {
       ],
     },
   ],
-} satisfies Partial<ManifestOptions>
+}
 
 export const devPwaManifest = {
   ...pwaManifest,
   name: 'SpiroAnim Dev',
   short_name: 'SpiroAnim Dev',
-} satisfies Partial<ManifestOptions>
+}

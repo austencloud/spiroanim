@@ -3,7 +3,6 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
-import { VitePWA } from 'vite-plugin-pwa'
 
 import AutoImport from 'unplugin-auto-import/vite'
 import { AutoImports } from './src/sys/auto-imports.ts'
@@ -58,20 +57,6 @@ export function createViteConfig(isSsrBuild: boolean) {
     plugins: [
       vue(),
       !isSsrBuild && vueDevTools(),
-      !isSsrBuild &&
-        VitePWA({
-          registerType: 'prompt',
-          manifest: false,
-          workbox: {
-            clientsClaim: true,
-            cleanupOutdatedCaches: true,
-            globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
-            navigateFallback: 'index.html',
-          },
-          devOptions: {
-            enabled: false,
-          },
-        }),
       !isSsrBuild && emitPwaManifests(),
       AutoImport({
         imports: [AutoImports],

@@ -21,7 +21,7 @@ describe('PWA manifests', () => {
   it('preserves the production manifest names', () => {
     expect(PWA_MANIFEST_URL).toBe('/manifest.webmanifest')
     expect(pwaManifest).toMatchObject({
-      name: 'Spiro Animator',
+      name: 'SpiroAnim',
       short_name: 'SpiroAnim',
     })
   })

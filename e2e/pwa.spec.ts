@@ -1,5 +1,7 @@
 import { expect, test, type Response } from '@playwright/test'
 
+import { stagePwaBuildTransition } from './support/pwaBuildTransition.js'
+
 function requireResponse(response: Response | null): Response {
   if (!response) throw new Error('The browser did not return a navigation response.')
   return response
@@ -46,7 +48,7 @@ test('ships an installable manifest and every declared icon', async ({ request }
     id: '/',
     scope: '/',
     start_url: '/',
-    name: 'Spiro Animator',
+    name: 'SpiroAnim',
     short_name: 'SpiroAnim',
     display: 'standalone',
   })
@@ -121,5 +123,49 @@ test('relaunches a routed application screen after the network goes offline', as
     await expect(offlinePage.locator('[data-role="main-container"]')).toBeVisible()
   } finally {
     await context.setOffline(false)
+  }
+})
+
+test('updates an open page across changed lazy CSS without stale asset failures', async ({
+  page,
+}) => {
+  const consoleErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'SpiroAnim.com' })).toBeVisible()
+  await page.evaluate(async () => navigator.serviceWorker.ready)
+  await expect
+    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .toBe(true)
+
+  const transition = await stagePwaBuildTransition()
+  let replacementCssLoaded = false
+  page.on('response', (response) => {
+    if (new URL(response.url()).pathname === transition.replacementCssUrl) {
+      replacementCssLoaded = response.ok()
+    }
+  })
+
+  try {
+    await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.ready
+      await registration.update()
+    })
+
+    const updateButton = page.getByRole('button', { name: 'Update Now' })
+    await expect(updateButton).toBeVisible()
+    await Promise.all([page.waitForEvent('load'), updateButton.click()])
+
+    await expect(page.getByRole('heading', { name: 'SpiroAnim.com' })).toBeVisible()
+    await page.goto('/app')
+    await expect(page.locator('[data-role="main-container"]')).toBeVisible()
+
+    expect(replacementCssLoaded).toBe(true)
+    expect(consoleErrors).toEqual([])
+  } finally {
+    await transition.restore()
   }
 })

@@ -1,8 +1,10 @@
 # Progressive Web App
 
-SpiroAnim uses `vite-plugin-pwa` to generate its web manifest and Workbox service worker. The
-service worker precaches the static application shell, routed Vue chunks, and animation worker so
-the editor can reopen without a network connection after its first successful load.
+SpiroAnim emits its production and development web manifests from Vite configuration. After
+prerendering completes, `workbox-build` generates the single final service worker from the finished
+build. The service worker precaches the static application shell, routed Vue chunks, and animation
+worker so the editor can reopen without a network connection after its first successful load.
+`workbox-window` owns registration and the update prompt in the client.
 
 ## Product behavior
 
@@ -17,11 +19,16 @@ the editor can reopen without a network connection after its first successful lo
   control and account for the More and Open as Web App steps shown by current iPadOS versions.
 - Service-worker updates require user confirmation. Do not switch to automatic reload without
   accounting for active editor work.
+- While the application is open, it checks for an updated service worker hourly, when the browser
+  comes back online, and when the page becomes visible. Checks are throttled and remain
+  opportunistic so an update failure never interrupts editing.
 - After an update is accepted, every page already controlled by the previous service worker reloads
   when the replacement takes control. This prevents an old page from requesting fingerprinted
   assets after the replacement worker removes the previous precache.
 - If a routed chunk still becomes unavailable during a deployment transition, the client handles
-  Vite's `vite:preloadError` event and reloads once. A session-scoped guard prevents reload loops.
+  Vite's `vite:preloadError` event and reloads. A session-scoped cooldown prevents a tight reload
+  loop while allowing a long-lived Safari tab to recover if the first attempt occurred before the
+  deployment finished.
 - Offline support is available in production builds served over HTTPS (and in `npm run preview`),
   not from `npm run dev`; the development service worker is intentionally disabled.
 - A device must finish one online production launch and register the service worker before it can
@@ -34,6 +41,9 @@ the editor can reopen without a network connection after its first successful lo
   including route aliases and URLs containing animation query data.
 - The final service worker is generated after prerendering, so Workbox revisions the actual emitted
   HTML and cannot reuse documents that reference outdated hashed assets.
+- The preload recovery hook cannot run when the initial entry script itself is unavailable because
+  application code has not started yet. Correct HTML revalidation, real asset 404 responses, and a
+  consistent deployment are therefore required parts of startup reliability.
 
 ## Icons
 
@@ -77,7 +87,9 @@ LLM:
 ## Validation
 
 The PWA test builds the production application, starts Vite preview, validates the generated
-manifest and icons, installs the service worker, and performs an offline routed navigation:
+manifest and icons, installs the service worker, performs an offline routed navigation, and stages
+a second generated build to verify that an already-open client can accept an update and load the
+new fingerprinted assets:
 
 ```sh
 npm run test:pwa
