@@ -16,7 +16,7 @@
           :key="`side-${rule.number}`"
           :labels="rule.labels"
           :number="rule.number"
-          :pattern="rule.pattern"
+          :diagram="rule.diagram"
           orientation="vertical"
           :accent="rule.accent"
         />
@@ -60,7 +60,7 @@
           :key="`bottom-${rule.number}`"
           :labels="rule.labels"
           :number="rule.number"
-          :pattern="rule.pattern"
+          :diagram="rule.diagram"
           orientation="horizontal"
           :accent="rule.accent"
         />
@@ -74,13 +74,7 @@ import { mdiShuffleVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
-
-interface RuleSpec {
-  labels: readonly [string, string]
-  number: number
-  pattern: 'split' | 'toggle'
-  accent?: boolean
-}
+import type { VtgRuleSpec } from '@/features/vtg/types'
 
 interface BlankDimensions {
   width: number
@@ -104,22 +98,132 @@ const matrixTiles = matrixRows.flatMap((row, rowIndex) =>
   })),
 )
 
-const sideRules: readonly RuleSpec[] = [
-  { labels: ['SPLIT', 'TOG'], number: 6, pattern: 'split' },
-  { labels: ['TOG', 'SPLIT'], number: 5, pattern: 'toggle', accent: true },
-  { labels: ['SPLIT', 'IN'], number: 4, pattern: 'split' },
-  { labels: ['TOG', 'IN'], number: 3, pattern: 'toggle' },
-  { labels: ['SPLIT', 'OUT'], number: 2, pattern: 'split' },
-  { labels: ['TOG', 'OUT'], number: 1, pattern: 'toggle' },
+const sideRules: readonly VtgRuleSpec[] = [
+  {
+    labels: ['SPLIT', 'TOG'],
+    number: 6,
+    diagram: {
+      props: [
+        { lane: 50, start: 0, end: 47, largeEnd: 'start' },
+        { lane: 50, start: 57, end: 100, largeEnd: 'start' },
+      ],
+    },
+  },
+  {
+    labels: ['TOG', 'SPLIT'],
+    number: 5,
+    accent: true,
+    diagram: {
+      props: [
+        { lane: 50, start: 0, end: 100, largeEnd: 'start' },
+        { lane: 50, start: 0, end: 100, largeEnd: 'end' },
+      ],
+    },
+  },
+  {
+    labels: ['SPLIT', 'IN'],
+    number: 4,
+    diagram: {
+      props: [
+        { lane: 50, start: 0, end: 43, largeEnd: 'end' },
+        { lane: 50, start: 57, end: 100, largeEnd: 'start' },
+      ],
+    },
+  },
+  {
+    labels: ['TOG', 'IN'],
+    number: 3,
+    diagram: {
+      props: [
+        { lane: 42, start: 54, end: 100, largeEnd: 'start' },
+        { lane: 58, start: 54, end: 100, largeEnd: 'start' },
+      ],
+    },
+  },
+  {
+    labels: ['SPLIT', 'OUT'],
+    number: 2,
+    diagram: {
+      props: [
+        { lane: 50, start: 0, end: 47, largeEnd: 'start' },
+        { lane: 50, start: 53, end: 100, largeEnd: 'end' },
+      ],
+    },
+  },
+  {
+    labels: ['TOG', 'OUT'],
+    number: 1,
+    diagram: {
+      props: [
+        { lane: 42, start: 54, end: 100, largeEnd: 'end' },
+        { lane: 58, start: 54, end: 100, largeEnd: 'end' },
+      ],
+    },
+  },
 ]
 
-const bottomRules: readonly RuleSpec[] = [
-  { labels: ['TOG', 'OUT'], number: 1, pattern: 'toggle' },
-  { labels: ['SPLIT', 'OUT'], number: 2, pattern: 'split' },
-  { labels: ['TOG', 'IN'], number: 3, pattern: 'toggle' },
-  { labels: ['SPLIT', 'IN'], number: 4, pattern: 'split' },
-  { labels: ['SPLIT', 'SPLIT'], number: 5, pattern: 'split' },
-  { labels: ['SPLIT', 'TOG'], number: 6, pattern: 'split', accent: true },
+const bottomRules: readonly VtgRuleSpec[] = [
+  {
+    labels: ['TOG', 'OUT'],
+    number: 1,
+    diagram: {
+      props: [
+        { lane: 42, start: 54, end: 100, largeEnd: 'end' },
+        { lane: 58, start: 54, end: 100, largeEnd: 'end' },
+      ],
+    },
+  },
+  {
+    labels: ['SPLIT', 'OUT'],
+    number: 2,
+    diagram: {
+      props: [
+        { lane: 50, start: 0, end: 47, largeEnd: 'start' },
+        { lane: 50, start: 53, end: 100, largeEnd: 'end' },
+      ],
+    },
+  },
+  {
+    labels: ['TOG', 'IN'],
+    number: 3,
+    diagram: {
+      props: [
+        { lane: 42, start: 0, end: 46, largeEnd: 'end' },
+        { lane: 58, start: 0, end: 46, largeEnd: 'end' },
+      ],
+    },
+  },
+  {
+    labels: ['SPLIT', 'IN'],
+    number: 4,
+    diagram: {
+      props: [
+        { lane: 50, start: 0, end: 43, largeEnd: 'end' },
+        { lane: 50, start: 57, end: 100, largeEnd: 'start' },
+      ],
+    },
+  },
+  {
+    labels: ['SPLIT', 'SPLIT'],
+    number: 5,
+    diagram: {
+      props: [
+        { lane: 50, start: 0, end: 100, largeEnd: 'start' },
+        { lane: 50, start: 0, end: 100, largeEnd: 'end' },
+      ],
+    },
+  },
+  {
+    labels: ['SPLIT', 'TOG'],
+    number: 6,
+    accent: true,
+    diagram: {
+      props: [
+        { lane: 50, start: 0, end: 47, largeEnd: 'start' },
+        { lane: 50, start: 57, end: 100, largeEnd: 'start' },
+      ],
+    },
+  },
 ]
 
 const paneElement = ref<HTMLElement>()
