@@ -10,21 +10,21 @@ export const SITE_ORIGIN = 'https://spiroanim.com'
 export const SOCIAL_IMAGE_URL = `${SITE_ORIGIN}/images/app-icons/pwa-512x512.png`
 
 const defaultSeo: PageSeo = {
-  appTitle: '3D Flow Arts Editor',
+  appTitle: '3D Flow Arts Animation',
   canonicalPath: '/',
   description: 'Create, edit, and play procedural 3D animations for flow arts props.',
   robots: 'noindex, nofollow',
-  title: 'Spiro Animator',
+  title: 'SpiroAnim - 3D Flow Arts',
 }
 
 const pageSeo: Record<string, PageSeo> = {
   '/': {
-    appTitle: '3D Flow Arts Animation Editor',
+    appTitle: '3D Flow Arts Animation',
     canonicalPath: '/',
     description:
-      'Explore SpiroAnim, an open-source 3D rendering and animation editor for flow arts props.',
+      'Explore SpiroAnim, an open-source 3D rendering and animation tool for flow arts props.',
     robots: 'index, follow',
-    title: 'SpiroAnim - 3D Flow Arts Animation Editor',
+    title: 'SpiroAnim - 3D Flow Arts Animation',
   },
   '/about': {
     appTitle: 'About - Open-Source Flow Arts Rendering',

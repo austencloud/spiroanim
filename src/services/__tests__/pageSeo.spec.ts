@@ -29,9 +29,9 @@ describe('applyPageSeo', () => {
 
     applyPageSeo('/')
 
-    expect(document.title).toBe('3D Flow Arts Animation Editor')
+    expect(document.title).toBe('3D Flow Arts Animation')
     expect(document.querySelector('meta[property="og:title"]')?.getAttribute('content')).toBe(
-      'SpiroAnim - 3D Flow Arts Animation Editor',
+      'SpiroAnim - 3D Flow Arts Animation',
     )
   })
 
@@ -40,6 +40,6 @@ describe('applyPageSeo', () => {
 
     applyPageSeo('/')
 
-    expect(document.title).toBe('SpiroAnim - 3D Flow Arts Animation Editor')
+    expect(document.title).toBe('SpiroAnim - 3D Flow Arts Animation')
   })
 })
