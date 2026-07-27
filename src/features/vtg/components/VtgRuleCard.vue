@@ -101,24 +101,26 @@ const propStyle = (propPlacement: VtgPropPlacement): CSSProperties =>
 .vtg-rule-card__title {
   position: absolute;
   z-index: 3;
-  inset-block-start: 0.45cqi;
-  inset-inline-start: 0.55cqi;
+  inset-block-start: 0.5cqi;
+  inset-inline-start: 0.6cqi;
   display: flex;
   flex-direction: column;
-  font-size: max(0.62rem, 1.65cqi);
-  font-weight: 900;
-  letter-spacing: 0.025em;
-  line-height: 0.95;
+  font-size: max(0.62rem, 1.7cqi);
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  line-height: 0.98;
+  text-rendering: geometricPrecision;
 }
 
 .vtg-rule-card__number {
   position: absolute;
   z-index: 3;
   inset-inline-end: 0.55cqi;
-  inset-block-end: 0.25cqi;
+  inset-block-end: 0.3cqi;
   font-size: max(1.3rem, 4cqi);
   font-weight: 900;
-  line-height: 0.85;
+  line-height: 0.88;
+  text-rendering: geometricPrecision;
 }
 
 .vtg-rule-card__diagram {

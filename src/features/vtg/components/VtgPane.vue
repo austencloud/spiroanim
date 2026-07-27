@@ -205,7 +205,7 @@ const bottomRules: readonly VtgRuleSpec[] = [
     diagram: diagrams.insideSplit,
   },
   {
-    labels: ['SPLIT', 'SPLIT'],
+    labels: ['TOG', 'SPLIT'],
     number: 5,
     diagram: diagrams.outsideSplit,
   },
@@ -335,9 +335,10 @@ defineExpose({
     0 0.45cqi 1cqi color-mix(in srgb, var(--vtg-color-preview) 22%, transparent);
   font-family: 'Arial Narrow', var(--font-family-sans);
   font-size: max(0.78rem, 2.55cqi);
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-weight: 700;
+  letter-spacing: 0.025em;
   line-height: 1;
+  text-rendering: geometricPrecision;
   white-space: nowrap;
 }
 
