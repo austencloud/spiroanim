@@ -21,7 +21,7 @@ function escapeHtml(value) {
 
 function pageHtml(appHtml, seo) {
   const canonicalUrl = new URL(seo.canonicalPath, 'https://spiroanim.com').href
-  const socialImageUrl = 'https://spiroanim.com/pwa-512x512.png'
+  const socialImageUrl = 'https://spiroanim.com/images/app-icons/pwa-512x512.png'
   const seoHead = [
     `<meta name="description" content="${escapeHtml(seo.description)}">`,
     `<link rel="canonical" href="${canonicalUrl}">`,

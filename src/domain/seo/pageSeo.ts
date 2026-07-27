@@ -7,7 +7,7 @@ export interface PageSeo {
 }
 
 export const SITE_ORIGIN = 'https://spiroanim.com'
-export const SOCIAL_IMAGE_URL = `${SITE_ORIGIN}/pwa-512x512.png`
+export const SOCIAL_IMAGE_URL = `${SITE_ORIGIN}/images/app-icons/pwa-512x512.png`
 
 const defaultSeo: PageSeo = {
   appTitle: '3D Flow Arts Editor',

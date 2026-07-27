@@ -50,7 +50,7 @@ import { RouterLink } from 'vue-router'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 
-const brandIconUrl = '/pwa-source.svg'
+const brandIconUrl = '/images/app-icons/pwa-source.svg'
 </script>
 
 <style scoped>

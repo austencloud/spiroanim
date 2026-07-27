@@ -37,10 +37,12 @@ the editor can reopen without a network connection after its first successful lo
 
 ## Icons
 
-`public/pwa-source.svg` is the authoritative, editable icon source. It intentionally has a
-transparent background; the generator adds a dark background only to platform-specific icons that
-require one. Regenerate the favicon, Apple touch icon,
-standard PWA icons, and maskable icon after changing it:
+`public/images/app-icons/pwa-source.svg` is the authoritative, editable icon source. It
+intentionally has a transparent background; the generator adds a dark background only to
+platform-specific icons that require one. All source and generated application icons live together
+under `public/images/app-icons`; future image categories should use their own purpose-based
+directory under `public/images`. Regenerate the favicon, Apple touch icon, standard PWA icons, and
+maskable icon after changing it:
 
 ```sh
 npm run generate:pwa-assets
@@ -54,8 +56,9 @@ central safe zone.
 Treat these constraints as part of the icon's design contract when modifying it manually or with an
 LLM:
 
-- Edit `public/pwa-source.svg`, not the generated PNG or ICO files. Keep it as an understandable,
-  editable vector with named gradients, grouped elements, and no embedded raster image.
+- Edit `public/images/app-icons/pwa-source.svg`, not the generated PNG or ICO files. Keep it as an
+  understandable, editable vector with named gradients, grouped elements, and no embedded raster
+  image.
 - Keep the SVG canvas transparent. Do not add a full-canvas dark rectangle, vignette, or baked-in
   border. `pwa-assets.config.ts` supplies the dark background for maskable and Apple icons.
 - Preserve the basic concept: three rounded orbital loops at different apparent 3D orientations.

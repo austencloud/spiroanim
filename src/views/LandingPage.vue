@@ -54,7 +54,7 @@ import { RouterLink } from 'vue-router'
 
 import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
 
-const brandIconUrl = '/pwa-source.svg'
+const brandIconUrl = '/images/app-icons/pwa-source.svg'
 const hasMounted = ref(false)
 
 onMounted(() => {

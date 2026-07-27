@@ -28,8 +28,9 @@ const preset: Preset = {
 
 export default defineConfig({
   headLinkOptions: {
+    basePath: '/images/app-icons/',
     preset: '2023',
   },
-  images: ['public/pwa-source.svg'],
+  images: ['public/images/app-icons/pwa-source.svg'],
   preset,
 })

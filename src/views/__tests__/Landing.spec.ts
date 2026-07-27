@@ -28,7 +28,7 @@ describe('Landing view', () => {
     const wrapper = await mountLanding()
 
     expect(wrapper.get('h1').text()).toBe('SpiroAnim.com')
-    expect(wrapper.get('img.brand-mark').attributes('src')).toBe('/pwa-source.svg')
+    expect(wrapper.get('img.brand-mark').attributes('src')).toBe('/images/app-icons/pwa-source.svg')
     expect(wrapper.get('img.brand-mark').attributes('alt')).toBe('')
     expect(wrapper.get('.project-note').text()).toContain('proof-of-concept rendering tool')
     expect(wrapper.get('.project-note').text()).toContain('including a VTG generator, a library')

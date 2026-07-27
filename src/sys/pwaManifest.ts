@@ -17,23 +17,23 @@ export const pwaManifest = {
   theme_color: '#090b0f',
   icons: [
     {
-      src: '/pwa-64x64.png',
+      src: '/images/app-icons/pwa-64x64.png',
       sizes: '64x64',
       type: 'image/png',
     },
     {
-      src: '/pwa-192x192.png',
+      src: '/images/app-icons/pwa-192x192.png',
       sizes: '192x192',
       type: 'image/png',
     },
     {
-      src: '/pwa-512x512.png',
+      src: '/images/app-icons/pwa-512x512.png',
       sizes: '512x512',
       type: 'image/png',
       purpose: 'any',
     },
     {
-      src: '/maskable-icon-512x512.png',
+      src: '/images/app-icons/maskable-icon-512x512.png',
       sizes: '512x512',
       type: 'image/png',
       purpose: 'maskable',
@@ -44,13 +44,25 @@ export const pwaManifest = {
       name: 'SpiroAnim',
       short_name: 'SpiroAnim',
       url: '/app',
-      icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+      icons: [
+        {
+          src: '/images/app-icons/pwa-192x192.png',
+          sizes: '192x192',
+          type: 'image/png',
+        },
+      ],
     },
     {
       name: 'About',
       short_name: 'About',
       url: '/about',
-      icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+      icons: [
+        {
+          src: '/images/app-icons/pwa-192x192.png',
+          sizes: '192x192',
+          type: 'image/png',
+        },
+      ],
     },
   ],
 } satisfies Partial<ManifestOptions>

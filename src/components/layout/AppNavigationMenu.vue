@@ -237,7 +237,7 @@ onClickOutside(rootElement, closeMenu)
   display: block;
   width: 100%;
   height: 100%;
-  background: url('/pwa-source.svg') center / contain no-repeat;
+  background: url('/images/app-icons/pwa-source.svg') center / contain no-repeat;
   filter: drop-shadow(0 0 0.4rem color-mix(in srgb, var(--color-action-primary) 24%, transparent));
 }
 

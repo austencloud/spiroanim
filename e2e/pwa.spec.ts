@@ -29,6 +29,14 @@ function readManifestIcons(manifest: unknown): ManifestIcon[] {
 }
 
 test('ships an installable manifest and every declared icon', async ({ request }) => {
+  for (const iconPath of [
+    '/images/app-icons/favicon.ico',
+    '/images/app-icons/pwa-source.svg',
+    '/images/app-icons/apple-touch-icon-180x180.png',
+  ]) {
+    expect((await request.get(iconPath)).ok()).toBe(true)
+  }
+
   const response = await request.get('/manifest.webmanifest')
   expect(response.ok()).toBe(true)
   expect(response.headers()['content-type']).toContain('application/manifest+json')

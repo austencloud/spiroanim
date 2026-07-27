@@ -35,7 +35,13 @@ describe('PWA manifests', () => {
     expect(pwaManifest.shortcuts).toEqual(
       shortcuts.map((shortcut) => ({
         ...shortcut,
-        icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+        icons: [
+          {
+            src: '/images/app-icons/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+        ],
       })),
     )
     expect(devPwaManifest.shortcuts).toBe(pwaManifest.shortcuts)
