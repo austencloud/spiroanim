@@ -14,9 +14,6 @@
   --size-editor-scrollbar: 8px;
   --size-pane-switch-button: 2rem;
   --space-pane-switch-bottom: 10px;
-  --size-pane-switch-bottom-clearance: calc(
-    var(--size-pane-switch-button) + var(--space-pane-switch-bottom)
-  );
 
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
@@ -28,6 +25,13 @@
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --space-workspace-bottom-offset: max(
+    var(--space-pane-switch-bottom),
+    var(--safe-area-inset-bottom)
+  );
+  --size-pane-switch-bottom-clearance: calc(
+    var(--size-pane-switch-button) + var(--space-workspace-bottom-offset)
+  );
 
   --transition-fast: 150ms ease;
 }

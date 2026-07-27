@@ -130,9 +130,9 @@ const {
 } = useFullscreen()
 const { isIos } = useAppDisplayMode()
 
-// 1.) iPhones do not support full screen.
-// 2.) Standalone app support for Apple devices still needs more work.
-// 3.) Fullscreen mode on iPad remains inconsistent, so keep it hidden.
+// 1.) iPhones do not reliably support element full screen.
+// 2.) On iPadOS, dragging downward inside an element can exit full screen.
+// 3.) That system gesture conflicts with draggable editor controls, especially the progress bar.
 // Modern iPads identify as touch-enabled Macs; useAppDisplayMode handles that case.
 const showFullscreen = computed(() => isFullscreenSupported.value && !isIos.value)
 const fullscreenIcon = computed(() => (isFullscreen.value ? mdiFullscreenExit : mdiFullscreen))

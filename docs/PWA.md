@@ -36,7 +36,8 @@ worker so the editor can reopen without a network connection after its first suc
 - A browser shortcut created from a development or otherwise uncontrolled page is only a shortcut;
   it is not an offline-capable installed app.
 - Installed desktop and Android apps retain the fullscreen control. It remains hidden on iOS and
-  iPadOS until their fullscreen behavior is tested and intentionally supported.
+  iPadOS because iPhone element fullscreen is unreliable and iPadOS reserves a downward drag to
+  exit fullscreen, which conflicts with SpiroAnim's draggable editor controls.
 - The service worker uses the client-only `app-shell.html` as its offline navigation fallback,
   including route aliases and URLs containing animation query data.
 - The final service worker is generated after prerendering, so Workbox revisions the actual emitted

@@ -116,7 +116,7 @@ const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelec
 .btnCenter {
   position: absolute;
   right: 2px;
-  bottom: 45px;
+  bottom: calc(var(--space-workspace-bottom-offset) + 35px);
 }
 
 .icon-button {
@@ -143,7 +143,7 @@ const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelec
 
 .speed {
   position: absolute;
-  bottom: 44px;
+  bottom: calc(var(--space-workspace-bottom-offset) + 34px);
   left: 10px;
   display: grid;
   width: 48px;

@@ -12,7 +12,10 @@ function detectIos(): boolean {
 
   const userAgent = navigator.userAgent
   const isIosDevice = /iPhone|iPad|iPod/.test(userAgent)
-  const isTouchMac = userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1
+  // navigator.platform is deprecated, but remains necessary for iPads requesting desktop sites.
+  const isTouchMac =
+    (navigator.platform === 'MacIntel' || userAgent.includes('Macintosh')) &&
+    navigator.maxTouchPoints > 1
 
   return isIosDevice || isTouchMac
 }

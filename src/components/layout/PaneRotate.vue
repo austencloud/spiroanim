@@ -29,7 +29,7 @@ const onClick = () => {
 <style scoped>
 .pane-rotate-icon {
   position: absolute;
-  bottom: var(--space-pane-switch-bottom);
+  bottom: var(--space-workspace-bottom-offset);
   left: 1px;
   z-index: 1010;
 }

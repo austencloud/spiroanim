@@ -4,6 +4,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { isInstalledDisplayMode, useAppDisplayMode } from '@/composables/useAppDisplayMode'
 
 const originalStandalone = Object.getOwnPropertyDescriptor(navigator, 'standalone')
+const originalUserAgent = Object.getOwnPropertyDescriptor(navigator, 'userAgent')
+const originalPlatform = Object.getOwnPropertyDescriptor(navigator, 'platform')
+const originalMaxTouchPoints = Object.getOwnPropertyDescriptor(navigator, 'maxTouchPoints')
+
+function restoreNavigatorProperty(name: string, descriptor: PropertyDescriptor | undefined) {
+  if (descriptor) Object.defineProperty(navigator, name, descriptor)
+  else Reflect.deleteProperty(navigator, name)
+}
 
 function stubDisplayMode(activeMode?: string, isDesktop = false) {
   vi.stubGlobal(
@@ -36,8 +44,10 @@ function mountHarness() {
 describe('useAppDisplayMode', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
-    if (originalStandalone) Object.defineProperty(navigator, 'standalone', originalStandalone)
-    else Reflect.deleteProperty(navigator, 'standalone')
+    restoreNavigatorProperty('standalone', originalStandalone)
+    restoreNavigatorProperty('userAgent', originalUserAgent)
+    restoreNavigatorProperty('platform', originalPlatform)
+    restoreNavigatorProperty('maxTouchPoints', originalMaxTouchPoints)
   })
 
   it('detects standards-based standalone display mode', () => {
@@ -60,5 +70,19 @@ describe('useAppDisplayMode', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.attributes('data-installed')).toBe('true')
+  })
+
+  it('detects an iPad requesting the desktop version of a site', async () => {
+    stubDisplayMode()
+    Object.defineProperties(navigator, {
+      maxTouchPoints: { configurable: true, value: 5 },
+      platform: { configurable: true, value: 'MacIntel' },
+      userAgent: { configurable: true, value: 'Mozilla/5.0 (Mac OS X)' },
+    })
+
+    const wrapper = mountHarness()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.attributes('data-ios')).toBe('true')
   })
 })

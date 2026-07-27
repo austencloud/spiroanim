@@ -194,7 +194,7 @@ const positionFillStyle = computed<CSSProperties>(() => {
 const sliderStyle = computed<CSSProperties>(() => ({
   width: `${Math.max((dim?.width ?? 0) - 45, 0)}px`,
   position: 'absolute',
-  bottom: '10px',
+  bottom: 'var(--space-workspace-bottom-offset)',
   right: '0px',
 }))
 </script>
@@ -223,10 +223,14 @@ const sliderStyle = computed<CSSProperties>(() => ({
 }
 
 .range {
+  --range-thumb-size: 1.25rem;
+  --range-thumb-webkit-offset: -0.4375rem;
+
   width: 100%;
   margin: 0;
   accent-color: var(--color-action-primary);
   cursor: pointer;
+  touch-action: none;
 }
 
 .range--custom,
@@ -269,9 +273,9 @@ const sliderStyle = computed<CSSProperties>(() => ({
 .range--selection::-webkit-slider-thumb {
   position: relative;
   z-index: 2;
-  width: 1rem;
-  height: 1rem;
-  margin-block-start: -0.3125rem;
+  width: var(--range-thumb-size);
+  height: var(--range-thumb-size);
+  margin-block-start: var(--range-thumb-webkit-offset);
   appearance: none;
   pointer-events: auto;
   background: var(--color-action-primary);
@@ -294,8 +298,8 @@ const sliderStyle = computed<CSSProperties>(() => ({
 
 .range--custom::-moz-range-thumb,
 .range--selection::-moz-range-thumb {
-  width: 1rem;
-  height: 1rem;
+  width: var(--range-thumb-size);
+  height: var(--range-thumb-size);
   pointer-events: auto;
   background: var(--color-action-primary);
   border: 2px solid var(--color-surface);
@@ -327,5 +331,13 @@ const sliderStyle = computed<CSSProperties>(() => ({
 .range:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 3px;
+}
+
+@media (pointer: coarse) {
+  .range {
+    /* Enlarge only the draggable thumb on touch devices without changing the track or layout. */
+    --range-thumb-size: 1.5rem;
+    --range-thumb-webkit-offset: -0.5625rem;
+  }
 }
 </style>

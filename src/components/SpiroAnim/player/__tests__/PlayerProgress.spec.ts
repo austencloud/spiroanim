@@ -22,6 +22,14 @@ describe('PlayerProgress', () => {
     })
   }
 
+  it('keeps the draggable controls above the device safe area', () => {
+    const wrapper = mountProgress('progress-safe-area')
+
+    expect(wrapper.get('.slider').attributes('style')).toContain(
+      'bottom: var(--space-workspace-bottom-offset)',
+    )
+  })
+
   it('updates the current position and reports the modification', async () => {
     const store = usePlayerStore('progress-position')
     store.MAX = 2000
