@@ -356,12 +356,12 @@ defineExpose({
   z-index: 3;
   align-self: start;
   justify-self: start;
-  width: 62%;
+  width: 78%;
   aspect-ratio: 1;
-  background: var(--vtg-color-preview);
+  background: color-mix(in srgb, var(--vtg-color-preview) 94%, transparent);
   border-radius: 0.9cqi;
   box-shadow: 0 0.35cqi 0.85cqi color-mix(in srgb, var(--vtg-color-preview) 30%, transparent);
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, calc(-50% - 0.33cqi));
 }
 
 .vtg-blank--1,

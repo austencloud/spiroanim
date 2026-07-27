@@ -58,7 +58,7 @@ describe('VtgPane', () => {
       }),
     ).toBe(true)
 
-    const splitRule = wrapper.get('[aria-label="SPLIT SPLIT rule 5"]')
+    const splitRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]')
     const splitProps = splitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
 
     expect(splitProps.map(({ element }) => element.style.insetInlineStart)).toEqual(['4%', '59%'])
