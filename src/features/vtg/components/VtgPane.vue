@@ -6,6 +6,7 @@
     data-role="vtg-pane"
     :data-blank-width="blankWidth"
     :data-blank-height="blankHeight"
+    :data-selected-cell="selectedCellReference"
   >
     <h1 id="vtg-pane-title" class="vtg-pane__visually-hidden">VTG generator</h1>
 
@@ -18,21 +19,28 @@
           :number="rule.number"
           :diagram="rule.diagram"
           orientation="vertical"
-          :accent="rule.accent"
+          :accent="rule.number === selectedCell?.row"
         />
       </div>
 
       <div class="vtg-matrix" data-role="vtg-matrix">
         <div class="vtg-tile-grid">
-          <div
+          <button
             v-for="tile in matrixTiles"
-            :key="tile.key"
+            :key="tile.reference"
+            type="button"
             class="vtg-tile"
-            :class="`vtg-tile--${tile.tone}`"
+            :class="{ 'vtg-tile--highlighted': isTileHighlighted(tile) }"
+            :aria-label="`${tile.label}, cell ${tile.reference}`"
+            :aria-pressed="tile.reference === selectedCellReference"
+            :data-board-column="tile.boardColumn"
+            :data-board-row="tile.boardRow"
+            :data-cell-reference="tile.reference"
             data-role="vtg-tile"
+            @click="selectTile(tile)"
           >
             {{ tile.label }}
-          </div>
+          </button>
         </div>
 
         <div class="vtg-blank-grid">
@@ -50,9 +58,9 @@
         </div>
       </div>
 
-      <div class="vtg-shuffle" aria-label="Shuffle VTG rules">
+      <button type="button" class="vtg-shuffle" aria-label="Shuffle VTG rules">
         <BaseIcon :path="mdiShuffleVariant" size="42%" />
-      </div>
+      </button>
 
       <div class="vtg-footer" data-role="vtg-footer">
         <VtgRuleCard
@@ -62,7 +70,7 @@
           :number="rule.number"
           :diagram="rule.diagram"
           orientation="horizontal"
-          :accent="rule.accent"
+          :accent="rule.number === selectedCell?.column"
         />
       </div>
     </div>
@@ -74,11 +82,27 @@ import { mdiShuffleVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
-import type { VtgPropPlacement, VtgRuleDiagram, VtgRuleSpec } from '@/features/vtg/types'
+import type {
+  VtgCellAddress,
+  VtgCellReference,
+  VtgPropPlacement,
+  VtgRuleDiagram,
+  VtgRuleNumber,
+  VtgRuleSpec,
+} from '@/features/vtg/types'
 
 interface BlankDimensions {
   width: number
   height: number
+}
+
+interface VtgMatrixTile {
+  label: string
+  column: VtgRuleNumber
+  row: VtgRuleNumber
+  boardColumn: number
+  boardRow: number
+  reference: VtgCellReference
 }
 
 const matrixRows = [
@@ -90,13 +114,52 @@ const matrixRows = [
   ['TS/TS', 'TO/TO', 'TS/TS', 'TO/TO', 'TS/TO', 'TO/TS'],
 ] as const
 
-const matrixTiles = matrixRows.flatMap((row, rowIndex) =>
-  row.map((label, columnIndex) => ({
-    key: `${rowIndex}-${columnIndex}`,
-    label,
-    tone: rowIndex === 1 || columnIndex === 5 ? ('secondary' as const) : ('primary' as const),
-  })),
-)
+const bottomRuleNumbers = [1, 2, 3, 4, 5, 6] as const
+const leftRuleNumbers = [6, 5, 4, 3, 2, 1] as const
+
+const getRuleNumber = (ruleNumbers: readonly VtgRuleNumber[], index: number): VtgRuleNumber => {
+  const ruleNumber = ruleNumbers[index]
+  if (ruleNumber === undefined) throw new Error(`Missing VTG rule number at index ${index}`)
+  return ruleNumber
+}
+
+const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
+  `${column}-${row}`
+
+const matrixTiles: readonly VtgMatrixTile[] = matrixRows.flatMap((row, rowIndex) => {
+  const rowNumber = getRuleNumber(leftRuleNumbers, rowIndex)
+
+  return row.map((label, columnIndex) => {
+    const columnNumber = getRuleNumber(bottomRuleNumbers, columnIndex)
+    const reference = createCellReference(columnNumber, rowNumber)
+
+    return {
+      label,
+      column: columnNumber,
+      row: rowNumber,
+      boardColumn: columnIndex + 2,
+      boardRow: rowIndex + 1,
+      reference,
+    }
+  })
+})
+
+const selectedCell = ref<VtgCellAddress>()
+const selectedCellReference = computed<VtgCellReference | undefined>(() => {
+  const cell = selectedCell.value
+  return cell ? createCellReference(cell.column, cell.row) : undefined
+})
+
+const isTileHighlighted = (tile: VtgMatrixTile) =>
+  selectedCell.value !== undefined &&
+  (tile.column === selectedCell.value.column || tile.row === selectedCell.value.row)
+
+const selectTile = (tile: VtgMatrixTile) => {
+  selectedCell.value = {
+    column: tile.column,
+    row: tile.row,
+  }
+}
 
 const propBounds = {
   outerStart: 4,
@@ -158,7 +221,6 @@ const sideRules: readonly VtgRuleSpec[] = [
   {
     labels: ['TOG', 'SPLIT'],
     number: 5,
-    accent: true,
     diagram: diagrams.outsideSplit,
   },
   {
@@ -212,7 +274,6 @@ const bottomRules: readonly VtgRuleSpec[] = [
   {
     labels: ['SPLIT', 'TOG'],
     number: 6,
-    accent: true,
     diagram: diagrams.alternatingSplit,
   },
 ]
@@ -259,6 +320,8 @@ defineExpose({
   blankDimensions,
   blankWidth,
   blankHeight,
+  selectedCell,
+  selectedCellReference,
 })
 </script>
 
@@ -325,10 +388,16 @@ defineExpose({
 }
 
 .vtg-tile {
+  appearance: none;
   display: grid;
   min-width: 0;
   min-height: 0;
+  padding: 0;
   place-items: center;
+  color: var(--vtg-color-rule-text);
+  cursor: pointer;
+  background: var(--vtg-color-primary);
+  border: 0;
   border-radius: 1.7cqi;
   box-shadow:
     inset 0 0.15cqi 0.15cqi color-mix(in srgb, var(--vtg-color-rule-text) 12%, transparent),
@@ -342,12 +411,7 @@ defineExpose({
   white-space: nowrap;
 }
 
-.vtg-tile--primary {
-  color: var(--vtg-color-rule-text);
-  background: var(--vtg-color-primary);
-}
-
-.vtg-tile--secondary {
+.vtg-tile--highlighted {
   color: var(--vtg-color-ink);
   background: var(--vtg-color-secondary);
 }
@@ -401,11 +465,15 @@ defineExpose({
 }
 
 .vtg-shuffle {
+  appearance: none;
   display: grid;
   grid-row: 7;
   grid-column: 1;
+  padding: 0;
   color: var(--vtg-color-ink);
+  cursor: pointer;
   background: var(--vtg-color-secondary);
+  border: 0;
   border-radius: 0.75cqi;
   box-shadow: 0 0.4cqi 0.9cqi color-mix(in srgb, var(--vtg-color-preview) 22%, transparent);
   place-items: center;

@@ -1,8 +1,10 @@
 <template>
-  <article
+  <button
+    type="button"
     class="vtg-rule-card"
     :class="[`vtg-rule-card--${props.orientation}`, { 'vtg-rule-card--accent': props.accent }]"
     :aria-label="`${props.labels.join(' ')} rule ${props.number}`"
+    :aria-pressed="props.accent"
     data-role="vtg-rule-card"
   >
     <span class="vtg-rule-card__title">
@@ -46,16 +48,16 @@
     </span>
 
     <strong class="vtg-rule-card__number">{{ props.number }}</strong>
-  </article>
+  </button>
 </template>
 
 <script setup lang="ts">
-import type { VtgPropPlacement, VtgRuleDiagram } from '@/features/vtg/types'
+import type { VtgPropPlacement, VtgRuleDiagram, VtgRuleNumber } from '@/features/vtg/types'
 
 const props = withDefaults(
   defineProps<{
     labels: readonly [string, string]
-    number: number
+    number: VtgRuleNumber
     orientation: 'vertical' | 'horizontal'
     diagram: VtgRuleDiagram
     accent?: boolean
@@ -81,15 +83,19 @@ const propStyle = (propPlacement: VtgPropPlacement): CSSProperties =>
 
 <style scoped>
 .vtg-rule-card {
+  appearance: none;
   position: relative;
   min-width: 0;
   min-height: 0;
+  padding: 0;
   overflow: hidden;
   color: var(--vtg-color-rule-text);
+  cursor: pointer;
   background: var(--vtg-color-rule);
   border: max(1px, 0.16cqi) dashed var(--vtg-color-line);
   border-radius: 0.7cqi;
   font-family: 'Arial Narrow', var(--font-family-sans);
+  text-align: start;
 }
 
 .vtg-rule-card--accent {

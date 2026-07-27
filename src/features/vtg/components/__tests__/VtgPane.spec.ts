@@ -37,12 +37,51 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
     expect(wrapper.findAll('[data-role="vtg-rule-card"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+    expect(wrapper.findAll('button')).toHaveLength(49)
     expect(wrapper.findAll('[data-role="vtg-divider"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--large')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--small')).toHaveLength(24)
     expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('SO/TS')
     expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('TO/TS')
+  })
+
+  it('uses bottom-then-left references and highlights a selected matrix cross', async () => {
+    const wrapper = mount(VtgPane)
+    const pane = wrapper.get('[data-role="vtg-pane"]')
+    const exampleCell = wrapper.get('[data-cell-reference="1-5"]')
+
+    expect(pane.attributes('data-selected-cell')).toBeUndefined()
+    expect(exampleCell.element.tagName).toBe('BUTTON')
+    expect(exampleCell.attributes('data-board-column')).toBe('2')
+    expect(exampleCell.attributes('data-board-row')).toBe('2')
+    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(0)
+    expect(
+      wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]').attributes('aria-pressed'),
+    ).toBe('false')
+    expect(
+      wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 6"]').attributes('aria-pressed'),
+    ).toBe('false')
+
+    await exampleCell.trigger('click')
+
+    expect(pane.attributes('data-selected-cell')).toBe('1-5')
+    expect(exampleCell.attributes('aria-pressed')).toBe('true')
+    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
+    expect(
+      wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').attributes('aria-pressed'),
+    ).toBe('true')
+  })
+
+  it('keeps the left column and bottom row inert for now', async () => {
+    const wrapper = mount(VtgPane)
+    const pane = wrapper.get('[data-role="vtg-pane"]')
+
+    await wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 6"]').trigger('click')
+    await wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').trigger('click')
+    await wrapper.get('.vtg-shuffle').trigger('click')
+
+    expect(pane.attributes('data-selected-cell')).toBeUndefined()
   })
 
   it('uses one shortened prop length and keeps split props clear of the divider', () => {
