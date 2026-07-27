@@ -328,6 +328,8 @@ const gridStyle = computed<CSSProperties>(() => ({
   position: sticky;
   top: 0;
   z-index: 1000;
+  display: flex;
+  align-items: center;
   min-height: var(--size-editor-toolbar-height);
   background-color: var(--color-editor-toolbar-background);
   padding-bottom: 1px;
@@ -336,13 +338,14 @@ const gridStyle = computed<CSSProperties>(() => ({
 }
 .container-cntrl {
   display: grid;
+  align-items: center;
+  width: 100%;
   grid-template-columns: minmax(min-content, auto) 1fr;
 }
 .props-header {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
-  padding-block-start: 5px;
   padding-inline-start: 15px;
   text-align: center;
 }
@@ -355,7 +358,7 @@ const gridStyle = computed<CSSProperties>(() => ({
 .cntrl {
   display: flex;
   gap: var(--space-1);
-  padding: 5px 15px 0;
+  padding-inline: 15px;
 }
 
 .modifying-count {
