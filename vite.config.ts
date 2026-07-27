@@ -1,12 +1,46 @@
 import { fileURLToPath, URL } from 'node:url'
 
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { VitePWA } from 'vite-plugin-pwa'
 
 import AutoImport from 'unplugin-auto-import/vite'
 import { AutoImports } from './src/sys/auto-imports.ts'
+import {
+  DEV_PWA_HOSTNAME,
+  DEV_PWA_MANIFEST_URL,
+  PWA_MANIFEST_URL,
+  devPwaManifest,
+  pwaManifest,
+} from './src/sys/pwaManifest.ts'
+
+function emitPwaManifests(): Plugin {
+  return {
+    name: 'emit-pwa-manifests',
+    transformIndexHtml() {
+      return [
+        {
+          tag: 'script',
+          children: `if (location.hostname === ${JSON.stringify(DEV_PWA_HOSTNAME)}) document.querySelector('link[rel="manifest"]')?.setAttribute('href', ${JSON.stringify(DEV_PWA_MANIFEST_URL)})`,
+          injectTo: 'head',
+        },
+      ]
+    },
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: PWA_MANIFEST_URL.slice(1),
+        source: JSON.stringify(pwaManifest),
+      })
+      this.emitFile({
+        type: 'asset',
+        fileName: DEV_PWA_MANIFEST_URL.slice(1),
+        source: JSON.stringify(devPwaManifest),
+      })
+    },
+  }
+}
 
 export function createViteConfig(isSsrBuild: boolean) {
   return {
@@ -27,63 +61,7 @@ export function createViteConfig(isSsrBuild: boolean) {
       !isSsrBuild &&
         VitePWA({
           registerType: 'prompt',
-          manifestFilename: 'manifest.webmanifest',
-          manifest: {
-            id: '/',
-            scope: '/',
-            start_url: '/',
-            name: 'Spiro Animator',
-            short_name: 'SpiroAnim',
-            description: 'Create, edit, and play procedural spiro animations.',
-            lang: 'en',
-            display: 'standalone',
-            background_color: '#090b0f',
-            theme_color: '#090b0f',
-            icons: [
-              {
-                src: '/pwa-64x64.png',
-                sizes: '64x64',
-                type: 'image/png',
-              },
-              {
-                src: '/pwa-192x192.png',
-                sizes: '192x192',
-                type: 'image/png',
-              },
-              {
-                src: '/pwa-512x512.png',
-                sizes: '512x512',
-                type: 'image/png',
-                purpose: 'any',
-              },
-              {
-                src: '/maskable-icon-512x512.png',
-                sizes: '512x512',
-                type: 'image/png',
-                purpose: 'maskable',
-              },
-            ],
-            shortcuts: [
-              {
-                name: 'Open Player',
-                short_name: 'Player',
-                url: '/player',
-                icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
-              },
-              {
-                name: 'Open Editor',
-                short_name: 'Editor',
-                url: '/editor',
-                icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
-              },
-              {
-                name: 'Open Timeline',
-                short_name: 'Timeline',
-                url: '/timeline',
-                icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
-              },
-            ],
-          },
+          manifest: false,
           workbox: {
             clientsClaim: true,
             cleanupOutdatedCaches: true,
@@ -94,6 +72,7 @@ export function createViteConfig(isSsrBuild: boolean) {
             enabled: false,
           },
         }),
+      !isSsrBuild && emitPwaManifests(),
       AutoImport({
         imports: [AutoImports],
         dts: 'src/sys/auto-imports-generated.d.ts',

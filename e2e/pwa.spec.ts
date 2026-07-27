@@ -38,6 +38,8 @@ test('ships an installable manifest and every declared icon', async ({ request }
     id: '/',
     scope: '/',
     start_url: '/',
+    name: 'Spiro Animator',
+    short_name: 'SpiroAnim',
     display: 'standalone',
   })
 
@@ -49,6 +51,13 @@ test('ships an installable manifest and every declared icon', async ({ request }
 
   expect(declaredSizes).toContain('192x192')
   expect(declaredSizes).toContain('512x512')
+
+  const devManifestResponse = await request.get('/manifest-dev.webmanifest')
+  expect(devManifestResponse.ok()).toBe(true)
+  expect(await devManifestResponse.json()).toMatchObject({
+    name: 'SpiroAnim Dev',
+    short_name: 'SpiroAnim Dev',
+  })
 })
 
 test('serves rendered HTML only for public pages', async ({ request }) => {

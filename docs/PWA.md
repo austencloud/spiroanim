@@ -8,6 +8,10 @@ the editor can reopen without a network connection after its first successful lo
 
 - Installed launches open the landing page. Manifest shortcuts can open the player, editor, or
   timeline directly.
+- Pages loaded from `dev.spiroanim.com` select a second web manifest that labels installed apps as
+  "SpiroAnim Dev". Every other hostname uses the production manifest and "SpiroAnim" launcher
+  label. Both manifests are emitted by the Vite build, so this behavior does not depend on the
+  hosting provider or deployment branch metadata.
 - Browser installation is offered on the landing page only when the browser exposes an install
   prompt. Safari on iOS receives numbered Add to Home Screen instructions that identify the Share
   control and account for the More and Open as Web App steps shown by current iPadOS versions.
@@ -84,8 +88,9 @@ Production hosting must:
 - serve the generated client-only directory index files for `/app`, `/player`, `/editor`,
   `/timeline`, and the pane-layout aliases. A blanket rewrite to `/index.html` would replace this
   separation and should not be used;
-- serve `manifest.webmanifest` as `application/manifest+json`;
-- revalidate HTML files, `/manifest.webmanifest`, and `/sw.js` rather than caching them as immutable;
+- serve both web manifests as `application/manifest+json`;
+- revalidate HTML files, `/manifest.webmanifest`, `/manifest-dev.webmanifest`, and `/sw.js` rather
+  than caching them as immutable;
 - cache hashed `/assets/*` files with a long immutable lifetime.
 
 ### Cloudflare Pages cache configuration
@@ -98,8 +103,8 @@ The current rules require:
 
 - `/sw.js` to use `no-cache, no-store, must-revalidate` so browsers can discover a new service
   worker immediately;
-- `/manifest.webmanifest` to use `no-cache, must-revalidate` so installation metadata stays
-  current;
+- `/manifest.webmanifest` and `/manifest-dev.webmanifest` to use `no-cache, must-revalidate` so
+  installation metadata stays current;
 - fingerprinted `/assets/*` files to use a one-year immutable cache because a content change
   produces a new filename.
 
@@ -112,9 +117,9 @@ new platform to provide the same effective cache behavior using its headers, red
 configuration. The deployment must also publish each build consistently so its HTML, service
 worker, and fingerprinted assets come from the same build.
 
-After changing hosts or cache rules, inspect the deployed response headers for `/`, `/sw.js`,
-`/manifest.webmanifest`, and one `/assets/*` file. Local preview confirms application behavior but
-cannot validate CDN response headers.
+After changing hosts or cache rules, inspect the deployed response headers for `/`, `/sw.js`, both
+web manifests, and one `/assets/*` file. Local preview confirms application behavior but cannot
+validate CDN response headers.
 
 Vite emits production files to `build/`. The directory is ignored because deployment should build
 from source. If a hosting workflow intentionally commits generated output, document that exception
