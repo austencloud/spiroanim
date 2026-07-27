@@ -263,7 +263,7 @@ const propStyle = (propPlacement: VtgPropPlacement): CSSProperties =>
 }
 
 .vtg-rule-card__prop-handle--small {
-  width: max(2px, 0.32cqi);
+  width: max(2.5px, 0.36cqi);
   background: currentColor;
 }
 

@@ -74,7 +74,7 @@ import { mdiShuffleVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
-import type { VtgRuleSpec } from '@/features/vtg/types'
+import type { VtgPropPlacement, VtgRuleDiagram, VtgRuleSpec } from '@/features/vtg/types'
 
 interface BlankDimensions {
   width: number
@@ -98,67 +98,88 @@ const matrixTiles = matrixRows.flatMap((row, rowIndex) =>
   })),
 )
 
+const propBounds = {
+  outerStart: 4,
+  beforeDivider: 41,
+  afterDivider: 59,
+  outerEnd: 96,
+} as const
+
+const createSplitDiagram = (
+  firstLargeEnd: VtgPropPlacement['largeEnd'],
+  secondLargeEnd: VtgPropPlacement['largeEnd'],
+): VtgRuleDiagram => ({
+  props: [
+    {
+      lane: 50,
+      start: propBounds.outerStart,
+      end: propBounds.beforeDivider,
+      largeEnd: firstLargeEnd,
+    },
+    {
+      lane: 50,
+      start: propBounds.afterDivider,
+      end: propBounds.outerEnd,
+      largeEnd: secondLargeEnd,
+    },
+  ],
+})
+
+const createParallelDiagram = (
+  dividerSide: 'before' | 'after',
+  largeEnd: VtgPropPlacement['largeEnd'],
+): VtgRuleDiagram => {
+  const start = dividerSide === 'before' ? propBounds.outerStart : propBounds.afterDivider
+  const end = dividerSide === 'before' ? propBounds.beforeDivider : propBounds.outerEnd
+
+  return {
+    props: [
+      { lane: 42, start, end, largeEnd },
+      { lane: 58, start, end, largeEnd },
+    ],
+  }
+}
+
+const diagrams = {
+  alternatingSplit: createSplitDiagram('start', 'start'),
+  outsideSplit: createSplitDiagram('start', 'end'),
+  insideSplit: createSplitDiagram('end', 'start'),
+  parallelBeforeInside: createParallelDiagram('before', 'end'),
+  parallelAfterInside: createParallelDiagram('after', 'start'),
+  parallelAfterOutside: createParallelDiagram('after', 'end'),
+} as const
+
 const sideRules: readonly VtgRuleSpec[] = [
   {
     labels: ['SPLIT', 'TOG'],
     number: 6,
-    diagram: {
-      props: [
-        { lane: 50, start: 0, end: 47, largeEnd: 'start' },
-        { lane: 50, start: 57, end: 100, largeEnd: 'start' },
-      ],
-    },
+    diagram: diagrams.alternatingSplit,
   },
   {
     labels: ['TOG', 'SPLIT'],
     number: 5,
     accent: true,
-    diagram: {
-      props: [
-        { lane: 50, start: 0, end: 100, largeEnd: 'start' },
-        { lane: 50, start: 0, end: 100, largeEnd: 'end' },
-      ],
-    },
+    diagram: diagrams.outsideSplit,
   },
   {
     labels: ['SPLIT', 'IN'],
     number: 4,
-    diagram: {
-      props: [
-        { lane: 50, start: 0, end: 43, largeEnd: 'end' },
-        { lane: 50, start: 57, end: 100, largeEnd: 'start' },
-      ],
-    },
+    diagram: diagrams.insideSplit,
   },
   {
     labels: ['TOG', 'IN'],
     number: 3,
-    diagram: {
-      props: [
-        { lane: 42, start: 54, end: 100, largeEnd: 'start' },
-        { lane: 58, start: 54, end: 100, largeEnd: 'start' },
-      ],
-    },
+    diagram: diagrams.parallelAfterInside,
   },
   {
     labels: ['SPLIT', 'OUT'],
     number: 2,
-    diagram: {
-      props: [
-        { lane: 50, start: 0, end: 47, largeEnd: 'start' },
-        { lane: 50, start: 53, end: 100, largeEnd: 'end' },
-      ],
-    },
+    diagram: diagrams.outsideSplit,
   },
   {
     labels: ['TOG', 'OUT'],
     number: 1,
-    diagram: {
-      props: [
-        { lane: 42, start: 54, end: 100, largeEnd: 'end' },
-        { lane: 58, start: 54, end: 100, largeEnd: 'end' },
-      ],
-    },
+    diagram: diagrams.parallelAfterOutside,
   },
 ]
 
@@ -166,63 +187,33 @@ const bottomRules: readonly VtgRuleSpec[] = [
   {
     labels: ['TOG', 'OUT'],
     number: 1,
-    diagram: {
-      props: [
-        { lane: 42, start: 54, end: 100, largeEnd: 'end' },
-        { lane: 58, start: 54, end: 100, largeEnd: 'end' },
-      ],
-    },
+    diagram: diagrams.parallelAfterOutside,
   },
   {
     labels: ['SPLIT', 'OUT'],
     number: 2,
-    diagram: {
-      props: [
-        { lane: 50, start: 0, end: 47, largeEnd: 'start' },
-        { lane: 50, start: 53, end: 100, largeEnd: 'end' },
-      ],
-    },
+    diagram: diagrams.outsideSplit,
   },
   {
     labels: ['TOG', 'IN'],
     number: 3,
-    diagram: {
-      props: [
-        { lane: 42, start: 0, end: 46, largeEnd: 'end' },
-        { lane: 58, start: 0, end: 46, largeEnd: 'end' },
-      ],
-    },
+    diagram: diagrams.parallelBeforeInside,
   },
   {
     labels: ['SPLIT', 'IN'],
     number: 4,
-    diagram: {
-      props: [
-        { lane: 50, start: 0, end: 43, largeEnd: 'end' },
-        { lane: 50, start: 57, end: 100, largeEnd: 'start' },
-      ],
-    },
+    diagram: diagrams.insideSplit,
   },
   {
     labels: ['SPLIT', 'SPLIT'],
     number: 5,
-    diagram: {
-      props: [
-        { lane: 50, start: 0, end: 100, largeEnd: 'start' },
-        { lane: 50, start: 0, end: 100, largeEnd: 'end' },
-      ],
-    },
+    diagram: diagrams.outsideSplit,
   },
   {
     labels: ['SPLIT', 'TOG'],
     number: 6,
     accent: true,
-    diagram: {
-      props: [
-        { lane: 50, start: 0, end: 47, largeEnd: 'start' },
-        { lane: 50, start: 57, end: 100, largeEnd: 'start' },
-      ],
-    },
+    diagram: diagrams.alternatingSplit,
   },
 ]
 

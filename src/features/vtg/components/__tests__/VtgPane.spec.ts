@@ -45,6 +45,26 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('TO/TS')
   })
 
+  it('uses one shortened prop length and keeps split props clear of the divider', () => {
+    const wrapper = mount(VtgPane)
+    const propElements = wrapper
+      .findAll<HTMLElement>('[data-role="vtg-prop"]')
+      .map(({ element }) => element)
+
+    expect(
+      propElements.every((element) => {
+        const length = element.style.blockSize || element.style.inlineSize
+        return length === '37%'
+      }),
+    ).toBe(true)
+
+    const splitRule = wrapper.get('[aria-label="SPLIT SPLIT rule 5"]')
+    const splitProps = splitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+
+    expect(splitProps.map(({ element }) => element.style.insetInlineStart)).toEqual(['4%', '59%'])
+    expect(splitRule.findAll('.vtg-rule-card__prop-handle')).toHaveLength(4)
+  })
+
   it('tracks the live width and height of each blank preview', async () => {
     const wrapper = mount(VtgPane)
     const firstBlank = wrapper.get('[data-blank-index="0"]').element
