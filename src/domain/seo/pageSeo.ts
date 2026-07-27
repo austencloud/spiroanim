@@ -10,7 +10,7 @@ export const SITE_ORIGIN = 'https://spiroanim.com'
 export const SOCIAL_IMAGE_URL = `${SITE_ORIGIN}/pwa-512x512.png`
 
 const defaultSeo: PageSeo = {
-  appTitle: 'Animator',
+  appTitle: '3D Flow Arts Editor',
   canonicalPath: '/',
   description: 'Create, edit, and play procedural 3D animations for flow arts props.',
   robots: 'noindex, nofollow',
