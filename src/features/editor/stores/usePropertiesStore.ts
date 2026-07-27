@@ -58,6 +58,7 @@ export const usePropertiesStore = (id: string) => {
         advanced: ['advanced'],
         base: ['base'],
         root: ['root'],
+        settings: ['settings'],
         manage: ['manage'],
         rotate: ['rotate'],
       })

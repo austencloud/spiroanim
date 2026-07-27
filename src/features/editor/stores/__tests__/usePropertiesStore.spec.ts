@@ -81,6 +81,7 @@ describe('usePropertiesStore', () => {
     expect(store.pMULTI).toBe(true)
     expect(store.pDESKTOP.root).toEqual([])
     expect(store.pDESKTOP.anim).toEqual(['anim'])
+    expect(store.pDESKTOP.settings).toEqual(['settings'])
     expect(store.pSELECTED).toEqual({ 0: true })
   })
 })

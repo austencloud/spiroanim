@@ -120,6 +120,7 @@
       <div v-show="ANIMS.length"><Advanced /></div>
       <div v-show="PROPS.length"><Base /></div>
       <div><Root class="expansion-panel" /></div>
+      <div><Settings /></div>
       <div class="expansion-panel"><Manage /></div>
     </div>
   </div>
@@ -128,6 +129,7 @@
 import Animations from './properties/panels/AnimationsPanel.vue'
 import Advanced from './properties/panels/AdvancedPanel.vue'
 import Root from './properties/panels/RootPanel.vue'
+import Settings from './properties/panels/SettingsPanel.vue'
 import Base from './properties/panels/BasesPanel.vue'
 import Manage from './properties/panels/ManagePanel.vue'
 import AppTooltip from '@/components/AppTooltip.vue'

@@ -6,6 +6,7 @@ import PropertyPanel from '@/features/editor/components/properties/PropertyPanel
 import AdvancedPanel from '@/features/editor/components/properties/panels/AdvancedPanel.vue'
 import AnimationsPanel from '@/features/editor/components/properties/panels/AnimationsPanel.vue'
 import RootPanel from '@/features/editor/components/properties/panels/RootPanel.vue'
+import SettingsPanel from '@/features/editor/components/properties/panels/SettingsPanel.vue'
 import type { DynamicVal } from '@/types/AnimTypes'
 
 describe('editor property panel organization', () => {
@@ -47,14 +48,34 @@ describe('editor property panel organization', () => {
     ])
   })
 
-  it('provides help content for every root display control', () => {
-    const wrapper = shallowMount(RootPanel, {
-      global: { provide: { store: ref('root-panel-tooltips') } },
+  it('moves global numeric controls from Root into Settings', () => {
+    expect(propertyNames(RootPanel, 'root-panel-order')).toEqual([
+      'paths',
+      'hands',
+      'visible',
+      'nodes',
+      'anchors',
+      'guides',
+      'prop',
+      'color',
+    ])
+    expect(propertyNames(SettingsPanel, 'settings-panel-order')).toEqual([
+      'bpm',
+      'aspectx',
+      'aspecty',
+      'distance',
+      'thick',
+    ])
+  })
+
+  it('preserves help content for every settings control', () => {
+    const wrapper = shallowMount(SettingsPanel, {
+      global: { provide: { store: ref('settings-panel-tooltips') } },
     })
     const slots = wrapper.getComponent(PropertyPanel).vm.$slots
 
     expect(Object.keys(slots)).toEqual(
-      expect.arrayContaining(['aspectx', 'aspecty', 'distance', 'thick']),
+      expect.arrayContaining(['bpm', 'aspectx', 'aspecty', 'distance', 'thick']),
     )
     wrapper.unmount()
   })
