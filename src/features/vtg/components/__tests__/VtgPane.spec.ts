@@ -29,6 +29,7 @@ describe('VtgPane', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   it('recreates the matrix, rule cards, and blank intersection previews', () => {
@@ -44,6 +45,45 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--small')).toHaveLength(24)
     expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('SO/TS')
     expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('TO/TS')
+  })
+
+  it('maps the extracted header descriptions to both sets of rule buttons', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(VtgPane)
+    const sideRule = wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
+    const bottomRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]')
+
+    expect(wrapper.findAll('[data-role="vtg-rule-card"][aria-describedby]')).toHaveLength(12)
+    expect(sideRule.attributes('aria-describedby')).toBeTruthy()
+    expect(bottomRule.attributes('aria-describedby')).toBeTruthy()
+
+    await sideRule.trigger('mouseenter')
+    vi.runAllTimers()
+    await nextTick()
+
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
+      'Tog Split - Hands are together but the props are facing 180 degrees apart.',
+    )
+
+    wrapper.unmount()
+  })
+
+  it('derives Hands and Props tooltips for all matrix buttons', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(VtgPane)
+    const exampleCell = wrapper.get('[data-cell-reference="1-6"]')
+
+    expect(wrapper.findAll('[data-role="vtg-tile"][aria-describedby]')).toHaveLength(36)
+
+    await exampleCell.trigger('mouseenter')
+    vi.runAllTimers()
+    await nextTick()
+
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
+      'Hands: Split Time / Opposite Direction\nProps: Together Time / Split Time',
+    )
+
+    wrapper.unmount()
   })
 
   it('uses bottom-then-left references and highlights a selected matrix cross', async () => {

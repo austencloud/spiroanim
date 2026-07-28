@@ -19,6 +19,7 @@
           :labels="rule.labels"
           :number="rule.number"
           :diagram="rule.diagram"
+          :description="rule.description"
           orientation="vertical"
           :accent="rule.number === activeCell?.row"
         />
@@ -26,24 +27,35 @@
 
       <div class="vtg-matrix" data-role="vtg-matrix">
         <div class="vtg-tile-grid">
-          <button
+          <BaseTooltip
             v-for="tile in matrixTiles"
             :key="tile.reference"
-            type="button"
-            class="vtg-tile"
-            :class="{ 'vtg-tile--highlighted': isTileHighlighted(tile) }"
-            :aria-label="`${tile.label}, cell ${tile.reference}`"
-            :aria-pressed="tile.reference === selectedCellReference"
-            :data-board-column="tile.boardColumn"
-            :data-board-row="tile.boardRow"
-            :data-cell-reference="tile.reference"
-            data-role="vtg-tile"
-            @click="selectTile(tile)"
-            @mouseenter="previewTile(tile)"
-            @mouseleave="clearTilePreview"
+            class="vtg-tile-tooltip"
+            :text="tile.description"
           >
-            {{ tile.label }}
-          </button>
+            <template #activator="{ props: activatorProps }">
+              <button
+                v-bind="activatorProps"
+                type="button"
+                class="vtg-tile"
+                :class="{ 'vtg-tile--highlighted': isTileHighlighted(tile) }"
+                :aria-label="`${tile.label}, cell ${tile.reference}`"
+                :aria-pressed="tile.reference === selectedCellReference"
+                :data-board-column="tile.boardColumn"
+                :data-board-row="tile.boardRow"
+                :data-cell-reference="tile.reference"
+                data-role="vtg-tile"
+                @click="selectTile(tile)"
+                @mouseenter="previewTile(tile)"
+                @mouseleave="clearTilePreview"
+              >
+                {{ tile.label }}
+              </button>
+            </template>
+            <template #html>
+              <span class="vtg-tile-tooltip__text">{{ tile.description }}</span>
+            </template>
+          </BaseTooltip>
         </div>
 
         <div class="vtg-blank-grid">
@@ -72,6 +84,7 @@
           :labels="rule.labels"
           :number="rule.number"
           :diagram="rule.diagram"
+          :description="rule.description"
           orientation="horizontal"
           :accent="rule.number === activeCell?.column"
         />
@@ -84,6 +97,7 @@
 import { mdiShuffleVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import { debounce } from '@/utils/UtilFunc'
 import type {
@@ -102,6 +116,7 @@ interface BlankDimensions {
 
 interface VtgMatrixTile {
   label: string
+  description: string
   column: VtgRuleNumber
   row: VtgRuleNumber
   boardColumn: number
@@ -120,6 +135,17 @@ const matrixRows = [
 
 const bottomRuleNumbers = [1, 2, 3, 4, 5, 6] as const
 const leftRuleNumbers = [6, 5, 4, 3, 2, 1] as const
+const timingDescriptions: Readonly<Record<string, string>> = {
+  S: 'Split Time',
+  O: 'Opposite Direction',
+  T: 'Together Time',
+}
+const describeTiming = (value: string) =>
+  [...value].map((code) => timingDescriptions[code] ?? code).join(' / ')
+const describeTile = (label: string) => {
+  const [hands = '', props = ''] = label.split('/')
+  return `Hands: ${describeTiming(hands)}\nProps: ${describeTiming(props)}`
+}
 
 const getRuleNumber = (ruleNumbers: readonly VtgRuleNumber[], index: number): VtgRuleNumber => {
   const ruleNumber = ruleNumbers[index]
@@ -139,6 +165,7 @@ const matrixTiles: readonly VtgMatrixTile[] = matrixRows.flatMap((row, rowIndex)
 
     return {
       label,
+      description: describeTile(label),
       column: columnNumber,
       row: rowNumber,
       boardColumn: columnIndex + 2,
@@ -236,36 +263,51 @@ const diagrams = {
   parallelAfterOutside: createParallelDiagram('after', 'end'),
 } as const
 
+const ruleDescriptions: Readonly<Record<VtgRuleNumber, string>> = {
+  1: 'Tog Out - Both props are together facing out either on the left or right or the top and bottom.',
+  2: 'Split Out - Props facing out, separated by 180 degrees, and located on the opposite sides of the circle.',
+  3: 'Tog In - Both props are together facing in either on the left or right or the top and bottom.',
+  4: 'Split In - Props facing in, separated by 180 degrees, and located on the opposite sides of the circle.',
+  5: 'Tog Split - Hands are together but the props are facing 180 degrees apart.',
+  6: 'Split Tog - Hands are split but the props are facing the same direction.',
+}
+
 const sideRules: readonly VtgRuleSpec[] = [
   {
     labels: ['SPLIT', 'TOG'],
     number: 6,
     diagram: diagrams.alternatingSplit,
+    description: ruleDescriptions[6],
   },
   {
     labels: ['TOG', 'SPLIT'],
     number: 5,
     diagram: diagrams.outsideSplit,
+    description: ruleDescriptions[5],
   },
   {
     labels: ['SPLIT', 'IN'],
     number: 4,
     diagram: diagrams.insideSplit,
+    description: ruleDescriptions[4],
   },
   {
     labels: ['TOG', 'IN'],
     number: 3,
     diagram: diagrams.parallelAfterInside,
+    description: ruleDescriptions[3],
   },
   {
     labels: ['SPLIT', 'OUT'],
     number: 2,
     diagram: diagrams.outsideSplit,
+    description: ruleDescriptions[2],
   },
   {
     labels: ['TOG', 'OUT'],
     number: 1,
     diagram: diagrams.parallelAfterOutside,
+    description: ruleDescriptions[1],
   },
 ]
 
@@ -274,31 +316,37 @@ const bottomRules: readonly VtgRuleSpec[] = [
     labels: ['TOG', 'OUT'],
     number: 1,
     diagram: diagrams.parallelAfterOutside,
+    description: ruleDescriptions[1],
   },
   {
     labels: ['SPLIT', 'OUT'],
     number: 2,
     diagram: diagrams.outsideSplit,
+    description: ruleDescriptions[2],
   },
   {
     labels: ['TOG', 'IN'],
     number: 3,
     diagram: diagrams.parallelBeforeInside,
+    description: ruleDescriptions[3],
   },
   {
     labels: ['SPLIT', 'IN'],
     number: 4,
     diagram: diagrams.insideSplit,
+    description: ruleDescriptions[4],
   },
   {
     labels: ['TOG', 'SPLIT'],
     number: 5,
     diagram: diagrams.outsideSplit,
+    description: ruleDescriptions[5],
   },
   {
     labels: ['SPLIT', 'TOG'],
     number: 6,
     diagram: diagrams.alternatingSplit,
+    description: ruleDescriptions[6],
   },
 ]
 
@@ -417,6 +465,8 @@ defineExpose({
 .vtg-tile {
   appearance: none;
   display: grid;
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
   padding: 0;
@@ -436,6 +486,16 @@ defineExpose({
   line-height: 1;
   text-rendering: geometricPrecision;
   white-space: nowrap;
+}
+
+.vtg-tile-grid > .vtg-tile-tooltip {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.vtg-tile-tooltip__text {
+  white-space: pre-line;
 }
 
 .vtg-tile--highlighted {

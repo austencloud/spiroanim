@@ -1,57 +1,63 @@
 <template>
-  <button
-    type="button"
-    class="vtg-rule-card"
-    :class="[`vtg-rule-card--${props.orientation}`, { 'vtg-rule-card--accent': props.accent }]"
-    :aria-label="`${props.labels.join(' ')} rule ${props.number}`"
-    :aria-pressed="props.accent"
-    data-role="vtg-rule-card"
-  >
-    <span class="vtg-rule-card__title">
-      <span v-for="label in props.labels" :key="label">{{ label }}</span>
-    </span>
-
-    <span class="vtg-rule-card__diagram" aria-hidden="true">
-      <span class="vtg-rule-card__divider" data-role="vtg-divider">
-        <span class="vtg-rule-card__divider-line" />
-        <span class="vtg-rule-card__divider-end vtg-rule-card__divider-end--start" />
-        <span class="vtg-rule-card__divider-end vtg-rule-card__divider-end--end" />
-      </span>
-
-      <span
-        v-for="(propPlacement, index) in props.diagram.props"
-        :key="`prop-${index}`"
-        class="vtg-rule-card__prop"
-        :style="propStyle(propPlacement)"
-        data-role="vtg-prop"
+  <BaseTooltip :text="props.description">
+    <template #activator="{ props: activatorProps }">
+      <button
+        v-bind="activatorProps"
+        type="button"
+        class="vtg-rule-card"
+        :class="[`vtg-rule-card--${props.orientation}`, { 'vtg-rule-card--accent': props.accent }]"
+        :aria-label="`${props.labels.join(' ')} rule ${props.number}`"
+        :aria-pressed="props.accent"
+        data-role="vtg-rule-card"
       >
-        <span class="vtg-rule-card__prop-line" />
-        <span
-          class="vtg-rule-card__prop-handle"
-          :class="
-            propPlacement.largeEnd === 'start'
-              ? 'vtg-rule-card__prop-handle--large'
-              : 'vtg-rule-card__prop-handle--small'
-          "
-          data-role="vtg-prop-start"
-        />
-        <span
-          class="vtg-rule-card__prop-handle vtg-rule-card__prop-handle--end"
-          :class="
-            propPlacement.largeEnd === 'end'
-              ? 'vtg-rule-card__prop-handle--large'
-              : 'vtg-rule-card__prop-handle--small'
-          "
-          data-role="vtg-prop-end"
-        />
-      </span>
-    </span>
+        <span class="vtg-rule-card__title">
+          <span v-for="label in props.labels" :key="label">{{ label }}</span>
+        </span>
 
-    <strong class="vtg-rule-card__number">{{ props.number }}</strong>
-  </button>
+        <span class="vtg-rule-card__diagram" aria-hidden="true">
+          <span class="vtg-rule-card__divider" data-role="vtg-divider">
+            <span class="vtg-rule-card__divider-line" />
+            <span class="vtg-rule-card__divider-end vtg-rule-card__divider-end--start" />
+            <span class="vtg-rule-card__divider-end vtg-rule-card__divider-end--end" />
+          </span>
+
+          <span
+            v-for="(propPlacement, index) in props.diagram.props"
+            :key="`prop-${index}`"
+            class="vtg-rule-card__prop"
+            :style="propStyle(propPlacement)"
+            data-role="vtg-prop"
+          >
+            <span class="vtg-rule-card__prop-line" />
+            <span
+              class="vtg-rule-card__prop-handle"
+              :class="
+                propPlacement.largeEnd === 'start'
+                  ? 'vtg-rule-card__prop-handle--large'
+                  : 'vtg-rule-card__prop-handle--small'
+              "
+              data-role="vtg-prop-start"
+            />
+            <span
+              class="vtg-rule-card__prop-handle vtg-rule-card__prop-handle--end"
+              :class="
+                propPlacement.largeEnd === 'end'
+                  ? 'vtg-rule-card__prop-handle--large'
+                  : 'vtg-rule-card__prop-handle--small'
+              "
+              data-role="vtg-prop-end"
+            />
+          </span>
+        </span>
+
+        <strong class="vtg-rule-card__number">{{ props.number }}</strong>
+      </button>
+    </template>
+  </BaseTooltip>
 </template>
 
 <script setup lang="ts">
+import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import type { VtgPropPlacement, VtgRuleDiagram, VtgRuleNumber } from '@/features/vtg/types'
 
 const props = withDefaults(
@@ -60,6 +66,7 @@ const props = withDefaults(
     number: VtgRuleNumber
     orientation: 'vertical' | 'horizontal'
     diagram: VtgRuleDiagram
+    description: string
     accent?: boolean
   }>(),
   {
@@ -85,6 +92,8 @@ const propStyle = (propPlacement: VtgPropPlacement): CSSProperties =>
 .vtg-rule-card {
   appearance: none;
   position: relative;
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
   padding: 0;

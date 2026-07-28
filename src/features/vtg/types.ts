@@ -26,4 +26,5 @@ export interface VtgRuleSpec {
   labels: readonly [string, string]
   number: VtgRuleNumber
   diagram: VtgRuleDiagram
+  description: string
 }
