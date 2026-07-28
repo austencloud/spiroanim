@@ -98,7 +98,12 @@
         </div>
       </div>
 
-      <button type="button" class="vtg-shuffle" aria-label="Shuffle VTG rules">
+      <button
+        type="button"
+        class="vtg-shuffle"
+        aria-label="Shuffle VTG rules"
+        @click="selectRandomTile"
+      >
         <BaseIcon :path="mdiShuffleVariant" size="42%" />
       </button>
 
@@ -247,10 +252,21 @@ const selectTile = (tile: VtgMatrixTile) => {
   emitPatternSelection(tile)
 }
 
+const selectRandomTile = () => {
+  const tile = matrixTiles[Math.floor(Math.random() * matrixTiles.length)]
+  if (tile === undefined) throw new Error('Cannot select a random VTG cell from an empty matrix')
+  selectTile(tile)
+}
+
 const toggleSpinDirection = (tile: VtgMatrixTile) => {
   isAnti.value = !isAnti.value
   emitPatternSelection(tile)
 }
+
+watch(speedRatio, () => {
+  const tile = matrixTiles.find(({ reference }) => reference === selectedCellReference.value)
+  if (tile !== undefined) emitPatternSelection(tile)
+})
 
 const propBounds = {
   outerStart: 4,

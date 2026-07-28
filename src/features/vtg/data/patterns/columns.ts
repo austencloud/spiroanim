@@ -32,14 +32,23 @@ const arcStill = { arc: 90, turns: 0 } as const satisfies AnimReadable
 const arcBack = { arc: 90, turns: -180 } as const satisfies AnimReadable
 const arcForward = { arc: 90, turns: 180 } as const satisfies AnimReadable
 const arcDoubleBack = { arc: 90, turns: -360 } as const satisfies AnimReadable
+const arcDoubleForward = { arc: 90, turns: 360 } as const satisfies AnimReadable
+const arcTripleBack = { arc: 90, turns: -540 } as const satisfies AnimReadable
 const plane = { plane: 180, arc: 90 } as const satisfies AnimReadable
 const planeStill = { plane: 180, arc: 90, turns: 0 } as const satisfies AnimReadable
 const planeBack = { plane: 180, arc: 90, turns: -180 } as const satisfies AnimReadable
 const planeDoubleBack = { plane: 180, arc: 90, turns: -360 } as const satisfies AnimReadable
 const planeForward = { plane: 180, arc: 90, turns: 180 } as const satisfies AnimReadable
+const planeDoubleForward = { plane: 180, arc: 90, turns: 360 } as const satisfies AnimReadable
+const planeTripleBack = { plane: 180, arc: 90, turns: -540 } as const satisfies AnimReadable
 const zeroPlane = { plane: 0, arc: 90 } as const satisfies AnimReadable
 const zeroPlaneStill = { plane: 0, arc: 90, turns: 0 } as const satisfies AnimReadable
 const zeroPlaneDoubleBack = { plane: 0, arc: 90, turns: -360 } as const satisfies AnimReadable
+const zeroPlaneDoubleForward = {
+  plane: 0,
+  arc: 90,
+  turns: 360,
+} as const satisfies AnimReadable
 
 const outsideRowsBySpeedRatio = {
   '1:1': {
@@ -57,6 +66,14 @@ const outsideRowsBySpeedRatio = {
     4: [planeForward, arcForward],
     5: [planeForward, planeDoubleBack],
     6: [planeForward, arcDoubleBack],
+  },
+  '1:5': {
+    1: [planeDoubleForward, planeDoubleForward],
+    2: [planeDoubleForward, arcDoubleForward],
+    3: [planeTripleBack, planeTripleBack],
+    4: [planeTripleBack, arcTripleBack],
+    5: [planeDoubleForward, planeTripleBack],
+    6: [planeDoubleForward, arcTripleBack],
   },
 } as const satisfies VtgRowsBySpeedRatio
 
@@ -76,6 +93,14 @@ const insideRowsBySpeedRatio = {
     4: [planeDoubleBack, arcDoubleBack],
     5: [planeForward, planeDoubleBack],
     6: [planeForward, arcDoubleBack],
+  },
+  '1:5': {
+    1: [planeTripleBack, planeTripleBack],
+    2: [planeTripleBack, arcTripleBack],
+    3: [planeDoubleForward, planeDoubleForward],
+    4: [planeDoubleForward, arcDoubleForward],
+    5: [planeDoubleForward, planeTripleBack],
+    6: [planeDoubleForward, arcTripleBack],
   },
 } as const satisfies VtgRowsBySpeedRatio
 
@@ -137,6 +162,10 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
         ...insideRowsBySpeedRatio['1:3'],
         4: [planeDoubleBack, zeroPlaneDoubleBack],
       },
+      '1:5': {
+        ...insideRowsBySpeedRatio['1:5'],
+        4: [planeDoubleForward, zeroPlaneDoubleForward],
+      },
     },
   },
   4: {
@@ -174,6 +203,20 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
           anti: [arcDoubleBack, planeDoubleBack],
         },
       },
+      '1:5': {
+        1: [arcDoubleForward, arcTripleBack],
+        2: [arcDoubleForward, planeTripleBack],
+        3: [arcTripleBack, arcDoubleForward],
+        4: [arcTripleBack, planeDoubleForward],
+        5: {
+          spin: [arcDoubleForward, arcDoubleForward],
+          anti: [planeTripleBack, planeTripleBack],
+        },
+        6: {
+          spin: [arcDoubleForward, planeDoubleForward],
+          anti: [arcTripleBack, planeTripleBack],
+        },
+      },
     },
   },
   6: {
@@ -206,6 +249,20 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
         6: {
           spin: [planeForward, arcForward],
           anti: [planeDoubleBack, arcDoubleBack],
+        },
+      },
+      '1:5': {
+        1: [arcTripleBack, arcDoubleForward],
+        2: [planeTripleBack, arcDoubleForward],
+        3: [arcDoubleForward, arcTripleBack],
+        4: [planeDoubleForward, arcTripleBack],
+        5: {
+          spin: [arcDoubleForward, arcDoubleForward],
+          anti: [arcTripleBack, arcTripleBack],
+        },
+        6: {
+          spin: [planeDoubleForward, arcDoubleForward],
+          anti: [planeTripleBack, arcTripleBack],
         },
       },
     },

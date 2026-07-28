@@ -13,6 +13,55 @@ const withoutScale = (frames: readonly AnimReadable[]) =>
 describe('VTG query references', () => {
   it.each([
     {
+      reference: '1-4',
+      p0: 'N--.blE-----s.blEmw...',
+      p1: 'S--.blE-----s.bn-mw...',
+    },
+    {
+      reference: '3-4',
+      p0: 'N--.blEs8---s.blEAA...',
+      p1: 'S--.blExM---s.biQAA...',
+    },
+    {
+      reference: '5-4',
+      p0: 'N--.bn------s.bn-mw...',
+      p1: 'S--.bn-xM---s.blEAA...',
+    },
+    {
+      reference: '1-2',
+      p0: 'N--.blE-----s.blEAA...',
+      p1: 'S--.blE-----s.bn-AA...',
+    },
+    {
+      reference: '3-2',
+      p0: 'N--.blEs8---s.blEmw...',
+      p1: 'S--.blExM---s.bn-mw...',
+    },
+    {
+      reference: '5-2',
+      p0: 'N--.bn------s.bn-AA...',
+      p1: 'S--.bn-xM---s.blEmw...',
+    },
+  ] as const)('decodes the 1:5 values for $reference', async ({ reference, p0, p1 }) => {
+    const version = await loadSpiroAnimQSVersion(1)
+    const queryCodec = await useSpiroAnimQS(version.VDEF, useBaseQS(version.VDEF), 1)
+    const readable = encodeReadable(
+      queryCodec.decodeQS({
+        r: 'Ew09APi11',
+        p0,
+        p1,
+        v: '1',
+      }),
+    )
+    const pattern = buildVtgPattern({ reference, speedRatio: '1:5' })
+
+    expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
+      readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
+    )
+  })
+
+  it.each([
+    {
       reference: '1-6',
       p0: 'N--.blE.blExM...',
       p1: 'S--.blE.bn-pk...',

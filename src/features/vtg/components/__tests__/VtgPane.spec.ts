@@ -28,6 +28,7 @@ describe('VtgPane', () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.unstubAllGlobals()
     vi.useRealTimers()
   })
@@ -61,6 +62,7 @@ describe('VtgPane', () => {
 
     expect(options[2]?.element.checked).toBe(true)
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:5')
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
   it('maps the extracted header descriptions to both sets of rule buttons', async () => {
@@ -141,6 +143,18 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:5' }]])
   })
 
+  it('applies a newly selected speed ratio to the current pattern', async () => {
+    const wrapper = mount(VtgPane)
+
+    await wrapper.get('[data-cell-reference="3-4"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
+
+    expect(wrapper.emitted('patternSelect')).toEqual([
+      [{ reference: '3-4', speedRatio: '1:1' }],
+      [{ reference: '3-4', speedRatio: '1:5' }],
+    ])
+  })
+
   it('shares the Spin and Anti choice across the four special cells', async () => {
     const wrapper = mount(VtgPane)
     const firstSpecialCell = wrapper.get('[data-cell-reference="5-6"]')
@@ -192,13 +206,23 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(0)
   })
 
+  it('selects a random matrix cell from the bottom-left button', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const wrapper = mount(VtgPane)
+
+    await wrapper.get('.vtg-shuffle').trigger('click')
+
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-6')
+    expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:1' }]])
+  })
+
   it('keeps the left column and bottom row inert for now', async () => {
     const wrapper = mount(VtgPane)
     const pane = wrapper.get('[data-role="vtg-pane"]')
 
     await wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 6"]').trigger('click')
     await wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').trigger('click')
-    await wrapper.get('.vtg-shuffle').trigger('click')
 
     expect(pane.attributes('data-selected-cell')).toBeUndefined()
   })

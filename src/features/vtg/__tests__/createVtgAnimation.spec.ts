@@ -149,13 +149,20 @@ describe('createVtgAnimation', () => {
     ])
   })
 
-  it('does not replace the player for an unsupported speed ratio', () => {
-    expect(
-      createVtgAnimation(createCurrentAnimation(), {
-        reference: '5-6',
-        speedRatio: '1:5',
-      }),
-    ).toBeUndefined()
+  it('builds an inferred 1:5 pattern', () => {
+    const animation = createVtgAnimation(createCurrentAnimation(), {
+      reference: '5-2',
+      speedRatio: '1:5',
+    })
+
+    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
+      { arc: 90, scale: 8 },
+      { arc: 90, turns: 360 },
+    ])
+    expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
+      { arc: 90, turns: 180, scale: 8 },
+      { plane: 180, arc: 90, turns: -540 },
+    ])
   })
 
   it('uses the explicit 1:3 Anti values for a special cell', () => {
