@@ -8,8 +8,19 @@
     :data-blank-height="blankHeight"
     :data-selected-cell="selectedCellReference"
     :data-previewed-cell="previewedCellReference"
+    :data-speed-ratio="speedRatio"
   >
     <h1 id="vtg-pane-title" class="vtg-pane__visually-hidden">VTG generator</h1>
+
+    <fieldset class="vtg-speed-ratio">
+      <legend>Speed Ratio: Hands Props</legend>
+      <div class="vtg-speed-ratio__options">
+        <label v-for="ratio in speedRatios" :key="ratio">
+          <input v-model="speedRatio" type="radio" name="vtg-speed-ratio" :value="ratio" />
+          <span>{{ ratio }}</span>
+        </label>
+      </div>
+    </fieldset>
 
     <div class="vtg-board">
       <div class="vtg-sidebar" data-role="vtg-sidebar">
@@ -126,6 +137,10 @@ interface VtgMatrixTile {
   boardRow: number
   reference: VtgCellReference
 }
+
+const speedRatios = ['1:1', '1:3', '1:5'] as const
+type VtgSpeedRatio = (typeof speedRatios)[number]
+const speedRatio = ref<VtgSpeedRatio>('1:1')
 
 const matrixRows = [
   ['SO/TS', 'SS/TO', 'SO/TS', 'SS/TO', 'SO/TO', 'SS/TS'],
@@ -400,6 +415,7 @@ defineExpose({
   selectedCellReference,
   previewedCell,
   previewedCellReference,
+  speedRatio,
 })
 </script>
 
@@ -413,6 +429,72 @@ defineExpose({
   overflow: auto;
   color: var(--color-text);
   background: transparent;
+}
+
+.vtg-speed-ratio {
+  display: grid;
+  width: 100%;
+  min-width: 20rem;
+  padding: var(--space-2);
+  margin: 0;
+  border: 0;
+  justify-items: center;
+}
+
+.vtg-speed-ratio legend {
+  padding: 0;
+  margin-inline: auto;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.vtg-speed-ratio__options {
+  display: grid;
+  width: min(100%, 14rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin-block-start: var(--space-1);
+}
+
+.vtg-speed-ratio__options label {
+  position: relative;
+  cursor: pointer;
+}
+
+.vtg-speed-ratio__options input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.vtg-speed-ratio__options span {
+  display: grid;
+  min-height: 2rem;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  place-items: center;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.vtg-speed-ratio__options input:checked + span {
+  color: var(--color-on-action-primary);
+  background: var(--color-action-primary);
+  border-color: var(--color-action-primary);
+}
+
+.vtg-speed-ratio__options input:focus-visible + span {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
 }
 
 .vtg-board {

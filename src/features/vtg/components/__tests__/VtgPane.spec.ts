@@ -47,6 +47,22 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('TO/TS')
   })
 
+  it('offers a typed Speed Ratio radio group above the board', async () => {
+    const wrapper = mount(VtgPane)
+    const group = wrapper.get('fieldset.vtg-speed-ratio')
+    const options = group.findAll<HTMLInputElement>('input[type="radio"]')
+
+    expect(group.get('legend').text()).toBe('Speed Ratio: Hands Props')
+    expect(options.map((option) => option.element.value)).toEqual(['1:1', '1:3', '1:5'])
+    expect(options[0]?.element.checked).toBe(true)
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:1')
+
+    await options[2]?.setValue()
+
+    expect(options[2]?.element.checked).toBe(true)
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:5')
+  })
+
   it('maps the extracted header descriptions to both sets of rule buttons', async () => {
     vi.useFakeTimers()
     const wrapper = mount(VtgPane)
