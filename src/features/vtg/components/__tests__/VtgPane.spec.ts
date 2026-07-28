@@ -155,6 +155,51 @@ describe('VtgPane', () => {
     ])
   })
 
+  it('offers Swap and Reverse checkboxes that reapply the current pattern', async () => {
+    const wrapper = mount(VtgPane)
+    const swap = wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]')
+    const reverse = wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]')
+
+    expect(swap.element.checked).toBe(false)
+    expect(reverse.element.checked).toBe(false)
+    expect(swap.element.nextElementSibling?.textContent).toBe('Swap')
+    expect(reverse.element.nextElementSibling?.textContent).toBe('Reverse')
+
+    await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
+    await swap.setValue(true)
+    await reverse.setValue(true)
+
+    expect(wrapper.emitted('patternSelect')).toEqual([
+      [{ reference: '2-6', speedRatio: '1:1' }],
+      [{ reference: '2-6', speedRatio: '1:1', swapProps: true }],
+      [{ reference: '2-6', speedRatio: '1:1', swapProps: true, reversePlane: true }],
+    ])
+  })
+
+  it('offers capped BPM and Scale sliders that reapply the current pattern', async () => {
+    const wrapper = mount(VtgPane)
+    const bpm = wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]')
+    const scale = wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]')
+    const outputs = wrapper.findAll('fieldset.vtg-slider-controls output')
+
+    expect(bpm.attributes()).toMatchObject({ min: '40', max: '140', step: '1' })
+    expect(scale.attributes()).toMatchObject({ min: '0.6', max: '1.4', step: '0.1' })
+    expect(bpm.element.value).toBe('120')
+    expect(scale.element.value).toBe('0.8')
+    expect(outputs.map((output) => output.text())).toEqual(['120', '0.8'])
+
+    await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
+    await bpm.setValue(40)
+    await scale.setValue(1.4)
+
+    expect(wrapper.emitted('patternSelect')).toEqual([
+      [{ reference: '1-6', speedRatio: '1:1' }],
+      [{ reference: '1-6', speedRatio: '1:1', bpm: 40 }],
+      [{ reference: '1-6', speedRatio: '1:1', bpm: 40, scale: 1.4 }],
+    ])
+    expect(outputs.map((output) => output.text())).toEqual(['40', '1.4'])
+  })
+
   it('shares the Spin and Anti choice across the four special cells', async () => {
     const wrapper = mount(VtgPane)
     const firstSpecialCell = wrapper.get('[data-cell-reference="5-6"]')

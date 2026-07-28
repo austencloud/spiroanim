@@ -20,6 +20,10 @@ export interface VtgPatternSelection {
   reference: VtgCellReference
   speedRatio: VtgSpeedRatio
   isAnti?: boolean
+  swapProps?: boolean
+  reversePlane?: boolean
+  bpm?: number
+  scale?: number
 }
 
 export type VtgReadableAnimation = Partial<

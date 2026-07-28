@@ -120,6 +120,50 @@
         />
       </div>
     </div>
+
+    <fieldset class="vtg-slider-controls">
+      <legend class="vtg-pane__visually-hidden">Animation settings</legend>
+      <label>
+        <span class="vtg-slider-controls__label">
+          <span>BPM</span>
+          <output>{{ bpm }}</output>
+        </span>
+        <input
+          v-model.number="bpm"
+          type="range"
+          :min="vtgBpmControl.min"
+          :max="vtgBpmControl.max"
+          :step="vtgBpmControl.step"
+          data-role="vtg-bpm"
+        />
+      </label>
+      <label>
+        <span class="vtg-slider-controls__label">
+          <span>Scale</span>
+          <output>{{ scale.toFixed(1) }}</output>
+        </span>
+        <input
+          v-model.number="scale"
+          type="range"
+          :min="vtgScaleControl.min"
+          :max="vtgScaleControl.max"
+          :step="vtgScaleControl.step"
+          data-role="vtg-scale"
+        />
+      </label>
+    </fieldset>
+
+    <fieldset class="vtg-pattern-options">
+      <legend class="vtg-pane__visually-hidden">Pattern options</legend>
+      <label>
+        <input v-model="swapProps" type="checkbox" data-role="vtg-swap" />
+        <span>Swap</span>
+      </label>
+      <label>
+        <input v-model="reversePlane" type="checkbox" data-role="vtg-reverse" />
+        <span>Reverse</span>
+      </label>
+    </fieldset>
   </section>
 </template>
 
@@ -129,6 +173,7 @@ import { mdiShuffleVariant } from '@mdi/js'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
+import { vtgBpmControl, vtgScaleControl } from '@/features/vtg/data/vtgPlayerSettings'
 import type {
   VtgCellAddress,
   VtgCellReference,
@@ -163,6 +208,10 @@ const emit = defineEmits<{
 const speedRatios = vtgSpeedRatios
 const speedRatio = ref<VtgSpeedRatio>('1:1')
 const isAnti = ref(false)
+const swapProps = ref(false)
+const reversePlane = ref(false)
+const bpm = ref(vtgBpmControl.default)
+const scale = ref(vtgScaleControl.default)
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 
 const matrixRows = [
@@ -237,6 +286,10 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
     speedRatio: speedRatio.value,
   }
   if (isSpinToggleCell(tile.reference)) selection.isAnti = isAnti.value
+  if (swapProps.value) selection.swapProps = true
+  if (reversePlane.value) selection.reversePlane = true
+  if (bpm.value !== vtgBpmControl.default) selection.bpm = bpm.value
+  if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
   emit('patternSelect', selection)
 }
 
@@ -263,7 +316,7 @@ const toggleSpinDirection = (tile: VtgMatrixTile) => {
   emitPatternSelection(tile)
 }
 
-watch(speedRatio, () => {
+watch([speedRatio, swapProps, reversePlane, bpm, scale], () => {
   const tile = matrixTiles.find(({ reference }) => reference === selectedCellReference.value)
   if (tile !== undefined) emitPatternSelection(tile)
 })
@@ -469,6 +522,10 @@ defineExpose({
   selectedCellReference,
   speedRatio,
   isAnti,
+  swapProps,
+  reversePlane,
+  bpm,
+  scale,
 })
 </script>
 
@@ -546,6 +603,99 @@ defineExpose({
 }
 
 .vtg-speed-ratio__options input:focus-visible + span {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+.vtg-pattern-options {
+  display: flex;
+  min-width: 20rem;
+  padding: var(--space-2);
+  margin: 0;
+  border: 0;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.vtg-pattern-options label {
+  position: relative;
+  cursor: pointer;
+}
+
+.vtg-pattern-options input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.vtg-pattern-options span {
+  display: grid;
+  min-width: 6rem;
+  min-height: 2.25rem;
+  padding-inline: var(--space-3);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  place-items: center;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.vtg-pattern-options input:checked + span {
+  color: var(--color-on-action-primary);
+  background: var(--color-action-primary);
+  border-color: var(--color-action-primary);
+}
+
+.vtg-pattern-options input:focus-visible + span {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+.vtg-slider-controls {
+  display: grid;
+  width: min(100%, 30rem);
+  min-width: 20rem;
+  padding: var(--space-3) var(--space-2) 0;
+  margin: 0 auto;
+  border: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.vtg-slider-controls label {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.vtg-slider-controls__label {
+  display: flex;
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  justify-content: space-between;
+}
+
+.vtg-slider-controls output {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.vtg-slider-controls input {
+  width: 100%;
+  cursor: pointer;
+  accent-color: var(--color-action-primary);
+}
+
+.vtg-slider-controls input:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }

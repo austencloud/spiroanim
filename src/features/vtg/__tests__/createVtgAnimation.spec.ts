@@ -149,6 +149,70 @@ describe('createVtgAnimation', () => {
     ])
   })
 
+  it('swaps selected animation tracks without changing root prop colors', () => {
+    const current = createCurrentAnimation()
+    const original = createVtgAnimation(current, {
+      reference: '1-6',
+      speedRatio: '1:1',
+    })
+    const swapped = createVtgAnimation(current, {
+      reference: '1-6',
+      speedRatio: '1:1',
+      swapProps: true,
+    })
+
+    expect(swapped?.props.map((prop) => prop.color)).toEqual([1, 6])
+    expect(swapped?.props[0]?.anim).toEqual(original?.props[1]?.anim)
+    expect(swapped?.props[1]?.anim).toEqual(original?.props[0]?.anim)
+  })
+
+  it('reverses the effective Plane in both VTG base frames', () => {
+    const original = buildVtgPattern({
+      reference: '2-6',
+      speedRatio: '1:1',
+    })
+    const reversed = buildVtgPattern({
+      reference: '2-6',
+      speedRatio: '1:1',
+      reversePlane: true,
+    })
+
+    expect(original?.props.map((prop) => prop.anim[0]?.plane)).toEqual([180, 0])
+    expect(reversed?.props.map((prop) => prop.anim[0]?.plane)).toEqual([0, 180])
+    expect(reversed?.props.map((prop) => prop.anim[1])).toEqual(
+      original?.props.map((prop) => prop.anim[1]),
+    )
+
+    const reversedImplicitPlanes = buildVtgPattern({
+      reference: '5-2',
+      speedRatio: '1:1',
+      reversePlane: true,
+    })
+    expect(reversedImplicitPlanes?.props.map((prop) => prop.anim[0]?.plane)).toEqual([180, 180])
+  })
+
+  it('caps BPM and Scale while mapping Scale to Distance', () => {
+    expect(vtgPlayerSettings.distance).toBe(21)
+
+    const minimum = buildVtgPattern({
+      reference: '1-6',
+      speedRatio: '1:1',
+      bpm: 20,
+      scale: 0.2,
+    })
+    const maximum = buildVtgPattern({
+      reference: '1-6',
+      speedRatio: '1:1',
+      bpm: 200,
+      scale: 2,
+    })
+
+    expect(minimum).toMatchObject({ bpm: 40, distance: 18 })
+    expect(minimum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([6, 6])
+    expect(maximum).toMatchObject({ bpm: 140, distance: 30 })
+    expect(maximum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([14, 14])
+  })
+
   it('builds an inferred 1:5 pattern', () => {
     const animation = createVtgAnimation(createCurrentAnimation(), {
       reference: '5-2',

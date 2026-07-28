@@ -6,6 +6,7 @@
 <script setup lang="ts">
 import Decimal from './DecimalForm.vue'
 import { VALUE } from '@/features/editor/composables/useProperties'
+import { reverseAngle } from '@/math/animation/AngleFunc'
 import type { DynamicVal, ValRetType, SetterFunc } from '@/types/AnimTypes'
 
 const props = defineProps<{
@@ -16,19 +17,6 @@ const props = defineProps<{
 
 function click() {
   props.setter(props.vals.name, reverseAngle(Number(props.data[VALUE])))
-}
-
-function reverseAngle(value: number): number {
-  // add 180 to flip
-  let result = value + 180
-
-  // wrap into 0..360
-  result = ((result % 360) + 360) % 360
-
-  // shift to -180..180
-  if (result > 180) result -= 360
-
-  return result
 }
 </script>
 
