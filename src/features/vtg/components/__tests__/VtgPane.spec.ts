@@ -301,6 +301,83 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
+  it('selects a random 1:3 pattern when the loaded animation is empty', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const populatedAnimation = createDefaultVtgAnimation({
+      reference: '1-1',
+      speedRatio: '1:3',
+    })
+    if (!populatedAnimation) throw new Error('Expected a supported VTG animation')
+
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation: {
+          ...populatedAnimation,
+          props: [],
+        },
+      },
+    })
+    await nextTick()
+
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-6')
+    expect(wrapper.get<HTMLInputElement>('input[value="1:3"]').element.checked).toBe(true)
+    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:3' }]])
+  })
+
+  it('waits for shared animation data before deciding whether to select a random pattern', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const loadedAnimation = createDefaultVtgAnimation({
+      reference: '3-4',
+      speedRatio: '1:5',
+    })
+    if (!loadedAnimation) throw new Error('Expected a supported VTG animation')
+
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation: {
+          ...loadedAnimation,
+          props: [],
+        },
+        animationReady: false,
+      },
+    })
+    await nextTick()
+
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBeUndefined()
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+
+    await wrapper.setProps({ animation: loadedAnimation })
+    await wrapper.setProps({ animationReady: true })
+    await nextTick()
+
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('3-4')
+    expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+  })
+
+  it('does not select another random pattern when animation data is cleared after load', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const loadedAnimation = createDefaultVtgAnimation({
+      reference: '3-4',
+      speedRatio: '1:5',
+    })
+    if (!loadedAnimation) throw new Error('Expected a supported VTG animation')
+
+    const wrapper = mount(VtgPane, { props: { animation: loadedAnimation } })
+    await nextTick()
+
+    await wrapper.setProps({
+      animation: {
+        ...loadedAnimation,
+        props: [],
+      },
+    })
+    await nextTick()
+
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('3-4')
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+  })
+
   it('preserves a locally selected no-op transform when the player applies it', async () => {
     const initialAnimation = createDefaultVtgAnimation({
       reference: '1-1',

@@ -213,9 +213,15 @@ interface VtgMatrixTile {
   reference: VtgCellReference
 }
 
-const props = defineProps<{
-  animation?: RootDataFinal
-}>()
+const props = withDefaults(
+  defineProps<{
+    animation?: RootDataFinal
+    animationReady?: boolean
+  }>(),
+  {
+    animationReady: true,
+  },
+)
 
 const emit = defineEmits<{
   patternSelect: [selection: VtgPatternSelection]
@@ -232,6 +238,8 @@ const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5
 let suppressPatternEmit = false
 let hydrationVersion = 0
 let lastEmittedSelection: VtgPatternSelection | undefined
+let componentMounted = false
+let initialAnimationHandled = false
 
 const matrixRows = [
   ['SO/TS', 'SS/TO', 'SO/TS', 'SS/TO', 'SO/TO', 'SS/TS'],
@@ -378,13 +386,39 @@ const hydratePatternControls = (animation: RootDataFinal) => {
   })
 }
 
-watch(
-  () => props.animation,
-  (animation) => {
-    if (animation) hydratePatternControls(animation)
-  },
-  { immediate: true },
-)
+const selectInitialRandomPattern = () => {
+  const version = ++hydrationVersion
+  suppressPatternEmit = true
+  selectedCell.value = undefined
+  speedRatio.value = vtgDefaultSpeedRatio
+  isAnti.value = false
+  swapProps.value = false
+  reversePlane.value = false
+  bpm.value = vtgBpmControl.default
+  scale.value = vtgScaleControl.default
+  selectRandomTile()
+
+  void nextTick(() => {
+    if (version === hydrationVersion) suppressPatternEmit = false
+  })
+}
+
+const syncPatternControls = () => {
+  if (!componentMounted || !props.animationReady || !props.animation) return
+
+  if (props.animation.props.length === 0) {
+    if (initialAnimationHandled) return
+
+    initialAnimationHandled = true
+    selectInitialRandomPattern()
+    return
+  }
+
+  initialAnimationHandled = true
+  hydratePatternControls(props.animation)
+}
+
+watch([() => props.animationReady, () => props.animation], syncPatternControls)
 
 const propBounds = {
   outerStart: 4,
@@ -560,6 +594,9 @@ let blankObserver: ResizeObserver | undefined
 const roundDimension = (value: number) => Math.round(value * 100) / 100
 
 onMounted(() => {
+  componentMounted = true
+  syncPatternControls()
+
   if (typeof ResizeObserver === 'undefined') return
 
   const observer = new ResizeObserver((entries) => {
@@ -585,6 +622,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  componentMounted = false
   blankObserver?.disconnect()
 })
 

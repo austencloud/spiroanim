@@ -80,5 +80,5 @@ export const paneKeysMain = ['left', 'right', 'hidden'] as const
  */
 export const useMainPaneStore = createPaneStore('main', viewKeysMain, paneKeysMain, 'hidden', {
   left: 'player',
-  right: 'timeline',
+  right: 'vtg',
 })

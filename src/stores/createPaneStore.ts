@@ -234,9 +234,21 @@ export function createPaneStore<
           const migratedParents = createInitialParents()
 
           if (typeof hydratedParents === 'object' && hydratedParents !== null) {
+            // Preserve an existing user's layout when new views gain visible defaults.
+            for (const view of viewKeys) migratedParents[view as ElementType] = hiddenPane
+
             for (const view of viewKeys) {
               const pane = Reflect.get(hydratedParents, view)
               if (isPaneKey(pane)) migratedParents[view as ElementType] = pane
+            }
+
+            const occupiedPanes = new Set<PaneKey>()
+            for (const view of viewKeys) {
+              const key = view as ElementType
+              const pane = migratedParents[key]
+              if (pane === hiddenPane) continue
+              if (occupiedPanes.has(pane)) migratedParents[key] = hiddenPane
+              else occupiedPanes.add(pane)
             }
           }
 

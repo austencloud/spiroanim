@@ -56,6 +56,13 @@ describe('SpiroAnim view', () => {
     })
     await router.push('/play-time')
     await router.isReady()
+    const playerRoot = usePlayerStore('main').raw().ROOT
+    const initialAnimation = createVtgAnimation(playerRoot.value, {
+      reference: '1-1',
+      speedRatio: '1:3',
+    })
+    if (!initialAnimation) throw new Error('Expected a supported VTG animation')
+    playerRoot.value = initialAnimation
     const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
 
     const wrapper = mount(SpiroAnim, {
@@ -91,7 +98,6 @@ describe('SpiroAnim view', () => {
     const splitter = useSplitterStore('main')
     expect(splitter.leftPerc).toBe(50)
 
-    const playerRoot = usePlayerStore('main').raw().ROOT
     const hydratedVtg = createVtgAnimation(playerRoot.value, {
       reference: '5-6',
       speedRatio: '1:3',

@@ -37,8 +37,8 @@ describe('useMainPaneStore', () => {
     expect(store.parents).toEqual({
       player: 'left',
       editor: 'hidden',
-      timeline: 'right',
-      vtg: 'hidden',
+      timeline: 'hidden',
+      vtg: 'right',
     })
 
     app.unmount()
@@ -52,8 +52,8 @@ describe('useMainPaneStore', () => {
     expect(store.parents).toEqual({
       player: 'hidden',
       editor: 'left',
-      timeline: 'right',
-      vtg: 'hidden',
+      timeline: 'hidden',
+      vtg: 'right',
     })
     app.unmount()
   })
@@ -66,8 +66,8 @@ describe('useMainPaneStore', () => {
     expect(store.parents).toEqual({
       player: 'right',
       editor: 'hidden',
-      timeline: 'left',
-      vtg: 'hidden',
+      timeline: 'hidden',
+      vtg: 'left',
     })
     app.unmount()
   })
@@ -94,7 +94,7 @@ describe('useMainPaneStore', () => {
     const { app, store } = mountStore()
     await nextTick()
 
-    expect(store.viewVisible).toEqual({ player: true, editor: false, timeline: true, vtg: false })
+    expect(store.viewVisible).toEqual({ player: true, editor: false, timeline: false, vtg: true })
 
     store.paneVisible.left = false
     await nextTick()

@@ -38,6 +38,7 @@
         v-if="viewVisible.vtg"
         ref="cVtg"
         :animation="ROOT"
+        :animation-ready="animationReady"
         data-type="vtg"
         data-role="vtg-view"
         @pattern-select="applyVtgPattern"
@@ -79,7 +80,7 @@ import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 useScrollSelectScale()
-useMainRoute() // Handles updates to route path and query
+const { animationReady } = useMainRoute() // Handles updates to route path and query
 useSpiroAnimKeyboard()
 
 const { viewWidth, viewHeight, viewLeft, viewTop, isLandscape } = storeToRefs(useViewportStore())

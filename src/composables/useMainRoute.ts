@@ -6,8 +6,6 @@ import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 
 import { findKeyByValue } from '@/utils/UtilFunc'
-import { rootFinal } from '@/math/animation/PlayerFunc'
-import { tmpProp } from '@/domain/animation/tmpProp'
 //import { encodeReadable } from '@/func/AnimReadableFunc'
 
 const possib = ['play', 'time', 'edit', 'vtg'] as const
@@ -42,6 +40,7 @@ export function useMainRoute() {
 
   const router = useRouter()
   const route = useRoute()
+  const animationReady = ref(route.query.r === undefined)
 
   const page = route.path.substring(1) as PageNames
 
@@ -110,8 +109,19 @@ export function useMainRoute() {
       })
   }
 
-  // Update path if page is / or app
-  if (!page || (page as string) == 'app') updatePath()
+  const showVtgForEmptyAnimation = () => {
+    if (!animationReady.value || ROOT.value.props.length > 0) return false
+
+    setViewInPane('player', 'left')
+    setViewInPane('vtg', 'right')
+    leftPerc.value = 50
+    return true
+  }
+
+  const switchedToVtg = showVtgForEmptyAnimation()
+
+  // Update path if page is / or app, or the empty startup state changed the requested layout.
+  if (!page || (page as string) == 'app' || switchedToVtg) updatePath()
 
   // Watch for view/pane changes
   watch(parents, updatePath)
@@ -145,12 +155,19 @@ export function useMainRoute() {
   */
 
   // Load data from query string
-  let loaded = false
   if (route.query.r !== undefined) {
-    decodeVer(route.query).then((data) => (ROOT.value = data))
-    loaded = true
+    decodeVer(route.query)
+      .then((data) => (ROOT.value = data))
+      .catch((error: unknown) => {
+        console.warn('Failed to load animation data from the route.', error)
+      })
+      .finally(() => {
+        animationReady.value = true
+        if (showVtgForEmptyAnimation()) updatePath()
+      })
   }
 
-  // Load the default animation
-  if (!loaded) ROOT.value = rootFinal(tmpProp)
+  return {
+    animationReady: readonly(animationReady),
+  }
 }

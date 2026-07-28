@@ -6,13 +6,15 @@ import { flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { paneSplits, useMainRoute } from '@/composables/useMainRoute'
+import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
+import type { RootDataFinal } from '@/types/AnimTypes'
 
 const mountedApps: ReturnType<typeof createApp>[] = []
 
-const mountRoute = async (path: string) => {
+const mountRoute = async (path: string, initialAnimation?: RootDataFinal) => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
@@ -24,6 +26,7 @@ const mountRoute = async (path: string) => {
   const app = createApp(
     defineComponent({
       setup() {
+        if (initialAnimation) usePlayerStore('main').raw().ROOT.value = initialAnimation
         useMainRoute()
         return () => h('div')
       },
@@ -41,6 +44,15 @@ const mountRoute = async (path: string) => {
     playerStore: usePlayerStore('main'),
     splitterStore: useSplitterStore('main'),
   }
+}
+
+const createLoadedAnimation = () => {
+  const animation = createDefaultVtgAnimation({
+    reference: '1-1',
+    speedRatio: '1:3',
+  })
+  if (!animation) throw new Error('Expected a supported VTG animation')
+  return animation
 }
 
 describe('useMainRoute', () => {
@@ -68,22 +80,56 @@ describe('useMainRoute', () => {
   })
 
   it('maps a single hidden view to the left pane and expands it fully', async () => {
-    const { paneStore, playerStore, splitterStore } = await mountRoute('/editor')
+    const { paneStore, splitterStore } = await mountRoute('/editor', createLoadedAnimation())
 
     expect(paneStore.parents).toEqual({
       player: 'hidden',
       editor: 'left',
-      timeline: 'right',
-      vtg: 'hidden',
+      timeline: 'hidden',
+      vtg: 'right',
     })
     expect(splitterStore.leftPerc).toBe(100)
-    expect(playerStore.raw().ROOT.value).toMatchObject({ bpm: 60, props: [{}, {}] })
+  })
+
+  it('switches an empty animation to the play-vtg layout', async () => {
+    const { paneStore, playerStore, router, splitterStore } = await mountRoute('/editor')
+    await flushPromises()
+
+    expect(paneStore.parents).toEqual({
+      player: 'left',
+      editor: 'hidden',
+      timeline: 'hidden',
+      vtg: 'right',
+    })
+    expect(splitterStore.leftPerc).toBe(50)
+    expect(playerStore.raw().ROOT.value).toMatchObject({ bpm: 120, props: [] })
+    expect(router.currentRoute.value.path).toBe('/play-vtg')
+  })
+
+  it('does not force play-vtg when animation data is cleared after startup', async () => {
+    const { paneStore, playerStore, router, splitterStore } = await mountRoute(
+      '/editor',
+      createLoadedAnimation(),
+    )
+
+    const runtime = playerStore.raw()
+    runtime.ROOT.value = { ...runtime.ROOT.value, props: [] }
+    await flushPromises()
+
+    expect(paneStore.parents).toEqual({
+      player: 'hidden',
+      editor: 'left',
+      timeline: 'hidden',
+      vtg: 'right',
+    })
+    expect(splitterStore.leftPerc).toBe(100)
+    expect(router.currentRoute.value.path).toBe('/editor')
   })
 
   it('maps short split routes and resets a persisted snapped splitter', async () => {
     localStorage.setItem('sa-splitter-main', JSON.stringify({ leftPerc: 100 }))
 
-    const { paneStore, splitterStore } = await mountRoute('/edit-time')
+    const { paneStore, splitterStore } = await mountRoute('/edit-time', createLoadedAnimation())
 
     expect(paneStore.parents).toEqual({
       player: 'hidden',
@@ -98,18 +144,18 @@ describe('useMainRoute', () => {
     const { router } = await mountRoute('/app')
     await flushPromises()
 
-    expect(router.currentRoute.value.path).toBe('/play-time')
+    expect(router.currentRoute.value.path).toBe('/play-vtg')
   })
 
   it('maps the VTG route to a full-width pane', async () => {
-    const { paneStore, splitterStore } = await mountRoute('/vtg')
+    const { paneStore, splitterStore } = await mountRoute('/vtg', createLoadedAnimation())
 
     expect(paneStore.parents).toEqual({
-      player: 'hidden',
+      player: 'left',
       editor: 'hidden',
-      timeline: 'right',
-      vtg: 'left',
+      timeline: 'hidden',
+      vtg: 'right',
     })
-    expect(splitterStore.leftPerc).toBe(100)
+    expect(splitterStore.leftPerc).toBe(0)
   })
 })
