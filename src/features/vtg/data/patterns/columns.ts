@@ -13,6 +13,7 @@ interface VtgColumnPattern {
   starts: VtgPropPair
   spin: VtgPropPair
   anti?: VtgPropPair
+  swapProps?: boolean
   rows?: Readonly<Partial<Record<VtgRuleNumber, { spin: VtgPropPair; anti?: VtgPropPair }>>>
 }
 
@@ -25,13 +26,12 @@ const createPattern = (
   const spin = rowPattern?.spin ?? column.spin
   const anti = rowPattern?.anti ?? column.anti
   const continuations = isAnti && anti ? anti : spin
+  const firstProp = { anim: [column.starts[0], continuations[0]] }
+  const secondProp = { anim: [column.starts[1], continuations[1]] }
 
   return {
     ...vtgPlayerSettings,
-    props: [
-      { anim: [column.starts[0], continuations[0]] },
-      { anim: [column.starts[1], continuations[1]] },
-    ],
+    props: column.swapProps ? [secondProp, firstProp] : [firstProp, secondProp],
   }
 }
 
@@ -164,6 +164,7 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
     },
   },
   6: {
+    swapProps: true,
     starts: [{ plane: 180, arc: 90, turns: 180 }, { arc: 90 }],
     spin: [
       { plane: 180, arc: 90, turns: 0 },

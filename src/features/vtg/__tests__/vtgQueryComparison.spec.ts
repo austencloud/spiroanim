@@ -218,9 +218,10 @@ describe('VTG query references', () => {
       )
       const selection = { reference, speedRatio: '1:1', isAnti } as const
       const pattern = getVtgPatternDefinition(selection)?.patternsBySpeedRatio['1:1']?.(selection)
+      const readableProps = [...readable.props].reverse()
 
       expect(pattern?.props.map((prop) => prop.anim)).toEqual(
-        readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
+        readableProps.map((prop) => withoutScale(prop.anim.slice(0, 2))),
       )
     },
   )

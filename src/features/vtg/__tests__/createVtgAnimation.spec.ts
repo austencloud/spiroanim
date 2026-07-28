@@ -115,6 +115,24 @@ describe('createVtgAnimation', () => {
     ])
   })
 
+  it('swaps column 6 animation properties without changing root prop colors', () => {
+    const animation = createVtgAnimation(createCurrentAnimation(), {
+      reference: '6-6',
+      speedRatio: '1:1',
+      isAnti: false,
+    })
+
+    expect(animation?.props.map((prop) => prop.color)).toEqual([1, 6])
+    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
+      { arc: 90 },
+      { arc: 90, turns: 0 },
+    ])
+    expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
+      { plane: 180, arc: 90, turns: 180 },
+      { plane: 180, arc: 90, turns: 0 },
+    ])
+  })
+
   it('does not replace the player for a catalog cell that is not defined yet', () => {
     expect(
       createVtgAnimation(createCurrentAnimation(), {
