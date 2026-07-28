@@ -89,10 +89,46 @@ describe('createVtgAnimation', () => {
     expect(createVtgAnimation(createCurrentAnimation(), selection)?.props[0]?.anim).toHaveLength(5)
   })
 
+  it('sets the Orange second-frame plane for SS/TO', () => {
+    const animation = createVtgAnimation(createCurrentAnimation(), {
+      reference: '2-6',
+      speedRatio: '1:1',
+    })
+
+    expect(animation?.props[0]?.anim[0]).toEqual({ arc: 180, scale: 10 })
+    expect(animation?.props[1]?.anim[0]).toEqual({
+      plane: 180,
+      arc: 0,
+      turns: 180,
+      scale: 10,
+    })
+    expect(animation?.props[1]?.anim[1]).toEqual({
+      plane: 180,
+      arc: 90,
+      turns: -180,
+    })
+  })
+
+  it('sets the Orange second-frame plane for the fourth row 1 cell', () => {
+    const animation = createVtgAnimation(createCurrentAnimation(), {
+      reference: '4-6',
+      speedRatio: '1:1',
+    })
+
+    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
+      { arc: 180, turns: -180, scale: 10 },
+      { arc: 90, turns: 0 },
+    ])
+    expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
+      { plane: 180, arc: 0, scale: 10 },
+      { plane: 180, arc: 90, turns: -180 },
+    ])
+  })
+
   it('does not replace the player for a catalog cell that is not defined yet', () => {
     expect(
       createVtgAnimation(createCurrentAnimation(), {
-        reference: '2-6',
+        reference: '5-6',
         speedRatio: '1:5',
       }),
     ).toBeUndefined()
