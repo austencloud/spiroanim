@@ -1,4 +1,4 @@
-import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import { vtgBaseFrameSettings, vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { vtgSpeedRatios } from '@/features/vtg/types'
 import type {
   VtgCellReference,
@@ -86,8 +86,8 @@ const createPattern = (
 ): VtgReadableAnimation => {
   const continuations =
     'spin' in rowPattern ? (isAnti ? rowPattern.anti : rowPattern.spin) : rowPattern
-  const firstProp = { anim: [column.starts[0], continuations[0]] }
-  const secondProp = { anim: [column.starts[1], continuations[1]] }
+  const firstProp = { anim: [{ ...vtgBaseFrameSettings, ...column.starts[0] }, continuations[0]] }
+  const secondProp = { anim: [{ ...vtgBaseFrameSettings, ...column.starts[1] }, continuations[1]] }
 
   return {
     ...vtgPlayerSettings,

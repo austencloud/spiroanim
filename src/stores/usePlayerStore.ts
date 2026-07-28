@@ -33,7 +33,7 @@ export const usePlayerStore = (id: string) => {
             bpm: 120,
             prop: 0,
             color: 0,
-            //scale: 8,
+            //scale: 10,
             guides: false,
             paths: true,
             hands: true,

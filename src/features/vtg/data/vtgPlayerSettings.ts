@@ -1,5 +1,5 @@
 import type { VtgReadableAnimation } from '@/features/vtg/types'
-import type { PropReadable } from '@/types/AnimTypes'
+import type { AnimReadable, PropReadable } from '@/types/AnimTypes'
 
 export const vtgPlayerSettings = {
   speed: 1,
@@ -20,6 +20,10 @@ export const vtgPlayerSettings = {
   distance: 22,
   thick: 4,
 } satisfies Omit<VtgReadableAnimation, 'props'>
+
+export const vtgBaseFrameSettings = {
+  scale: 8,
+} satisfies AnimReadable
 
 export const vtgPropSettings = [{ color: 'Green' }, { color: 'Orange' }] satisfies readonly Omit<
   PropReadable,

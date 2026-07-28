@@ -131,7 +131,7 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
 
     const vars = {
         turns: anim.turns ?? 0,
-        scale: anim.scale ?? 8,
+        scale: anim.scale ?? 10,
         depth: anim.depth ?? 0,
         beats: anim.beats ?? 1,
         adjust: anim.adjust ?? 0,

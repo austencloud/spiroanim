@@ -235,7 +235,7 @@ describe('VTG query references', () => {
     } as const
     const pattern = buildVtgPattern(selection)
 
-    expect(pattern?.props.map((prop) => prop.anim)).toEqual(
+    expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
       readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
     )
   })
@@ -320,7 +320,7 @@ describe('VTG query references', () => {
     const selection = { reference, speedRatio: '1:1' } as const
     const pattern = buildVtgPattern(selection)
 
-    expect(pattern?.props.map((prop) => prop.anim)).toEqual(
+    expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
       readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
     )
   })
@@ -399,7 +399,7 @@ describe('VTG query references', () => {
     const selection = { reference, speedRatio: '1:1' } as const
     const pattern = buildVtgPattern(selection)
 
-    expect(pattern?.props.map((prop) => prop.anim)).toEqual(
+    expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
       readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
     )
   })
@@ -477,7 +477,7 @@ describe('VTG query references', () => {
       const selection = { reference, speedRatio: '1:1', isAnti } as const
       const pattern = buildVtgPattern(selection)
 
-      expect(pattern?.props.map((prop) => prop.anim)).toEqual(
+      expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
         readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
       )
     },
@@ -565,7 +565,7 @@ describe('VTG query references', () => {
       const pattern = buildVtgPattern(selection)
       const readableProps = reverseQueryProps ? [...readable.props].reverse() : readable.props
 
-      expect(pattern?.props.map((prop) => prop.anim)).toEqual(
+      expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
         readableProps.map((prop) => withoutScale(prop.anim.slice(0, 2))),
       )
     },
