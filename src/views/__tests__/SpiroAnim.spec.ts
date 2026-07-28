@@ -101,18 +101,20 @@ describe('SpiroAnim view', () => {
       aspectx: vtgPlayerSettings.aspectx,
       aspecty: vtgPlayerSettings.aspecty,
       props: [
-        { anim: [{ arc: 180, scale: 10 }, { arc: 90 }, {}, {}, {}] },
         {
-          anim: [
-            { plane: 180, arc: 0, turns: 180, scale: 10 },
-            { arc: 90, turns: -180 },
-            {},
-            {},
-            {},
-          ],
+          anim: [{ plane: -180, arc: 90, scale: 10 }, { plane: 180, arc: 90 }, {}, {}, {}],
+        },
+        {
+          anim: [{ plane: 180, arc: 90, scale: 10 }, { arc: 90, turns: -180 }, {}, {}, {}],
         },
       ],
     })
+
+    const oneToOneAnimation = structuredClone(playerRoot.value)
+    await wrapper.get<HTMLInputElement>('input[value="1:3"]').setValue()
+    await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
+
+    expect(playerRoot.value).toEqual(oneToOneAnimation)
 
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)

@@ -41,17 +41,11 @@ describe('createVtgAnimation', () => {
       props: [
         {
           color: 1,
-          anim: [{ arc: 180, scale: 10 }, { arc: 90 }, {}, {}, {}],
+          anim: [{ plane: -180, arc: 90, scale: 10 }, { plane: 180, arc: 90 }, {}, {}, {}],
         },
         {
           color: 6,
-          anim: [
-            { plane: 180, arc: 0, turns: 180, scale: 10 },
-            { arc: 90, turns: -180 },
-            {},
-            {},
-            {},
-          ],
+          anim: [{ plane: 180, arc: 90, scale: 10 }, { arc: 90, turns: -180 }, {}, {}, {}],
         },
       ],
     })
@@ -64,11 +58,11 @@ describe('createVtgAnimation', () => {
 
     const first = createVtgAnimation(current, {
       reference: '1-6',
-      speedRatio: '1:3',
+      speedRatio: '1:1',
     })
     const second = createVtgAnimation(current, {
       reference: '1-6',
-      speedRatio: '1:3',
+      speedRatio: '1:1',
     })
 
     expect(first).not.toBe(second)
@@ -85,28 +79,24 @@ describe('createVtgAnimation', () => {
     } as const
     const definition = getVtgPatternDefinition(selection)
 
-    expect(definition?.build(selection.speedRatio).props[0]?.anim).toHaveLength(2)
+    expect(definition?.patternsBySpeedRatio['1:1']?.().props[0]?.anim).toHaveLength(2)
     expect(createVtgAnimation(createCurrentAnimation(), selection)?.props[0]?.anim).toHaveLength(5)
   })
 
-  it('sets the Orange second-frame plane for SS/TO', () => {
+  it('builds SS/TO from its replacement query values', () => {
     const animation = createVtgAnimation(createCurrentAnimation(), {
       reference: '2-6',
       speedRatio: '1:1',
     })
 
-    expect(animation?.props[0]?.anim[0]).toEqual({ arc: 180, scale: 10 })
-    expect(animation?.props[1]?.anim[0]).toEqual({
-      plane: 180,
-      arc: 0,
-      turns: 180,
-      scale: 10,
-    })
-    expect(animation?.props[1]?.anim[1]).toEqual({
-      plane: 180,
-      arc: 90,
-      turns: -180,
-    })
+    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
+      { plane: -180, arc: 90, scale: 10 },
+      { plane: 180, arc: 90 },
+    ])
+    expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
+      { plane: 0, arc: 90 },
+      { arc: 90, turns: -180 },
+    ])
   })
 
   it('sets the Orange second-frame plane for the fourth row 1 cell', () => {
@@ -133,4 +123,16 @@ describe('createVtgAnimation', () => {
       }),
     ).toBeUndefined()
   })
+
+  it.each(['1:3', '1:5'] as const)(
+    'does not build a pattern for the unsupported %s speed ratio',
+    (speedRatio) => {
+      expect(
+        createVtgAnimation(createCurrentAnimation(), {
+          reference: '1-6',
+          speedRatio,
+        }),
+      ).toBeUndefined()
+    },
+  )
 })

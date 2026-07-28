@@ -3,7 +3,6 @@ import type {
   VtgCellReference,
   VtgPatternDefinition,
   VtgReadableAnimation,
-  VtgSpeedRatio,
 } from '@/features/vtg/types'
 import type { AnimReadable } from '@/types/AnimTypes'
 
@@ -12,9 +11,9 @@ type VtgPropFrames = readonly [AnimReadable, AnimReadable]
 type VtgPatternFrames = readonly [VtgPropFrames, VtgPropFrames]
 type VtgStartingFrames = readonly [AnimReadable, AnimReadable]
 
-const firstPairStarts: VtgStartingFrames = [
-  { arc: 180, scale: 10 },
-  { plane: 180, arc: 0, turns: 180, scale: 10 },
+const firstPairGreenFrames: VtgPropFrames = [
+  { plane: -180, arc: 90, scale: 10 },
+  { plane: 180, arc: 90 },
 ]
 
 const secondPairStarts: VtgStartingFrames = [
@@ -44,34 +43,54 @@ const createCellPattern = (
  * Visual row 1 patterns. The VTG reference uses the bottom rule first and
  * left rule second, so its first cell is `1-6`.
  *
- * Speed ratio is deliberately passed through each builder even though row 1
- * does not transform it yet.
+ * Each cell defines values by speed ratio. Unsupported ratios remain absent
+ * and therefore do not replace the current player animation.
  */
 export const vtgFirstRowPatterns = {
   '1-6': {
     label: 'SO/TS',
-    build: (_speedRatio: VtgSpeedRatio) =>
-      createCellPattern(firstPairStarts, [{ arc: 90 }, { arc: 90, turns: -180 }]),
+    patternsBySpeedRatio: {
+      '1:1': () =>
+        createFirstRowPattern([
+          firstPairGreenFrames,
+          [
+            { plane: 180, arc: 90, scale: 10 },
+            { arc: 90, turns: -180 },
+          ],
+        ]),
+    },
   },
   '2-6': {
     label: 'SS/TO',
-    build: (_speedRatio: VtgSpeedRatio) =>
-      createCellPattern(firstPairStarts, [{ arc: 90 }, { plane: 180, arc: 90, turns: -180 }]),
+    patternsBySpeedRatio: {
+      '1:1': () =>
+        createFirstRowPattern([
+          firstPairGreenFrames,
+          [
+            { plane: 0, arc: 90 },
+            { arc: 90, turns: -180 },
+          ],
+        ]),
+    },
   },
   '3-6': {
     label: 'SO/TS',
-    build: (_speedRatio: VtgSpeedRatio) =>
-      createCellPattern(secondPairStarts, [
-        { arc: 90, turns: 0 },
-        { arc: 90, turns: -180 },
-      ]),
+    patternsBySpeedRatio: {
+      '1:1': () =>
+        createCellPattern(secondPairStarts, [
+          { arc: 90, turns: 0 },
+          { arc: 90, turns: -180 },
+        ]),
+    },
   },
   '4-6': {
     label: 'SS/TO',
-    build: (_speedRatio: VtgSpeedRatio) =>
-      createCellPattern(secondPairStarts, [
-        { arc: 90, turns: 0 },
-        { plane: 180, arc: 90, turns: -180 },
-      ]),
+    patternsBySpeedRatio: {
+      '1:1': () =>
+        createCellPattern(secondPairStarts, [
+          { arc: 90, turns: 0 },
+          { plane: 180, arc: 90, turns: -180 },
+        ]),
+    },
   },
 } satisfies VtgRowPatterns

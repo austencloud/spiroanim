@@ -141,74 +141,13 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:5' }]])
   })
 
-  it('temporarily previews a hovered cross and restores the clicked selection', async () => {
-    vi.useFakeTimers()
+  it('does not preview row or column selections on hover', async () => {
     const wrapper = mount(VtgPane)
-    const pane = wrapper.get('[data-role="vtg-pane"]')
-    const selectedCell = wrapper.get('[data-cell-reference="1-5"]')
-    const hoveredCell = wrapper.get('[data-cell-reference="4-2"]')
-    const nextHoveredCell = wrapper.get('[data-cell-reference="6-3"]')
-
-    await selectedCell.trigger('click')
-    await hoveredCell.trigger('mouseenter')
-
-    expect(pane.attributes('data-selected-cell')).toBe('1-5')
-    expect(pane.attributes('data-previewed-cell')).toBe('4-2')
-    expect(selectedCell.classes()).toContain('vtg-tile--selected')
-    expect(hoveredCell.classes()).not.toContain('vtg-tile--selected')
-    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
-    expect(
-      wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 4"]').attributes('aria-pressed'),
-    ).toBe('true')
-    expect(
-      wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 2"]').attributes('aria-pressed'),
-    ).toBe('true')
-
-    await hoveredCell.trigger('mouseleave')
-
-    expect(pane.attributes('data-previewed-cell')).toBe('4-2')
-
-    await nextHoveredCell.trigger('mouseenter')
-    vi.advanceTimersByTime(50)
-    await nextTick()
-
-    expect(pane.attributes('data-previewed-cell')).toBe('6-3')
-
-    await nextHoveredCell.trigger('mouseleave')
-    vi.advanceTimersByTime(50)
-    await nextTick()
-
-    expect(pane.attributes('data-selected-cell')).toBe('1-5')
-    expect(pane.attributes('data-previewed-cell')).toBeUndefined()
-    expect(selectedCell.attributes('aria-pressed')).toBe('true')
-    expect(
-      wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').attributes('aria-pressed'),
-    ).toBe('true')
-    expect(
-      wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]').attributes('aria-pressed'),
-    ).toBe('true')
-  })
-
-  it('restores the neutral state after hovering when nothing has been clicked', async () => {
-    vi.useFakeTimers()
-    const wrapper = mount(VtgPane)
-    const pane = wrapper.get('[data-role="vtg-pane"]')
     const hoveredCell = wrapper.get('[data-cell-reference="6-6"]')
 
     await hoveredCell.trigger('mouseenter')
 
-    expect(pane.attributes('data-selected-cell')).toBeUndefined()
-    expect(pane.attributes('data-previewed-cell')).toBe('6-6')
-    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
-
-    await hoveredCell.trigger('mouseleave')
-
-    expect(pane.attributes('data-previewed-cell')).toBe('6-6')
-
-    vi.advanceTimersByTime(50)
-    await nextTick()
-
-    expect(pane.attributes('data-previewed-cell')).toBeUndefined()
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBeUndefined()
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(0)
   })
 
@@ -241,6 +180,15 @@ describe('VtgPane', () => {
 
     expect(splitProps.map(({ element }) => element.style.insetInlineStart)).toEqual(['4%', '59%'])
     expect(splitRule.findAll('.vtg-rule-card__prop-handle')).toHaveLength(4)
+  })
+
+  it('places the bottom TOG IN props after the divider', () => {
+    const wrapper = mount(VtgPane)
+    const togInRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 3"]')
+    const props = togInRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+
+    expect(props.map(({ element }) => element.style.insetInlineStart)).toEqual(['59%', '59%'])
+    expect(props.map(({ element }) => element.style.inlineSize)).toEqual(['37%', '37%'])
   })
 
   it('tracks the live width and height of each blank preview', async () => {

@@ -43,7 +43,10 @@ export const createVtgAnimation = (
   const definition = getVtgPatternDefinition(selection)
   if (!definition) return undefined
 
-  const pattern = addDefaultFrames(definition.build(selection.speedRatio))
+  const buildPattern = definition.patternsBySpeedRatio[selection.speedRatio]
+  if (!buildPattern) return undefined
+
+  const pattern = addDefaultFrames(buildPattern())
   const decoded = decodeReadable(mergeWithCurrentAnimation(current, pattern))
 
   return {

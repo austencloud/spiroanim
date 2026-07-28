@@ -29,7 +29,7 @@ export type VtgReadableAnimation = Partial<
 
 export interface VtgPatternDefinition {
   label: string
-  build: (speedRatio: VtgSpeedRatio) => VtgReadableAnimation
+  patternsBySpeedRatio: Readonly<Partial<Record<VtgSpeedRatio, () => VtgReadableAnimation>>>
 }
 
 export interface VtgPropPlacement {
