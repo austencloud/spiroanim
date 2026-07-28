@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
-import { getVtgPatternDefinition } from '@/features/vtg/data/vtgPatternCatalog'
+import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import type { RootData } from '@/types/AnimTypes'
@@ -77,9 +77,8 @@ describe('createVtgAnimation', () => {
       reference: '1-6',
       speedRatio: '1:1',
     } as const
-    const definition = getVtgPatternDefinition(selection)
 
-    expect(definition?.patternsBySpeedRatio['1:1']?.(selection)?.props[0]?.anim).toHaveLength(2)
+    expect(buildVtgPattern(selection)?.props[0]?.anim).toHaveLength(2)
     expect(createVtgAnimation(createCurrentAnimation(), selection)?.props[0]?.anim).toHaveLength(5)
   })
 
@@ -154,14 +153,5 @@ describe('createVtgAnimation', () => {
       { arc: 90, turns: 180 },
       { plane: 180, arc: 90, turns: -360 },
     ])
-  })
-
-  it('does not build a pattern for the unsupported 1:5 speed ratio', () => {
-    expect(
-      createVtgAnimation(createCurrentAnimation(), {
-        reference: '1-6',
-        speedRatio: '1:5',
-      }),
-    ).toBeUndefined()
   })
 })

@@ -28,13 +28,11 @@ export type VtgReadableAnimation = Partial<
   props: PropReadable[]
 }
 
+export type VtgPatternBuilder = (isAnti: boolean) => VtgReadableAnimation
+
 export interface VtgPatternDefinition {
   label: string
-  patternsBySpeedRatio: Readonly<
-    Partial<
-      Record<VtgSpeedRatio, (selection: VtgPatternSelection) => VtgReadableAnimation | undefined>
-    >
-  >
+  patternsBySpeedRatio: Readonly<Partial<Record<VtgSpeedRatio, VtgPatternBuilder>>>
 }
 
 export interface VtgPropPlacement {

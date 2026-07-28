@@ -113,7 +113,7 @@ describe('SpiroAnim view', () => {
 
     const expectedOneToThree = createVtgAnimation(playerRoot.value, {
       reference: '2-6',
-      speedRatio: '1:1',
+      speedRatio: '1:3',
     })
     await wrapper.get<HTMLInputElement>('input[value="1:3"]').setValue()
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')

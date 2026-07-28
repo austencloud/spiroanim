@@ -3,12 +3,16 @@ import type {
   VtgCellReference,
   VtgPatternDefinition,
   VtgPatternSelection,
+  VtgReadableAnimation,
 } from '@/features/vtg/types'
 
 const catalog: Readonly<Partial<Record<VtgCellReference, Readonly<VtgPatternDefinition>>>> = {
   ...vtgColumnPatterns,
 }
 
-export const getVtgPatternDefinition = (
+export const buildVtgPattern = (
   selection: VtgPatternSelection,
-): Readonly<VtgPatternDefinition> | undefined => catalog[selection.reference]
+): VtgReadableAnimation | undefined => {
+  const buildPattern = catalog[selection.reference]?.patternsBySpeedRatio[selection.speedRatio]
+  return buildPattern?.(selection.isAnti === true)
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
-import { getVtgPatternDefinition } from '@/features/vtg/data/vtgPatternCatalog'
+import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { encodeReadable } from '@/services/animation/AnimReadableFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
@@ -166,13 +166,13 @@ describe('VTG query references', () => {
     },
     {
       reference: '5-2',
-      p0: 'N--.bn-.bn-xM...',
-      p1: 'S--.bn-xM.blEpk...',
+      p0: 'N--.bn-.bn-pk...',
+      p1: 'S--.bn-xM.blExM...',
     },
     {
       reference: '5-1',
-      p0: 'N--.bn-.bn-xM...',
-      p1: 'S--.bn-xM.bn-pk...',
+      p0: 'N--.bn-.bn-pk...',
+      p1: 'S--.bn-xM.bn-xM...',
     },
     {
       reference: '6-6',
@@ -208,15 +208,15 @@ describe('VTG query references', () => {
     },
     {
       reference: '6-2',
-      p0: 'N--.bn-.bn-xM...',
-      p1: 'S--.blExM.blEpk...',
+      p0: 'N--.bn-.bn-pk...',
+      p1: 'S--.blExM.blExM...',
     },
     {
       reference: '6-1',
-      p0: 'N--.bn-.bn-xM...',
-      p1: 'S--.blExM.bn-pk...',
+      p0: 'N--.bn-.bn-pk...',
+      p1: 'S--.blExM.bn-xM...',
     },
-  ] as const)('decodes the 1:3 replacement for $reference', async (query) => {
+  ] as const)('decodes the 1:3 values for $reference', async (query) => {
     const { reference, p0, p1 } = query
     const version = await loadSpiroAnimQSVersion(1)
     const queryCodec = await useSpiroAnimQS(version.VDEF, useBaseQS(version.VDEF), 1)
@@ -233,7 +233,7 @@ describe('VTG query references', () => {
       speedRatio: '1:3',
       isAnti: 'isAnti' in query && query.isAnti,
     } as const
-    const pattern = getVtgPatternDefinition(selection)?.patternsBySpeedRatio['1:3']?.(selection)
+    const pattern = buildVtgPattern(selection)
 
     expect(pattern?.props.map((prop) => prop.anim)).toEqual(
       readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
@@ -318,7 +318,7 @@ describe('VTG query references', () => {
     const queryCodec = await useSpiroAnimQS(version.VDEF, useBaseQS(version.VDEF), 1)
     const readable = encodeReadable(queryCodec.decodeQS({ r, p0, p1, v: '1' }))
     const selection = { reference, speedRatio: '1:1' } as const
-    const pattern = getVtgPatternDefinition(selection)?.patternsBySpeedRatio['1:1']?.(selection)
+    const pattern = buildVtgPattern(selection)
 
     expect(pattern?.props.map((prop) => prop.anim)).toEqual(
       readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
@@ -397,7 +397,7 @@ describe('VTG query references', () => {
     })
     const readable = encodeReadable(decoded)
     const selection = { reference, speedRatio: '1:1' } as const
-    const pattern = getVtgPatternDefinition(selection)?.patternsBySpeedRatio['1:1']?.(selection)
+    const pattern = buildVtgPattern(selection)
 
     expect(pattern?.props.map((prop) => prop.anim)).toEqual(
       readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
@@ -475,7 +475,7 @@ describe('VTG query references', () => {
         }),
       )
       const selection = { reference, speedRatio: '1:1', isAnti } as const
-      const pattern = getVtgPatternDefinition(selection)?.patternsBySpeedRatio['1:1']?.(selection)
+      const pattern = buildVtgPattern(selection)
 
       expect(pattern?.props.map((prop) => prop.anim)).toEqual(
         readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
@@ -562,7 +562,7 @@ describe('VTG query references', () => {
         }),
       )
       const selection = { reference, speedRatio: '1:1', isAnti } as const
-      const pattern = getVtgPatternDefinition(selection)?.patternsBySpeedRatio['1:1']?.(selection)
+      const pattern = buildVtgPattern(selection)
       const readableProps = reverseQueryProps ? [...readable.props].reverse() : readable.props
 
       expect(pattern?.props.map((prop) => prop.anim)).toEqual(

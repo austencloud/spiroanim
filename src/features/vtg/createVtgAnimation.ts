@@ -1,4 +1,4 @@
-import { getVtgPatternDefinition } from '@/features/vtg/data/vtgPatternCatalog'
+import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
 import { rootFinal } from '@/math/animation/PlayerFunc'
@@ -34,19 +34,13 @@ const mergeWithCurrentAnimation = (
 
 /**
  * Builds fresh player data for a VTG selection. Undefined means that the
- * selected catalog cell has not been defined yet.
+ * selected cell has no pattern for that speed ratio yet.
  */
 export const createVtgAnimation = (
   current: RootDataFinal,
   selection: VtgPatternSelection,
 ): RootDataFinal | undefined => {
-  const definition = getVtgPatternDefinition(selection)
-  if (!definition) return undefined
-
-  const buildPattern = definition.patternsBySpeedRatio[selection.speedRatio]
-  if (!buildPattern) return undefined
-
-  const selectedPattern = buildPattern(selection)
+  const selectedPattern = buildVtgPattern(selection)
   if (!selectedPattern) return undefined
 
   const pattern = addDefaultFrames(selectedPattern)

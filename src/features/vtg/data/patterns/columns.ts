@@ -1,8 +1,9 @@
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import { vtgSpeedRatios } from '@/features/vtg/types'
 import type {
   VtgCellReference,
+  VtgPatternBuilder,
   VtgPatternDefinition,
-  VtgPatternSelection,
   VtgReadableAnimation,
   VtgRuleNumber,
   VtgSpeedRatio,
@@ -17,14 +18,12 @@ interface VtgSpinAntiPair {
 }
 
 type VtgCellPattern = VtgPropPair | VtgSpinAntiPair
-type VtgRowPatterns = Readonly<Record<VtgRuleNumber, VtgCellPattern>>
+type VtgRowPatterns = Readonly<Partial<Record<VtgRuleNumber, VtgCellPattern>>>
+type VtgRowsBySpeedRatio = Readonly<Partial<Record<VtgSpeedRatio, VtgRowPatterns>>>
 
 interface VtgColumnPattern {
   starts: VtgPropPair
-  rows: VtgRowPatterns
-  ratioRows?: Readonly<
-    Partial<Record<VtgSpeedRatio, Readonly<Partial<Record<VtgRuleNumber, VtgCellPattern>>>>>
-  >
+  rowsBySpeedRatio: VtgRowsBySpeedRatio
   swapProps?: boolean
 }
 
@@ -42,49 +41,49 @@ const zeroPlane = { plane: 0, arc: 90 } as const satisfies AnimReadable
 const zeroPlaneStill = { plane: 0, arc: 90, turns: 0 } as const satisfies AnimReadable
 const zeroPlaneDoubleBack = { plane: 0, arc: 90, turns: -360 } as const satisfies AnimReadable
 
-const outsideColumnRows = {
-  1: [plane, plane],
-  2: [plane, arc],
-  3: [planeBack, planeBack],
-  4: [planeBack, arcBack],
-  5: [plane, planeBack],
-  6: [plane, arcBack],
-} as const satisfies VtgRowPatterns
+const outsideRowsBySpeedRatio = {
+  '1:1': {
+    1: [plane, plane],
+    2: [plane, arc],
+    3: [planeBack, planeBack],
+    4: [planeBack, arcBack],
+    5: [plane, planeBack],
+    6: [plane, arcBack],
+  },
+  '1:3': {
+    1: [planeDoubleBack, planeDoubleBack],
+    2: [planeDoubleBack, arcDoubleBack],
+    3: [planeForward, planeForward],
+    4: [planeForward, arcForward],
+    5: [planeForward, planeDoubleBack],
+    6: [planeForward, arcDoubleBack],
+  },
+} as const satisfies VtgRowsBySpeedRatio
 
-const insideColumnRows = {
-  1: [planeBack, planeBack],
-  2: [planeBack, arcBack],
-  3: [planeStill, planeStill],
-  4: [planeStill, arcStill],
-  5: [planeStill, planeBack],
-  6: [planeStill, arcBack],
-} as const satisfies VtgRowPatterns
-
-const outsideColumnRatioRows = {
-  1: [planeDoubleBack, planeDoubleBack],
-  2: [planeDoubleBack, arcDoubleBack],
-  3: [planeForward, planeForward],
-  4: [planeForward, arcForward],
-  5: [planeForward, planeDoubleBack],
-  6: [planeForward, arcDoubleBack],
-} as const satisfies VtgRowPatterns
-
-const insideColumnRatioRows = {
-  1: [planeForward, planeForward],
-  2: [planeForward, arcForward],
-  3: [planeDoubleBack, planeDoubleBack],
-  4: [planeDoubleBack, arcDoubleBack],
-  5: [planeForward, planeDoubleBack],
-  6: [planeForward, arcDoubleBack],
-} as const satisfies VtgRowPatterns
+const insideRowsBySpeedRatio = {
+  '1:1': {
+    1: [planeBack, planeBack],
+    2: [planeBack, arcBack],
+    3: [planeStill, planeStill],
+    4: [planeStill, arcStill],
+    5: [planeStill, planeBack],
+    6: [planeStill, arcBack],
+  },
+  '1:3': {
+    1: [planeForward, planeForward],
+    2: [planeForward, arcForward],
+    3: [planeDoubleBack, planeDoubleBack],
+    4: [planeDoubleBack, arcDoubleBack],
+    5: [planeForward, planeDoubleBack],
+    6: [planeForward, arcDoubleBack],
+  },
+} as const satisfies VtgRowsBySpeedRatio
 
 const createPattern = (
   column: VtgColumnPattern,
-  row: VtgRuleNumber,
-  speedRatio: VtgSpeedRatio,
+  rowPattern: VtgCellPattern,
   isAnti: boolean,
 ): VtgReadableAnimation => {
-  const rowPattern = column.ratioRows?.[speedRatio]?.[row] ?? column.rows[row]
   const continuations =
     'spin' in rowPattern ? (isAnti ? rowPattern.anti : rowPattern.spin) : rowPattern
   const firstProp = { anim: [column.starts[0], continuations[0]] }
@@ -96,67 +95,74 @@ const createPattern = (
   }
 }
 
+const createPatternBuilders = (
+  column: VtgColumnPattern,
+  row: VtgRuleNumber,
+): VtgPatternDefinition['patternsBySpeedRatio'] => {
+  const builders: Partial<Record<VtgSpeedRatio, VtgPatternBuilder>> = {}
+
+  for (const speedRatio of vtgSpeedRatios) {
+    const rowPattern = column.rowsBySpeedRatio[speedRatio]?.[row]
+    if (rowPattern === undefined) continue
+    builders[speedRatio] = (isAnti) => createPattern(column, rowPattern, isAnti)
+  }
+
+  return builders
+}
+
 /**
  * A VTG reference stores the column first and row second. Every cell in a
  * column shares the same first animation frame for each prop. Each row entry
- * supplies the second frames, and only the four special cells define explicit
- * Spin/Anti variants.
+ * supplies the second frames for one speed ratio. Ratios are independent:
+ * missing ratio data is unsupported rather than inherited from another ratio.
+ * Only the four special cells define explicit Spin/Anti variants.
  */
 const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
   1: {
     starts: [plane, plane],
-    rows: outsideColumnRows,
-    ratioRows: {
-      '1:3': outsideColumnRatioRows,
-    },
+    rowsBySpeedRatio: outsideRowsBySpeedRatio,
   },
   2: {
     starts: [plane, zeroPlane],
-    rows: outsideColumnRows,
-    ratioRows: {
-      '1:3': outsideColumnRatioRows,
-    },
+    rowsBySpeedRatio: outsideRowsBySpeedRatio,
   },
   3: {
     starts: [planeBack, planeForward],
-    rows: {
-      ...insideColumnRows,
-      4: [planeStill, zeroPlaneStill],
-    },
-    ratioRows: {
+    rowsBySpeedRatio: {
+      '1:1': {
+        ...insideRowsBySpeedRatio['1:1'],
+        4: [planeStill, zeroPlaneStill],
+      },
       '1:3': {
-        ...insideColumnRatioRows,
+        ...insideRowsBySpeedRatio['1:3'],
         4: [planeDoubleBack, zeroPlaneDoubleBack],
       },
     },
   },
   4: {
     starts: [planeBack, arcForward],
-    rows: insideColumnRows,
-    ratioRows: {
-      '1:3': insideColumnRatioRows,
-    },
+    rowsBySpeedRatio: insideRowsBySpeedRatio,
   },
   5: {
     starts: [arc, arcForward],
-    rows: {
-      1: [arc, arcBack],
-      2: [arc, planeBack],
-      3: [arcBack, arcStill],
-      4: [arcBack, planeStill],
-      5: {
-        spin: [arc, arcStill],
-        anti: [planeBack, planeBack],
+    rowsBySpeedRatio: {
+      '1:1': {
+        1: [arc, arcBack],
+        2: [arc, planeBack],
+        3: [arcBack, arcStill],
+        4: [arcBack, planeStill],
+        5: {
+          spin: [arc, arcStill],
+          anti: [planeBack, planeBack],
+        },
+        6: {
+          spin: [arc, planeStill],
+          anti: [arcBack, planeBack],
+        },
       },
-      6: {
-        spin: [arc, planeStill],
-        anti: [arcBack, planeBack],
-      },
-    },
-    ratioRows: {
       '1:3': {
-        1: [arcForward, arcDoubleBack],
-        2: [arcForward, planeDoubleBack],
+        1: [arcDoubleBack, arcForward],
+        2: [arcDoubleBack, planeForward],
         3: [arcForward, arcDoubleBack],
         4: [arcForward, planeDoubleBack],
         5: {
@@ -173,24 +179,24 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
   6: {
     starts: [planeForward, arc],
     swapProps: true,
-    rows: {
-      1: [arcBack, arcStill],
-      2: [planeBack, arcStill],
-      3: [arcStill, arcBack],
-      4: [planeStill, arcBack],
-      5: {
-        spin: [arcStill, arcStill],
-        anti: [arcBack, arcBack],
+    rowsBySpeedRatio: {
+      '1:1': {
+        1: [arcBack, arcStill],
+        2: [planeBack, arcStill],
+        3: [arcStill, arcBack],
+        4: [planeStill, arcBack],
+        5: {
+          spin: [arcStill, arcStill],
+          anti: [arcBack, arcBack],
+        },
+        6: {
+          spin: [planeStill, arcStill],
+          anti: [planeBack, arcBack],
+        },
       },
-      6: {
-        spin: [planeStill, arcStill],
-        anti: [planeBack, arcBack],
-      },
-    },
-    ratioRows: {
       '1:3': {
-        1: [arcDoubleBack, arcForward],
-        2: [planeDoubleBack, arcForward],
+        1: [arcForward, arcDoubleBack],
+        2: [planeForward, arcDoubleBack],
         3: [arcDoubleBack, arcForward],
         4: [planeDoubleBack, arcForward],
         5: {
@@ -223,15 +229,10 @@ for (const row of ruleNumbers) {
     const reference: VtgCellReference = `${column}-${row}`
     const label = rowLabels[row][column - 1]
     if (label === undefined) throw new Error(`Missing VTG label for ${reference}`)
-    const buildPattern = (selection: VtgPatternSelection) =>
-      createPattern(columnPatterns[column], row, selection.speedRatio, selection.isAnti === true)
 
     catalog[reference] = {
       label,
-      patternsBySpeedRatio: {
-        '1:1': buildPattern,
-        '1:3': buildPattern,
-      },
+      patternsBySpeedRatio: createPatternBuilders(columnPatterns[column], row),
     }
   }
 }
