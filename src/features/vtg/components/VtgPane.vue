@@ -121,7 +121,10 @@ import type {
   VtgRuleDiagram,
   VtgRuleNumber,
   VtgRuleSpec,
+  VtgPatternSelection,
+  VtgSpeedRatio,
 } from '@/features/vtg/types'
+import { vtgSpeedRatios } from '@/features/vtg/types'
 
 interface BlankDimensions {
   width: number
@@ -138,8 +141,11 @@ interface VtgMatrixTile {
   reference: VtgCellReference
 }
 
-const speedRatios = ['1:1', '1:3', '1:5'] as const
-type VtgSpeedRatio = (typeof speedRatios)[number]
+const emit = defineEmits<{
+  patternSelect: [selection: VtgPatternSelection]
+}>()
+
+const speedRatios = vtgSpeedRatios
 const speedRatio = ref<VtgSpeedRatio>('1:1')
 
 const matrixRows = [
@@ -216,6 +222,10 @@ const selectTile = (tile: VtgMatrixTile) => {
     column: tile.column,
     row: tile.row,
   }
+  emit('patternSelect', {
+    reference: tile.reference,
+    speedRatio: speedRatio.value,
+  })
 }
 
 const previewTile = (tile: VtgMatrixTile) => {

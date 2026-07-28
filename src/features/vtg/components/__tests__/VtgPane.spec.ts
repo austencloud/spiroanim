@@ -129,6 +129,16 @@ describe('VtgPane', () => {
     expect(
       wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').attributes('aria-pressed'),
     ).toBe('true')
+    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-5', speedRatio: '1:1' }]])
+  })
+
+  it('includes the selected speed ratio in each pattern request', async () => {
+    const wrapper = mount(VtgPane)
+
+    await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
+    await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
+
+    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:5' }]])
   })
 
   it('temporarily previews a hovered cross and restores the clicked selection', async () => {

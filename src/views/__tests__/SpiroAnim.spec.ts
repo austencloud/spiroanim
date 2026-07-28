@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
+import { usePlayerStore } from '@/stores/usePlayerStore'
+import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 
 describe('SpiroAnim view', () => {
   beforeEach(() => {
@@ -91,6 +93,26 @@ describe('SpiroAnim view', () => {
     useMainPaneStore().setViewInPane('vtg', 'left')
     await flushPromises()
     expect(wrapper.get('[data-role="left-pane"]').text()).toContain('VTG')
+
+    const playerRoot = usePlayerStore('main').raw().ROOT
+    await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
+
+    expect(playerRoot.value).toMatchObject({
+      aspectx: vtgPlayerSettings.aspectx,
+      aspecty: vtgPlayerSettings.aspecty,
+      props: [
+        { anim: [{ arc: 180, scale: 10 }, { arc: 90 }, {}, {}, {}] },
+        {
+          anim: [
+            { plane: 180, arc: 0, turns: 180, scale: 10 },
+            { arc: 90, turns: -180 },
+            {},
+            {},
+            {},
+          ],
+        },
+      ],
+    })
 
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)

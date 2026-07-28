@@ -1,3 +1,5 @@
+import type { PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
+
 export type VtgRuleNumber = 1 | 2 | 3 | 4 | 5 | 6
 
 /**
@@ -9,6 +11,25 @@ export type VtgCellReference = `${VtgRuleNumber}-${VtgRuleNumber}`
 export interface VtgCellAddress {
   column: VtgRuleNumber
   row: VtgRuleNumber
+}
+
+export const vtgSpeedRatios = ['1:1', '1:3', '1:5'] as const
+export type VtgSpeedRatio = (typeof vtgSpeedRatios)[number]
+
+export interface VtgPatternSelection {
+  reference: VtgCellReference
+  speedRatio: VtgSpeedRatio
+}
+
+export type VtgReadableAnimation = Partial<
+  Omit<RootReadable, 'props'> & Pick<RootDataFinal, 'speed' | 'type' | 'turns' | 'depth'>
+> & {
+  props: PropReadable[]
+}
+
+export interface VtgPatternDefinition {
+  label: string
+  build: (speedRatio: VtgSpeedRatio) => VtgReadableAnimation
 }
 
 export interface VtgPropPlacement {

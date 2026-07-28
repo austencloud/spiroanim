@@ -34,7 +34,13 @@
         :dim="dTimeline"
         :landscape="isLandscape"
       />
-      <VtgPane v-if="viewVisible.vtg" ref="cVtg" data-type="vtg" data-role="vtg-view" />
+      <VtgPane
+        v-if="viewVisible.vtg"
+        ref="cVtg"
+        data-type="vtg"
+        data-role="vtg-view"
+        @pattern-select="applyVtgPattern"
+      />
     </div>
     <AppNavigationMenu />
     <PaneSplitter
@@ -58,6 +64,8 @@ import Player from '@/components/SpiroAnim/AnimPlayer.vue'
 import Editor from '@/components/SpiroAnim/AnimEditor.vue'
 import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
+import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import type { VtgPatternSelection } from '@/features/vtg/types'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useScrollSelectScale } from '@/composables/useScrollSelectScale'
@@ -67,6 +75,7 @@ import { useSpiroAnimKeyboard } from '@/composables/useSpiroAnimKeyboard'
 import { useViewportStore } from '@/stores/useViewportStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
+import { usePlayerStore } from '@/stores/usePlayerStore'
 
 useScrollSelectScale()
 useMainRoute() // Handles updates to route path and query
@@ -78,6 +87,7 @@ const splitterStore = useSplitterStore('main')
 const { leftWidth, leftHeight, rightWidth, rightHeight, leftPerc } = storeToRefs(splitterStore)
 
 const paneStore = useMainPaneStore()
+const { ROOT } = usePlayerStore('main').raw()
 const { registerComponentEl } = paneStore
 
 const {
@@ -104,6 +114,11 @@ registerComponentEl(cPlayer, ePlayer)
 registerComponentEl(cEditor, eEditor)
 registerComponentEl(cTimeline, eTimeline)
 registerComponentEl(cVtg, eVtg)
+
+const applyVtgPattern = (selection: VtgPatternSelection) => {
+  const animation = createVtgAnimation(ROOT.value, selection)
+  if (animation) ROOT.value = animation
+}
 
 const parentDim = computed(() => ({ width: viewWidth.value, height: viewHeight.value }))
 
