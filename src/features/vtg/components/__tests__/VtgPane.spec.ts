@@ -73,6 +73,75 @@ describe('VtgPane', () => {
     ).toBe('true')
   })
 
+  it('temporarily previews a hovered cross and restores the clicked selection', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(VtgPane)
+    const pane = wrapper.get('[data-role="vtg-pane"]')
+    const selectedCell = wrapper.get('[data-cell-reference="1-5"]')
+    const hoveredCell = wrapper.get('[data-cell-reference="4-2"]')
+    const nextHoveredCell = wrapper.get('[data-cell-reference="6-3"]')
+
+    await selectedCell.trigger('click')
+    await hoveredCell.trigger('mouseenter')
+
+    expect(pane.attributes('data-selected-cell')).toBe('1-5')
+    expect(pane.attributes('data-previewed-cell')).toBe('4-2')
+    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
+    expect(
+      wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 4"]').attributes('aria-pressed'),
+    ).toBe('true')
+    expect(
+      wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 2"]').attributes('aria-pressed'),
+    ).toBe('true')
+
+    await hoveredCell.trigger('mouseleave')
+
+    expect(pane.attributes('data-previewed-cell')).toBe('4-2')
+
+    await nextHoveredCell.trigger('mouseenter')
+    vi.advanceTimersByTime(50)
+    await nextTick()
+
+    expect(pane.attributes('data-previewed-cell')).toBe('6-3')
+
+    await nextHoveredCell.trigger('mouseleave')
+    vi.advanceTimersByTime(50)
+    await nextTick()
+
+    expect(pane.attributes('data-selected-cell')).toBe('1-5')
+    expect(pane.attributes('data-previewed-cell')).toBeUndefined()
+    expect(selectedCell.attributes('aria-pressed')).toBe('true')
+    expect(
+      wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').attributes('aria-pressed'),
+    ).toBe('true')
+    expect(
+      wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]').attributes('aria-pressed'),
+    ).toBe('true')
+  })
+
+  it('restores the neutral state after hovering when nothing has been clicked', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(VtgPane)
+    const pane = wrapper.get('[data-role="vtg-pane"]')
+    const hoveredCell = wrapper.get('[data-cell-reference="6-6"]')
+
+    await hoveredCell.trigger('mouseenter')
+
+    expect(pane.attributes('data-selected-cell')).toBeUndefined()
+    expect(pane.attributes('data-previewed-cell')).toBe('6-6')
+    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
+
+    await hoveredCell.trigger('mouseleave')
+
+    expect(pane.attributes('data-previewed-cell')).toBe('6-6')
+
+    vi.advanceTimersByTime(50)
+    await nextTick()
+
+    expect(pane.attributes('data-previewed-cell')).toBeUndefined()
+    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(0)
+  })
+
   it('keeps the left column and bottom row inert for now', async () => {
     const wrapper = mount(VtgPane)
     const pane = wrapper.get('[data-role="vtg-pane"]')

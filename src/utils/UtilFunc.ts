@@ -19,20 +19,34 @@ export function debounceImmediate<Args extends unknown[], R>(
   }
 }
 
+export type DebouncedFunction<Args extends unknown[]> = ((...args: Args) => void) & {
+  cancel: () => void
+}
+
 export function debounce<Args extends unknown[]>(
   func: (...args: Args) => void,
   wait: number = 50,
-): (...args: Args) => void {
+): DebouncedFunction<Args> {
   let timeout: ReturnType<typeof setTimeout> | undefined
 
-  return function (...args: Args): void {
+  const debounced = (...args: Args): void => {
     if (timeout !== undefined) {
       clearTimeout(timeout)
     }
     timeout = setTimeout(() => {
+      timeout = undefined
       func(...args)
     }, wait)
   }
+
+  debounced.cancel = () => {
+    if (timeout === undefined) return
+
+    clearTimeout(timeout)
+    timeout = undefined
+  }
+
+  return debounced
 }
 
 /*

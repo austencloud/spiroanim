@@ -29,6 +29,18 @@ describe('UtilFunc', () => {
     expect(callback).toHaveBeenCalledExactlyOnceWith('latest')
   })
 
+  it('cancels a pending debounced call', () => {
+    vi.useFakeTimers()
+    const callback = vi.fn<() => void>()
+    const wrapped = debounce(callback, 50)
+
+    wrapped()
+    wrapped.cancel()
+    vi.advanceTimersByTime(50)
+
+    expect(callback).not.toHaveBeenCalled()
+  })
+
   it('supports leading and trailing immediate debounce behavior', () => {
     vi.useFakeTimers()
     const callback = vi.fn<(value: string) => void>()

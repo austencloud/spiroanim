@@ -7,6 +7,7 @@
     :data-blank-width="blankWidth"
     :data-blank-height="blankHeight"
     :data-selected-cell="selectedCellReference"
+    :data-previewed-cell="previewedCellReference"
   >
     <h1 id="vtg-pane-title" class="vtg-pane__visually-hidden">VTG generator</h1>
 
@@ -19,7 +20,7 @@
           :number="rule.number"
           :diagram="rule.diagram"
           orientation="vertical"
-          :accent="rule.number === selectedCell?.row"
+          :accent="rule.number === activeCell?.row"
         />
       </div>
 
@@ -38,6 +39,8 @@
             :data-cell-reference="tile.reference"
             data-role="vtg-tile"
             @click="selectTile(tile)"
+            @mouseenter="previewTile(tile)"
+            @mouseleave="clearTilePreview"
           >
             {{ tile.label }}
           </button>
@@ -70,7 +73,7 @@
           :number="rule.number"
           :diagram="rule.diagram"
           orientation="horizontal"
-          :accent="rule.number === selectedCell?.column"
+          :accent="rule.number === activeCell?.column"
         />
       </div>
     </div>
@@ -82,6 +85,7 @@ import { mdiShuffleVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
+import { debounce } from '@/utils/UtilFunc'
 import type {
   VtgCellAddress,
   VtgCellReference,
@@ -145,14 +149,22 @@ const matrixTiles: readonly VtgMatrixTile[] = matrixRows.flatMap((row, rowIndex)
 })
 
 const selectedCell = ref<VtgCellAddress>()
+const previewedCell = ref<VtgCellAddress>()
+const activeCell = computed(() => previewedCell.value ?? selectedCell.value)
+const previewRestoreDelay = 50
+
 const selectedCellReference = computed<VtgCellReference | undefined>(() => {
   const cell = selectedCell.value
   return cell ? createCellReference(cell.column, cell.row) : undefined
 })
+const previewedCellReference = computed<VtgCellReference | undefined>(() => {
+  const cell = previewedCell.value
+  return cell ? createCellReference(cell.column, cell.row) : undefined
+})
 
 const isTileHighlighted = (tile: VtgMatrixTile) =>
-  selectedCell.value !== undefined &&
-  (tile.column === selectedCell.value.column || tile.row === selectedCell.value.row)
+  activeCell.value !== undefined &&
+  (tile.column === activeCell.value.column || tile.row === activeCell.value.row)
 
 const selectTile = (tile: VtgMatrixTile) => {
   selectedCell.value = {
@@ -160,6 +172,18 @@ const selectTile = (tile: VtgMatrixTile) => {
     row: tile.row,
   }
 }
+
+const previewTile = (tile: VtgMatrixTile) => {
+  clearTilePreview.cancel()
+  previewedCell.value = {
+    column: tile.column,
+    row: tile.row,
+  }
+}
+
+const clearTilePreview = debounce(() => {
+  previewedCell.value = undefined
+}, previewRestoreDelay)
 
 const propBounds = {
   outerStart: 4,
@@ -313,6 +337,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  clearTilePreview.cancel()
   blankObserver?.disconnect()
 })
 
@@ -322,6 +347,8 @@ defineExpose({
   blankHeight,
   selectedCell,
   selectedCellReference,
+  previewedCell,
+  previewedCellReference,
 })
 </script>
 
