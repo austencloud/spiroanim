@@ -107,6 +107,8 @@ describe('VtgPane', () => {
 
     expect(pane.attributes('data-selected-cell')).toBe('1-5')
     expect(exampleCell.attributes('aria-pressed')).toBe('true')
+    expect(exampleCell.classes()).toContain('vtg-tile--selected')
+    expect(wrapper.findAll('.vtg-tile--selected')).toHaveLength(1)
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
     expect(
       wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').attributes('aria-pressed'),
@@ -126,6 +128,8 @@ describe('VtgPane', () => {
 
     expect(pane.attributes('data-selected-cell')).toBe('1-5')
     expect(pane.attributes('data-previewed-cell')).toBe('4-2')
+    expect(selectedCell.classes()).toContain('vtg-tile--selected')
+    expect(hoveredCell.classes()).not.toContain('vtg-tile--selected')
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
     expect(
       wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 4"]').attributes('aria-pressed'),

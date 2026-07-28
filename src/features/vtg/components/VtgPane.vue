@@ -38,7 +38,10 @@
                 v-bind="activatorProps"
                 type="button"
                 class="vtg-tile"
-                :class="{ 'vtg-tile--highlighted': isTileHighlighted(tile) }"
+                :class="{
+                  'vtg-tile--highlighted': isTileHighlighted(tile),
+                  'vtg-tile--selected': tile.reference === selectedCellReference,
+                }"
                 :aria-label="`${tile.label}, cell ${tile.reference}`"
                 :aria-pressed="tile.reference === selectedCellReference"
                 :data-board-column="tile.boardColumn"
@@ -406,6 +409,7 @@ defineExpose({
   height: 100%;
   min-inline-size: 0;
   min-block-size: 0;
+  padding-block-end: var(--size-pane-switch-bottom-clearance);
   overflow: auto;
   color: var(--color-text);
   background: transparent;
@@ -424,8 +428,8 @@ defineExpose({
 
   container-type: inline-size;
   display: grid;
-  width: max(100%, 32rem);
-  min-width: 32rem;
+  width: 100%;
+  min-width: 20rem;
   aspect-ratio: 1;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-template-rows: repeat(7, minmax(0, 1fr));
@@ -464,6 +468,7 @@ defineExpose({
 
 .vtg-tile {
   appearance: none;
+  position: relative;
   display: grid;
   width: 100%;
   height: 100%;
@@ -501,6 +506,13 @@ defineExpose({
 .vtg-tile--highlighted {
   color: var(--vtg-color-ink);
   background: var(--vtg-color-secondary);
+}
+
+.vtg-tile--selected {
+  box-shadow:
+    inset 0 0 0 max(2px, 0.28cqi) var(--vtg-color-rule-text),
+    inset 0 0 0 max(4px, 0.52cqi) var(--vtg-color-ink),
+    0 0.45cqi 1cqi color-mix(in srgb, var(--vtg-color-preview) 22%, transparent);
 }
 
 .vtg-blank {
