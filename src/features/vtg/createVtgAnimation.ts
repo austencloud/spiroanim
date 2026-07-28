@@ -1,5 +1,5 @@
 import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
-import { vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
@@ -32,6 +32,14 @@ const mergeWithCurrentAnimation = (
   props: pattern.props,
 })
 
+const vtgPreviewBase = rootFinal(
+  decodeReadable({
+    ...vtgPlayerSettings,
+    smooth: true,
+    props: [],
+  }),
+)
+
 /**
  * Builds fresh player data for a VTG selection. Undefined means that the
  * selected cell has no pattern for that speed ratio yet.
@@ -52,5 +60,29 @@ export const createVtgAnimation = (
     type: pattern.type ?? current.type,
     turns: pattern.turns ?? current.turns,
     depth: pattern.depth ?? current.depth,
+  }
+}
+
+/**
+ * Builds VTG data without inheriting settings from the active player.
+ */
+export const createVtgPreviewAnimation = (
+  selection: VtgPatternSelection,
+): RootDataFinal | undefined => {
+  const animation = createVtgAnimation(vtgPreviewBase, selection)
+  if (!animation) return undefined
+
+  return {
+    ...animation,
+    hands: false,
+    thick: 15,
+    visible: false,
+    props: animation.props.map((prop) => ({
+      ...prop,
+      hands: false,
+      paths: animation.paths,
+      thick: 15,
+      visible: false,
+    })),
   }
 }

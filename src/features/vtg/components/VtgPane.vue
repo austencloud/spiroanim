@@ -94,7 +94,16 @@
             :data-width="dimensions.width"
             :data-height="dimensions.height"
             aria-hidden="true"
-          />
+          >
+            <img
+              v-if="previewUrls[index]"
+              :src="previewUrls[index]"
+              alt=""
+              class="vtg-blank__preview"
+              data-role="vtg-preview"
+              :data-preview-reference="vtgPreviewReferences[index]"
+            />
+          </div>
         </div>
       </div>
 
@@ -173,6 +182,7 @@ import { mdiShuffleVariant } from '@mdi/js'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
+import { useVtgPreviews, vtgPreviewReferences } from '@/features/vtg/composables/useVtgPreviews'
 import { vtgBpmControl, vtgScaleControl } from '@/features/vtg/data/vtgPlayerSettings'
 import type {
   VtgCellAddress,
@@ -481,6 +491,14 @@ const blankHeight = ref(0)
 const blankDimensions = reactive<BlankDimensions[]>(
   Array.from({ length: 9 }, () => ({ width: 0, height: 0 })),
 )
+const { previewUrls, requestPreviews } = useVtgPreviews({
+  dimensions: blankDimensions,
+  speedRatio,
+  isAnti,
+  swapProps,
+  reversePlane,
+  scale,
+})
 
 let blankObserver: ResizeObserver | undefined
 
@@ -502,6 +520,7 @@ onMounted(() => {
       blankWidth.value = dimensions.width
       blankHeight.value = dimensions.height
     }
+    requestPreviews()
   })
   blankObserver = observer
 
@@ -526,6 +545,7 @@ defineExpose({
   reversePlane,
   bpm,
   scale,
+  previewUrls,
 })
 </script>
 
@@ -837,6 +857,13 @@ defineExpose({
   border-radius: 0.9cqi;
   box-shadow: 0 0.35cqi 0.85cqi color-mix(in srgb, var(--vtg-color-preview) 30%, transparent);
   transform: translate(-50%, calc(-50% - 0.33cqi));
+}
+
+.vtg-blank__preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .vtg-blank--1,

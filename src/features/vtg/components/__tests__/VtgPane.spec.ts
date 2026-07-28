@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
@@ -20,11 +20,84 @@ class FakeResizeObserver {
   unobserve(): void {}
 }
 
+interface FakeWorkerMessage {
+  id?: string
+  type: string
+  data: unknown
+}
+
+class FakeWorker {
+  static instances: FakeWorker[] = []
+  static previewCount = 0
+  static activePreviewRequests = 0
+  static maxActivePreviewRequests = 0
+
+  readonly messages: FakeWorkerMessage[] = []
+  private readonly listeners = new Set<EventListener>()
+
+  constructor() {
+    FakeWorker.instances.push(this)
+  }
+
+  addEventListener(type: string, listener: EventListener): void {
+    if (type === 'message') this.listeners.add(listener)
+  }
+
+  postMessage(message: FakeWorkerMessage): void {
+    this.messages.push(message)
+    if (message.id === undefined) return
+
+    let data: unknown
+    if (message.type === 'warnStr') data = message.data
+    else if (message.type === 'initialize') data = true
+    else if (message.type === 'reqimgs') {
+      FakeWorker.activePreviewRequests++
+      FakeWorker.maxActivePreviewRequests = Math.max(
+        FakeWorker.maxActivePreviewRequests,
+        FakeWorker.activePreviewRequests,
+      )
+      data = { 0: `blob:vtg-preview-${++FakeWorker.previewCount}` }
+    }
+
+    queueMicrotask(() => {
+      if (message.type === 'reqimgs') FakeWorker.activePreviewRequests--
+      const event = { data: { id: message.id, type: message.type, data } } as MessageEvent
+      this.listeners.forEach((listener) => listener(event))
+    })
+  }
+
+  terminate(): void {}
+}
+
+const reportAllBlankDimensions = (width: number, height: number) => {
+  const entries = FakeResizeObserver.observed.map(
+    (target) =>
+      ({
+        target,
+        contentRect: { width, height },
+      }) as ResizeObserverEntry,
+  )
+  FakeResizeObserver.callback?.(entries, {} as ResizeObserver)
+}
+
+const settlePreviewRendering = async () => {
+  for (let index = 0; index < 12; index++) await flushPromises()
+  await nextTick()
+}
+
+const countWorkerMessages = (type: string) =>
+  FakeWorker.instances[0]?.messages.filter((message) => message.type === type).length ?? 0
+
 describe('VtgPane', () => {
   beforeEach(() => {
     FakeResizeObserver.callback = undefined
     FakeResizeObserver.observed = []
+    FakeWorker.instances = []
+    FakeWorker.previewCount = 0
+    FakeWorker.activePreviewRequests = 0
+    FakeWorker.maxActivePreviewRequests = 0
     vi.stubGlobal('ResizeObserver', FakeResizeObserver)
+    vi.stubGlobal('Worker', FakeWorker)
   })
 
   afterEach(() => {
@@ -183,7 +256,7 @@ describe('VtgPane', () => {
     const outputs = wrapper.findAll('fieldset.vtg-slider-controls output')
 
     expect(bpm.attributes()).toMatchObject({ min: '40', max: '140', step: '1' })
-    expect(scale.attributes()).toMatchObject({ min: '0.6', max: '1.4', step: '0.1' })
+    expect(scale.attributes()).toMatchObject({ min: '0.5', max: '1.4', step: '0.1' })
     expect(bpm.element.value).toBe('120')
     expect(scale.element.value).toBe('0.8')
     expect(outputs.map((output) => output.text())).toEqual(['120', '0.8'])
@@ -333,5 +406,68 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-blank-height')).toBe('68.5')
     expect(wrapper.get('[data-blank-index="0"]').attributes('data-width')).toBe('71.25')
     expect(wrapper.get('[data-blank-index="0"]').attributes('data-height')).toBe('68.5')
+  })
+
+  it('renders the top-left cell for each intersection through one sequential worker queue', async () => {
+    const wrapper = mount(VtgPane)
+    await settlePreviewRendering()
+
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+
+    expect(
+      wrapper
+        .findAll('[data-role="vtg-preview"]')
+        .map((preview) => preview.attributes('data-preview-reference')),
+    ).toEqual(['1-6', '3-6', '5-6', '1-4', '3-4', '5-4', '1-2', '3-2', '5-2'])
+    expect(wrapper.findAll('[data-role="vtg-preview"]')).toHaveLength(9)
+    expect(countWorkerMessages('data')).toBe(9)
+    expect(countWorkerMessages('reqimgs')).toBe(9)
+    expect(FakeWorker.maxActivePreviewRequests).toBe(1)
+    expect(
+      FakeWorker.instances[0]?.messages.find(({ type }) => type === 'initialize')?.data,
+    ).toEqual({ girth: 2, timeline: false })
+
+    const renderMessages = FakeWorker.instances[0]?.messages
+      .filter(({ type }) => type === 'data' || type === 'reqimgs')
+      .map(({ type }) => type)
+    expect(renderMessages).toEqual(Array.from({ length: 9 }, () => ['data', 'reqimgs']).flat())
+  })
+
+  it('refreshes previews for resize and non-BPM form changes', async () => {
+    const wrapper = mount(VtgPane)
+    await settlePreviewRendering()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+
+    const expectNineMorePreviews = async (change: () => Promise<unknown> | void) => {
+      const before = countWorkerMessages('data')
+      await change()
+      await settlePreviewRendering()
+      expect(countWorkerMessages('data')).toBe(before + 9)
+    }
+
+    const beforeBpm = countWorkerMessages('data')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').setValue(90)
+    await settlePreviewRendering()
+    expect(countWorkerMessages('data')).toBe(beforeBpm)
+
+    await expectNineMorePreviews(() =>
+      wrapper.get<HTMLInputElement>('input[value="1:3"]').setValue(),
+    )
+    await expectNineMorePreviews(async () => {
+      await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
+      await wrapper.get('[data-role="vtg-spin-toggle"]').trigger('click')
+    })
+    await expectNineMorePreviews(() =>
+      wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true),
+    )
+    await expectNineMorePreviews(() =>
+      wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true),
+    )
+    await expectNineMorePreviews(() =>
+      wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(1.1),
+    )
+    await expectNineMorePreviews(() => reportAllBlankDimensions(80, 76))
   })
 })

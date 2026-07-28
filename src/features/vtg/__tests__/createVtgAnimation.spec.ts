@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { createVtgAnimation, createVtgPreviewAnimation } from '@/features/vtg/createVtgAnimation'
 import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { rootCompile } from '@/math/animation/AnimFunc'
@@ -81,6 +81,42 @@ describe('createVtgAnimation', () => {
 
     expect(buildVtgPattern(selection)?.props[0]?.anim).toHaveLength(2)
     expect(createVtgAnimation(createCurrentAnimation(), selection)?.props[0]?.anim).toHaveLength(5)
+  })
+
+  it('uses player VTG settings with preview-only visibility and thickness overrides', () => {
+    const preview = createVtgPreviewAnimation({
+      reference: '1-6',
+      speedRatio: '1:1',
+    })
+    if (preview === undefined) throw new Error('Expected the VTG preview pattern to be defined')
+
+    expect(preview).toMatchObject({
+      bpm: vtgPlayerSettings.bpm,
+      paths: vtgPlayerSettings.paths,
+      hands: vtgPlayerSettings.hands,
+      distance: vtgPlayerSettings.distance,
+      visible: false,
+      thick: 15,
+    })
+    expect(preview.props.every((prop) => prop.anim.length === 5)).toBe(true)
+    expect(
+      preview.props.every(
+        (prop) =>
+          prop.paths === vtgPlayerSettings.paths &&
+          prop.hands === false &&
+          prop.visible === false &&
+          prop.thick === 15,
+      ),
+    ).toBe(true)
+    expect(
+      rootCompile(preview).props.every(
+        (prop) =>
+          prop.hands === false &&
+          prop.visible === false &&
+          prop.thick === 15 &&
+          prop.anim.length === 5,
+      ),
+    ).toBe(true)
   })
 
   it('sets scale 8 on VTG base frames and inherits it through compilation', () => {
@@ -192,7 +228,7 @@ describe('createVtgAnimation', () => {
   })
 
   it('caps BPM and Scale while mapping Scale to Distance', () => {
-    expect(vtgPlayerSettings.distance).toBe(21)
+    expect(vtgPlayerSettings.distance).toBe(17.5)
 
     const minimum = buildVtgPattern({
       reference: '1-6',
@@ -206,10 +242,16 @@ describe('createVtgAnimation', () => {
       bpm: 200,
       scale: 2,
     })
+    const pivot = buildVtgPattern({
+      reference: '1-6',
+      speedRatio: '1:1',
+      scale: 0.6,
+    })
 
-    expect(minimum).toMatchObject({ bpm: 40, distance: 18 })
-    expect(minimum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([6, 6])
-    expect(maximum).toMatchObject({ bpm: 140, distance: 30 })
+    expect(minimum).toMatchObject({ bpm: 40, distance: 14 })
+    expect(minimum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([5, 5])
+    expect(pivot).toMatchObject({ distance: 15 })
+    expect(maximum).toMatchObject({ bpm: 140, distance: 25 })
     expect(maximum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([14, 14])
   })
 

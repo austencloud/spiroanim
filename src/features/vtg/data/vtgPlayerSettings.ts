@@ -9,12 +9,14 @@ export const vtgBpmControl = {
 } as const
 
 export const vtgScaleControl = {
-  min: 0.6,
+  min: 0.5,
   max: 1.4,
   step: 0.1,
   default: 0.8,
-  distanceMin: 18,
-  distanceMax: 30,
+  distanceMin: 14,
+  distancePivotScale: 0.6,
+  distancePivot: 15,
+  distanceMax: 25,
 } as const
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -26,12 +28,14 @@ export const toVtgInternalScale = (scale: number) =>
 
 export const getVtgDistanceForScale = (scale: number) => {
   const clampedScale = clamp(scale, vtgScaleControl.min, vtgScaleControl.max)
-  const progress =
-    (clampedScale - vtgScaleControl.min) / (vtgScaleControl.max - vtgScaleControl.min)
+  const belowPivot = clampedScale <= vtgScaleControl.distancePivotScale
+  const scaleStart = belowPivot ? vtgScaleControl.min : vtgScaleControl.distancePivotScale
+  const scaleEnd = belowPivot ? vtgScaleControl.distancePivotScale : vtgScaleControl.max
+  const distanceStart = belowPivot ? vtgScaleControl.distanceMin : vtgScaleControl.distancePivot
+  const distanceEnd = belowPivot ? vtgScaleControl.distancePivot : vtgScaleControl.distanceMax
+  const progress = (clampedScale - scaleStart) / (scaleEnd - scaleStart)
 
-  const distance =
-    vtgScaleControl.distanceMin +
-    progress * (vtgScaleControl.distanceMax - vtgScaleControl.distanceMin)
+  const distance = distanceStart + progress * (distanceEnd - distanceStart)
 
   return Math.round(distance * 100) / 100
 }
