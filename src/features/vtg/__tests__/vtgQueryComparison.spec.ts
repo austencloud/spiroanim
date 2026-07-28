@@ -48,6 +48,42 @@ describe('VTG query references', () => {
       p0: 'N--.blE.blEs8...',
       p1: 'S--.biQ.bn-s8...',
     },
+    {
+      reference: '1-3',
+      r: 'Ew09APi11',
+      p0: 'N--.blE.blEs8...',
+      p1: 'S--.blE.blEs8...',
+    },
+    {
+      reference: '2-3',
+      r: 'Ew09APi11',
+      p0: 'N--.blE.blEs8...',
+      p1: 'S--.biQ.blEs8...',
+    },
+    {
+      reference: '1-2',
+      r: 'Ew09APi11',
+      p0: 'N--.blE.blE...',
+      p1: 'S--.blE.bn-...',
+    },
+    {
+      reference: '2-2',
+      r: 'Ew09APi11',
+      p0: 'N--.blE.blE...',
+      p1: 'S--.biQ.bn-...',
+    },
+    {
+      reference: '1-1',
+      r: 'Ew09APi11',
+      p0: 'N--.blE.blE...',
+      p1: 'S--.blE.blE...',
+    },
+    {
+      reference: '2-1',
+      r: 'Ew09APi11',
+      p0: 'N--.blE.blE...',
+      p1: 'S--.biQ.blE...',
+    },
   ] as const)('decodes replacement $reference', async ({ reference, r, p0, p1 }) => {
     const version = await loadSpiroAnimQSVersion(1)
     const queryCodec = await useSpiroAnimQS(version.VDEF, useBaseQS(version.VDEF), 1)
@@ -90,6 +126,36 @@ describe('VTG query references', () => {
       reference: '4-4',
       p0: 'N--.blEs8.blEuY...',
       p1: 'S--.bn-xM.bn-uY...',
+    },
+    {
+      reference: '3-3',
+      p0: 'N--.blEs8.blEuY...',
+      p1: 'S--.blExM.blEuY...',
+    },
+    {
+      reference: '4-3',
+      p0: 'N--.blEs8.blEuY...',
+      p1: 'S--.bn-xM.blEuY...',
+    },
+    {
+      reference: '3-2',
+      p0: 'N--.blEs8.blEs8...',
+      p1: 'S--.blExM.bn-s8...',
+    },
+    {
+      reference: '4-2',
+      p0: 'N--.blEs8.blEs8...',
+      p1: 'S--.bn-xM.bn-s8...',
+    },
+    {
+      reference: '3-1',
+      p0: 'N--.blEs8.blEs8...',
+      p1: 'S--.blExM.blEs8...',
+    },
+    {
+      reference: '4-1',
+      p0: 'N--.blEs8.blEs8...',
+      p1: 'S--.bn-xM.blEs8...',
     },
   ] as const)('decodes the replacement $reference', async ({ reference, p0, p1 }) => {
     const version = await loadSpiroAnimQSVersion(1)
@@ -140,10 +206,31 @@ describe('VTG query references', () => {
     },
     {
       reference: '5-4',
-      mode: 'Spin',
+      mode: 'Standard',
       isAnti: false,
       p0: 'N--.bn-.bn-s8...',
       p1: 'S--.bn-xM.blEuY...',
+    },
+    {
+      reference: '5-3',
+      mode: 'Standard',
+      isAnti: false,
+      p0: 'N--.bn-.bn-s8...',
+      p1: 'S--.bn-xM.bn-uY...',
+    },
+    {
+      reference: '5-2',
+      mode: 'Standard',
+      isAnti: false,
+      p0: 'N--.bn-.bn-...',
+      p1: 'S--.bn-xM.blEs8...',
+    },
+    {
+      reference: '5-1',
+      mode: 'Standard',
+      isAnti: false,
+      p0: 'N--.bn-.bn-...',
+      p1: 'S--.bn-xM.bn-s8...',
     },
   ] as const)(
     'decodes the $mode replacement for $reference',
@@ -172,6 +259,7 @@ describe('VTG query references', () => {
       reference: '6-6',
       mode: 'Spin',
       isAnti: false,
+      reverseQueryProps: true,
       p0: 'N--.blExM.blEuY...',
       p1: 'S--.bn-.bn-uY...',
     },
@@ -179,6 +267,7 @@ describe('VTG query references', () => {
       reference: '6-6',
       mode: 'Anti',
       isAnti: true,
+      reverseQueryProps: true,
       p0: 'N--.blExM.blEs8...',
       p1: 'S--.bn-.bn-s8...',
     },
@@ -186,6 +275,7 @@ describe('VTG query references', () => {
       reference: '6-5',
       mode: 'Spin',
       isAnti: false,
+      reverseQueryProps: true,
       p0: 'N--.blExM.bn-uY...',
       p1: 'S--.bn-.bn-uY...',
     },
@@ -193,19 +283,45 @@ describe('VTG query references', () => {
       reference: '6-5',
       mode: 'Anti',
       isAnti: true,
+      reverseQueryProps: true,
       p0: 'N--.blExM.bn-s8...',
       p1: 'S--.bn-.bn-s8...',
     },
     {
       reference: '6-4',
-      mode: 'Spin',
+      mode: 'Standard',
       isAnti: false,
+      reverseQueryProps: true,
       p0: 'N--.blExM.blEuY...',
       p1: 'S--.bn-.bn-s8...',
     },
+    {
+      reference: '6-3',
+      mode: 'Standard',
+      isAnti: false,
+      reverseQueryProps: false,
+      p0: 'N--.bn-.bn-s8...',
+      p1: 'S--.blExM.bn-uY...',
+    },
+    {
+      reference: '6-2',
+      mode: 'Standard',
+      isAnti: false,
+      reverseQueryProps: false,
+      p0: 'N--.bn-.bn-uY...',
+      p1: 'S--.blExM.blEs8...',
+    },
+    {
+      reference: '6-1',
+      mode: 'Standard',
+      isAnti: false,
+      reverseQueryProps: false,
+      p0: 'N--.bn-.bn-uY...',
+      p1: 'S--.blExM.bn-s8...',
+    },
   ] as const)(
     'decodes the $mode replacement for $reference',
-    async ({ reference, isAnti, p0, p1 }) => {
+    async ({ reference, isAnti, reverseQueryProps, p0, p1 }) => {
       const version = await loadSpiroAnimQSVersion(1)
       const queryCodec = await useSpiroAnimQS(version.VDEF, useBaseQS(version.VDEF), 1)
       const readable = encodeReadable(
@@ -218,7 +334,7 @@ describe('VTG query references', () => {
       )
       const selection = { reference, speedRatio: '1:1', isAnti } as const
       const pattern = getVtgPatternDefinition(selection)?.patternsBySpeedRatio['1:1']?.(selection)
-      const readableProps = [...readable.props].reverse()
+      const readableProps = reverseQueryProps ? [...readable.props].reverse() : readable.props
 
       expect(pattern?.props.map((prop) => prop.anim)).toEqual(
         readableProps.map((prop) => withoutScale(prop.anim.slice(0, 2))),

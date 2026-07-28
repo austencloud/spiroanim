@@ -26,18 +26,8 @@ describe('VTG column patterns', () => {
 
       for (const row of ruleNumbers) {
         const pattern = buildPattern(createReference(column, row))
+        expect(pattern).toBeDefined()
         expect(pattern?.props.map((prop) => prop.anim[0])).toEqual(topStarts)
-      }
-    }
-  })
-
-  it('keeps unfilled continuations copied from each top cell', () => {
-    for (const column of ruleNumbers) {
-      const topPattern = buildPattern(createReference(column, 6))
-
-      for (const row of ruleNumbers) {
-        if (row === 5 || row === 4) continue
-        expect(buildPattern(createReference(column, row))).toEqual(topPattern)
       }
     }
   })

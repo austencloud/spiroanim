@@ -11,10 +11,10 @@ type VtgPropPair = readonly [AnimReadable, AnimReadable]
 
 interface VtgColumnPattern {
   starts: VtgPropPair
-  spin: VtgPropPair
-  anti?: VtgPropPair
+  fallback: VtgPropPair
   swapProps?: boolean
-  rows?: Readonly<Partial<Record<VtgRuleNumber, { spin: VtgPropPair; anti?: VtgPropPair }>>>
+  rows?: Readonly<Partial<Record<VtgRuleNumber, VtgPropPair>>>
+  variants?: Readonly<Partial<Record<VtgRuleNumber, { spin: VtgPropPair; anti: VtgPropPair }>>>
 }
 
 const createPattern = (
@@ -22,10 +22,12 @@ const createPattern = (
   row: VtgRuleNumber,
   isAnti: boolean,
 ): VtgReadableAnimation => {
-  const rowPattern = column.rows?.[row]
-  const spin = rowPattern?.spin ?? column.spin
-  const anti = rowPattern?.anti ?? column.anti
-  const continuations = isAnti && anti ? anti : spin
+  const variant = column.variants?.[row]
+  const continuations = variant
+    ? isAnti
+      ? variant.anti
+      : variant.spin
+    : (column.rows?.[row] ?? column.fallback)
   const firstProp = { anim: [column.starts[0], continuations[0]] }
   const secondProp = { anim: [column.starts[1], continuations[1]] }
 
@@ -41,7 +43,7 @@ const createPattern = (
  * remaining cell continuations are defined, every row also reuses its top
  * cell's second frames.
  *
- * Only the four Spin/Anti cells expose the column's Anti continuation.
+ * Only the four special cells define explicit Spin/Anti variants.
  */
 const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
   1: {
@@ -49,23 +51,28 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
       { plane: 180, arc: 90 },
       { plane: 180, arc: 90 },
     ],
-    spin: [
+    fallback: [
       { plane: 180, arc: 90 },
       { arc: 90, turns: -180 },
     ],
     rows: {
-      4: {
-        spin: [
-          { plane: 180, arc: 90, turns: -180 },
-          { arc: 90, turns: -180 },
-        ],
-      },
-      5: {
-        spin: [
-          { plane: 180, arc: 90 },
-          { plane: 180, arc: 90, turns: -180 },
-        ],
-      },
+      1: [
+        { plane: 180, arc: 90 },
+        { plane: 180, arc: 90 },
+      ],
+      2: [{ plane: 180, arc: 90 }, { arc: 90 }],
+      3: [
+        { plane: 180, arc: 90, turns: -180 },
+        { plane: 180, arc: 90, turns: -180 },
+      ],
+      4: [
+        { plane: 180, arc: 90, turns: -180 },
+        { arc: 90, turns: -180 },
+      ],
+      5: [
+        { plane: 180, arc: 90 },
+        { plane: 180, arc: 90, turns: -180 },
+      ],
     },
   },
   2: {
@@ -73,23 +80,28 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
       { plane: 180, arc: 90 },
       { plane: 0, arc: 90 },
     ],
-    spin: [
+    fallback: [
       { plane: 180, arc: 90 },
       { arc: 90, turns: -180 },
     ],
     rows: {
-      4: {
-        spin: [
-          { plane: 180, arc: 90, turns: -180 },
-          { arc: 90, turns: -180 },
-        ],
-      },
-      5: {
-        spin: [
-          { plane: 180, arc: 90 },
-          { plane: 180, arc: 90, turns: -180 },
-        ],
-      },
+      1: [
+        { plane: 180, arc: 90 },
+        { plane: 180, arc: 90 },
+      ],
+      2: [{ plane: 180, arc: 90 }, { arc: 90 }],
+      3: [
+        { plane: 180, arc: 90, turns: -180 },
+        { plane: 180, arc: 90, turns: -180 },
+      ],
+      4: [
+        { plane: 180, arc: 90, turns: -180 },
+        { arc: 90, turns: -180 },
+      ],
+      5: [
+        { plane: 180, arc: 90 },
+        { plane: 180, arc: 90, turns: -180 },
+      ],
     },
   },
   3: {
@@ -97,23 +109,31 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
       { plane: 180, arc: 90, turns: -180 },
       { plane: 180, arc: 90, turns: 180 },
     ],
-    spin: [
+    fallback: [
       { plane: 180, arc: 90, turns: 0 },
       { arc: 90, turns: -180 },
     ],
     rows: {
-      4: {
-        spin: [
-          { plane: 180, arc: 90, turns: 0 },
-          { plane: 0, arc: 90, turns: 0 },
-        ],
-      },
-      5: {
-        spin: [
-          { plane: 180, arc: 90, turns: 0 },
-          { plane: 180, arc: 90, turns: -180 },
-        ],
-      },
+      1: [
+        { plane: 180, arc: 90, turns: -180 },
+        { plane: 180, arc: 90, turns: -180 },
+      ],
+      2: [
+        { plane: 180, arc: 90, turns: -180 },
+        { arc: 90, turns: -180 },
+      ],
+      3: [
+        { plane: 180, arc: 90, turns: 0 },
+        { plane: 180, arc: 90, turns: 0 },
+      ],
+      4: [
+        { plane: 180, arc: 90, turns: 0 },
+        { plane: 0, arc: 90, turns: 0 },
+      ],
+      5: [
+        { plane: 180, arc: 90, turns: 0 },
+        { plane: 180, arc: 90, turns: -180 },
+      ],
     },
   },
   4: {
@@ -121,43 +141,60 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
       { plane: 180, arc: 90, turns: -180 },
       { arc: 90, turns: 180 },
     ],
-    spin: [
+    fallback: [
       { plane: 180, arc: 90, turns: 0 },
       { arc: 90, turns: -180 },
     ],
     rows: {
-      4: {
-        spin: [
-          { plane: 180, arc: 90, turns: 0 },
-          { arc: 90, turns: 0 },
-        ],
-      },
-      5: {
-        spin: [
-          { plane: 180, arc: 90, turns: 0 },
-          { plane: 180, arc: 90, turns: -180 },
-        ],
-      },
+      1: [
+        { plane: 180, arc: 90, turns: -180 },
+        { plane: 180, arc: 90, turns: -180 },
+      ],
+      2: [
+        { plane: 180, arc: 90, turns: -180 },
+        { arc: 90, turns: -180 },
+      ],
+      3: [
+        { plane: 180, arc: 90, turns: 0 },
+        { plane: 180, arc: 90, turns: 0 },
+      ],
+      4: [
+        { plane: 180, arc: 90, turns: 0 },
+        { arc: 90, turns: 0 },
+      ],
+      5: [
+        { plane: 180, arc: 90, turns: 0 },
+        { plane: 180, arc: 90, turns: -180 },
+      ],
     },
   },
   5: {
     starts: [{ arc: 90 }, { arc: 90, turns: 180 }],
-    spin: [{ arc: 90 }, { plane: 180, arc: 90, turns: 0 }],
-    anti: [
-      { arc: 90, turns: -180 },
-      { plane: 180, arc: 90, turns: -180 },
-    ],
+    fallback: [{ arc: 90 }, { plane: 180, arc: 90, turns: 0 }],
     rows: {
-      4: {
-        spin: [
-          { arc: 90, turns: -180 },
-          { plane: 180, arc: 90, turns: 0 },
-        ],
-      },
+      1: [{ arc: 90 }, { arc: 90, turns: -180 }],
+      2: [{ arc: 90 }, { plane: 180, arc: 90, turns: -180 }],
+      3: [
+        { arc: 90, turns: -180 },
+        { arc: 90, turns: 0 },
+      ],
+      4: [
+        { arc: 90, turns: -180 },
+        { plane: 180, arc: 90, turns: 0 },
+      ],
+    },
+    variants: {
       5: {
         spin: [{ arc: 90 }, { arc: 90, turns: 0 }],
         anti: [
           { plane: 180, arc: 90, turns: -180 },
+          { plane: 180, arc: 90, turns: -180 },
+        ],
+      },
+      6: {
+        spin: [{ arc: 90 }, { plane: 180, arc: 90, turns: 0 }],
+        anti: [
+          { arc: 90, turns: -180 },
           { plane: 180, arc: 90, turns: -180 },
         ],
       },
@@ -166,21 +203,29 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
   6: {
     swapProps: true,
     starts: [{ plane: 180, arc: 90, turns: 180 }, { arc: 90 }],
-    spin: [
+    fallback: [
       { plane: 180, arc: 90, turns: 0 },
       { arc: 90, turns: 0 },
     ],
-    anti: [
-      { plane: 180, arc: 90, turns: -180 },
-      { arc: 90, turns: -180 },
-    ],
     rows: {
-      4: {
-        spin: [
-          { plane: 180, arc: 90, turns: 0 },
-          { arc: 90, turns: -180 },
-        ],
-      },
+      1: [
+        { arc: 90, turns: -180 },
+        { arc: 90, turns: 0 },
+      ],
+      2: [
+        { plane: 180, arc: 90, turns: -180 },
+        { arc: 90, turns: 0 },
+      ],
+      3: [
+        { arc: 90, turns: 0 },
+        { arc: 90, turns: -180 },
+      ],
+      4: [
+        { plane: 180, arc: 90, turns: 0 },
+        { arc: 90, turns: -180 },
+      ],
+    },
+    variants: {
       5: {
         spin: [
           { arc: 90, turns: 0 },
@@ -188,6 +233,16 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
         ],
         anti: [
           { arc: 90, turns: -180 },
+          { arc: 90, turns: -180 },
+        ],
+      },
+      6: {
+        spin: [
+          { plane: 180, arc: 90, turns: 0 },
+          { arc: 90, turns: 0 },
+        ],
+        anti: [
+          { plane: 180, arc: 90, turns: -180 },
           { arc: 90, turns: -180 },
         ],
       },
@@ -204,7 +259,6 @@ const rowLabels: Readonly<Record<VtgRuleNumber, readonly string[]>> = {
   1: ['TS/TS', 'TO/TO', 'TS/TS', 'TO/TO', 'TS/TO', 'TO/TS'],
 }
 
-const antiCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const
 const catalog: Partial<Record<VtgCellReference, Readonly<VtgPatternDefinition>>> = {}
 
@@ -217,12 +271,7 @@ for (const row of ruleNumbers) {
     catalog[reference] = {
       label,
       patternsBySpeedRatio: {
-        '1:1': (selection) =>
-          createPattern(
-            columnPatterns[column],
-            row,
-            antiCells.has(reference) && selection.isAnti === true,
-          ),
+        '1:1': (selection) => createPattern(columnPatterns[column], row, selection.isAnti === true),
       },
     }
   }
