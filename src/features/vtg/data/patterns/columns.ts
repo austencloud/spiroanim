@@ -54,6 +54,12 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
       { arc: 90, turns: -180 },
     ],
     rows: {
+      4: {
+        spin: [
+          { plane: 180, arc: 90, turns: -180 },
+          { arc: 90, turns: -180 },
+        ],
+      },
       5: {
         spin: [
           { plane: 180, arc: 90 },
@@ -72,6 +78,12 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
       { arc: 90, turns: -180 },
     ],
     rows: {
+      4: {
+        spin: [
+          { plane: 180, arc: 90, turns: -180 },
+          { arc: 90, turns: -180 },
+        ],
+      },
       5: {
         spin: [
           { plane: 180, arc: 90 },
@@ -90,6 +102,12 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
       { arc: 90, turns: -180 },
     ],
     rows: {
+      4: {
+        spin: [
+          { plane: 180, arc: 90, turns: 0 },
+          { plane: 0, arc: 90, turns: 0 },
+        ],
+      },
       5: {
         spin: [
           { plane: 180, arc: 90, turns: 0 },
@@ -108,6 +126,12 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
       { arc: 90, turns: -180 },
     ],
     rows: {
+      4: {
+        spin: [
+          { plane: 180, arc: 90, turns: 0 },
+          { arc: 90, turns: 0 },
+        ],
+      },
       5: {
         spin: [
           { plane: 180, arc: 90, turns: 0 },
@@ -124,6 +148,12 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
       { plane: 180, arc: 90, turns: -180 },
     ],
     rows: {
+      4: {
+        spin: [
+          { arc: 90, turns: -180 },
+          { plane: 180, arc: 90, turns: 0 },
+        ],
+      },
       5: {
         spin: [{ arc: 90 }, { arc: 90, turns: 0 }],
         anti: [
@@ -144,6 +174,12 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
       { arc: 90, turns: -180 },
     ],
     rows: {
+      4: {
+        spin: [
+          { plane: 180, arc: 90, turns: 0 },
+          { arc: 90, turns: -180 },
+        ],
+      },
       5: {
         spin: [
           { arc: 90, turns: 0 },

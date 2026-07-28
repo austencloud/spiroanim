@@ -36,6 +36,18 @@ describe('VTG query references', () => {
       p0: 'N--.blE.blE...',
       p1: 'S--.biQ.blEs8...',
     },
+    {
+      reference: '1-4',
+      r: 'Ew09APi11',
+      p0: 'N--.blE.blEs8...',
+      p1: 'S--.blE.bn-s8...',
+    },
+    {
+      reference: '2-4',
+      r: 'Ew09APi11',
+      p0: 'N--.blE.blEs8...',
+      p1: 'S--.biQ.bn-s8...',
+    },
   ] as const)('decodes replacement $reference', async ({ reference, r, p0, p1 }) => {
     const version = await loadSpiroAnimQSVersion(1)
     const queryCodec = await useSpiroAnimQS(version.VDEF, useBaseQS(version.VDEF), 1)
@@ -68,6 +80,16 @@ describe('VTG query references', () => {
       reference: '4-5',
       p0: 'N--.blEs8.blEuY...',
       p1: 'S--.bn-xM.blEs8...',
+    },
+    {
+      reference: '3-4',
+      p0: 'N--.blEs8.blEuY...',
+      p1: 'S--.blExM.biQuY...',
+    },
+    {
+      reference: '4-4',
+      p0: 'N--.blEs8.blEuY...',
+      p1: 'S--.bn-xM.bn-uY...',
     },
   ] as const)('decodes the replacement $reference', async ({ reference, p0, p1 }) => {
     const version = await loadSpiroAnimQSVersion(1)
@@ -115,6 +137,13 @@ describe('VTG query references', () => {
       isAnti: true,
       p0: 'N--.bn-.blEs8...',
       p1: 'S--.bn-xM.blEs8...',
+    },
+    {
+      reference: '5-4',
+      mode: 'Spin',
+      isAnti: false,
+      p0: 'N--.bn-.bn-s8...',
+      p1: 'S--.bn-xM.blEuY...',
     },
   ] as const)(
     'decodes the $mode replacement for $reference',
@@ -165,6 +194,13 @@ describe('VTG query references', () => {
       mode: 'Anti',
       isAnti: true,
       p0: 'N--.blExM.bn-s8...',
+      p1: 'S--.bn-.bn-s8...',
+    },
+    {
+      reference: '6-4',
+      mode: 'Spin',
+      isAnti: false,
+      p0: 'N--.blExM.blEuY...',
       p1: 'S--.bn-.bn-s8...',
     },
   ] as const)(

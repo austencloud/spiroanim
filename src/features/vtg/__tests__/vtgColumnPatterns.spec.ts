@@ -36,7 +36,7 @@ describe('VTG column patterns', () => {
       const topPattern = buildPattern(createReference(column, 6))
 
       for (const row of ruleNumbers) {
-        if (row === 5) continue
+        if (row === 5 || row === 4) continue
         expect(buildPattern(createReference(column, row))).toEqual(topPattern)
       }
     }
