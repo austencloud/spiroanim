@@ -15,13 +15,13 @@ describe('VTG query references', () => {
     {
       reference: '1-6',
       r: 'Ew09APi11',
-      p0: 'N--.bg0-----u.blE...',
-      p1: 'S--.blE-----u.bn-s8...',
+      p0: 'N--.blE.blE...',
+      p1: 'S--.blE.bn-s8...',
     },
     {
       reference: '2-6',
       r: 'Ew09APi11',
-      p0: 'N--.bg0-----u.blE...',
+      p0: 'N--.blE.blE...',
       p1: 'S--.biQ.bn-s8...',
     },
     {

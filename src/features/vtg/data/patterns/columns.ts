@@ -9,25 +9,57 @@ import type { AnimReadable } from '@/types/AnimTypes'
 
 type VtgPropPair = readonly [AnimReadable, AnimReadable]
 
+interface VtgSpinAntiPair {
+  spin: VtgPropPair
+  anti: VtgPropPair
+}
+
+type VtgCellPattern = VtgPropPair | VtgSpinAntiPair
+type VtgRowPatterns = Readonly<Record<VtgRuleNumber, VtgCellPattern>>
+
 interface VtgColumnPattern {
   starts: VtgPropPair
-  fallback: VtgPropPair
+  rows: VtgRowPatterns
   swapProps?: boolean
-  rows?: Readonly<Partial<Record<VtgRuleNumber, VtgPropPair>>>
-  variants?: Readonly<Partial<Record<VtgRuleNumber, { spin: VtgPropPair; anti: VtgPropPair }>>>
 }
+
+const arc = { arc: 90 } as const satisfies AnimReadable
+const arcStill = { arc: 90, turns: 0 } as const satisfies AnimReadable
+const arcBack = { arc: 90, turns: -180 } as const satisfies AnimReadable
+const arcForward = { arc: 90, turns: 180 } as const satisfies AnimReadable
+const plane = { plane: 180, arc: 90 } as const satisfies AnimReadable
+const planeStill = { plane: 180, arc: 90, turns: 0 } as const satisfies AnimReadable
+const planeBack = { plane: 180, arc: 90, turns: -180 } as const satisfies AnimReadable
+const planeForward = { plane: 180, arc: 90, turns: 180 } as const satisfies AnimReadable
+const zeroPlane = { plane: 0, arc: 90 } as const satisfies AnimReadable
+const zeroPlaneStill = { plane: 0, arc: 90, turns: 0 } as const satisfies AnimReadable
+
+const outsideColumnRows = {
+  1: [plane, plane],
+  2: [plane, arc],
+  3: [planeBack, planeBack],
+  4: [planeBack, arcBack],
+  5: [plane, planeBack],
+  6: [plane, arcBack],
+} as const satisfies VtgRowPatterns
+
+const insideColumnRows = {
+  1: [planeBack, planeBack],
+  2: [planeBack, arcBack],
+  3: [planeStill, planeStill],
+  4: [planeStill, arcStill],
+  5: [planeStill, planeBack],
+  6: [planeStill, arcBack],
+} as const satisfies VtgRowPatterns
 
 const createPattern = (
   column: VtgColumnPattern,
   row: VtgRuleNumber,
   isAnti: boolean,
 ): VtgReadableAnimation => {
-  const variant = column.variants?.[row]
-  const continuations = variant
-    ? isAnti
-      ? variant.anti
-      : variant.spin
-    : (column.rows?.[row] ?? column.fallback)
+  const rowPattern = column.rows[row]
+  const continuations =
+    'spin' in rowPattern ? (isAnti ? rowPattern.anti : rowPattern.spin) : rowPattern
   const firstProp = { anim: [column.starts[0], continuations[0]] }
   const secondProp = { anim: [column.starts[1], continuations[1]] }
 
@@ -39,212 +71,62 @@ const createPattern = (
 
 /**
  * A VTG reference stores the column first and row second. Every cell in a
- * column shares the same first animation frame for each prop. Until the
- * remaining cell continuations are defined, every row also reuses its top
- * cell's second frames.
- *
- * Only the four special cells define explicit Spin/Anti variants.
+ * column shares the same first animation frame for each prop. Each row entry
+ * supplies the second frames, and only the four special cells define explicit
+ * Spin/Anti variants.
  */
 const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
   1: {
-    starts: [
-      { plane: 180, arc: 90 },
-      { plane: 180, arc: 90 },
-    ],
-    fallback: [
-      { plane: 180, arc: 90 },
-      { arc: 90, turns: -180 },
-    ],
-    rows: {
-      1: [
-        { plane: 180, arc: 90 },
-        { plane: 180, arc: 90 },
-      ],
-      2: [{ plane: 180, arc: 90 }, { arc: 90 }],
-      3: [
-        { plane: 180, arc: 90, turns: -180 },
-        { plane: 180, arc: 90, turns: -180 },
-      ],
-      4: [
-        { plane: 180, arc: 90, turns: -180 },
-        { arc: 90, turns: -180 },
-      ],
-      5: [
-        { plane: 180, arc: 90 },
-        { plane: 180, arc: 90, turns: -180 },
-      ],
-    },
+    starts: [plane, plane],
+    rows: outsideColumnRows,
   },
   2: {
-    starts: [
-      { plane: 180, arc: 90 },
-      { plane: 0, arc: 90 },
-    ],
-    fallback: [
-      { plane: 180, arc: 90 },
-      { arc: 90, turns: -180 },
-    ],
-    rows: {
-      1: [
-        { plane: 180, arc: 90 },
-        { plane: 180, arc: 90 },
-      ],
-      2: [{ plane: 180, arc: 90 }, { arc: 90 }],
-      3: [
-        { plane: 180, arc: 90, turns: -180 },
-        { plane: 180, arc: 90, turns: -180 },
-      ],
-      4: [
-        { plane: 180, arc: 90, turns: -180 },
-        { arc: 90, turns: -180 },
-      ],
-      5: [
-        { plane: 180, arc: 90 },
-        { plane: 180, arc: 90, turns: -180 },
-      ],
-    },
+    starts: [plane, zeroPlane],
+    rows: outsideColumnRows,
   },
   3: {
-    starts: [
-      { plane: 180, arc: 90, turns: -180 },
-      { plane: 180, arc: 90, turns: 180 },
-    ],
-    fallback: [
-      { plane: 180, arc: 90, turns: 0 },
-      { arc: 90, turns: -180 },
-    ],
+    starts: [planeBack, planeForward],
     rows: {
-      1: [
-        { plane: 180, arc: 90, turns: -180 },
-        { plane: 180, arc: 90, turns: -180 },
-      ],
-      2: [
-        { plane: 180, arc: 90, turns: -180 },
-        { arc: 90, turns: -180 },
-      ],
-      3: [
-        { plane: 180, arc: 90, turns: 0 },
-        { plane: 180, arc: 90, turns: 0 },
-      ],
-      4: [
-        { plane: 180, arc: 90, turns: 0 },
-        { plane: 0, arc: 90, turns: 0 },
-      ],
-      5: [
-        { plane: 180, arc: 90, turns: 0 },
-        { plane: 180, arc: 90, turns: -180 },
-      ],
+      ...insideColumnRows,
+      4: [planeStill, zeroPlaneStill],
     },
   },
   4: {
-    starts: [
-      { plane: 180, arc: 90, turns: -180 },
-      { arc: 90, turns: 180 },
-    ],
-    fallback: [
-      { plane: 180, arc: 90, turns: 0 },
-      { arc: 90, turns: -180 },
-    ],
-    rows: {
-      1: [
-        { plane: 180, arc: 90, turns: -180 },
-        { plane: 180, arc: 90, turns: -180 },
-      ],
-      2: [
-        { plane: 180, arc: 90, turns: -180 },
-        { arc: 90, turns: -180 },
-      ],
-      3: [
-        { plane: 180, arc: 90, turns: 0 },
-        { plane: 180, arc: 90, turns: 0 },
-      ],
-      4: [
-        { plane: 180, arc: 90, turns: 0 },
-        { arc: 90, turns: 0 },
-      ],
-      5: [
-        { plane: 180, arc: 90, turns: 0 },
-        { plane: 180, arc: 90, turns: -180 },
-      ],
-    },
+    starts: [planeBack, arcForward],
+    rows: insideColumnRows,
   },
   5: {
-    starts: [{ arc: 90 }, { arc: 90, turns: 180 }],
-    fallback: [{ arc: 90 }, { plane: 180, arc: 90, turns: 0 }],
+    starts: [arc, arcForward],
     rows: {
-      1: [{ arc: 90 }, { arc: 90, turns: -180 }],
-      2: [{ arc: 90 }, { plane: 180, arc: 90, turns: -180 }],
-      3: [
-        { arc: 90, turns: -180 },
-        { arc: 90, turns: 0 },
-      ],
-      4: [
-        { arc: 90, turns: -180 },
-        { plane: 180, arc: 90, turns: 0 },
-      ],
-    },
-    variants: {
+      1: [arc, arcBack],
+      2: [arc, planeBack],
+      3: [arcBack, arcStill],
+      4: [arcBack, planeStill],
       5: {
-        spin: [{ arc: 90 }, { arc: 90, turns: 0 }],
-        anti: [
-          { plane: 180, arc: 90, turns: -180 },
-          { plane: 180, arc: 90, turns: -180 },
-        ],
+        spin: [arc, arcStill],
+        anti: [planeBack, planeBack],
       },
       6: {
-        spin: [{ arc: 90 }, { plane: 180, arc: 90, turns: 0 }],
-        anti: [
-          { arc: 90, turns: -180 },
-          { plane: 180, arc: 90, turns: -180 },
-        ],
+        spin: [arc, planeStill],
+        anti: [arcBack, planeBack],
       },
     },
   },
   6: {
+    starts: [planeForward, arc],
     swapProps: true,
-    starts: [{ plane: 180, arc: 90, turns: 180 }, { arc: 90 }],
-    fallback: [
-      { plane: 180, arc: 90, turns: 0 },
-      { arc: 90, turns: 0 },
-    ],
     rows: {
-      1: [
-        { arc: 90, turns: -180 },
-        { arc: 90, turns: 0 },
-      ],
-      2: [
-        { plane: 180, arc: 90, turns: -180 },
-        { arc: 90, turns: 0 },
-      ],
-      3: [
-        { arc: 90, turns: 0 },
-        { arc: 90, turns: -180 },
-      ],
-      4: [
-        { plane: 180, arc: 90, turns: 0 },
-        { arc: 90, turns: -180 },
-      ],
-    },
-    variants: {
+      1: [arcBack, arcStill],
+      2: [planeBack, arcStill],
+      3: [arcStill, arcBack],
+      4: [planeStill, arcBack],
       5: {
-        spin: [
-          { arc: 90, turns: 0 },
-          { arc: 90, turns: 0 },
-        ],
-        anti: [
-          { arc: 90, turns: -180 },
-          { arc: 90, turns: -180 },
-        ],
+        spin: [arcStill, arcStill],
+        anti: [arcBack, arcBack],
       },
       6: {
-        spin: [
-          { plane: 180, arc: 90, turns: 0 },
-          { arc: 90, turns: 0 },
-        ],
-        anti: [
-          { plane: 180, arc: 90, turns: -180 },
-          { arc: 90, turns: -180 },
-        ],
+        spin: [planeStill, arcStill],
+        anti: [planeBack, arcBack],
       },
     },
   },
