@@ -420,7 +420,7 @@ const roundDimension = (value: number) => Math.round(value * 100) / 100
 onMounted(() => {
   if (typeof ResizeObserver === 'undefined') return
 
-  blankObserver = new ResizeObserver((entries) => {
+  const observer = new ResizeObserver((entries) => {
     for (const entry of entries) {
       if (!(entry.target instanceof HTMLElement)) continue
 
@@ -434,10 +434,11 @@ onMounted(() => {
       blankHeight.value = dimensions.height
     }
   })
+  blankObserver = observer
 
-  const blankElements =
-    paneElement.value?.querySelectorAll<HTMLElement>('[data-role="vtg-blank"]') ?? []
-  for (const element of blankElements) blankObserver.observe(element)
+  paneElement.value
+    ?.querySelectorAll<HTMLElement>('[data-role="vtg-blank"]')
+    .forEach((element) => observer.observe(element))
 })
 
 onBeforeUnmount(() => {

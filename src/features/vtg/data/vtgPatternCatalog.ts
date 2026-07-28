@@ -1,4 +1,4 @@
-import { vtgFirstRowPatterns } from '@/features/vtg/data/patterns/firstRow'
+import { vtgColumnPatterns } from '@/features/vtg/data/patterns/columns'
 import type {
   VtgCellReference,
   VtgPatternDefinition,
@@ -6,7 +6,7 @@ import type {
 } from '@/features/vtg/types'
 
 const catalog: Readonly<Partial<Record<VtgCellReference, Readonly<VtgPatternDefinition>>>> = {
-  ...vtgFirstRowPatterns,
+  ...vtgColumnPatterns,
 }
 
 export const getVtgPatternDefinition = (
