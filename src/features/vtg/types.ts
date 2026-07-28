@@ -19,6 +19,7 @@ export type VtgSpeedRatio = (typeof vtgSpeedRatios)[number]
 export interface VtgPatternSelection {
   reference: VtgCellReference
   speedRatio: VtgSpeedRatio
+  isAnti?: boolean
 }
 
 export type VtgReadableAnimation = Partial<
@@ -29,7 +30,11 @@ export type VtgReadableAnimation = Partial<
 
 export interface VtgPatternDefinition {
   label: string
-  patternsBySpeedRatio: Readonly<Partial<Record<VtgSpeedRatio, () => VtgReadableAnimation>>>
+  patternsBySpeedRatio: Readonly<
+    Partial<
+      Record<VtgSpeedRatio, (selection: VtgPatternSelection) => VtgReadableAnimation | undefined>
+    >
+  >
 }
 
 export interface VtgPropPlacement {
@@ -41,6 +46,7 @@ export interface VtgPropPlacement {
 
 export interface VtgRuleDiagram {
   props: readonly [VtgPropPlacement, VtgPropPlacement]
+  divider?: number
 }
 
 export interface VtgRuleSpec {

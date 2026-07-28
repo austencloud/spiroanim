@@ -102,10 +102,10 @@ describe('SpiroAnim view', () => {
       aspecty: vtgPlayerSettings.aspecty,
       props: [
         {
-          anim: [{ plane: -180, arc: 90, scale: 10 }, { plane: 180, arc: 90 }, {}, {}, {}],
+          anim: [{ plane: -180, arc: 90 }, { plane: 180, arc: 90 }, {}, {}, {}],
         },
         {
-          anim: [{ plane: 180, arc: 90, scale: 10 }, { arc: 90, turns: -180 }, {}, {}, {}],
+          anim: [{ plane: 180, arc: 90 }, { arc: 90, turns: -180 }, {}, {}, {}],
         },
       ],
     })

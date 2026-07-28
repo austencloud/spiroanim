@@ -62,6 +62,20 @@
               >
                 {{ tile.label }}
               </button>
+              <button
+                v-if="tile.reference === selectedCellReference && isSpinToggleCell(tile.reference)"
+                type="button"
+                class="vtg-tile__spin-toggle"
+                :class="{
+                  'vtg-tile__spin-toggle--lower-right': isLowerRightSpinToggleCell(tile.reference),
+                }"
+                :aria-label="`Use ${isAnti ? 'Spin' : 'Anti'} pattern for cell ${tile.reference}`"
+                :aria-pressed="isAnti"
+                data-role="vtg-spin-toggle"
+                @click.stop="toggleSpinDirection(tile)"
+              >
+                {{ isAnti ? 'Anti' : 'Spin' }}
+              </button>
             </template>
             <template #html>
               <span class="vtg-tile-tooltip__text">{{ tile.description }}</span>
@@ -143,6 +157,8 @@ const emit = defineEmits<{
 
 const speedRatios = vtgSpeedRatios
 const speedRatio = ref<VtgSpeedRatio>('1:1')
+const isAnti = ref(false)
+const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 
 const matrixRows = [
   ['SO/TS', 'SS/TO', 'SO/TS', 'SS/TO', 'SO/TO', 'SS/TS'],
@@ -156,9 +172,9 @@ const matrixRows = [
 const bottomRuleNumbers = [1, 2, 3, 4, 5, 6] as const
 const leftRuleNumbers = [6, 5, 4, 3, 2, 1] as const
 const timingDescriptions: Readonly<Record<string, string>> = {
-  S: 'Split Time',
-  O: 'Opposite Direction',
-  T: 'Together Time',
+  S: 'Split',
+  O: 'Opposite',
+  T: 'Together',
 }
 const describeTiming = (value: string) =>
   [...value].map((code) => timingDescriptions[code] ?? code).join(' / ')
@@ -206,15 +222,34 @@ const isTileHighlighted = (tile: VtgMatrixTile) =>
   selectedCell.value !== undefined &&
   (tile.column === selectedCell.value.column || tile.row === selectedCell.value.row)
 
+const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(reference)
+const isLowerRightSpinToggleCell = (reference: VtgCellReference) =>
+  reference === '5-5' || reference === '6-5'
+
+const emitPatternSelection = (tile: VtgMatrixTile) => {
+  const selection: VtgPatternSelection = {
+    reference: tile.reference,
+    speedRatio: speedRatio.value,
+  }
+  if (isSpinToggleCell(tile.reference)) selection.isAnti = isAnti.value
+  emit('patternSelect', selection)
+}
+
 const selectTile = (tile: VtgMatrixTile) => {
+  const isReselectedSpinToggleCell =
+    tile.reference === selectedCellReference.value && isSpinToggleCell(tile.reference)
+
   selectedCell.value = {
     column: tile.column,
     row: tile.row,
   }
-  emit('patternSelect', {
-    reference: tile.reference,
-    speedRatio: speedRatio.value,
-  })
+  if (isReselectedSpinToggleCell) isAnti.value = !isAnti.value
+  emitPatternSelection(tile)
+}
+
+const toggleSpinDirection = (tile: VtgMatrixTile) => {
+  isAnti.value = !isAnti.value
+  emitPatternSelection(tile)
 }
 
 const propBounds = {
@@ -263,9 +298,26 @@ const diagrams = {
   alternatingSplit: createSplitDiagram('start', 'start'),
   outsideSplit: createSplitDiagram('start', 'end'),
   insideSplit: createSplitDiagram('end', 'start'),
+  clusteredOutsideSplit: {
+    divider: 97,
+    props: [
+      {
+        lane: 50,
+        start: propBounds.outerStart,
+        end: propBounds.beforeDivider,
+        largeEnd: 'start',
+      },
+      {
+        lane: 50,
+        start: 48,
+        end: 85,
+        largeEnd: 'end',
+      },
+    ],
+  },
   parallelAfterInside: createParallelDiagram('after', 'start'),
   parallelAfterOutside: createParallelDiagram('after', 'end'),
-} as const
+} as const satisfies Readonly<Record<string, VtgRuleDiagram>>
 
 const ruleDescriptions: Readonly<Record<VtgRuleNumber, string>> = {
   1: 'Tog Out - Both props are together facing out either on the left or right or the top and bottom.',
@@ -286,7 +338,7 @@ const sideRules: readonly VtgRuleSpec[] = [
   {
     labels: ['TOG', 'SPLIT'],
     number: 5,
-    diagram: diagrams.outsideSplit,
+    diagram: diagrams.clusteredOutsideSplit,
     description: ruleDescriptions[5],
   },
   {
@@ -343,7 +395,7 @@ const bottomRules: readonly VtgRuleSpec[] = [
   {
     labels: ['TOG', 'SPLIT'],
     number: 5,
-    diagram: diagrams.outsideSplit,
+    diagram: diagrams.clusteredOutsideSplit,
     description: ruleDescriptions[5],
   },
   {
@@ -399,6 +451,7 @@ defineExpose({
   selectedCell,
   selectedCellReference,
   speedRatio,
+  isAnti,
 })
 </script>
 
@@ -566,6 +619,33 @@ defineExpose({
 
 .vtg-tile-tooltip__text {
   white-space: pre-line;
+}
+
+.vtg-tile__spin-toggle {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: max(0.4rem, 1cqi);
+  inset-inline-end: max(0.4rem, 1cqi);
+  padding: max(0.24rem, 0.5cqi) max(0.44rem, 0.8cqi);
+  color: var(--vtg-color-ink);
+  cursor: pointer;
+  background: var(--vtg-color-secondary);
+  border: max(1px, 0.12cqi) solid var(--vtg-color-ink);
+  border-radius: max(0.4rem, 0.9cqi);
+  font-family: var(--font-family-sans);
+  font-size: max(1rem, 2.2cqi);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.vtg-tile__spin-toggle--lower-right {
+  inset-block-start: auto;
+  inset-block-end: max(0.4rem, 1cqi);
+}
+
+.vtg-tile__spin-toggle:focus-visible {
+  outline: max(2px, 0.2cqi) solid var(--vtg-color-rule-text);
+  outline-offset: max(1px, 0.1cqi);
 }
 
 .vtg-tile--highlighted {

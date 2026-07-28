@@ -15,7 +15,7 @@
         </span>
 
         <span class="vtg-rule-card__diagram" aria-hidden="true">
-          <span class="vtg-rule-card__divider" data-role="vtg-divider">
+          <span class="vtg-rule-card__divider" :style="dividerStyle" data-role="vtg-divider">
             <span class="vtg-rule-card__divider-line" />
             <span class="vtg-rule-card__divider-end vtg-rule-card__divider-end--start" />
             <span class="vtg-rule-card__divider-end vtg-rule-card__divider-end--end" />
@@ -86,6 +86,12 @@ const propStyle = (propPlacement: VtgPropPlacement): CSSProperties =>
         insetInlineStart: `${propPlacement.start}%`,
         inlineSize: `${propPlacement.end - propPlacement.start}%`,
       }
+
+const dividerStyle = computed<CSSProperties>(() =>
+  props.orientation === 'vertical'
+    ? { insetBlockStart: `${props.diagram.divider ?? 50}%` }
+    : { insetInlineStart: `${props.diagram.divider ?? 50}%` },
+)
 </script>
 
 <style scoped>
@@ -130,8 +136,8 @@ const propStyle = (propPlacement: VtgPropPlacement): CSSProperties =>
 .vtg-rule-card__number {
   position: absolute;
   z-index: 3;
-  inset-inline-end: 0.55cqi;
-  inset-block-end: 0.3cqi;
+  inset-inline-end: 1.8cqi;
+  inset-block-end: 1.5cqi;
   font-size: max(1.3rem, 4cqi);
   font-weight: 900;
   line-height: 0.88;

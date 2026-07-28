@@ -9,16 +9,10 @@ import type { AnimReadable } from '@/types/AnimTypes'
 type VtgRowPatterns = Readonly<Partial<Record<VtgCellReference, Readonly<VtgPatternDefinition>>>>
 type VtgPropFrames = readonly [AnimReadable, AnimReadable]
 type VtgPatternFrames = readonly [VtgPropFrames, VtgPropFrames]
-type VtgStartingFrames = readonly [AnimReadable, AnimReadable]
 
 const firstPairGreenFrames: VtgPropFrames = [
-  { plane: -180, arc: 90, scale: 10 },
   { plane: 180, arc: 90 },
-]
-
-const secondPairStarts: VtgStartingFrames = [
-  { arc: 180, turns: -180, scale: 10 },
-  { plane: 180, arc: 0, scale: 10 },
+  { plane: 180, arc: 90 },
 ]
 
 const createFirstRowPattern = (frames: VtgPatternFrames): VtgReadableAnimation => {
@@ -29,15 +23,6 @@ const createFirstRowPattern = (frames: VtgPatternFrames): VtgReadableAnimation =
     props: [{ anim: [...firstPropFrames] }, { anim: [...secondPropFrames] }],
   }
 }
-
-const createCellPattern = (
-  starts: VtgStartingFrames,
-  continuations: readonly [AnimReadable, AnimReadable],
-): VtgReadableAnimation =>
-  createFirstRowPattern([
-    [starts[0], continuations[0]],
-    [starts[1], continuations[1]],
-  ])
 
 /**
  * Visual row 1 patterns. The VTG reference uses the bottom rule first and
@@ -54,7 +39,7 @@ export const vtgFirstRowPatterns = {
         createFirstRowPattern([
           firstPairGreenFrames,
           [
-            { plane: 180, arc: 90, scale: 10 },
+            { plane: 180, arc: 90 },
             { arc: 90, turns: -180 },
           ],
         ]),
@@ -77,9 +62,15 @@ export const vtgFirstRowPatterns = {
     label: 'SO/TS',
     patternsBySpeedRatio: {
       '1:1': () =>
-        createCellPattern(secondPairStarts, [
-          { arc: 90, turns: 0 },
-          { arc: 90, turns: -180 },
+        createFirstRowPattern([
+          [
+            { plane: 180, arc: 90, turns: -180 },
+            { plane: 180, arc: 90, turns: 0 },
+          ],
+          [
+            { plane: 180, arc: 90, turns: 180 },
+            { arc: 90, turns: -180 },
+          ],
         ]),
     },
   },
@@ -87,10 +78,64 @@ export const vtgFirstRowPatterns = {
     label: 'SS/TO',
     patternsBySpeedRatio: {
       '1:1': () =>
-        createCellPattern(secondPairStarts, [
-          { arc: 90, turns: 0 },
-          { plane: 180, arc: 90, turns: -180 },
+        createFirstRowPattern([
+          [
+            { plane: 180, arc: 90, turns: -180 },
+            { plane: 180, arc: 90, turns: 0 },
+          ],
+          [
+            { arc: 90, turns: 180 },
+            { arc: 90, turns: -180 },
+          ],
         ]),
+    },
+  },
+  '5-6': {
+    label: 'SO/TO',
+    patternsBySpeedRatio: {
+      '1:1': (selection) =>
+        selection.isAnti
+          ? createFirstRowPattern([
+              [
+                { arc: 90 },
+                { arc: 90, turns: -180 },
+              ],
+              [
+                { arc: 90, turns: 180 },
+                { plane: 180, arc: 90, turns: -180 },
+              ],
+            ])
+          : createFirstRowPattern([
+              [{ arc: 90 }, { arc: 90 }],
+              [
+                { arc: 90, turns: 180 },
+                { plane: 180, arc: 90, turns: 0 },
+              ],
+            ]),
+    },
+  },
+  '6-6': {
+    label: 'SS/TS',
+    patternsBySpeedRatio: {
+      '1:1': (selection) =>
+        selection.isAnti
+          ? createFirstRowPattern([
+              [
+                { plane: 180, arc: 90, turns: 180 },
+                { plane: 180, arc: 90, turns: -180 },
+              ],
+              [
+                { arc: 90 },
+                { arc: 90, turns: -180 },
+              ],
+            ])
+          : createFirstRowPattern([
+              [
+                { plane: 180, arc: 90, turns: 180 },
+                { plane: 180, arc: 90, turns: 0 },
+              ],
+              [{ arc: 90 }, { arc: 90, turns: 0 }],
+            ]),
     },
   },
 } satisfies VtgRowPatterns

@@ -41,11 +41,11 @@ describe('createVtgAnimation', () => {
       props: [
         {
           color: 1,
-          anim: [{ plane: -180, arc: 90, scale: 10 }, { plane: 180, arc: 90 }, {}, {}, {}],
+          anim: [{ plane: 180, arc: 90 }, { plane: 180, arc: 90 }, {}, {}, {}],
         },
         {
           color: 6,
-          anim: [{ plane: 180, arc: 90, scale: 10 }, { arc: 90, turns: -180 }, {}, {}, {}],
+          anim: [{ plane: 180, arc: 90 }, { arc: 90, turns: -180 }, {}, {}, {}],
         },
       ],
     })
@@ -79,7 +79,7 @@ describe('createVtgAnimation', () => {
     } as const
     const definition = getVtgPatternDefinition(selection)
 
-    expect(definition?.patternsBySpeedRatio['1:1']?.().props[0]?.anim).toHaveLength(2)
+    expect(definition?.patternsBySpeedRatio['1:1']?.(selection)?.props[0]?.anim).toHaveLength(2)
     expect(createVtgAnimation(createCurrentAnimation(), selection)?.props[0]?.anim).toHaveLength(5)
   })
 
@@ -90,7 +90,7 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { plane: -180, arc: 90, scale: 10 },
+      { plane: 180, arc: 90 },
       { plane: 180, arc: 90 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
@@ -99,19 +99,19 @@ describe('createVtgAnimation', () => {
     ])
   })
 
-  it('sets the Orange second-frame plane for the fourth row 1 cell', () => {
+  it('builds the fourth row 1 cell from its replacement query values', () => {
     const animation = createVtgAnimation(createCurrentAnimation(), {
       reference: '4-6',
       speedRatio: '1:1',
     })
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { arc: 180, turns: -180, scale: 10 },
-      { arc: 90, turns: 0 },
+      { plane: 180, arc: 90, turns: -180 },
+      { plane: 180, arc: 90, turns: 0 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { plane: 180, arc: 0, scale: 10 },
-      { plane: 180, arc: 90, turns: -180 },
+      { arc: 90, turns: 180 },
+      { arc: 90, turns: -180 },
     ])
   })
 

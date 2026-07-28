@@ -141,6 +141,47 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:5' }]])
   })
 
+  it('shares the Spin and Anti choice across the four special cells', async () => {
+    const wrapper = mount(VtgPane)
+    const firstSpecialCell = wrapper.get('[data-cell-reference="5-6"]')
+
+    expect(wrapper.find('[data-role="vtg-spin-toggle"]').exists()).toBe(false)
+
+    await firstSpecialCell.trigger('click')
+
+    const toggle = wrapper.get('[data-role="vtg-spin-toggle"]')
+    expect(toggle.text()).toBe('Spin')
+    expect(toggle.attributes('aria-pressed')).toBe('false')
+    expect(toggle.classes()).not.toContain('vtg-tile__spin-toggle--lower-right')
+    expect(wrapper.emitted('patternSelect')).toEqual([
+      [{ reference: '5-6', speedRatio: '1:1', isAnti: false }],
+    ])
+
+    await toggle.trigger('click')
+
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Anti')
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { reference: '5-6', speedRatio: '1:1', isAnti: true },
+    ])
+
+    await wrapper.get('[data-cell-reference="6-5"]').trigger('click')
+
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Anti')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+      'vtg-tile__spin-toggle--lower-right',
+    )
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { reference: '6-5', speedRatio: '1:1', isAnti: true },
+    ])
+
+    await wrapper.get('[data-cell-reference="6-5"]').trigger('click')
+
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Spin')
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { reference: '6-5', speedRatio: '1:1', isAnti: false },
+    ])
+  })
+
   it('does not preview row or column selections on hover', async () => {
     const wrapper = mount(VtgPane)
     const hoveredCell = wrapper.get('[data-cell-reference="6-6"]')
@@ -162,7 +203,7 @@ describe('VtgPane', () => {
     expect(pane.attributes('data-selected-cell')).toBeUndefined()
   })
 
-  it('uses one shortened prop length and keeps split props clear of the divider', () => {
+  it('clusters TOG SPLIT props before its moved divider', () => {
     const wrapper = mount(VtgPane)
     const propElements = wrapper
       .findAll<HTMLElement>('[data-role="vtg-prop"]')
@@ -175,11 +216,28 @@ describe('VtgPane', () => {
       }),
     ).toBe(true)
 
-    const splitRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]')
-    const splitProps = splitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+    const bottomSplitRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]')
+    const bottomSplitProps = bottomSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
 
-    expect(splitProps.map(({ element }) => element.style.insetInlineStart)).toEqual(['4%', '59%'])
-    expect(splitRule.findAll('.vtg-rule-card__prop-handle')).toHaveLength(4)
+    expect(bottomSplitProps.map(({ element }) => element.style.insetInlineStart)).toEqual([
+      '4%',
+      '48%',
+    ])
+    expect(
+      bottomSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetInlineStart,
+    ).toBe('97%')
+
+    const sideSplitRule = wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
+    const sideSplitProps = sideSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+
+    expect(sideSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
+      '4%',
+      '48%',
+    ])
+    expect(
+      sideSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
+    ).toBe('97%')
+    expect(sideSplitRule.findAll('.vtg-rule-card__prop-handle')).toHaveLength(4)
   })
 
   it('places the bottom TOG IN props after the divider', () => {

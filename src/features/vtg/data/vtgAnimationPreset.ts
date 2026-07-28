@@ -27,11 +27,11 @@ export const vtgAnimationPreset = {
   props: [
     {
       color: 'Green',
-      anim: [{ arc: 180, scale: 10 }, { arc: 90 }, {}, {}, {}],
+      anim: [{ arc: 180 }, { arc: 90 }, {}, {}, {}],
     },
     {
       color: 'Orange',
-      anim: [{ plane: 180, arc: 0, turns: 180, scale: 10 }, { arc: 90, turns: -180 }, {}, {}, {}],
+      anim: [{ plane: 180, arc: 0, turns: 180 }, { arc: 90, turns: -180 }, {}, {}, {}],
     },
   ],
 } satisfies VtgReadableAnimation
