@@ -12,7 +12,7 @@
     <h1 id="vtg-pane-title" class="vtg-pane__visually-hidden">VTG generator</h1>
 
     <fieldset class="vtg-speed-ratio">
-      <legend>Speed Ratio: Hands Props</legend>
+      <legend class="vtg-pane__visually-hidden">Speed ratio</legend>
       <div class="vtg-speed-ratio__options">
         <label v-for="ratio in speedRatios" :key="ratio">
           <input v-model="speedRatio" type="radio" name="vtg-speed-ratio" :value="ratio" />
@@ -184,6 +184,7 @@ import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import { useVtgPreviews, vtgPreviewReferences } from '@/features/vtg/composables/useVtgPreviews'
 import { vtgBpmControl, vtgScaleControl } from '@/features/vtg/data/vtgPlayerSettings'
+import { findVtgPatternMatch, matchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
 import type {
   VtgCellAddress,
   VtgCellReference,
@@ -194,7 +195,8 @@ import type {
   VtgPatternSelection,
   VtgSpeedRatio,
 } from '@/features/vtg/types'
-import { vtgSpeedRatios } from '@/features/vtg/types'
+import { vtgDefaultSpeedRatio, vtgSpeedRatios } from '@/features/vtg/types'
+import type { RootDataFinal } from '@/types/AnimTypes'
 
 interface BlankDimensions {
   width: number
@@ -211,18 +213,25 @@ interface VtgMatrixTile {
   reference: VtgCellReference
 }
 
+const props = defineProps<{
+  animation?: RootDataFinal
+}>()
+
 const emit = defineEmits<{
   patternSelect: [selection: VtgPatternSelection]
 }>()
 
 const speedRatios = vtgSpeedRatios
-const speedRatio = ref<VtgSpeedRatio>('1:1')
+const speedRatio = ref<VtgSpeedRatio>(vtgDefaultSpeedRatio)
 const isAnti = ref(false)
 const swapProps = ref(false)
 const reversePlane = ref(false)
-const bpm = ref(vtgBpmControl.default)
-const scale = ref(vtgScaleControl.default)
+const bpm = ref<number>(vtgBpmControl.default)
+const scale = ref<number>(vtgScaleControl.default)
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
+let suppressPatternEmit = false
+let hydrationVersion = 0
+let lastEmittedSelection: VtgPatternSelection | undefined
 
 const matrixRows = [
   ['SO/TS', 'SS/TO', 'SO/TS', 'SS/TO', 'SO/TO', 'SS/TS'],
@@ -300,6 +309,7 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (reversePlane.value) selection.reversePlane = true
   if (bpm.value !== vtgBpmControl.default) selection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
+  lastEmittedSelection = selection
   emit('patternSelect', selection)
 }
 
@@ -327,9 +337,54 @@ const toggleSpinDirection = (tile: VtgMatrixTile) => {
 }
 
 watch([speedRatio, swapProps, reversePlane, bpm, scale], () => {
+  if (suppressPatternEmit) return
+
   const tile = matrixTiles.find(({ reference }) => reference === selectedCellReference.value)
   if (tile !== undefined) emitPatternSelection(tile)
 })
+
+const hydratePatternControls = (animation: RootDataFinal) => {
+  if (lastEmittedSelection && matchesVtgSelection(animation, lastEmittedSelection)) {
+    lastEmittedSelection = undefined
+    return
+  }
+  lastEmittedSelection = undefined
+
+  const match = findVtgPatternMatch(animation)
+  const version = ++hydrationVersion
+  suppressPatternEmit = true
+
+  if (match) {
+    const tile = matrixTiles.find(({ reference }) => reference === match.reference)
+    selectedCell.value = tile ? { column: tile.column, row: tile.row } : undefined
+    speedRatio.value = match.speedRatio
+    isAnti.value = match.isAnti
+    swapProps.value = match.swapProps
+    reversePlane.value = match.reversePlane
+    bpm.value = match.bpm
+    scale.value = match.scale
+  } else {
+    selectedCell.value = undefined
+    speedRatio.value = vtgDefaultSpeedRatio
+    isAnti.value = false
+    swapProps.value = false
+    reversePlane.value = false
+    bpm.value = vtgBpmControl.default
+    scale.value = vtgScaleControl.default
+  }
+
+  void nextTick(() => {
+    if (version === hydrationVersion) suppressPatternEmit = false
+  })
+}
+
+watch(
+  () => props.animation,
+  (animation) => {
+    if (animation) hydratePatternControls(animation)
+  },
+  { immediate: true },
+)
 
 const propBounds = {
   outerStart: 4,
@@ -569,14 +624,6 @@ defineExpose({
   margin: 0;
   border: 0;
   justify-items: center;
-}
-
-.vtg-speed-ratio legend {
-  padding: 0;
-  margin-inline: auto;
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  line-height: 1.2;
 }
 
 .vtg-speed-ratio__options {

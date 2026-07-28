@@ -32,7 +32,7 @@ const mergeWithCurrentAnimation = (
   props: pattern.props,
 })
 
-const vtgPreviewBase = rootFinal(
+const vtgStandaloneBase = rootFinal(
   decodeReadable({
     ...vtgPlayerSettings,
     smooth: true,
@@ -66,10 +66,17 @@ export const createVtgAnimation = (
 /**
  * Builds VTG data without inheriting settings from the active player.
  */
+export const createDefaultVtgAnimation = (
+  selection: VtgPatternSelection,
+): RootDataFinal | undefined => createVtgAnimation(vtgStandaloneBase, selection)
+
+/**
+ * Builds VTG data without inheriting settings from the active player.
+ */
 export const createVtgPreviewAnimation = (
   selection: VtgPatternSelection,
 ): RootDataFinal | undefined => {
-  const animation = createVtgAnimation(vtgPreviewBase, selection)
+  const animation = createDefaultVtgAnimation(selection)
   if (!animation) return undefined
 
   return {

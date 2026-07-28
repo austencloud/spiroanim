@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
+import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 
 class FakeResizeObserver {
   static callback: ResizeObserverCallback | undefined
@@ -126,10 +127,11 @@ describe('VtgPane', () => {
     const group = wrapper.get('fieldset.vtg-speed-ratio')
     const options = group.findAll<HTMLInputElement>('input[type="radio"]')
 
-    expect(group.get('legend').text()).toBe('Speed Ratio: Hands Props')
+    expect(group.get('legend').text()).toBe('Speed ratio')
+    expect(group.get('legend').classes()).toContain('vtg-pane__visually-hidden')
     expect(options.map((option) => option.element.value)).toEqual(['1:1', '1:3', '1:5'])
-    expect(options[0]?.element.checked).toBe(true)
-    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:1')
+    expect(options[1]?.element.checked).toBe(true)
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:3')
 
     await options[2]?.setValue()
 
@@ -204,7 +206,7 @@ describe('VtgPane', () => {
     expect(
       wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').attributes('aria-pressed'),
     ).toBe('true')
-    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-5', speedRatio: '1:1' }]])
+    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-5', speedRatio: '1:3' }]])
   })
 
   it('includes the selected speed ratio in each pattern request', async () => {
@@ -223,7 +225,7 @@ describe('VtgPane', () => {
     await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
 
     expect(wrapper.emitted('patternSelect')).toEqual([
-      [{ reference: '3-4', speedRatio: '1:1' }],
+      [{ reference: '3-4', speedRatio: '1:3' }],
       [{ reference: '3-4', speedRatio: '1:5' }],
     ])
   })
@@ -243,9 +245,9 @@ describe('VtgPane', () => {
     await reverse.setValue(true)
 
     expect(wrapper.emitted('patternSelect')).toEqual([
-      [{ reference: '2-6', speedRatio: '1:1' }],
-      [{ reference: '2-6', speedRatio: '1:1', swapProps: true }],
-      [{ reference: '2-6', speedRatio: '1:1', swapProps: true, reversePlane: true }],
+      [{ reference: '2-6', speedRatio: '1:3' }],
+      [{ reference: '2-6', speedRatio: '1:3', swapProps: true }],
+      [{ reference: '2-6', speedRatio: '1:3', swapProps: true, reversePlane: true }],
     ])
   })
 
@@ -266,11 +268,66 @@ describe('VtgPane', () => {
     await scale.setValue(1.4)
 
     expect(wrapper.emitted('patternSelect')).toEqual([
-      [{ reference: '1-6', speedRatio: '1:1' }],
-      [{ reference: '1-6', speedRatio: '1:1', bpm: 40 }],
-      [{ reference: '1-6', speedRatio: '1:1', bpm: 40, scale: 1.4 }],
+      [{ reference: '1-6', speedRatio: '1:3' }],
+      [{ reference: '1-6', speedRatio: '1:3', bpm: 40 }],
+      [{ reference: '1-6', speedRatio: '1:3', bpm: 40, scale: 1.4 }],
     ])
     expect(outputs.map((output) => output.text())).toEqual(['40', '1.4'])
+  })
+
+  it('hydrates every VTG control from a supported animation without selecting it again', async () => {
+    const wrapper = mount(VtgPane)
+    const animation = createDefaultVtgAnimation({
+      reference: '5-6',
+      speedRatio: '1:3',
+      isAnti: true,
+      swapProps: true,
+      reversePlane: true,
+      bpm: 87,
+      scale: 0.6,
+    })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+
+    await wrapper.setProps({ animation })
+    await nextTick()
+
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-6')
+    expect(wrapper.get<HTMLInputElement>('input[value="1:3"]').element.checked).toBe(true)
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Anti')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('87')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').element.value).toBe('0.6')
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+  })
+
+  it('preserves a locally selected no-op transform when the player applies it', async () => {
+    const initialAnimation = createDefaultVtgAnimation({
+      reference: '1-1',
+      speedRatio: '1:1',
+    })
+    if (!initialAnimation) throw new Error('Expected a supported VTG animation')
+
+    const wrapper = mount(VtgPane, { props: { animation: initialAnimation } })
+    await nextTick()
+
+    const swap = wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]')
+    await swap.setValue(true)
+
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { reference: '1-1', speedRatio: '1:1', swapProps: true },
+    ])
+    const appliedAnimation = createDefaultVtgAnimation({
+      reference: '1-1',
+      speedRatio: '1:1',
+      swapProps: true,
+    })
+    if (!appliedAnimation) throw new Error('Expected the emitted VTG animation')
+
+    await wrapper.setProps({ animation: appliedAnimation })
+    await nextTick()
+
+    expect(swap.element.checked).toBe(true)
   })
 
   it('shares the Spin and Anti choice across the four special cells', async () => {
@@ -286,14 +343,14 @@ describe('VtgPane', () => {
     expect(toggle.attributes('aria-pressed')).toBe('false')
     expect(toggle.classes()).not.toContain('vtg-tile__spin-toggle--lower-right')
     expect(wrapper.emitted('patternSelect')).toEqual([
-      [{ reference: '5-6', speedRatio: '1:1', isAnti: false }],
+      [{ reference: '5-6', speedRatio: '1:3', isAnti: false }],
     ])
 
     await toggle.trigger('click')
 
     expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Anti')
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { reference: '5-6', speedRatio: '1:1', isAnti: true },
+      { reference: '5-6', speedRatio: '1:3', isAnti: true },
     ])
 
     await wrapper.get('[data-cell-reference="6-5"]').trigger('click')
@@ -303,14 +360,14 @@ describe('VtgPane', () => {
       'vtg-tile__spin-toggle--lower-right',
     )
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { reference: '6-5', speedRatio: '1:1', isAnti: true },
+      { reference: '6-5', speedRatio: '1:3', isAnti: true },
     ])
 
     await wrapper.get('[data-cell-reference="6-5"]').trigger('click')
 
     expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Spin')
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { reference: '6-5', speedRatio: '1:1', isAnti: false },
+      { reference: '6-5', speedRatio: '1:3', isAnti: false },
     ])
   })
 
@@ -332,7 +389,7 @@ describe('VtgPane', () => {
 
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-6')
     expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-pressed')).toBe('true')
-    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:1' }]])
+    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:3' }]])
   })
 
   it('keeps the left column and bottom row inert for now', async () => {
@@ -453,7 +510,7 @@ describe('VtgPane', () => {
     expect(countWorkerMessages('data')).toBe(beforeBpm)
 
     await expectNineMorePreviews(() =>
-      wrapper.get<HTMLInputElement>('input[value="1:3"]').setValue(),
+      wrapper.get<HTMLInputElement>('input[value="1:1"]').setValue(),
     )
     await expectNineMorePreviews(async () => {
       await wrapper.get('[data-cell-reference="5-6"]').trigger('click')

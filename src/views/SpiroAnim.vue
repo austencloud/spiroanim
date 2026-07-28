@@ -37,6 +37,7 @@
       <VtgPane
         v-if="viewVisible.vtg"
         ref="cVtg"
+        :animation="ROOT"
         data-type="vtg"
         data-role="vtg-view"
         @pattern-select="applyVtgPattern"

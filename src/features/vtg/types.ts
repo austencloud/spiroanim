@@ -15,6 +15,7 @@ export interface VtgCellAddress {
 
 export const vtgSpeedRatios = ['1:1', '1:3', '1:5'] as const
 export type VtgSpeedRatio = (typeof vtgSpeedRatios)[number]
+export const vtgDefaultSpeedRatio = '1:3' satisfies VtgSpeedRatio
 
 export interface VtgPatternSelection {
   reference: VtgCellReference
@@ -24,6 +25,16 @@ export interface VtgPatternSelection {
   reversePlane?: boolean
   bpm?: number
   scale?: number
+}
+
+export interface VtgPatternMatch {
+  reference: VtgCellReference
+  speedRatio: VtgSpeedRatio
+  isAnti: boolean
+  swapProps: boolean
+  reversePlane: boolean
+  bpm: number
+  scale: number
 }
 
 export type VtgReadableAnimation = Partial<

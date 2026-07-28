@@ -91,11 +91,33 @@ describe('SpiroAnim view', () => {
     const splitter = useSplitterStore('main')
     expect(splitter.leftPerc).toBe(50)
 
+    const playerRoot = usePlayerStore('main').raw().ROOT
+    const hydratedVtg = createVtgAnimation(playerRoot.value, {
+      reference: '5-6',
+      speedRatio: '1:3',
+      isAnti: true,
+      swapProps: true,
+      reversePlane: true,
+      bpm: 87,
+      scale: 0.6,
+    })
+    if (!hydratedVtg) throw new Error('Expected a supported VTG animation')
+    playerRoot.value = hydratedVtg
+
     useMainPaneStore().setViewInPane('vtg', 'left')
     await flushPromises()
     expect(wrapper.get('[data-role="left-pane"]').text()).toContain('VTG')
+    expect(wrapper.get('[data-role="vtg-view"]').attributes('data-selected-cell')).toBe('5-6')
+    expect(wrapper.get<HTMLInputElement>('input[value="1:3"]').element.checked).toBe(true)
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Anti')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(true)
 
-    const playerRoot = usePlayerStore('main').raw().ROOT
+    await wrapper.get<HTMLInputElement>('input[value="1:1"]').setValue()
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(false)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(false)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').setValue(120)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(0.8)
     await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
 
     expect(playerRoot.value).toMatchObject({
