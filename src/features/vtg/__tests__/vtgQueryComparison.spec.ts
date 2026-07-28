@@ -14,6 +14,235 @@ describe('VTG query references', () => {
   it.each([
     {
       reference: '1-6',
+      p0: 'N--.blE.blExM...',
+      p1: 'S--.blE.bn-pk...',
+    },
+    {
+      reference: '1-5',
+      p0: 'N--.blE.blExM...',
+      p1: 'S--.blE.blEpk...',
+    },
+    {
+      reference: '1-4',
+      p0: 'N--.blE.blExM...',
+      p1: 'S--.blE.bn-xM...',
+    },
+    {
+      reference: '1-3',
+      p0: 'N--.blE.blExM...',
+      p1: 'S--.blE.blExM...',
+    },
+    {
+      reference: '1-2',
+      p0: 'N--.blE.blEpk...',
+      p1: 'S--.blE.bn-pk...',
+    },
+    {
+      reference: '1-1',
+      p0: 'N--.blE.blEpk...',
+      p1: 'S--.blE.blEpk...',
+    },
+    {
+      reference: '2-6',
+      p0: 'N--.blE.blExM...',
+      p1: 'S--.biQ.bn-pk...',
+    },
+    {
+      reference: '2-5',
+      p0: 'N--.blE.blExM...',
+      p1: 'S--.biQ.blEpk...',
+    },
+    {
+      reference: '2-4',
+      p0: 'N--.blE.blExM...',
+      p1: 'S--.biQ.bn-xM...',
+    },
+    {
+      reference: '2-3',
+      p0: 'N--.blE.blExM...',
+      p1: 'S--.biQ.blExM...',
+    },
+    {
+      reference: '2-2',
+      p0: 'N--.blE.blEpk...',
+      p1: 'S--.biQ.bn-pk...',
+    },
+    {
+      reference: '2-1',
+      p0: 'N--.blE.blEpk...',
+      p1: 'S--.biQ.blEpk...',
+    },
+    {
+      reference: '3-6',
+      p0: 'N--.blEs8.blExM...',
+      p1: 'S--.blExM.bn-pk...',
+    },
+    {
+      reference: '3-5',
+      p0: 'N--.blEs8.blExM...',
+      p1: 'S--.blExM.blEpk...',
+    },
+    {
+      reference: '3-4',
+      p0: 'N--.blEs8.blEpk...',
+      p1: 'S--.blExM.biQpk...',
+    },
+    {
+      reference: '3-3',
+      p0: 'N--.blEs8.blEpk...',
+      p1: 'S--.blExM.blEpk...',
+    },
+    {
+      reference: '3-2',
+      p0: 'N--.blEs8.blExM...',
+      p1: 'S--.blExM.bn-xM...',
+    },
+    {
+      reference: '3-1',
+      p0: 'N--.blEs8.blExM...',
+      p1: 'S--.blExM.blExM...',
+    },
+    {
+      reference: '4-6',
+      p0: 'N--.blEs8.blExM...',
+      p1: 'S--.bn-xM.bn-pk...',
+    },
+    {
+      reference: '4-5',
+      p0: 'N--.blEs8.blExM...',
+      p1: 'S--.bn-xM.blEpk...',
+    },
+    {
+      reference: '4-4',
+      p0: 'N--.blEs8.blEpk...',
+      p1: 'S--.bn-xM.bn-pk...',
+    },
+    {
+      reference: '4-3',
+      p0: 'N--.blEs8.blEpk...',
+      p1: 'S--.bn-xM.blEpk...',
+    },
+    {
+      reference: '4-2',
+      p0: 'N--.blEs8.blExM...',
+      p1: 'S--.bn-xM.bn-xM...',
+    },
+    {
+      reference: '4-1',
+      p0: 'N--.blEs8.blExM...',
+      p1: 'S--.bn-xM.blExM...',
+    },
+    {
+      reference: '5-6',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.bn-xM.blExM...',
+    },
+    {
+      reference: '5-6',
+      isAnti: true,
+      p0: 'N--.bn-.bn-pk...',
+      p1: 'S--.bn-xM.blEpk...',
+    },
+    {
+      reference: '5-5',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.bn-xM.bn-xM...',
+    },
+    {
+      reference: '5-5',
+      isAnti: true,
+      p0: 'N--.bn-.blEpk...',
+      p1: 'S--.bn-xM.blEpk...',
+    },
+    {
+      reference: '5-4',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.bn-xM.blEpk...',
+    },
+    {
+      reference: '5-3',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.bn-xM.bn-pk...',
+    },
+    {
+      reference: '5-2',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.bn-xM.blEpk...',
+    },
+    {
+      reference: '5-1',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.bn-xM.bn-pk...',
+    },
+    {
+      reference: '6-6',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.blExM.blExM...',
+    },
+    {
+      reference: '6-6',
+      isAnti: true,
+      p0: 'N--.bn-.bn-pk...',
+      p1: 'S--.blExM.blEpk...',
+    },
+    {
+      reference: '6-5',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.blExM.bn-xM...',
+    },
+    {
+      reference: '6-5',
+      isAnti: true,
+      p0: 'N--.bn-.bn-pk...',
+      p1: 'S--.blExM.bn-pk...',
+    },
+    {
+      reference: '6-4',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.blExM.blEpk...',
+    },
+    {
+      reference: '6-3',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.blExM.bn-pk...',
+    },
+    {
+      reference: '6-2',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.blExM.blEpk...',
+    },
+    {
+      reference: '6-1',
+      p0: 'N--.bn-.bn-xM...',
+      p1: 'S--.blExM.bn-pk...',
+    },
+  ] as const)('decodes the 1:3 replacement for $reference', async (query) => {
+    const { reference, p0, p1 } = query
+    const version = await loadSpiroAnimQSVersion(1)
+    const queryCodec = await useSpiroAnimQS(version.VDEF, useBaseQS(version.VDEF), 1)
+    const readable = encodeReadable(
+      queryCodec.decodeQS({
+        r: 'Ew09APi11',
+        p0,
+        p1,
+        v: '1',
+      }),
+    )
+    const selection = {
+      reference,
+      speedRatio: '1:3',
+      isAnti: 'isAnti' in query && query.isAnti,
+    } as const
+    const pattern = getVtgPatternDefinition(selection)?.patternsBySpeedRatio['1:3']?.(selection)
+
+    expect(pattern?.props.map((prop) => prop.anim)).toEqual(
+      readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
+    )
+  })
+
+  it.each([
+    {
+      reference: '1-6',
       r: 'Ew09APi11',
       p0: 'N--.blE.blE...',
       p1: 'S--.blE.bn-s8...',

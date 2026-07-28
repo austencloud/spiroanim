@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 
 describe('SpiroAnim view', () => {
@@ -102,7 +103,7 @@ describe('SpiroAnim view', () => {
       aspecty: vtgPlayerSettings.aspecty,
       props: [
         {
-          anim: [{ plane: -180, arc: 90 }, { plane: 180, arc: 90 }, {}, {}, {}],
+          anim: [{ plane: 180, arc: 90 }, { plane: 180, arc: 90 }, {}, {}, {}],
         },
         {
           anim: [{ plane: 180, arc: 90 }, { arc: 90, turns: -180 }, {}, {}, {}],
@@ -110,11 +111,14 @@ describe('SpiroAnim view', () => {
       ],
     })
 
-    const oneToOneAnimation = structuredClone(playerRoot.value)
+    const expectedOneToThree = createVtgAnimation(playerRoot.value, {
+      reference: '2-6',
+      speedRatio: '1:1',
+    })
     await wrapper.get<HTMLInputElement>('input[value="1:3"]').setValue()
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
 
-    expect(playerRoot.value).toEqual(oneToOneAnimation)
+    expect(playerRoot.value).toEqual(expectedOneToThree)
 
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)

@@ -123,17 +123,14 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props.map((prop) => prop.color)).toEqual([1, 6])
-    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { arc: 90 },
-      { arc: 90, turns: 0 },
-    ])
+    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([{ arc: 90 }, { arc: 90, turns: 0 }])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { plane: 180, arc: 90, turns: 180 },
       { plane: 180, arc: 90, turns: 0 },
     ])
   })
 
-  it('does not replace the player for a catalog cell that is not defined yet', () => {
+  it('does not replace the player for an unsupported speed ratio', () => {
     expect(
       createVtgAnimation(createCurrentAnimation(), {
         reference: '5-6',
@@ -142,15 +139,29 @@ describe('createVtgAnimation', () => {
     ).toBeUndefined()
   })
 
-  it.each(['1:3', '1:5'] as const)(
-    'does not build a pattern for the unsupported %s speed ratio',
-    (speedRatio) => {
-      expect(
-        createVtgAnimation(createCurrentAnimation(), {
-          reference: '1-6',
-          speedRatio,
-        }),
-      ).toBeUndefined()
-    },
-  )
+  it('uses the explicit 1:3 Anti values for a special cell', () => {
+    const animation = createVtgAnimation(createCurrentAnimation(), {
+      reference: '5-5',
+      speedRatio: '1:3',
+      isAnti: true,
+    })
+
+    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
+      { arc: 90 },
+      { plane: 180, arc: 90, turns: -360 },
+    ])
+    expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
+      { arc: 90, turns: 180 },
+      { plane: 180, arc: 90, turns: -360 },
+    ])
+  })
+
+  it('does not build a pattern for the unsupported 1:5 speed ratio', () => {
+    expect(
+      createVtgAnimation(createCurrentAnimation(), {
+        reference: '1-6',
+        speedRatio: '1:5',
+      }),
+    ).toBeUndefined()
+  })
 })
