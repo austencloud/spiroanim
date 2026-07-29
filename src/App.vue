@@ -7,6 +7,8 @@
 import { defineAsyncComponent } from 'vue'
 import { RouterView } from 'vue-router'
 
+import { loadMobileDevTools } from '@/services/mobileDevTools'
+
 const PwaUpdatePrompt = import.meta.env.SSR
   ? null
   : defineAsyncComponent(() => import('@/components/layout/PwaUpdatePrompt.vue'))
@@ -14,5 +16,6 @@ const hasMounted = ref(false)
 
 onMounted(() => {
   hasMounted.value = true
+  loadMobileDevTools()
 })
 </script>
