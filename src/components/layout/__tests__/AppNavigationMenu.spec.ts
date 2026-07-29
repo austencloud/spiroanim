@@ -74,6 +74,7 @@ describe('AppNavigationMenu', () => {
     fullscreenState.toggle.mockClear()
     displayState.isInstalledDisplay.value = false
     displayState.isIos.value = false
+    Reflect.deleteProperty(navigator, 'clipboard')
   })
 
   it('opens page navigation with mobile-sized menu items', async () => {
@@ -91,6 +92,7 @@ describe('AppNavigationMenu', () => {
     )
     expect(wrapper.findAll('[role="menuitem"]').map((item) => item.text())).toEqual([
       'Enter Full Screen',
+      'Share This',
       'Tracer: Off',
       'Save Image',
       'Home',
@@ -133,6 +135,9 @@ describe('AppNavigationMenu', () => {
 
     await trigger.trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Enter Full Screen')
+
+    await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement?.textContent).toContain('Share This')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Tracer: Off')
@@ -199,6 +204,53 @@ describe('AppNavigationMenu', () => {
     wrapper.unmount()
   })
 
+  it('opens a share dialog containing the complete current URL', async () => {
+    const { wrapper } = await mountMenu()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    const spiroAnimItems = wrapper
+      .get('[aria-labelledby="spiroanim-heading"]')
+      .findAll('[role="menuitem"]')
+
+    expect(spiroAnimItems.map((item) => item.text())).toEqual([
+      'Share This',
+      'Tracer: Off',
+      'Save Image',
+    ])
+
+    await wrapper.get('.share-menu-item').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+    expect(wrapper.get('.share-dialog').attributes()).toHaveProperty('open')
+    expect(wrapper.get('.share-dialog input').element).toHaveProperty('value', window.location.href)
+    expect(wrapper.get('.share-note').text()).toContain('any portion of this app can be shared')
+    expect(wrapper.find('.copy-button').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('offers clipboard copying only when the Clipboard API is available', async () => {
+    const writeText = vi.fn<(text: string) => Promise<void>>(async () => undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    const { wrapper } = await mountMenu()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    await wrapper.get('.share-menu-item').trigger('click')
+    await wrapper.get('.copy-button').trigger('click')
+    await flushPromises()
+
+    expect(writeText).toHaveBeenCalledWith(window.location.href)
+    expect(wrapper.get('.copy-button').text()).toBe('Copied')
+    expect(wrapper.get('[role="status"]').text()).toBe('Copied.')
+
+    wrapper.unmount()
+    Reflect.deleteProperty(navigator, 'clipboard')
+  })
+
   it('toggles fullscreen from the uncategorized first menu item', async () => {
     const { wrapper } = await mountMenu()
 
@@ -237,6 +289,7 @@ describe('AppNavigationMenu', () => {
 
     expect(wrapper.find('.fullscreen-menu-item').exists()).toBe(false)
     expect(wrapper.findAll('[role="menuitem"]').map((item) => item.text())).toEqual([
+      'Share This',
       'Tracer: Off',
       'Save Image',
       'Home',

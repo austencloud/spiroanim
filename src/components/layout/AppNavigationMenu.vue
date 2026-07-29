@@ -46,6 +46,15 @@
       <section class="menu-group" role="group" aria-labelledby="spiroanim-heading">
         <h2 id="spiroanim-heading">SpiroAnim</h2>
         <button
+          class="menu-link menu-action share-menu-item"
+          type="button"
+          role="menuitem"
+          @click="openShareDialog"
+        >
+          <BaseIcon :path="mdiShareVariantOutline" :size="22" />
+          <span>Share This</span>
+        </button>
+        <button
           class="menu-link menu-action tracer-menu-item"
           type="button"
           role="menuitem"
@@ -82,6 +91,7 @@
         <PwaInstallControl variant="menu" @prompted="closeMenu" />
       </section>
     </div>
+    <ShareDialog ref="shareDialog" />
   </div>
 </template>
 
@@ -95,6 +105,7 @@ import {
   mdiHomeOutline,
   mdiInformationOutline,
   mdiPanoramaVariant,
+  mdiShareVariantOutline,
 } from '@mdi/js'
 import { onClickOutside, useFullscreen } from '@vueuse/core'
 import { useId } from 'vue'
@@ -103,6 +114,7 @@ import { RouterLink } from 'vue-router'
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
+import ShareDialog from '@/components/layout/ShareDialog.vue'
 import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
@@ -121,6 +133,7 @@ const isOpen = ref(false)
 const rootElement = ref<HTMLElement>()
 const triggerElement = ref<HTMLButtonElement>()
 const menuElement = ref<HTMLElement>()
+const shareDialog = ref<InstanceType<typeof ShareDialog>>()
 const triggerId = useId()
 const menuId = useId()
 const {
@@ -160,6 +173,11 @@ function toggleTracerMode() {
 function savePlayerImage() {
   saveImage.value = Symbol()
   closeMenu()
+}
+
+function openShareDialog() {
+  closeMenu()
+  void shareDialog.value?.open()
 }
 
 function toggleMenu() {
