@@ -1,6 +1,7 @@
 // src\workers\AnimWorker\AnimWorkerTypes.ts
 
 import type { RootDataCompiled } from '@/types/AnimTypes'
+import type { VideoExportProgress, VideoExportSettings } from '@/types/VideoExportTypes'
 
 export interface AnimBridgeMap {
   // Identifies the source (Player or Timeline) for warning messages
@@ -132,6 +133,29 @@ export interface AnimBridgeMap {
   reqimg: {
     arg: void
     ret: string
+  }
+
+  exportVideo: {
+    arg: VideoExportSettings & {
+      restorePositionMs: number
+    }
+    ret: {
+      blob?: Blob
+      extension: string
+      canceled: boolean
+    }
+  }
+
+  exportVideoCancel: {
+    arg: void
+  }
+
+  exportVideoProgress: {
+    arg: VideoExportProgress
+  }
+
+  exportVideoFinalizing: {
+    arg: void
   }
 
   // ========== Cleanup ==========

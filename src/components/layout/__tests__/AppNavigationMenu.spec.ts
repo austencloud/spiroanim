@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import AppNavigationMenu from '@/components/layout/AppNavigationMenu.vue'
 import { initializePwaInstallPromptCapture } from '@/composables/usePwaInstall'
+import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 class TestInstallPromptEvent extends Event {
@@ -23,6 +24,10 @@ const displayState = vi.hoisted(() => ({
   isInstalledDisplay: { value: false },
   isIos: { value: false },
 }))
+const videoExportState = vi.hoisted(() => ({
+  hasApi: false,
+  codecs: [] as Array<{ codec: string; container: 'mp4' | 'webm'; label: string }>,
+}))
 
 vi.mock('@vueuse/core', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@vueuse/core')>()),
@@ -30,6 +35,10 @@ vi.mock('@vueuse/core', async (importOriginal) => ({
 }))
 vi.mock('@/composables/useAppDisplayMode', () => ({
   useAppDisplayMode: () => displayState,
+}))
+vi.mock('@/services/videoExportSupport', () => ({
+  hasVideoExportApi: () => videoExportState.hasApi,
+  probeVideoExportCodecs: () => Promise.resolve(videoExportState.codecs),
 }))
 
 async function mountMenu() {
@@ -74,6 +83,8 @@ describe('AppNavigationMenu', () => {
     fullscreenState.toggle.mockClear()
     displayState.isInstalledDisplay.value = false
     displayState.isIos.value = false
+    videoExportState.hasApi = false
+    videoExportState.codecs = []
     Reflect.deleteProperty(navigator, 'clipboard')
   })
 
@@ -95,6 +106,7 @@ describe('AppNavigationMenu', () => {
       'Share This',
       'Tracer: Off',
       'Save Image',
+      'Export Video',
       'Home',
       'About',
     ])
@@ -144,6 +156,9 @@ describe('AppNavigationMenu', () => {
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Save Image')
+
+    await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement?.textContent).toContain('Export Video')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Home')
@@ -204,6 +219,85 @@ describe('AppNavigationMenu', () => {
     wrapper.unmount()
   })
 
+  it('shows player actions only while the player view is visible', async () => {
+    const paneStore = useMainPaneStore()
+    paneStore.setViewInPane('editor', 'left')
+    const { wrapper } = await mountMenu()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+
+    expect(wrapper.find('.tracer-menu-item').exists()).toBe(false)
+    expect(wrapper.find('.save-image-menu-item').exists()).toBe(false)
+    expect(wrapper.find('.export-video-menu-item').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('explains when video export is unavailable', async () => {
+    const { wrapper } = await mountMenu()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    const exportItem = wrapper.get('.export-video-menu-item')
+
+    expect(exportItem.attributes('aria-disabled')).toBe('true')
+    expect(exportItem.classes()).toContain('menu-action--unavailable')
+
+    await exportItem.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+    expect(wrapper.get('.export-video-dialog').attributes()).toHaveProperty('open')
+    expect(wrapper.get('[role="alert"]').text()).toContain(
+      'not supported on this device or browser',
+    )
+
+    wrapper.unmount()
+  })
+
+  it('opens export settings populated with supported codecs', async () => {
+    videoExportState.hasApi = true
+    videoExportState.codecs = [
+      { codec: 'avc1.42001f', container: 'mp4', label: 'H.264 (MP4)' },
+      { codec: 'vp09.00.10.08', container: 'webm', label: 'VP9 (WebM)' },
+    ]
+    const playerStore = usePlayerStore('main')
+    playerStore.CANVAS_DIM = { width: 973, height: 550 }
+    const { wrapper } = await mountMenu()
+    await flushPromises()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    const exportItem = wrapper.get('.export-video-menu-item')
+    expect(exportItem.attributes('aria-disabled')).toBe('false')
+
+    await exportItem.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(
+      wrapper
+        .get('.codec-field select')
+        .findAll('option')
+        .map((option) => option.text()),
+    ).toEqual(['H.264 (MP4)', 'VP9 (WebM)'])
+    expect(wrapper.get('.availability-status').text()).toBe('2 compatible codecs available.')
+    expect(wrapper.get('input[type="color"]').element).toHaveProperty('value', '#090b0f')
+    expect(
+      wrapper
+        .get('select')
+        .findAll('option')
+        .map((option) => option.text()),
+    ).toEqual([
+      'Current - 974 x 548 (adjusted from 973 x 550)',
+      '1280 x 720 (16:9)',
+      '1920 x 1080 (16:9)',
+      '2560 x 1440 (16:9)',
+      '3840 x 2160 (16:9)',
+      'Custom',
+    ])
+
+    wrapper.unmount()
+  })
+
   it('opens a share dialog containing the complete current URL', async () => {
     const { wrapper } = await mountMenu()
 
@@ -216,6 +310,7 @@ describe('AppNavigationMenu', () => {
       'Share This',
       'Tracer: Off',
       'Save Image',
+      'Export Video',
     ])
 
     await wrapper.get('.share-menu-item').trigger('click')
@@ -292,6 +387,7 @@ describe('AppNavigationMenu', () => {
       'Share This',
       'Tracer: Off',
       'Save Image',
+      'Export Video',
       'Home',
       'About',
     ])

@@ -54,25 +54,38 @@
           <BaseIcon :path="mdiShareVariantOutline" :size="22" />
           <span>Share This</span>
         </button>
-        <button
-          class="menu-link menu-action tracer-menu-item"
-          type="button"
-          role="menuitem"
-          :aria-pressed="TRACER"
-          @click="toggleTracerMode"
-        >
-          <BaseIcon :path="tracerIcon" :size="22" />
-          <span>{{ tracerLabel }}</span>
-        </button>
-        <button
-          class="menu-link menu-action save-image-menu-item"
-          type="button"
-          role="menuitem"
-          @click="savePlayerImage"
-        >
-          <BaseIcon :path="mdiPanoramaVariant" :size="22" />
-          <span>Save Image</span>
-        </button>
+        <template v-if="playerVisible">
+          <button
+            class="menu-link menu-action tracer-menu-item"
+            type="button"
+            role="menuitem"
+            :aria-pressed="TRACER"
+            @click="toggleTracerMode"
+          >
+            <BaseIcon :path="tracerIcon" :size="22" />
+            <span>{{ tracerLabel }}</span>
+          </button>
+          <button
+            class="menu-link menu-action save-image-menu-item"
+            type="button"
+            role="menuitem"
+            @click="savePlayerImage"
+          >
+            <BaseIcon :path="mdiPanoramaVariant" :size="22" />
+            <span>Save Image</span>
+          </button>
+          <button
+            class="menu-link menu-action export-video-menu-item"
+            :class="{ 'menu-action--unavailable': !videoExportAvailable }"
+            type="button"
+            role="menuitem"
+            :aria-disabled="!videoExportAvailable"
+            @click="openExportVideoDialog"
+          >
+            <BaseIcon :path="mdiMovieOpenOutline" :size="22" />
+            <span>Export Video</span>
+          </button>
+        </template>
       </section>
       <section class="menu-group" role="group" aria-labelledby="navigation-heading">
         <h2 id="navigation-heading">Navigation</h2>
@@ -92,6 +105,14 @@
       </section>
     </div>
     <ShareDialog ref="shareDialog" />
+    <ExportVideoDialog ref="exportVideoDialog" @export="startVideoExport" />
+    <ExportVideoProgressDialog
+      ref="exportVideoProgressDialog"
+      :status="videoExportStatus"
+      :progress="videoExportProgress"
+      :error="videoExportError"
+      @cancel="cancelVideoExport"
+    />
   </div>
 </template>
 
@@ -104,6 +125,7 @@ import {
   mdiFullscreenExit,
   mdiHomeOutline,
   mdiInformationOutline,
+  mdiMovieOpenOutline,
   mdiPanoramaVariant,
   mdiShareVariantOutline,
 } from '@mdi/js'
@@ -113,10 +135,15 @@ import { RouterLink } from 'vue-router'
 
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import ExportVideoDialog from '@/components/layout/ExportVideoDialog.vue'
+import ExportVideoProgressDialog from '@/components/layout/ExportVideoProgressDialog.vue'
 import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
 import ShareDialog from '@/components/layout/ShareDialog.vue'
 import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
+import { hasVideoExportApi, probeVideoExportCodecs } from '@/services/videoExportSupport'
+import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import type { VideoExportSettings } from '@/types/VideoExportTypes'
 
 interface MenuLink {
   icon: string
@@ -134,6 +161,8 @@ const rootElement = ref<HTMLElement>()
 const triggerElement = ref<HTMLButtonElement>()
 const menuElement = ref<HTMLElement>()
 const shareDialog = ref<InstanceType<typeof ShareDialog>>()
+const exportVideoDialog = ref<InstanceType<typeof ExportVideoDialog>>()
+const exportVideoProgressDialog = ref<InstanceType<typeof ExportVideoProgressDialog>>()
 const triggerId = useId()
 const menuId = useId()
 const {
@@ -152,7 +181,22 @@ const fullscreenIcon = computed(() => (isFullscreen.value ? mdiFullscreenExit : 
 const fullscreenLabel = computed(() =>
   isFullscreen.value ? 'Exit Full Screen' : 'Enter Full Screen',
 )
-const { TRACER, saveImage } = storeToRefs(usePlayerStore('main'))
+const playerStore = usePlayerStore('main')
+const {
+  ASPECT,
+  CANVAS_DIM,
+  MAX,
+  TRACER,
+  saveImage,
+  videoExportRequest,
+  videoExportCancel,
+  videoExportStatus,
+  videoExportProgress,
+  videoExportError,
+} = storeToRefs(playerStore)
+const { viewVisible } = storeToRefs(useMainPaneStore())
+const playerVisible = computed(() => viewVisible.value.player)
+const videoExportAvailable = ref(false)
 const tracerIcon = computed(() => (TRACER.value ? mdiFirework : mdiFireworkOff))
 const tracerLabel = computed(() => (TRACER.value ? 'Tracer: On' : 'Tracer: Off'))
 
@@ -178,6 +222,28 @@ function savePlayerImage() {
 function openShareDialog() {
   closeMenu()
   void shareDialog.value?.open()
+}
+
+function openExportVideoDialog() {
+  closeMenu()
+  void exportVideoDialog.value?.open(videoExportAvailable.value, CANVAS_DIM.value, ASPECT.value)
+}
+
+function startVideoExport(settings: Omit<VideoExportSettings, 'durationMs'>) {
+  videoExportRequest.value = {
+    id: Symbol(),
+    settings: {
+      ...settings,
+      durationMs: MAX.value,
+    },
+  }
+  void exportVideoProgressDialog.value?.open()
+}
+
+function cancelVideoExport() {
+  if (videoExportStatus.value === 'rendering' || videoExportStatus.value === 'finalizing') {
+    videoExportCancel.value = Symbol()
+  }
 }
 
 function toggleMenu() {
@@ -234,6 +300,17 @@ function onMenuKeydown(event: KeyboardEvent) {
 }
 
 onClickOutside(rootElement, closeMenu)
+
+onMounted(async () => {
+  if (!hasVideoExportApi()) return
+  const codecs = await probeVideoExportCodecs({
+    width: 1920,
+    height: 1080,
+    framerate: 60,
+    bitrate: 16_000_000,
+  })
+  videoExportAvailable.value = codecs.length > 0
+})
 </script>
 
 <style scoped>
@@ -347,6 +424,18 @@ onClickOutside(rootElement, closeMenu)
   text-align: start;
   background: transparent;
   border: 0;
+}
+
+.menu-action--unavailable {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.menu-action--unavailable:hover,
+.menu-action--unavailable:focus-visible {
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
 }
 
 .menu-link:hover,

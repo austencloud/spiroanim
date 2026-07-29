@@ -18,6 +18,7 @@ describe('usePlayerStore', () => {
     expect(store.PLAYING).toBe(true)
     expect(store.TRACER).toBe(false)
     expect(store.ASPECT).toEqual([16, 9])
+    expect(store.CANVAS_DIM).toEqual({ width: 0, height: 0 })
     expect(store.raw().COMPILED.value).toMatchObject({ bpm: 120, props: [] })
   })
 

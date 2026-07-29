@@ -13,8 +13,18 @@ import { createSpiroAnimator } from '@/workers/animation/createSpiroAnimator'
 
 import { CMODES } from '@/domain/animation/AnimStruct'
 import { PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
+import { videoExportFrameCount, videoExportFrameTimeMs } from '@/math/videoExportTiming'
 
 import { WebGLRenderer, Scene, PerspectiveCamera, Raycaster, Vector2, Mesh } from 'three'
+import { Color } from 'three'
+import {
+  BufferTarget,
+  CanvasSource,
+  Mp4OutputFormat,
+  Output,
+  WebMOutputFormat,
+  type VideoCodec,
+} from 'mediabunny'
 
 import {
   Material,
@@ -58,6 +68,17 @@ let animationId: number
 let selection = false
 let min = 0
 let max = 0
+let cancelVideoExport = false
+let videoExportActive = false
+let deferredResize: typeof dim | undefined
+let deferredProjection:
+  | {
+      fov: number
+      aspect: number
+      near: number
+      far: number
+    }
+  | undefined
 
 let fpsTime = 0
 let fpsCount = 0
@@ -67,12 +88,20 @@ let fpsCount = 0
 
 // Receive dimensions
 on('resize', (vals) => {
+  if (videoExportActive) {
+    deferredResize = { ...vals }
+    return
+  }
   Object.assign(dim, vals)
   resize(dim)
 })
 
 // Receive camera projection
 on('projection', (vals) => {
+  if (videoExportActive) {
+    deferredProjection = { ...vals }
+    return
+  }
   Object.assign(camera, vals)
   //console.log('projection:', vals)
   camera.updateProjectionMatrix()
@@ -268,6 +297,126 @@ register('reqimg', async () => {
   return URL.createObjectURL(blob)
 })
 
+on('exportVideoCancel', () => {
+  cancelVideoExport = true
+})
+
+register(
+  'exportVideo',
+  async ({
+    width,
+    height,
+    framerate,
+    bitrate,
+    backgroundColor,
+    transparent,
+    codec,
+    container,
+    durationMs,
+    restorePositionMs,
+  }) => {
+    if (videoExportActive) throw new Error('A video export is already in progress.')
+
+    videoExportActive = true
+    cancelVideoExport = false
+    deferredResize = undefined
+    deferredProjection = undefined
+
+    const previous = {
+      dim: { ...dim },
+      cameraAspect: camera.aspect,
+      clearColor: renderer.getClearColor(new Color()).clone(),
+      clearAlpha: renderer.getClearAlpha(),
+      autoClear: renderer.autoClear,
+      playing,
+      animating,
+    }
+
+    let output: Output | undefined
+
+    try {
+      playing = false
+      animating = false
+      if (animationId) cancelAnimationFrame(animationId)
+
+      Object.assign(dim, { width, height, ratio: 1 })
+      resize(dim)
+      camera.aspect = width / height
+      camera.updateProjectionMatrix()
+      renderer.autoClear = true
+      renderer.setClearColor(backgroundColor, transparent ? 0 : 1)
+
+      const format = container === 'mp4' ? new Mp4OutputFormat() : new WebMOutputFormat()
+      const target = new BufferTarget()
+      output = new Output({ format, target })
+      const source = new CanvasSource(canvas, {
+        codec: videoCodec(codec),
+        fullCodecString: codec,
+        bitrate,
+        bitrateMode: 'variable',
+        latencyMode: 'quality',
+        alpha: transparent ? 'keep' : 'discard',
+      })
+      output.addVideoTrack(source, { frameRate: framerate })
+      await output.start()
+
+      const frameDuration = 1 / framerate
+      const totalFrames = videoExportFrameCount(durationMs, framerate)
+
+      for (let frame = 0; frame < totalFrames; frame++) {
+        if (cancelVideoExport) break
+
+        const timestamp = frame * frameDuration
+        jump(videoExportFrameTimeMs(frame, totalFrames, durationMs, framerate))
+        renderer.render(scene, camera)
+        await source.add(timestamp, frameDuration)
+        send('exportVideoProgress', {
+          completedFrames: frame + 1,
+          totalFrames,
+        })
+      }
+
+      if (cancelVideoExport) {
+        await output.cancel()
+        return { extension: `.${container}`, canceled: true }
+      }
+
+      send('exportVideoFinalizing', undefined)
+      await output.finalize()
+      if (!target.buffer) throw new Error('The video encoder did not produce an output file.')
+
+      return {
+        blob: new Blob([target.buffer], { type: format.mimeType }),
+        extension: format.fileExtension,
+        canceled: false,
+      }
+    } catch (error) {
+      if (output && (output.state === 'pending' || output.state === 'started')) {
+        await output.cancel()
+      }
+      throw error
+    } finally {
+      Object.assign(dim, deferredResize ?? previous.dim)
+      resize(dim)
+      if (deferredProjection) Object.assign(camera, deferredProjection)
+      else camera.aspect = previous.cameraAspect
+      camera.updateProjectionMatrix()
+      renderer.autoClear = previous.autoClear
+      renderer.setClearColor(previous.clearColor, previous.clearAlpha)
+      jump(restorePositionMs)
+      renderer.render(scene, camera)
+
+      playing = previous.playing
+      animating = previous.animating
+      videoExportActive = false
+      cancelVideoExport = false
+      deferredResize = undefined
+      deferredProjection = undefined
+      if (animating) animate(undefined, false)
+    }
+  },
+)
+
 // Cleanup resources, main then terminates the worker
 register('dispose', () => {
   if (animating) cancelAnimationFrame(animationId)
@@ -290,6 +439,15 @@ function resize({ width, height, ratio }: typeof dim) {
     //console.log('Renderer.setSize:', width, height)
   }
   animatorDim()
+}
+
+function videoCodec(codec: string): VideoCodec {
+  if (codec.startsWith('avc1')) return 'avc'
+  if (codec.startsWith('hvc1') || codec.startsWith('hev1')) return 'hevc'
+  if (codec.startsWith('vp09')) return 'vp9'
+  if (codec.startsWith('av01')) return 'av1'
+  if (codec === 'vp8') return 'vp8'
+  throw new Error(`Unsupported video codec: ${codec}`)
 }
 
 // Eliminates a ton of flickering when adjusting camera w/ "tracer" turned on

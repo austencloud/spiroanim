@@ -1,6 +1,11 @@
 // src\stores\SpiroAnim\usePlayerStore.ts
 
 import type { RootDataFinal, PointInd, RootDataCompiled } from '@/types/AnimTypes'
+import type {
+  VideoExportProgress,
+  VideoExportRequest,
+  VideoExportStatus,
+} from '@/types/VideoExportTypes'
 import { RADIUS, ORIGRADIUS } from '@/domain/animation/AnimStruct'
 
 import { rootCompile } from '@/math/animation/AnimFunc'
@@ -80,9 +85,15 @@ export const usePlayerStore = (id: string) => {
         // if [x]/[0] is NaN, meaning second value is 0, causes UI to use max width/height
         // Player uses maximum available width / height, and timeline displays with 4:3
         ASPECT: ref<[number, number]>([0, 0]),
+        CANVAS_DIM: ref({ width: 0, height: 0 }),
 
         cameraCenter: ref(Symbol()), // When camera center is requested
         saveImage: ref(Symbol()), // Save image of current canvas
+        videoExportRequest: shallowRef<VideoExportRequest>(),
+        videoExportCancel: ref(Symbol()),
+        videoExportStatus: ref<VideoExportStatus>('idle'),
+        videoExportProgress: ref<VideoExportProgress>({ completedFrames: 0, totalFrames: 0 }),
+        videoExportError: ref(''),
 
         trackClicks: ref<[number, PointInd, number][]>([]), // Receive click events from worker
       }

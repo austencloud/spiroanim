@@ -30,6 +30,7 @@
     "@types/three": "^0.185.1",
     "@vue/server-renderer": "^3.5.39",
     "@vueuse/core": "^14.3.0",
+    "mediabunny": "^1.51.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "three": "^0.185.1",

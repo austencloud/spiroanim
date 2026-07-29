@@ -44,10 +44,13 @@ import { usePlayerStore /*, DEFAULT_POSITION*/ } from '@/stores/usePlayerStore'
 
 import { CMODES } from '@/domain/animation/AnimStruct'
 import type { PointInd } from '@/types/AnimTypes'
+import type { VideoExportSettings } from '@/types/VideoExportTypes'
 
 import { useAspectRatio } from '@/composables/useAspectRatio'
 
 import { useAnimWorkerCamera } from '@/composables/useAnimWorkerCamera'
+import { fitToAspect } from '@/math/aspectRatio'
+import { videoExportFrameCount } from '@/math/videoExportTiming'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 
@@ -77,8 +80,22 @@ const { isVisible } = storeToRefs(useViewportStore())
 
 const playerStore = usePlayerStore(props.store)
 const { COMPILED, CURRENT, FPS } = playerStore.raw()
-const { SELECTION, SELECTED, UPDATE, PLAYING, TRACER, ASPECT, saveImage, trackClicks } =
-  storeToRefs(playerStore)
+const {
+  SELECTION,
+  SELECTED,
+  UPDATE,
+  PLAYING,
+  TRACER,
+  ASPECT,
+  CANVAS_DIM,
+  saveImage,
+  videoExportRequest,
+  videoExportCancel,
+  videoExportStatus,
+  videoExportProgress,
+  videoExportError,
+  trackClicks,
+} = storeToRefs(playerStore)
 
 const eCanvas = ref<HTMLCanvasElement>()
 
@@ -111,6 +128,11 @@ watchEffect(() => {
     canvasDim.height = Math.floor(height)
     canvasMode.value = mode
   }
+
+  CANVAS_DIM.value = {
+    width: canvasDim.width,
+    height: canvasDim.height,
+  }
 })
 
 onMounted(() => {
@@ -128,6 +150,12 @@ onMounted(() => {
 
   // Receive frames per second every 1000ms when animating
   on('fps', (val) => (FPS.value = val))
+  on('exportVideoProgress', (progress) => {
+    videoExportProgress.value = progress
+  })
+  on('exportVideoFinalizing', () => {
+    videoExportStatus.value = 'finalizing'
+  })
 
   // Send offscreen canvas to the worker
   ;(() => {
@@ -182,10 +210,54 @@ onMounted(() => {
     })
   })
 
+  watch(videoExportRequest, (request) => {
+    if (request) void exportVideo(request.id, request.settings)
+  })
+
+  watch(videoExportCancel, () => {
+    if (videoExportStatus.value === 'rendering' || videoExportStatus.value === 'finalizing') {
+      send('exportVideoCancel', undefined)
+    }
+  })
+
   // Register canvas click or touchend
   const prefersTouch = matchMedia('(pointer: coarse)').matches
   useEventListener(eCanvas, prefersTouch ? 'touchend' : 'click', canvasClick)
 })
+
+async function exportVideo(requestId: symbol, settings: VideoExportSettings) {
+  const totalFrames = videoExportFrameCount(settings.durationMs, settings.framerate)
+  videoExportProgress.value = { completedFrames: 0, totalFrames }
+  videoExportError.value = ''
+  videoExportStatus.value = 'rendering'
+
+  try {
+    const result = await call('exportVideo', {
+      ...settings,
+      restorePositionMs: CURRENT.value,
+    })
+    if (videoExportRequest.value?.id !== requestId) return
+
+    if (result.canceled || !result.blob) {
+      videoExportStatus.value = 'canceled'
+      return
+    }
+
+    const blobUrl = URL.createObjectURL(result.blob)
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = `SpiroAnim${result.extension}`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0)
+    videoExportStatus.value = 'complete'
+  } catch (error) {
+    if (videoExportRequest.value?.id !== requestId) return
+    videoExportError.value = error instanceof Error ? error.message : String(error)
+    videoExportStatus.value = 'error'
+  }
+}
 
 onBeforeUnmount(() => {
   canvasStyle.value.visibility = 'hidden'
@@ -230,50 +302,6 @@ const canvasClick = (e: MouseEvent | TouchEvent) => {
     if (type == CMODES.points && point !== undefined && prop != undefined)
       trackClicks.value.push([type, point as PointInd, prop])
   })
-}
-
-/**
- * Calculate a new width/height that fits inside max bounds
- * while maintaining the desired aspect ratio.
- */
-function fitToAspect(
-  maxWidth: number,
-  maxHeight: number,
-  aspectRatio: number, // width / height
-): {
-  width: number
-  height: number
-  mode: 0 | 1 | 2 // 0 = already fits, 1 = limited by height, 2 = limited by width
-} {
-  const actualRatio = maxWidth / maxHeight
-  const diff = Math.abs(actualRatio - aspectRatio)
-
-  if (diff < 0.01) {
-    // Already matches the aspect ratio within tolerance
-    return {
-      width: maxWidth,
-      height: maxHeight,
-      mode: 0,
-    }
-  }
-
-  const heightBasedWidth = maxHeight * aspectRatio
-  if (heightBasedWidth <= maxWidth) {
-    // Width fits, so limit by height
-    return {
-      width: heightBasedWidth,
-      height: maxHeight,
-      mode: 1,
-    }
-  } else {
-    // Width would overflow — limit by width instead
-    const widthBasedHeight = maxWidth / aspectRatio
-    return {
-      width: maxWidth,
-      height: widthBasedHeight,
-      mode: 2,
-    }
-  }
 }
 
 // Aspect Ratio strings for UI
