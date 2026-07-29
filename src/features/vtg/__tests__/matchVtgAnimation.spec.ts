@@ -66,7 +66,64 @@ describe('VTG animation matching', () => {
     expect(findVtgPatternMatch(createAnimation(selection))).toEqual(selection)
   })
 
-  it('recognizes query-normalized Distance and equivalent -180 degree planes', () => {
+  it('recognizes a pattern regardless of non-pattern animation settings', () => {
+    const animation = createAnimation({
+      reference: '3-4',
+      speedRatio: '1:5',
+    })
+
+    animation.bpm = 240
+    animation.speed = 2
+    animation.type = 1
+    animation.turns = 45
+    animation.depth = 3
+    animation.prop = 1
+    animation.color = 0
+    animation.smooth = false
+    animation.guides = true
+    animation.paths = false
+    animation.hands = true
+    animation.visible = false
+    animation.nodes = true
+    animation.anchors = true
+    animation.aspectx = 16
+    animation.aspecty = 9
+    animation.distance = 999
+    animation.thick = 12
+
+    for (const prop of animation.props) {
+      prop.prop = 1
+      prop.color = 0
+      prop.guides = true
+      prop.paths = false
+      prop.hands = true
+      prop.visible = false
+      prop.nodes = true
+      prop.anchors = true
+      prop.thick = 12
+
+      for (const frame of prop.anim) {
+        frame.beats = 2
+        frame.depth = 3
+        frame.type = 1
+        frame.adjust = 15
+        frame.axis = 45
+        frame.move = [1, 2, 3]
+      }
+    }
+
+    animation.props[0]!.anim[0]!.scale = 25
+    animation.props[1]!.anim[0]!.scale = 7
+
+    expect(findVtgPatternMatch(animation)).toMatchObject({
+      reference: '3-4',
+      speedRatio: '1:5',
+      bpm: 240,
+      scale: 2.5,
+    })
+  })
+
+  it('recognizes query-normalized data and equivalent -180 degree planes', () => {
     const animation = createAnimation({
       reference: '1-6',
       speedRatio: '1:1',
