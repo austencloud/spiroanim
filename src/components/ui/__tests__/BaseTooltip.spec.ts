@@ -3,11 +3,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 
+const originalMaxTouchPoints = Object.getOwnPropertyDescriptor(navigator, 'maxTouchPoints')
+
 describe('BaseTooltip', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    if (originalMaxTouchPoints)
+      Object.defineProperty(navigator, 'maxTouchPoints', originalMaxTouchPoints)
+    else Reflect.deleteProperty(navigator, 'maxTouchPoints')
     document.body.innerHTML = ''
   })
 
@@ -97,7 +102,7 @@ describe('BaseTooltip', () => {
     wrapper.unmount()
   })
 
-  it('closes a tooltip three seconds after a pointer click on mobile', async () => {
+  it('closes and reopens a tooltip on repeated mobile pointer clicks', async () => {
     vi.useFakeTimers()
     vi.stubGlobal(
       'matchMedia',
@@ -111,10 +116,12 @@ describe('BaseTooltip', () => {
       slots: { activator: '<button v-bind="props">Help</button>' },
     })
 
-    await wrapper.get('button').trigger('mouseenter')
-    wrapper
-      .get('button')
-      .element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+    const button = wrapper.get('button')
+    const clickButton = () =>
+      button.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+
+    await button.trigger('mouseenter')
+    clickButton()
     vi.advanceTimersByTime(100)
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
@@ -126,6 +133,51 @@ describe('BaseTooltip', () => {
     vi.advanceTimersByTime(1)
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
+
+    clickButton()
+    vi.advanceTimersByTime(100)
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+
+    vi.advanceTimersByTime(3000)
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
+
+    wrapper.unmount()
+  })
+
+  it('handles repeated taps from an iPad reporting a desktop user agent', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Macintosh)')
+    Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 5 })
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: false,
+        media: query,
+      })),
+    )
+    const wrapper = mount(BaseTooltip, {
+      props: { text: 'iPad help', delay: 0 },
+      slots: { activator: '<button v-bind="props">Help</button>' },
+    })
+    const button = wrapper.get('button')
+    const clickButton = () =>
+      button.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+
+    clickButton()
+    vi.advanceTimersByTime(0)
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+
+    vi.advanceTimersByTime(3000)
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
+
+    clickButton()
+    vi.advanceTimersByTime(0)
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
 
     wrapper.unmount()
   })

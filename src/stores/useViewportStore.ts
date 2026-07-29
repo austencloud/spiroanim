@@ -1,5 +1,6 @@
 import { useDocumentVisibility } from '@vueuse/core'
 import { debounceImmediate } from '@/utils/UtilFunc'
+import { isTouchDevice } from '@/utils/device'
 
 export const useViewportStore = defineStore(
   'sa-viewport',
@@ -15,13 +16,6 @@ export const useViewportStore = defineStore(
 
     const isLandscape = computed(() => viewWidth.value > viewHeight.value)
     const isVisible = computed(() => visibility.value === 'visible')
-
-    function isTouchDevice() {
-      const ua = navigator.userAgent
-      const legacyMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)
-      const modernIPad = ua.includes('Macintosh') && navigator.maxTouchPoints > 1
-      return legacyMobile || modernIPad
-    }
 
     const showTooltips = ref(!isTouchDevice())
 

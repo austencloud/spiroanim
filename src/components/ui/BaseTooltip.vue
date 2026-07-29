@@ -30,6 +30,7 @@ import {
   MOBILE_TOOLTIP_DISMISS_DELAY,
   type TooltipPlacement,
 } from '@/components/ui/tooltip'
+import { isTouchDevice } from '@/utils/device'
 
 const props = withDefaults(
   defineProps<{
@@ -124,15 +125,21 @@ const startDismissTimer = () => {
   }, MOBILE_TOOLTIP_DISMISS_DELAY)
 }
 
-const dismissMobileClick = (event: MouseEvent) => {
+const handleMobileClick = (event: MouseEvent) => {
   const isPointerClick = event.detail > 0
   const isMobileDevice =
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(hover: none), (pointer: coarse)').matches
+    isTouchDevice() ||
+    (typeof window.matchMedia === 'function' &&
+      window.matchMedia('(hover: none), (pointer: coarse)').matches)
 
   if (!isPointerClick || !isMobileDevice) return
-  if (visible.value) startDismissTimer()
-  else if (showTimeout !== undefined) dismissAfterShow = true
+  if (visible.value) {
+    startDismissTimer()
+    return
+  }
+
+  if (showTimeout === undefined) show()
+  if (showTimeout !== undefined) dismissAfterShow = true
 }
 
 const activatorProps = {
@@ -141,7 +148,7 @@ const activatorProps = {
   onMouseleave: hide,
   onFocus: show,
   onBlur: hide,
-  onClick: dismissMobileClick,
+  onClick: handleMobileClick,
 }
 
 useEventListener(window, 'resize', updatePosition)
