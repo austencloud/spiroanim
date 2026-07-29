@@ -56,7 +56,7 @@ describe('PlayerControls', () => {
       .map((tooltip) => tooltip.props('text'))
     expect(tooltipText).toContain('Center Camera')
     expect(tooltipText).not.toContain('Tracer Mode')
-    expect(tooltipText).not.toContain('Save Image')
+    expect(tooltipText).not.toContain('Export Image')
 
     wrapper.unmount()
   })

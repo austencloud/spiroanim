@@ -297,6 +297,73 @@ register('reqimg', async () => {
   return URL.createObjectURL(blob)
 })
 
+register(
+  'exportImage',
+  async ({
+    width,
+    height,
+    backgroundColor,
+    transparent,
+    fileType,
+    quality,
+    hiddenFeatures,
+    positionMs,
+  }) => {
+    if (videoExportActive) throw new Error('Another export is already in progress.')
+
+    videoExportActive = true
+    deferredResize = undefined
+    deferredProjection = undefined
+    const previous = {
+      dim: { ...dim },
+      cameraAspect: camera.aspect,
+      clearColor: renderer.getClearColor(new Color()).clone(),
+      clearAlpha: renderer.getClearAlpha(),
+      autoClear: renderer.autoClear,
+      playing,
+      animating,
+    }
+
+    try {
+      playing = false
+      animating = false
+      if (animationId) cancelAnimationFrame(animationId)
+
+      Object.assign(dim, { width, height, ratio: 1 })
+      resize(dim)
+      camera.aspect = width / height
+      camera.updateProjectionMatrix()
+      renderer.autoClear = true
+      renderer.setClearColor(backgroundColor, transparent ? 0 : 1)
+      for (const animator of animators) animator.setExportHidden(hiddenFeatures, true)
+      jump(positionMs)
+      renderer.render(scene, camera)
+
+      return await canvas.convertToBlob(
+        fileType === 'image/png' ? { type: fileType } : { type: fileType, quality },
+      )
+    } finally {
+      for (const animator of animators) animator.setExportHidden(hiddenFeatures, false)
+      Object.assign(dim, deferredResize ?? previous.dim)
+      resize(dim)
+      if (deferredProjection) Object.assign(camera, deferredProjection)
+      else camera.aspect = previous.cameraAspect
+      camera.updateProjectionMatrix()
+      renderer.autoClear = previous.autoClear
+      renderer.setClearColor(previous.clearColor, previous.clearAlpha)
+      jump(positionMs)
+      renderer.render(scene, camera)
+
+      playing = previous.playing
+      animating = previous.animating
+      videoExportActive = false
+      deferredResize = undefined
+      deferredProjection = undefined
+      if (animating) animate(undefined, false)
+    }
+  },
+)
+
 on('exportVideoCancel', () => {
   cancelVideoExport = true
 })

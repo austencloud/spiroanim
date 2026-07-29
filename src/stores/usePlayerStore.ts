@@ -1,6 +1,7 @@
 // src\stores\SpiroAnim\usePlayerStore.ts
 
 import type { RootDataFinal, PointInd, RootDataCompiled } from '@/types/AnimTypes'
+import type { ImageExportRequest } from '@/types/ImageExportTypes'
 import type {
   VideoExportProgress,
   VideoExportRequest,
@@ -88,7 +89,7 @@ export const usePlayerStore = (id: string) => {
         CANVAS_DIM: ref({ width: 0, height: 0 }),
 
         cameraCenter: ref(Symbol()), // When camera center is requested
-        saveImage: ref(Symbol()), // Save image of current canvas
+        imageExportRequest: shallowRef<ImageExportRequest>(),
         videoExportRequest: shallowRef<VideoExportRequest>(),
         videoExportCancel: ref(Symbol()),
         videoExportStatus: ref<VideoExportStatus>('idle'),

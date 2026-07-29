@@ -42,4 +42,42 @@ describe('useSplitHandle', () => {
     expect(center).toBe(84)
     expect(center + button.offsetHeight / 2).toBe(100)
   })
+
+  it('starts mouse dragging when the TouchEvent constructor is unavailable', async () => {
+    const touchEventDescriptor = Object.getOwnPropertyDescriptor(window, 'TouchEvent')
+    Reflect.deleteProperty(window, 'TouchEvent')
+    const emit = vi.fn<(event: 'perc', value: number) => void>()
+
+    try {
+      const { useSplitHandle } = await import('@/composables/useSplitHandle')
+      const wrapper = mount(
+        defineComponent({
+          setup() {
+            const element = ref<HTMLElement>()
+            const { dragStart } = useSplitHandle({
+              parent: ref({ width: 200, height: 100 }),
+              object: ref({ width: 100, height: 100 }),
+              landscape: ref(true),
+              emit,
+              element,
+              iconMap: { vertical: '', horizontal: '', close: '' },
+            })
+
+            return () => h('button', { ref: element, onMousedown: dragStart })
+          },
+        }),
+      )
+      await nextTick()
+
+      await wrapper.get('button').trigger('mousedown', { clientX: 100, clientY: 50 })
+      document.dispatchEvent(new MouseEvent('mouseup'))
+
+      expect(emit).toHaveBeenCalledWith('perc', 50)
+      wrapper.unmount()
+    } finally {
+      if (touchEventDescriptor) {
+        Object.defineProperty(window, 'TouchEvent', touchEventDescriptor)
+      }
+    }
+  })
 })

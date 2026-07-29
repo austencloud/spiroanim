@@ -16,6 +16,14 @@ type IconMap = {
   close: string
 }
 
+const eventPosition = (event: MouseEvent | TouchEvent) => {
+  if ('touches' in event) {
+    const touch = event.touches[0]
+    return touch ? { x: touch.clientX, y: touch.clientY } : undefined
+  }
+  return { x: event.clientX, y: event.clientY }
+}
+
 const { isVisible } = storeToRefs(useViewportStore())
 
 export function useSplitHandle({
@@ -81,9 +89,12 @@ export function useSplitHandle({
       return
     }
 
+    const position = eventPosition(e)
+    if (!position) return
+
     dragging = true
-    IX = e instanceof TouchEvent ? e.touches[0]!.clientX : e.clientX
-    IY = e instanceof TouchEvent ? e.touches[0]!.clientY : e.clientY
+    IX = position.x
+    IY = position.y
 
     document.addEventListener('mousemove', dragMove)
     document.addEventListener('touchmove', dragMove, { passive: false })
@@ -106,8 +117,10 @@ export function useSplitHandle({
   const dragMove = (e: MouseEvent | TouchEvent) => {
     if (!dragging) return
 
-    const cX = e instanceof TouchEvent ? e.touches[0]!.clientX : e.clientX
-    const cY = e instanceof TouchEvent ? e.touches[0]!.clientY : e.clientY
+    const position = eventPosition(e)
+    if (!position) return
+    const cX = position.x
+    const cY = position.y
     const dX = cX - IX
     const dY = cY - IY
 

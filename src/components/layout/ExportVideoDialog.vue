@@ -124,22 +124,18 @@
 
 <script setup lang="ts">
 import BaseDialog from '@/components/ui/BaseDialog.vue'
-import { getAspectLabelData } from '@/composables/useAspectRatio'
+import { useExportResolutionSettings } from '@/composables/useExportResolutionSettings'
 import {
   hasVideoExportApi,
   probeVideoExportCodecs,
   type VideoExportCodec,
 } from '@/services/videoExportSupport'
 import {
-  createVideoExportResolutionOptions,
   MAX_VIDEO_EXPORT_DIMENSION,
   MIN_VIDEO_EXPORT_DIMENSION,
-  resizeVideoExportFromHeight,
-  resizeVideoExportFromWidth,
-  videoExportAspectRatio,
   type VideoExportDimensions,
-  type VideoExportResolutionOption,
 } from '@/math/videoExportResolution'
+import { useExportSettingsStore } from '@/stores/useExportSettingsStore'
 import type { VideoExportSettings } from '@/types/VideoExportTypes'
 
 const emit = defineEmits<{
@@ -150,28 +146,32 @@ const isOpen = ref(false)
 const supported = ref(false)
 const isChecking = ref(false)
 const codecs = ref<VideoExportCodec[]>([])
-const selectedCodec = ref('')
-const resolutionOptions = ref<VideoExportResolutionOption[]>([])
-const resolution = ref('')
-const exportAspectRatio = ref(16 / 9)
-const customWidth = ref(1920)
-const customHeight = ref(1080)
-const framerate = ref(60)
-const bitrate = ref(16_000_000)
-const backgroundColor = ref('#090b0f')
-const transparent = ref(false)
+const exportSettingsStore = useExportSettingsStore()
+const {
+  videoResolution: resolution,
+  videoAspectRatio: exportAspectRatio,
+  videoCustomWidth: customWidth,
+  videoCustomHeight: customHeight,
+  videoFramerate: framerate,
+  videoBitrate: bitrate,
+  videoBackgroundColor: backgroundColor,
+  videoTransparent: transparent,
+  videoCodec: selectedCodec,
+} = storeToRefs(exportSettingsStore)
+const {
+  resolutionOptions,
+  selectedResolution,
+  updateCustomWidth,
+  updateCustomHeight,
+  configureResolution,
+} = useExportResolutionSettings({
+  resolution,
+  aspectRatio: exportAspectRatio,
+  customWidth,
+  customHeight,
+})
 let probeGeneration = 0
 
-const selectedResolution = computed<VideoExportDimensions>(() => {
-  if (resolution.value === 'custom') {
-    return { width: customWidth.value, height: customHeight.value }
-  }
-
-  return (
-    resolutionOptions.value.find((option) => option.value === resolution.value) ??
-    resolutionOptions.value[0] ?? { width: 1920, height: 1080 }
-  )
-})
 const availabilityStatus = computed(() => {
   if (isChecking.value) return 'Checking this configuration...'
   if (codecs.value.length === 0) return 'No codec supports this configuration.'
@@ -202,22 +202,6 @@ async function refreshCodecs() {
   isChecking.value = false
 }
 
-function updateCustomWidth(event: Event) {
-  const width = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(width)) return
-  const dimensions = resizeVideoExportFromWidth(width, exportAspectRatio.value)
-  customWidth.value = dimensions.width
-  customHeight.value = dimensions.height
-}
-
-function updateCustomHeight(event: Event) {
-  const height = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(height)) return
-  const dimensions = resizeVideoExportFromHeight(height, exportAspectRatio.value)
-  customWidth.value = dimensions.width
-  customHeight.value = dimensions.height
-}
-
 function submit() {
   const codec = selectedCodecOption.value
   if (!codec || (!transparent.value && !validBackground.value)) return
@@ -240,41 +224,7 @@ async function open(
   aspect: readonly [number, number],
 ) {
   supported.value = isSupported && hasVideoExportApi()
-  const previousResolution = resolution.value
-  const previousWasCurrent =
-    previousResolution !== '' && previousResolution === resolutionOptions.value[0]?.value
-  const previousAspectRatio = exportAspectRatio.value
-  const sourceCanvas =
-    canvas.width > 0 && canvas.height > 0 ? canvas : { width: 1920, height: 1080 }
-  const nextAspectRatio = videoExportAspectRatio(sourceCanvas, aspect)
-  const nextOptions = createVideoExportResolutionOptions(sourceCanvas, aspect).map(
-    (option, index) => {
-      if (index === 0) return option
-      const aspectData = getAspectLabelData(option.width, option.height)
-      const aspectLabel = aspectData.match ?? aspectData.reduced
-      return {
-        ...option,
-        label: `${option.label} (${aspectLabel})`,
-      }
-    },
-  )
-  const sameAspect =
-    previousResolution !== '' && Math.abs(previousAspectRatio - nextAspectRatio) < 0.01
-  const rememberedResolution = previousWasCurrent
-    ? nextOptions[0]?.value
-    : nextOptions.some((option) => option.value === previousResolution) ||
-        previousResolution === 'custom'
-      ? previousResolution
-      : undefined
-
-  resolutionOptions.value = nextOptions
-  exportAspectRatio.value = nextAspectRatio
-  resolution.value =
-    (sameAspect ? rememberedResolution : undefined) ?? resolutionOptions.value[0]?.value ?? ''
-  if (!sameAspect || resolution.value !== 'custom') {
-    customWidth.value = selectedResolution.value.width
-    customHeight.value = selectedResolution.value.height
-  }
+  configureResolution(canvas, aspect)
   isOpen.value = true
   if (supported.value) await refreshCodecs()
 }

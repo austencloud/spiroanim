@@ -35,6 +35,7 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 
+import type { ImageExportFeature } from '@/types/ImageExportTypes'
 import type {
   PropDataCompiled,
   PointInd,
@@ -77,6 +78,7 @@ export const createSpiroAnimator = (vars: {
   playing: boolean
   readonly click: number
   readonly pobjs: Record<number, Mesh>
+  setExportHidden: (features: readonly ImageExportFeature[], hidden: boolean) => void
   animate: (time: number, forward?: number, force?: boolean) => void
   dimensions: (
     canvasWidth: number,
@@ -113,6 +115,8 @@ export const createSpiroAnimator = (vars: {
     guidesGroup: Group = new Group(),
     anchorsGroup: Group = new Group(),
     nodesGroup: Group = new Group(),
+    pathsGroup: Group = new Group(),
+    handsGroup: Group = new Group(),
     modelGroup: Group = new Group(),
     modelProp: ModelGroup = props[PROPSR[prop]](multi, color, girth),
     // Vectors used for computations over continuous cycles
@@ -512,8 +516,10 @@ export const createSpiroAnimator = (vars: {
     }
 
     // Creates lines when Paths or Hands are enabled
-    if (rotTmp.length > 0) scene.add(createLine2(rotTmp, COLSET[color]![0], rsize * girth * multi))
-    if (posTmp.length > 0) scene.add(createLine2(posTmp, COLSET[color]![1], rsize * girth * multi))
+    if (rotTmp.length > 0)
+      pathsGroup.add(createLine2(rotTmp, COLSET[color]![0], rsize * girth * multi))
+    if (posTmp.length > 0)
+      handsGroup.add(createLine2(posTmp, COLSET[color]![1], rsize * girth * multi))
   }
 
   if (guides) {
@@ -553,6 +559,17 @@ export const createSpiroAnimator = (vars: {
   scene.add(anchorsGroup)
   scene.add(nodesGroup)
   scene.add(guidesGroup)
+  scene.add(pathsGroup)
+  scene.add(handsGroup)
+
+  const exportGroups: Record<ImageExportFeature, Group> = {
+    paths: pathsGroup,
+    hands: handsGroup,
+    visible: modelGroup,
+    nodes: nodesGroup,
+    anchors: anchorsGroup,
+    guides: guidesGroup,
+  }
 
   return {
     get index() {
@@ -581,6 +598,9 @@ export const createSpiroAnimator = (vars: {
     },
     get pobjs() {
       return pobjs
+    },
+    setExportHidden(features, hidden) {
+      for (const feature of features) exportGroups[feature].visible = !hidden
     },
 
     animate,

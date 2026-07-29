@@ -66,13 +66,13 @@
             <span>{{ tracerLabel }}</span>
           </button>
           <button
-            class="menu-link menu-action save-image-menu-item"
+            class="menu-link menu-action export-image-menu-item"
             type="button"
             role="menuitem"
-            @click="savePlayerImage"
+            @click="openExportImageDialog"
           >
             <BaseIcon :path="mdiPanoramaVariant" :size="22" />
-            <span>Save Image</span>
+            <span>Export Image</span>
           </button>
           <button
             class="menu-link menu-action export-video-menu-item"
@@ -105,6 +105,7 @@
       </section>
     </div>
     <ShareDialog ref="shareDialog" />
+    <ExportImageDialog ref="exportImageDialog" @export="startImageExport" />
     <ExportVideoDialog ref="exportVideoDialog" @export="startVideoExport" />
     <ExportVideoProgressDialog
       ref="exportVideoProgressDialog"
@@ -135,6 +136,7 @@ import { RouterLink } from 'vue-router'
 
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import ExportImageDialog from '@/components/layout/ExportImageDialog.vue'
 import ExportVideoDialog from '@/components/layout/ExportVideoDialog.vue'
 import ExportVideoProgressDialog from '@/components/layout/ExportVideoProgressDialog.vue'
 import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
@@ -143,6 +145,11 @@ import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 import { hasVideoExportApi, probeVideoExportCodecs } from '@/services/videoExportSupport'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import type {
+  ImageExportFeature,
+  ImageExportFeatureAvailability,
+  ImageExportSettings,
+} from '@/types/ImageExportTypes'
 import type { VideoExportSettings } from '@/types/VideoExportTypes'
 
 interface MenuLink {
@@ -161,6 +168,7 @@ const rootElement = ref<HTMLElement>()
 const triggerElement = ref<HTMLButtonElement>()
 const menuElement = ref<HTMLElement>()
 const shareDialog = ref<InstanceType<typeof ShareDialog>>()
+const exportImageDialog = ref<InstanceType<typeof ExportImageDialog>>()
 const exportVideoDialog = ref<InstanceType<typeof ExportVideoDialog>>()
 const exportVideoProgressDialog = ref<InstanceType<typeof ExportVideoProgressDialog>>()
 const triggerId = useId()
@@ -182,12 +190,13 @@ const fullscreenLabel = computed(() =>
   isFullscreen.value ? 'Exit Full Screen' : 'Enter Full Screen',
 )
 const playerStore = usePlayerStore('main')
+const { COMPILED } = playerStore.raw()
 const {
   ASPECT,
   CANVAS_DIM,
   MAX,
   TRACER,
-  saveImage,
+  imageExportRequest,
   videoExportRequest,
   videoExportCancel,
   videoExportStatus,
@@ -199,6 +208,24 @@ const playerVisible = computed(() => viewVisible.value.player)
 const videoExportAvailable = ref(false)
 const tracerIcon = computed(() => (TRACER.value ? mdiFirework : mdiFireworkOff))
 const tracerLabel = computed(() => (TRACER.value ? 'Tracer: On' : 'Tracer: Off'))
+const imageExportFeatures: ImageExportFeature[] = [
+  'paths',
+  'hands',
+  'visible',
+  'nodes',
+  'anchors',
+  'guides',
+]
+const imageExportFeatureAvailability = computed<ImageExportFeatureAvailability>(
+  () =>
+    Object.fromEntries(
+      imageExportFeatures.map((feature) => [
+        feature,
+        COMPILED.value[feature] === true ||
+          COMPILED.value.props?.some((prop) => prop[feature] === true) === true,
+      ]),
+    ) as ImageExportFeatureAvailability,
+)
 
 function closeMenu() {
   isOpen.value = false
@@ -214,9 +241,20 @@ function toggleTracerMode() {
   closeMenu()
 }
 
-function savePlayerImage() {
-  saveImage.value = Symbol()
+function openExportImageDialog() {
   closeMenu()
+  exportImageDialog.value?.open(
+    CANVAS_DIM.value,
+    ASPECT.value,
+    imageExportFeatureAvailability.value,
+  )
+}
+
+function startImageExport(settings: ImageExportSettings) {
+  imageExportRequest.value = {
+    id: Symbol(),
+    settings,
+  }
 }
 
 function openShareDialog() {

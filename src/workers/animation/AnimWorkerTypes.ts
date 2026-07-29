@@ -1,6 +1,7 @@
 // src\workers\AnimWorker\AnimWorkerTypes.ts
 
 import type { RootDataCompiled } from '@/types/AnimTypes'
+import type { ImageExportSettings } from '@/types/ImageExportTypes'
 import type { VideoExportProgress, VideoExportSettings } from '@/types/VideoExportTypes'
 
 export interface AnimBridgeMap {
@@ -133,6 +134,13 @@ export interface AnimBridgeMap {
   reqimg: {
     arg: void
     ret: string
+  }
+
+  exportImage: {
+    arg: ImageExportSettings & {
+      positionMs: number
+    }
+    ret: Blob
   }
 
   exportVideo: {

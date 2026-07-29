@@ -44,6 +44,7 @@ import { usePlayerStore /*, DEFAULT_POSITION*/ } from '@/stores/usePlayerStore'
 
 import { CMODES } from '@/domain/animation/AnimStruct'
 import type { PointInd } from '@/types/AnimTypes'
+import type { ImageExportSettings } from '@/types/ImageExportTypes'
 import type { VideoExportSettings } from '@/types/VideoExportTypes'
 
 import { useAspectRatio } from '@/composables/useAspectRatio'
@@ -88,7 +89,7 @@ const {
   TRACER,
   ASPECT,
   CANVAS_DIM,
-  saveImage,
+  imageExportRequest,
   videoExportRequest,
   videoExportCancel,
   videoExportStatus,
@@ -199,15 +200,8 @@ onMounted(() => {
     } else send('stop', undefined)
   })
 
-  watch(saveImage, () => {
-    call('reqimg', undefined).then((blobUrl) => {
-      const a = document.createElement('a')
-      a.href = blobUrl
-      a.download = 'Saved.png'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    })
+  watch(imageExportRequest, (request) => {
+    if (request) void exportImage(request.id, request.settings)
   })
 
   watch(videoExportRequest, (request) => {
@@ -224,6 +218,33 @@ onMounted(() => {
   const prefersTouch = matchMedia('(pointer: coarse)').matches
   useEventListener(eCanvas, prefersTouch ? 'touchend' : 'click', canvasClick)
 })
+
+async function exportImage(requestId: symbol, settings: ImageExportSettings) {
+  try {
+    const blob = await call('exportImage', {
+      ...settings,
+      positionMs: CURRENT.value,
+    })
+    if (imageExportRequest.value?.id !== requestId) return
+
+    const extension =
+      settings.fileType === 'image/jpeg'
+        ? '.jpg'
+        : settings.fileType === 'image/webp'
+          ? '.webp'
+          : '.png'
+    const blobUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = `SpiroAnim${extension}`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0)
+  } catch (error) {
+    console.warn('Image export failed.', error)
+  }
+}
 
 async function exportVideo(requestId: symbol, settings: VideoExportSettings) {
   const totalFrames = videoExportFrameCount(settings.durationMs, settings.framerate)

@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ExportVideoDialog from '@/components/layout/ExportVideoDialog.vue'
@@ -23,6 +24,7 @@ vi.mock('@/services/videoExportSupport', async (importOriginal) => ({
 
 describe('ExportVideoDialog', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     probe.mockClear()
   })
 
