@@ -183,11 +183,16 @@ import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import { useVtgPreviews, vtgPreviewReferences } from '@/features/vtg/composables/useVtgPreviews'
+import {
+  describeVtgPatternLabel,
+  vtgPatternLabelsByRow,
+} from '@/features/vtg/data/vtgPatternLabels'
 import { vtgBpmControl, vtgScaleControl } from '@/features/vtg/data/vtgPlayerSettings'
 import { findVtgPatternMatch, matchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
 import type {
   VtgCellAddress,
   VtgCellReference,
+  VtgPatternLabel,
   VtgPropPlacement,
   VtgRuleDiagram,
   VtgRuleNumber,
@@ -204,7 +209,7 @@ interface BlankDimensions {
 }
 
 interface VtgMatrixTile {
-  label: string
+  label: VtgPatternLabel
   description: string
   column: VtgRuleNumber
   row: VtgRuleNumber
@@ -241,28 +246,8 @@ let lastEmittedSelection: VtgPatternSelection | undefined
 let componentMounted = false
 let initialAnimationHandled = false
 
-const matrixRows = [
-  ['SO/TS', 'SS/TO', 'SO/TS', 'SS/TO', 'SO/TO', 'SS/TS'],
-  ['TS/SO', 'TO/SS', 'TS/SO', 'TO/SS', 'TS/SS', 'TO/SO'],
-  ['SO/SO', 'SS/SS', 'SO/SO', 'SS/SS', 'SO/SS', 'SS/SO'],
-  ['TS/TS', 'TO/TO', 'TS/TS', 'TO/TO', 'TS/TO', 'TO/TS'],
-  ['SO/SO', 'SS/SS', 'SO/SO', 'SS/SS', 'SO/SS', 'SS/SO'],
-  ['TS/TS', 'TO/TO', 'TS/TS', 'TO/TO', 'TS/TO', 'TO/TS'],
-] as const
-
 const bottomRuleNumbers = [1, 2, 3, 4, 5, 6] as const
 const leftRuleNumbers = [6, 5, 4, 3, 2, 1] as const
-const timingDescriptions: Readonly<Record<string, string>> = {
-  S: 'Split',
-  O: 'Opposite',
-  T: 'Together',
-}
-const describeTiming = (value: string) =>
-  [...value].map((code) => timingDescriptions[code] ?? code).join(' / ')
-const describeTile = (label: string) => {
-  const [hands = '', props = ''] = label.split('/')
-  return `Hands: ${describeTiming(hands)}\nProps: ${describeTiming(props)}`
-}
 
 const getRuleNumber = (ruleNumbers: readonly VtgRuleNumber[], index: number): VtgRuleNumber => {
   const ruleNumber = ruleNumbers[index]
@@ -273,8 +258,8 @@ const getRuleNumber = (ruleNumbers: readonly VtgRuleNumber[], index: number): Vt
 const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
   `${column}-${row}`
 
-const matrixTiles: readonly VtgMatrixTile[] = matrixRows.flatMap((row, rowIndex) => {
-  const rowNumber = getRuleNumber(leftRuleNumbers, rowIndex)
+const matrixTiles: readonly VtgMatrixTile[] = leftRuleNumbers.flatMap((rowNumber, rowIndex) => {
+  const row = vtgPatternLabelsByRow[rowNumber]
 
   return row.map((label, columnIndex) => {
     const columnNumber = getRuleNumber(bottomRuleNumbers, columnIndex)
@@ -282,7 +267,7 @@ const matrixTiles: readonly VtgMatrixTile[] = matrixRows.flatMap((row, rowIndex)
 
     return {
       label,
-      description: describeTile(label),
+      description: describeVtgPatternLabel(label),
       column: columnNumber,
       row: rowNumber,
       boardColumn: columnIndex + 2,

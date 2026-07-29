@@ -1,4 +1,5 @@
 import { vtgBaseFrameSettings, vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import { vtgPatternLabelsByRow } from '@/features/vtg/data/vtgPatternLabels'
 import { vtgSpeedRatios } from '@/features/vtg/types'
 import type {
   VtgCellReference,
@@ -269,22 +270,13 @@ const columnPatterns: Readonly<Record<VtgRuleNumber, VtgColumnPattern>> = {
   },
 }
 
-const rowLabels: Readonly<Record<VtgRuleNumber, readonly string[]>> = {
-  6: ['SO/TS', 'SS/TO', 'SO/TS', 'SS/TO', 'SO/TO', 'SS/TS'],
-  5: ['TS/SO', 'TO/SS', 'TS/SO', 'TO/SS', 'TS/SS', 'TO/SO'],
-  4: ['SO/SO', 'SS/SS', 'SO/SO', 'SS/SS', 'SO/SS', 'SS/SO'],
-  3: ['TS/TS', 'TO/TO', 'TS/TS', 'TO/TO', 'TS/TO', 'TO/TS'],
-  2: ['SO/SO', 'SS/SS', 'SO/SO', 'SS/SS', 'SO/SS', 'SS/SO'],
-  1: ['TS/TS', 'TO/TO', 'TS/TS', 'TO/TO', 'TS/TO', 'TO/TS'],
-}
-
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const
 const catalog: Partial<Record<VtgCellReference, Readonly<VtgPatternDefinition>>> = {}
 
 for (const row of ruleNumbers) {
   for (const column of ruleNumbers) {
     const reference: VtgCellReference = `${column}-${row}`
-    const label = rowLabels[row][column - 1]
+    const label = vtgPatternLabelsByRow[row][column - 1]
     if (label === undefined) throw new Error(`Missing VTG label for ${reference}`)
 
     catalog[reference] = {

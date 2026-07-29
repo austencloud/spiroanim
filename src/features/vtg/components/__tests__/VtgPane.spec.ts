@@ -173,7 +173,7 @@ describe('VtgPane', () => {
     await nextTick()
 
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
-      'Hands: Split / Opposite\nProps: Together / Split',
+      'Hands: Split / Opposite\nProps: Together / Same',
     )
 
     wrapper.unmount()

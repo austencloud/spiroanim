@@ -7,6 +7,8 @@ export type VtgRuleNumber = 1 | 2 | 3 | 4 | 5 | 6
  * the left-column number. For example, `1-5` is board column 2, row 2.
  */
 export type VtgCellReference = `${VtgRuleNumber}-${VtgRuleNumber}`
+export type VtgRelationshipCode = `${'S' | 'T'}${'S' | 'O'}`
+export type VtgPatternLabel = `${VtgRelationshipCode}/${VtgRelationshipCode}`
 
 export interface VtgCellAddress {
   column: VtgRuleNumber
@@ -46,7 +48,7 @@ export type VtgReadableAnimation = Partial<
 export type VtgPatternBuilder = (isAnti: boolean) => VtgReadableAnimation
 
 export interface VtgPatternDefinition {
-  label: string
+  label: VtgPatternLabel
   patternsBySpeedRatio: Readonly<Partial<Record<VtgSpeedRatio, VtgPatternBuilder>>>
 }
 
