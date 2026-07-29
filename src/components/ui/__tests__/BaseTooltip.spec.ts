@@ -102,7 +102,7 @@ describe('BaseTooltip', () => {
     wrapper.unmount()
   })
 
-  it('closes and reopens a tooltip on repeated mobile pointer clicks', async () => {
+  it('toggles off on a second mobile pointer click within 1.5 seconds', async () => {
     vi.useFakeTimers()
     vi.stubGlobal(
       'matchMedia',
@@ -126,11 +126,8 @@ describe('BaseTooltip', () => {
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
 
-    vi.advanceTimersByTime(2999)
-    await nextTick()
-    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
-
-    vi.advanceTimersByTime(1)
+    vi.advanceTimersByTime(1000)
+    clickButton()
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
 
@@ -139,7 +136,13 @@ describe('BaseTooltip', () => {
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
 
-    vi.advanceTimersByTime(3000)
+    vi.advanceTimersByTime(1501)
+    clickButton()
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+
+    vi.advanceTimersByTime(1500)
+    clickButton()
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
 
@@ -170,7 +173,8 @@ describe('BaseTooltip', () => {
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
 
-    vi.advanceTimersByTime(3000)
+    vi.advanceTimersByTime(1000)
+    clickButton()
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
 
