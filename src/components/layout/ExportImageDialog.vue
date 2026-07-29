@@ -11,6 +11,18 @@
       </p>
 
       <div class="form-grid">
+        <label class="file-name-field">
+          <span>File name</span>
+          <input
+            :value="fileName"
+            type="text"
+            :maxlength="MAX_EXPORT_FILE_NAME_LENGTH"
+            autocomplete="off"
+            data-role="export-file-name"
+            @input="updateFileName"
+          />
+        </label>
+
         <label>
           <span>Resolution</span>
           <select v-model="resolution">
@@ -117,11 +129,18 @@ import type {
   ImageExportFeatureAvailability,
   ImageExportSettings,
 } from '@/types/ImageExportTypes'
+import {
+  MAX_EXPORT_FILE_NAME_LENGTH,
+  resolveExportFileName,
+  sanitizeExportFileName,
+} from '@/utils/exportFileName'
 
 const emit = defineEmits<{ export: [settings: ImageExportSettings] }>()
 const isOpen = ref(false)
 const exportSettingsStore = useExportSettingsStore()
+const fileName = ref('')
 const {
+  fileName: savedFileName,
   imageResolution: resolution,
   imageAspectRatio: exportAspectRatio,
   imageCustomWidth: customWidth,
@@ -168,7 +187,10 @@ const availableFeatureOptions = computed(() =>
 
 function submit() {
   if (!transparent.value && !validBackground.value) return
+  const resolvedFileName = resolveExportFileName(fileName.value)
+  savedFileName.value = resolvedFileName
   emit('export', {
+    fileName: resolvedFileName,
     ...selectedResolution.value,
     backgroundColor: backgroundColor.value,
     transparent: transparent.value,
@@ -195,7 +217,12 @@ function open(
 ) {
   configureResolution(canvas, aspect)
   availableFeatures.value = features
+  fileName.value = savedFileName.value
   isOpen.value = true
+}
+
+function updateFileName(event: Event) {
+  fileName.value = sanitizeExportFileName((event.target as HTMLInputElement).value)
 }
 
 watch(supportsTransparency, (supported) => {
@@ -249,6 +276,7 @@ label {
   font-weight: 700;
 }
 
+.file-name-field,
 .background-field,
 .alpha-field,
 .custom-resolution,
@@ -361,6 +389,7 @@ button:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .file-name-field,
   .background-field,
   .alpha-field,
   .custom-resolution,

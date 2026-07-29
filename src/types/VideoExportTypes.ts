@@ -1,6 +1,7 @@
 export type VideoExportContainer = 'mp4' | 'webm'
 
 export interface VideoExportSettings {
+  fileName: string
   width: number
   height: number
   framerate: number

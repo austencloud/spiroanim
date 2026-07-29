@@ -16,6 +16,7 @@ describe('ExportImageDialog', () => {
     await wrapper.get('.export-button').trigger('click')
 
     expect(wrapper.emitted('export')?.[0]?.[0]).toEqual({
+      fileName: 'SpiroAnim',
       width: 1920,
       height: 1080,
       backgroundColor: '#090b0f',
@@ -24,6 +25,26 @@ describe('ExportImageDialog', () => {
       quality: 0.92,
       hiddenFeatures: [],
     })
+    wrapper.unmount()
+  })
+
+  it('filters the file name and remembers it after a successful export', async () => {
+    const wrapper = mount(ExportImageDialog, { attachTo: document.body })
+
+    wrapper.vm.open({ width: 1280, height: 720 }, [16, 9])
+    await nextTick()
+    const fileName = wrapper.get<HTMLInputElement>('[data-role="export-file-name"]')
+    await fileName.setValue('My: Spin/Pattern?.png')
+
+    expect(fileName.element.value).toBe('My SpinPattern.png')
+    await wrapper.get('.export-button').trigger('click')
+    expect(wrapper.emitted('export')?.[0]?.[0]).toMatchObject({ fileName: 'My SpinPattern.png' })
+
+    wrapper.vm.open({ width: 1280, height: 720 }, [16, 9])
+    await nextTick()
+    expect(wrapper.get<HTMLInputElement>('[data-role="export-file-name"]').element.value).toBe(
+      'My SpinPattern.png',
+    )
     wrapper.unmount()
   })
 

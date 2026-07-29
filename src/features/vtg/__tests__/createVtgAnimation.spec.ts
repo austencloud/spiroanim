@@ -27,6 +27,19 @@ const createCurrentAnimation = () =>
   } satisfies RootData)
 
 describe('createVtgAnimation', () => {
+  it('applies Thick to main player data without changing preview thickness', () => {
+    const selection = {
+      reference: '1-6',
+      speedRatio: '1:3',
+      thick: 12,
+    } as const
+    const animation = createVtgAnimation(createCurrentAnimation(), selection)
+    const preview = createVtgPreviewAnimation(selection)
+
+    expect(animation?.thick).toBe(12)
+    expect(preview?.thick).toBe(15)
+  })
+
   it('builds the first SO/TS cell from the edited readable template', () => {
     const current = createCurrentAnimation()
     const animation = createVtgAnimation(current, {

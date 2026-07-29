@@ -3,6 +3,7 @@ export type ImageExportFeature = 'paths' | 'hands' | 'visible' | 'nodes' | 'anch
 export type ImageExportFeatureAvailability = Record<ImageExportFeature, boolean>
 
 export interface ImageExportSettings {
+  fileName: string
   width: number
   height: number
   backgroundColor: string

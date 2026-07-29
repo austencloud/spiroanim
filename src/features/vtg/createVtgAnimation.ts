@@ -51,7 +51,10 @@ export const createVtgAnimation = (
   const selectedPattern = buildVtgPattern(selection)
   if (!selectedPattern) return undefined
 
-  const pattern = addDefaultFrames(selectedPattern)
+  const pattern = addDefaultFrames({
+    ...selectedPattern,
+    ...(selection.thick === undefined ? {} : { thick: selection.thick }),
+  })
   const decoded = decodeReadable(mergeWithCurrentAnimation(current, pattern))
 
   return {

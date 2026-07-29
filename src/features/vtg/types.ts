@@ -27,6 +27,7 @@ export interface VtgPatternSelection {
   reversePlane?: boolean
   bpm?: number
   scale?: number
+  thick?: number
 }
 
 export interface VtgPatternMatch {

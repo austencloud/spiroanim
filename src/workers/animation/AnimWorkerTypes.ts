@@ -137,14 +137,14 @@ export interface AnimBridgeMap {
   }
 
   exportImage: {
-    arg: ImageExportSettings & {
+    arg: Omit<ImageExportSettings, 'fileName'> & {
       positionMs: number
     }
     ret: Blob
   }
 
   exportVideo: {
-    arg: VideoExportSettings & {
+    arg: Omit<VideoExportSettings, 'fileName'> & {
       restorePositionMs: number
     }
     ret: {

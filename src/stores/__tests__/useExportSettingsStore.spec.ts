@@ -19,6 +19,7 @@ describe('useExportSettingsStore', () => {
 
   it('persists image and video export preferences between store sessions', async () => {
     const store = useExportSettingsStore()
+    store.fileName = 'Favorite Pattern'
     store.imageResolution = '1920x1080'
     store.imageFileType = 'image/webp'
     store.imageHiddenFeatures.paths = true
@@ -31,6 +32,7 @@ describe('useExportSettingsStore', () => {
 
     activatePersistedPinia()
     const restored = useExportSettingsStore()
+    expect(restored.fileName).toBe('Favorite Pattern')
     expect(restored.imageResolution).toBe('1920x1080')
     expect(restored.imageFileType).toBe('image/webp')
     expect(restored.imageHiddenFeatures.paths).toBe(true)

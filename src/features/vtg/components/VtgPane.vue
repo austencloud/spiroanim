@@ -134,20 +134,6 @@
       <legend class="vtg-pane__visually-hidden">Animation settings</legend>
       <label>
         <span class="vtg-slider-controls__label">
-          <span>BPM</span>
-          <output>{{ bpm }}</output>
-        </span>
-        <input
-          v-model.number="bpm"
-          type="range"
-          :min="vtgBpmControl.min"
-          :max="vtgBpmControl.max"
-          :step="vtgBpmControl.step"
-          data-role="vtg-bpm"
-        />
-      </label>
-      <label>
-        <span class="vtg-slider-controls__label">
           <span>Scale</span>
           <output>{{ scale.toFixed(1) }}</output>
         </span>
@@ -158,6 +144,34 @@
           :max="vtgScaleControl.max"
           :step="vtgScaleControl.step"
           data-role="vtg-scale"
+        />
+      </label>
+      <label>
+        <span class="vtg-slider-controls__label">
+          <span>Thick</span>
+          <output>{{ thick }}</output>
+        </span>
+        <input
+          v-model.number="thick"
+          type="range"
+          :min="vtgThickControl.min"
+          :max="vtgThickControl.max"
+          :step="vtgThickControl.step"
+          data-role="vtg-thick"
+        />
+      </label>
+      <label>
+        <span class="vtg-slider-controls__label">
+          <span>BPM</span>
+          <output>{{ bpm }}</output>
+        </span>
+        <input
+          v-model.number="bpm"
+          type="range"
+          :min="vtgBpmControl.min"
+          :max="vtgBpmControl.max"
+          :step="vtgBpmControl.step"
+          data-role="vtg-bpm"
         />
       </label>
     </fieldset>
@@ -187,7 +201,11 @@ import {
   describeVtgPatternLabel,
   vtgPatternLabelsByRow,
 } from '@/features/vtg/data/vtgPatternLabels'
-import { vtgBpmControl, vtgScaleControl } from '@/features/vtg/data/vtgPlayerSettings'
+import {
+  vtgBpmControl,
+  vtgScaleControl,
+  vtgThickControl,
+} from '@/features/vtg/data/vtgPlayerSettings'
 import { findVtgPatternMatch, matchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
 import type {
   VtgCellAddress,
@@ -239,6 +257,7 @@ const swapProps = ref(false)
 const reversePlane = ref(false)
 const bpm = ref<number>(vtgBpmControl.default)
 const scale = ref<number>(vtgScaleControl.default)
+const thick = ref<number>(vtgThickControl.default)
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 let suppressPatternEmit = false
 let hydrationVersion = 0
@@ -302,6 +321,7 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (reversePlane.value) selection.reversePlane = true
   if (bpm.value !== vtgBpmControl.default) selection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
+  if (thick.value !== vtgThickControl.default) selection.thick = thick.value
   lastEmittedSelection = selection
   emit('patternSelect', selection)
 }
@@ -329,7 +349,7 @@ const toggleSpinDirection = (tile: VtgMatrixTile) => {
   emitPatternSelection(tile)
 }
 
-watch([speedRatio, swapProps, reversePlane, bpm, scale], () => {
+watch([speedRatio, swapProps, reversePlane, bpm, scale, thick], () => {
   if (suppressPatternEmit) return
 
   const tile = matrixTiles.find(({ reference }) => reference === selectedCellReference.value)
@@ -356,6 +376,7 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     reversePlane.value = match.reversePlane
     bpm.value = match.bpm
     scale.value = match.scale
+    thick.value = animation.thick
   } else {
     selectedCell.value = undefined
     speedRatio.value = vtgDefaultSpeedRatio
@@ -364,6 +385,7 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     reversePlane.value = false
     bpm.value = vtgBpmControl.default
     scale.value = vtgScaleControl.default
+    thick.value = vtgThickControl.default
   }
 
   void nextTick(() => {
@@ -381,6 +403,7 @@ const selectInitialRandomPattern = () => {
   reversePlane.value = false
   bpm.value = vtgBpmControl.default
   scale.value = vtgScaleControl.default
+  thick.value = vtgThickControl.default
   selectRandomTile()
 
   void nextTick(() => {
@@ -750,19 +773,19 @@ defineExpose({
 }
 
 .vtg-slider-controls {
-  display: grid;
-  width: min(100%, 30rem);
-  min-width: 20rem;
+  display: flex;
+  width: min(100%, 45rem);
   padding: var(--space-3) var(--space-2) 0;
   margin: 0 auto;
   border: 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex-wrap: wrap;
   gap: var(--space-4);
 }
 
 .vtg-slider-controls label {
   display: grid;
-  min-width: 0;
+  flex: 1 1 9rem;
+  min-width: 9rem;
   gap: var(--space-1);
 }
 

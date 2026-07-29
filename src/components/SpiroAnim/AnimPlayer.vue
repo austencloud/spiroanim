@@ -222,8 +222,9 @@ onMounted(() => {
 
 async function exportImage(requestId: symbol, settings: ImageExportSettings) {
   try {
+    const { fileName, ...renderSettings } = settings
     const blob = await call('exportImage', {
-      ...settings,
+      ...renderSettings,
       positionMs: CURRENT.value,
     })
     if (imageExportRequest.value?.id !== requestId) return
@@ -237,7 +238,7 @@ async function exportImage(requestId: symbol, settings: ImageExportSettings) {
     const blobUrl = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = blobUrl
-    link.download = `SpiroAnim${extension}`
+    link.download = `${fileName}${extension}`
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -254,8 +255,9 @@ async function exportVideo(requestId: symbol, settings: VideoExportSettings) {
   videoExportStatus.value = 'rendering'
 
   try {
+    const { fileName, ...renderSettings } = settings
     const result = await call('exportVideo', {
-      ...settings,
+      ...renderSettings,
       restorePositionMs: CURRENT.value,
     })
     if (videoExportRequest.value?.id !== requestId) return
@@ -268,7 +270,7 @@ async function exportVideo(requestId: symbol, settings: VideoExportSettings) {
     const blobUrl = URL.createObjectURL(result.blob)
     const link = document.createElement('a')
     link.href = blobUrl
-    link.download = `SpiroAnim${result.extension}`
+    link.download = `${fileName}${result.extension}`
     document.body.appendChild(link)
     link.click()
     link.remove()

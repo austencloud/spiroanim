@@ -19,6 +19,18 @@
       </p>
 
       <div class="form-grid">
+        <label class="file-name-field">
+          <span>File name</span>
+          <input
+            :value="fileName"
+            type="text"
+            :maxlength="MAX_EXPORT_FILE_NAME_LENGTH"
+            autocomplete="off"
+            data-role="export-file-name"
+            @input="updateFileName"
+          />
+        </label>
+
         <label>
           <span>Resolution</span>
           <select v-model="resolution">
@@ -137,6 +149,11 @@ import {
 } from '@/math/videoExportResolution'
 import { useExportSettingsStore } from '@/stores/useExportSettingsStore'
 import type { VideoExportSettings } from '@/types/VideoExportTypes'
+import {
+  MAX_EXPORT_FILE_NAME_LENGTH,
+  resolveExportFileName,
+  sanitizeExportFileName,
+} from '@/utils/exportFileName'
 
 const emit = defineEmits<{
   export: [settings: Omit<VideoExportSettings, 'durationMs'>]
@@ -147,7 +164,9 @@ const supported = ref(false)
 const isChecking = ref(false)
 const codecs = ref<VideoExportCodec[]>([])
 const exportSettingsStore = useExportSettingsStore()
+const fileName = ref('')
 const {
+  fileName: savedFileName,
   videoResolution: resolution,
   videoAspectRatio: exportAspectRatio,
   videoCustomWidth: customWidth,
@@ -206,7 +225,10 @@ function submit() {
   const codec = selectedCodecOption.value
   if (!codec || (!transparent.value && !validBackground.value)) return
 
+  const resolvedFileName = resolveExportFileName(fileName.value)
+  savedFileName.value = resolvedFileName
   emit('export', {
+    fileName: resolvedFileName,
     ...selectedResolution.value,
     framerate: framerate.value,
     bitrate: bitrate.value,
@@ -225,8 +247,13 @@ async function open(
 ) {
   supported.value = isSupported && hasVideoExportApi()
   configureResolution(canvas, aspect)
+  fileName.value = savedFileName.value
   isOpen.value = true
   if (supported.value) await refreshCodecs()
+}
+
+function updateFileName(event: Event) {
+  fileName.value = sanitizeExportFileName((event.target as HTMLInputElement).value)
 }
 
 watch([resolution, customWidth, customHeight, framerate, bitrate], () => {
@@ -318,6 +345,7 @@ label {
   font-weight: 700;
 }
 
+.file-name-field,
 .codec-field,
 .background-field,
 .alpha-field {
@@ -427,6 +455,7 @@ button:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .file-name-field,
   .codec-field,
   .background-field {
     grid-column: auto;

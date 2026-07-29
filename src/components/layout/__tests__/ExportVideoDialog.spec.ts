@@ -39,6 +39,7 @@ describe('ExportVideoDialog', () => {
     await button.trigger('click')
 
     expect(wrapper.emitted('export')?.[0]?.[0]).toMatchObject({
+      fileName: 'SpiroAnim',
       width: 1280,
       height: 720,
       framerate: 60,
@@ -48,6 +49,25 @@ describe('ExportVideoDialog', () => {
       codec: 'avc1.640028',
       container: 'mp4',
     })
+    wrapper.unmount()
+  })
+
+  it('uses the last successfully exported file name', async () => {
+    const wrapper = mount(ExportVideoDialog, { attachTo: document.body })
+
+    await wrapper.vm.open(true, { width: 1280, height: 720 }, [16, 9])
+    await flushPromises()
+    const fileName = wrapper.get<HTMLInputElement>('[data-role="export-file-name"]')
+    await fileName.setValue('Juggling <Final>')
+    await wrapper.get('.export-button').trigger('click')
+
+    expect(wrapper.emitted('export')?.[0]?.[0]).toMatchObject({ fileName: 'Juggling Final' })
+
+    await wrapper.vm.open(true, { width: 1280, height: 720 }, [16, 9])
+    await flushPromises()
+    expect(wrapper.get<HTMLInputElement>('[data-role="export-file-name"]').element.value).toBe(
+      'Juggling Final',
+    )
     wrapper.unmount()
   })
 

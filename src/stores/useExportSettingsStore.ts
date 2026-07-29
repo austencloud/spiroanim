@@ -1,4 +1,5 @@
 import type { ImageExportFeature, ImageExportFileType } from '@/types/ImageExportTypes'
+import { DEFAULT_EXPORT_FILE_NAME } from '@/utils/exportFileName'
 
 const defaultHiddenFeatures = (): Record<ImageExportFeature, boolean> => ({
   paths: false,
@@ -12,6 +13,7 @@ const defaultHiddenFeatures = (): Record<ImageExportFeature, boolean> => ({
 export const useExportSettingsStore = defineStore(
   'export-settings',
   () => {
+    const fileName = ref(DEFAULT_EXPORT_FILE_NAME)
     const imageResolution = ref('')
     const imageAspectRatio = ref(16 / 9)
     const imageCustomWidth = ref(1920)
@@ -33,6 +35,7 @@ export const useExportSettingsStore = defineStore(
     const videoCodec = ref('')
 
     return {
+      fileName,
       imageResolution,
       imageAspectRatio,
       imageCustomWidth,
@@ -57,6 +60,7 @@ export const useExportSettingsStore = defineStore(
     persist: {
       key: 'sa-export-settings-v1',
       pick: [
+        'fileName',
         'imageResolution',
         'imageAspectRatio',
         'imageCustomWidth',

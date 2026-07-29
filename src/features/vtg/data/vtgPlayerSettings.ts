@@ -19,6 +19,13 @@ export const vtgScaleControl = {
   distanceMax: 25,
 } as const
 
+export const vtgThickControl = {
+  min: 1,
+  max: 15,
+  step: 1,
+  default: 4,
+} as const
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
 export const clampVtgBpm = (bpm: number) => clamp(bpm, vtgBpmControl.min, vtgBpmControl.max)
@@ -57,7 +64,7 @@ export const vtgPlayerSettings = {
   aspectx: 1,
   aspecty: 1,
   distance: getVtgDistanceForScale(vtgScaleControl.default),
-  thick: 4,
+  thick: vtgThickControl.default,
 } satisfies Omit<VtgReadableAnimation, 'props'>
 
 export const vtgBaseFrameSettings = {

@@ -251,28 +251,33 @@ describe('VtgPane', () => {
     ])
   })
 
-  it('offers capped BPM and Scale sliders that reapply the current pattern', async () => {
+  it('offers BPM, Scale, and full-range Thick sliders that reapply the current pattern', async () => {
     const wrapper = mount(VtgPane)
     const bpm = wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]')
     const scale = wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]')
+    const thick = wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]')
     const outputs = wrapper.findAll('fieldset.vtg-slider-controls output')
 
     expect(bpm.attributes()).toMatchObject({ min: '40', max: '140', step: '1' })
     expect(scale.attributes()).toMatchObject({ min: '0.5', max: '1.4', step: '0.1' })
+    expect(thick.attributes()).toMatchObject({ min: '1', max: '15', step: '1' })
     expect(bpm.element.value).toBe('120')
     expect(scale.element.value).toBe('0.8')
-    expect(outputs.map((output) => output.text())).toEqual(['120', '0.8'])
+    expect(thick.element.value).toBe('4')
+    expect(outputs.map((output) => output.text())).toEqual(['0.8', '4', '120'])
 
     await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
     await bpm.setValue(40)
     await scale.setValue(1.4)
+    await thick.setValue(15)
 
     expect(wrapper.emitted('patternSelect')).toEqual([
       [{ reference: '1-6', speedRatio: '1:3' }],
       [{ reference: '1-6', speedRatio: '1:3', bpm: 40 }],
       [{ reference: '1-6', speedRatio: '1:3', bpm: 40, scale: 1.4 }],
+      [{ reference: '1-6', speedRatio: '1:3', bpm: 40, scale: 1.4, thick: 15 }],
     ])
-    expect(outputs.map((output) => output.text())).toEqual(['40', '1.4'])
+    expect(outputs.map((output) => output.text())).toEqual(['1.4', '15', '40'])
   })
 
   it('hydrates every VTG control from a supported animation without selecting it again', async () => {
@@ -285,6 +290,7 @@ describe('VtgPane', () => {
       reversePlane: true,
       bpm: 87,
       scale: 0.6,
+      thick: 12,
     })
     if (!animation) throw new Error('Expected a supported VTG animation')
 
@@ -298,6 +304,7 @@ describe('VtgPane', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('87')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').element.value).toBe('0.6')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').element.value).toBe('12')
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
