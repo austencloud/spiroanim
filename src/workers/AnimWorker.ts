@@ -488,10 +488,7 @@ register(
 register('dispose', () => {
   if (animating) cancelAnimationFrame(animationId)
   if (scene) disposeScene(scene)
-  if (renderer) {
-    renderer.dispose()
-    renderer.forceContextLoss()
-  }
+  if (renderer) renderer.dispose()
 })
 
 // Handle resize

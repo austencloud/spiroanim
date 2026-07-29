@@ -118,14 +118,6 @@ export function createPaneStore<
 
         const targetPane = parents.value[type] as PaneKey
 
-        // DEBUG: Log when we're about to hide something
-        for (const view of viewKeys) {
-          if (view !== type && parents.value[view as ElementType] === targetPane) {
-            console.warn(`insertIntoPane: Hiding ${view} because ${type} is taking ${targetPane}`)
-            console.trace() // Shows call stack
-          }
-        }
-
         // Hide any other view currently assigned to the same pane
         for (const view of viewKeys) {
           if (view !== type && parents.value[view as ElementType] === targetPane) {

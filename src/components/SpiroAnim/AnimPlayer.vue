@@ -52,6 +52,7 @@ import { useAspectRatio } from '@/composables/useAspectRatio'
 import { useAnimWorkerCamera } from '@/composables/useAnimWorkerCamera'
 import { fitToAspect } from '@/math/aspectRatio'
 import { videoExportFrameCount } from '@/math/videoExportTiming'
+import { getPointerClientPosition } from '@/utils/pointerEvent'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 
@@ -291,25 +292,8 @@ onBeforeUnmount(() => {
 const canvasClick = (e: MouseEvent | TouchEvent) => {
   if (eCanvas.value === undefined) return
 
-  // Define a custom type with the properties needed from MouseEvent and Touch
-  let xy: { clientX: number; clientY: number }
-
-  if (e instanceof TouchEvent) {
-    // Touch event
-    const touch = e.changedTouches?.[0] ?? e.touches?.[0]
-    if (!touch) return
-
-    xy = {
-      clientX: touch.clientX,
-      clientY: touch.clientY,
-    }
-  } else {
-    // If it's a MouseEvent, directly assign the event to ev
-    xy = {
-      clientX: e?.clientX,
-      clientY: e?.clientY,
-    }
-  }
+  const xy = getPointerClientPosition(e)
+  if (!xy) return
 
   // Send click to worker, check and push result
   const rect = eCanvas.value?.getBoundingClientRect()

@@ -5,6 +5,7 @@
 */
 
 import { useViewportStore } from '@/stores/useViewportStore'
+import { getPointerClientPosition } from '@/utils/pointerEvent'
 
 type Dimensions = { width: number; height: number }
 
@@ -14,14 +15,6 @@ type IconMap = {
   vertical: string
   horizontal: string
   close: string
-}
-
-const eventPosition = (event: MouseEvent | TouchEvent) => {
-  if ('touches' in event) {
-    const touch = event.touches[0]
-    return touch ? { x: touch.clientX, y: touch.clientY } : undefined
-  }
-  return { x: event.clientX, y: event.clientY }
 }
 
 const { isVisible } = storeToRefs(useViewportStore())
@@ -89,12 +82,12 @@ export function useSplitHandle({
       return
     }
 
-    const position = eventPosition(e)
+    const position = getPointerClientPosition(e)
     if (!position) return
 
     dragging = true
-    IX = position.x
-    IY = position.y
+    IX = position.clientX
+    IY = position.clientY
 
     document.addEventListener('mousemove', dragMove)
     document.addEventListener('touchmove', dragMove, { passive: false })
@@ -117,10 +110,10 @@ export function useSplitHandle({
   const dragMove = (e: MouseEvent | TouchEvent) => {
     if (!dragging) return
 
-    const position = eventPosition(e)
+    const position = getPointerClientPosition(e)
     if (!position) return
-    const cX = position.x
-    const cY = position.y
+    const cX = position.clientX
+    const cY = position.clientY
     const dX = cX - IX
     const dY = cY - IY
 
