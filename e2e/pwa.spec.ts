@@ -84,6 +84,8 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
 
   expect(landing).toContain('data-prerendered="true"')
   expect(landing).toContain('id="landing-title"')
+  expect(landing).toContain('<html lang="en" data-theme="dark">')
+  expect(landing).toContain('<meta name="theme-color" content="#090b0f" />')
   expect(landing).not.toContain('dev.spiroanim.com')
   expect(about).toContain('data-prerendered="true"')
   expect(about).toContain('id="about-title"')

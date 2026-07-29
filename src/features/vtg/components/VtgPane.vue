@@ -896,23 +896,24 @@ defineExpose({
 .vtg-tile__spin-toggle {
   position: absolute;
   z-index: 1;
-  inset-block-start: max(0.4rem, 1cqi);
-  inset-inline-end: max(0.4rem, 1cqi);
-  padding: max(0.24rem, 0.5cqi) max(0.44rem, 0.8cqi);
+  inset-block-start: max(0.2rem, 0.6cqi);
+  inset-inline-end: max(0.2rem, 0.6cqi);
+  padding: 0.3em 0.5em;
   color: var(--vtg-color-ink);
   cursor: pointer;
   background: var(--vtg-color-secondary);
   border: max(1px, 0.12cqi) solid var(--vtg-color-ink);
-  border-radius: max(0.4rem, 0.9cqi);
-  font-family: var(--font-family-sans);
-  font-size: max(1rem, 2.2cqi);
+  border-radius: 0.4em;
+  font-family: 'Arial Narrow', var(--font-family-sans);
+  font-size: max(0.62rem, 1.7cqi);
   font-weight: 700;
+  letter-spacing: 0.025em;
   line-height: 1;
 }
 
 .vtg-tile__spin-toggle--lower-right {
   inset-block-start: auto;
-  inset-block-end: max(0.4rem, 1cqi);
+  inset-block-end: max(0.2rem, 0.6cqi);
 }
 
 .vtg-tile__spin-toggle:focus-visible {
