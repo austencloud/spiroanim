@@ -42,7 +42,7 @@ import AppTooltip from '@/components/AppTooltip.vue'
 import { useViewportStore } from '@/stores/useViewportStore'
 import { usePlayerStore /*, DEFAULT_POSITION*/ } from '@/stores/usePlayerStore'
 
-import { CMODES, RADIUS, ORIGRADIUS } from '@/domain/animation/AnimStruct'
+import { CMODES } from '@/domain/animation/AnimStruct'
 import type { PointInd } from '@/types/AnimTypes'
 
 import { useAspectRatio } from '@/composables/useAspectRatio'
@@ -50,8 +50,6 @@ import { useAspectRatio } from '@/composables/useAspectRatio'
 import { useAnimWorkerCamera } from '@/composables/useAnimWorkerCamera'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
-
-const multi = RADIUS / ORIGRADIUS
 
 const props = withDefaults(
   defineProps<{
@@ -78,18 +76,9 @@ call('warnStr', 'Player').then(warnStr)
 const { isVisible } = storeToRefs(useViewportStore())
 
 const playerStore = usePlayerStore(props.store)
-const { ROOT, COMPILED, CURRENT, FPS, ORBIT } = playerStore.raw()
-const {
-  SELECTION,
-  SELECTED,
-  UPDATE,
-  PLAYING,
-  TRACER,
-  ASPECT,
-  cameraCenter,
-  saveImage,
-  trackClicks,
-} = storeToRefs(playerStore)
+const { COMPILED, CURRENT, FPS } = playerStore.raw()
+const { SELECTION, SELECTED, UPDATE, PLAYING, TRACER, ASPECT, saveImage, trackClicks } =
+  storeToRefs(playerStore)
 
 const eCanvas = ref<HTMLCanvasElement>()
 
@@ -180,13 +169,6 @@ onMounted(() => {
       send('jump', CURRENT.value) // helps smooth things out
       send('play', undefined)
     } else send('stop', undefined)
-  })
-
-  // Center Animation Event (triggers from the Center button,) triggers transform
-  watch(cameraCenter, () => {
-    ORBIT.value.position = [0, 0, ROOT.value.distance * -1 * multi] //[...DEFAULT_POSITION]
-    ORBIT.value.target = [0, 0, 0]
-    ORBIT.value = { ...ORBIT.value } // trigger shallow watchers
   })
 
   watch(saveImage, () => {

@@ -1,4 +1,5 @@
 export const DEFAULT_TOOLTIP_DELAY = 0
+export const MOBILE_TOOLTIP_DISMISS_DELAY = 3000
 
 export type TooltipPlacement = 'top' | 'bottom'
 

@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { ORIGRADIUS, RADIUS } from '@/domain/animation/AnimStruct'
 
 describe('usePlayerStore', () => {
   beforeEach(() => {
@@ -40,18 +41,24 @@ describe('usePlayerStore', () => {
     expect(store.INDEX).toBe(1)
   })
 
-  it('requests camera centering only when the viewing distance changes', async () => {
+  it('recenters the shared orbit when distance changes without a mounted player', async () => {
     const store = usePlayerStore('test-camera-centering')
     const runtime = store.raw()
     const initialRequest = store.cameraCenter
+    const initialOrbit = runtime.ORBIT.value
 
     runtime.ROOT.value = { ...runtime.ROOT.value, thick: 8 }
     await nextTick()
     expect(store.cameraCenter).toBe(initialRequest)
+    expect(runtime.ORBIT.value).toBe(initialOrbit)
 
     runtime.ROOT.value = { ...runtime.ROOT.value, distance: 30 }
     await nextTick()
     expect(store.cameraCenter).not.toBe(initialRequest)
+    expect(runtime.ORBIT.value).toEqual({
+      position: [0, 0, (-30 * RADIUS) / ORIGRADIUS],
+      target: [0, 0, 0],
+    })
   })
 
   it('loads the original settings key including legacy ORBIT data', () => {

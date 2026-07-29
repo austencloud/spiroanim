@@ -117,6 +117,14 @@ export const usePlayerStore = (id: string) => {
         () => (v.cameraCenter.value = Symbol()),
       )
 
+      // Center Animation Event (triggers from the Center button,) triggers transform
+      watch(v.cameraCenter, () => {
+        r.ORBIT.value = {
+          position: [0, 0, r.ROOT.value.distance * -1 * multi],
+          target: [0, 0, 0],
+        }
+      })
+
       // Update INDEX when position in player changes
       watchImmediate(r.CURRENT, (current) => {
         const times = v.UTIMES.value

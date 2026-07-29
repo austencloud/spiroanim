@@ -7,6 +7,7 @@ describe('BaseTooltip', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     document.body.innerHTML = ''
   })
 
@@ -90,6 +91,39 @@ describe('BaseTooltip', () => {
     expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
 
     window.dispatchEvent(new Event('blur'))
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
+
+    wrapper.unmount()
+  })
+
+  it('closes a tooltip three seconds after a pointer click on mobile', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(hover: none), (pointer: coarse)',
+        media: query,
+      })),
+    )
+    const wrapper = mount(BaseTooltip, {
+      props: { text: 'Mobile help', delay: 100 },
+      slots: { activator: '<button v-bind="props">Help</button>' },
+    })
+
+    await wrapper.get('button').trigger('mouseenter')
+    wrapper
+      .get('button')
+      .element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+    vi.advanceTimersByTime(100)
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+
+    vi.advanceTimersByTime(2999)
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+
+    vi.advanceTimersByTime(1)
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
 

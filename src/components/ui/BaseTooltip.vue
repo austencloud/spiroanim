@@ -27,6 +27,7 @@ import {
   activateTooltip,
   deactivateTooltip,
   DEFAULT_TOOLTIP_DELAY,
+  MOBILE_TOOLTIP_DISMISS_DELAY,
   type TooltipPlacement,
 } from '@/components/ui/tooltip'
 
@@ -51,7 +52,9 @@ const rootEl = ref<HTMLElement>()
 const contentEl = ref<HTMLElement>()
 const effectivePlacement = ref<TooltipPlacement>(props.placement)
 const position = reactive({ left: 0, top: 0 })
-let timeout: ReturnType<typeof setTimeout> | undefined
+let showTimeout: ReturnType<typeof setTimeout> | undefined
+let dismissTimeout: ReturnType<typeof setTimeout> | undefined
+let dismissAfterShow = false
 
 const contentStyle = computed<CSSProperties>(() => ({
   left: `${position.left}px`,
@@ -93,19 +96,43 @@ const updatePosition = () => {
 const show = () => {
   if (props.disabled) return
   activateTooltip(hide)
-  if (timeout !== undefined) clearTimeout(timeout)
-  timeout = setTimeout(() => {
+  if (showTimeout !== undefined) clearTimeout(showTimeout)
+  showTimeout = setTimeout(() => {
     visible.value = true
-    timeout = undefined
+    showTimeout = undefined
+    if (dismissAfterShow) startDismissTimer()
     nextTick(updatePosition)
   }, props.delay)
 }
 
 const hide = () => {
-  if (timeout !== undefined) clearTimeout(timeout)
-  timeout = undefined
+  if (showTimeout !== undefined) clearTimeout(showTimeout)
+  if (dismissTimeout !== undefined) clearTimeout(dismissTimeout)
+  showTimeout = undefined
+  dismissTimeout = undefined
+  dismissAfterShow = false
   visible.value = false
   deactivateTooltip(hide)
+}
+
+const startDismissTimer = () => {
+  if (dismissTimeout !== undefined) clearTimeout(dismissTimeout)
+  dismissAfterShow = false
+  dismissTimeout = setTimeout(() => {
+    dismissTimeout = undefined
+    hide()
+  }, MOBILE_TOOLTIP_DISMISS_DELAY)
+}
+
+const dismissMobileClick = (event: MouseEvent) => {
+  const isPointerClick = event.detail > 0
+  const isMobileDevice =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(hover: none), (pointer: coarse)').matches
+
+  if (!isPointerClick || !isMobileDevice) return
+  if (visible.value) startDismissTimer()
+  else if (showTimeout !== undefined) dismissAfterShow = true
 }
 
 const activatorProps = {
@@ -114,6 +141,7 @@ const activatorProps = {
   onMouseleave: hide,
   onFocus: show,
   onBlur: hide,
+  onClick: dismissMobileClick,
 }
 
 useEventListener(window, 'resize', updatePosition)
