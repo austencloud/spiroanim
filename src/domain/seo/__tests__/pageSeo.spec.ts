@@ -19,7 +19,7 @@ describe('page SEO metadata', () => {
 
   it('keeps application and unknown routes out of search indexes', () => {
     expect(getPageSeo('/app').robots).toBe('noindex, nofollow')
-    expect(getPageSeo('/app').appTitle).toBe('3D Flow Arts')
+    expect(getPageSeo('/app').appTitle).toBe('3D Flow Arts Animation')
     expect(getPageSeo('/missing').robots).toBe('noindex, nofollow')
   })
 })

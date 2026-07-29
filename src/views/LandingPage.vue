@@ -11,9 +11,16 @@
           <p class="eyebrow">Early preview</p>
           <h2 id="preview-title">A 3D playground for flow arts</h2>
           <p>
-            SpiroAnim is a proof-of-concept rendering tool with a basic editor. More features are on
-            the way, including a VTG generator, a library, and more. You may encounter a few rough
-            edges in the meantime.
+            SpiroAnim is a proof-of-concept rendering tool with a basic editor.<br />
+            Now includes a VTG3 Generator, a duplicate of Vulkan Tech Gospel v3.<br />
+            Credit to:
+            <a
+              class="vtg-link"
+              href="https://vtg-v3.web.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              >vtg-v3.web.app</a
+            >
           </p>
         </section>
 
@@ -166,6 +173,17 @@ h1 {
   margin: 0;
   color: var(--color-text-muted);
   line-height: 1.6;
+}
+
+.vtg-link {
+  color: var(--color-action-primary);
+  font-weight: 700;
+  text-underline-offset: 0.2em;
+}
+
+.vtg-link:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
 }
 
 .offline-note {

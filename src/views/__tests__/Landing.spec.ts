@@ -31,7 +31,20 @@ describe('Landing view', () => {
     expect(wrapper.get('img.brand-mark').attributes('src')).toBe('/images/app-icons/pwa-source.svg')
     expect(wrapper.get('img.brand-mark').attributes('alt')).toBe('')
     expect(wrapper.get('.project-note').text()).toContain('proof-of-concept rendering tool')
-    expect(wrapper.get('.project-note').text()).toContain('including a VTG generator, a library')
+    expect(wrapper.get('.project-note').text()).not.toContain('More features are on the way')
+    expect(wrapper.get('.project-note').text()).not.toContain('rough edges')
+    expect(wrapper.get('.project-note').text()).toContain(
+      'Now includes a VTG3 Generator, a duplicate of Vulkan Tech Gospel v3',
+    )
+    expect(wrapper.get('.project-note').text()).toContain('Credit to:')
+    expect(wrapper.get('.project-note').findAll('br')).toHaveLength(2)
+    const vtgLink = wrapper.get('a.vtg-link')
+    expect(vtgLink.text()).toBe('vtg-v3.web.app')
+    expect(vtgLink.attributes()).toMatchObject({
+      href: 'https://vtg-v3.web.app/',
+      target: '_blank',
+      rel: 'noopener noreferrer',
+    })
     expect(wrapper.get('.offline-note').text()).toContain('Built to work offline')
     expect(wrapper.get('.offline-note').text()).toContain('After one online visit')
     expect(wrapper.get('.mobile-guidance').text()).toContain('high-end mobile device')
