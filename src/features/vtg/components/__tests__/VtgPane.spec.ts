@@ -113,7 +113,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
     expect(wrapper.findAll('[data-role="vtg-rule-card"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
-    expect(wrapper.findAll('button')).toHaveLength(49)
+    expect(wrapper.findAll('button')).toHaveLength(50)
     expect(wrapper.findAll('[data-role="vtg-divider"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--large')).toHaveLength(24)
@@ -248,6 +248,34 @@ describe('VtgPane', () => {
       [{ reference: '2-6', speedRatio: '1:3' }],
       [{ reference: '2-6', speedRatio: '1:3', swapProps: true }],
       [{ reference: '2-6', speedRatio: '1:3', swapProps: true, reversePlane: true }],
+    ])
+  })
+
+  it('resets VTG controls while keeping and reapplying the selected pattern', async () => {
+    const wrapper = mount(VtgPane)
+    await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
+    await wrapper.get('[data-role="vtg-spin-toggle"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(0.7)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').setValue(12)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').setValue(90)
+
+    const emissionCount = wrapper.emitted('patternSelect')?.length ?? 0
+    await wrapper.get('[data-role="vtg-reset"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-6')
+    expect(wrapper.get<HTMLInputElement>('input[value="1:3"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(false)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(false)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').element.value).toBe('0.8')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').element.value).toBe('4')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('120')
+    expect(wrapper.emitted('patternSelect')).toHaveLength(emissionCount + 1)
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { reference: '5-6', speedRatio: '1:3', isAnti: false },
     ])
   })
 

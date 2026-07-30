@@ -186,6 +186,7 @@
         <input v-model="reversePlane" type="checkbox" data-role="vtg-reverse" />
         <span>Reverse</span>
       </label>
+      <button type="button" data-role="vtg-reset" @click="resetPatternControls">Reset</button>
     </fieldset>
   </section>
 </template>
@@ -347,6 +348,21 @@ const selectRandomTile = () => {
 const toggleSpinDirection = (tile: VtgMatrixTile) => {
   isAnti.value = !isAnti.value
   emitPatternSelection(tile)
+}
+
+const resetPatternControls = async () => {
+  const tile = matrixTiles.find(({ reference }) => reference === selectedCellReference.value)
+  suppressPatternEmit = true
+  speedRatio.value = vtgDefaultSpeedRatio
+  isAnti.value = false
+  swapProps.value = false
+  reversePlane.value = false
+  bpm.value = vtgBpmControl.default
+  scale.value = vtgScaleControl.default
+  thick.value = vtgThickControl.default
+  await nextTick()
+  suppressPatternEmit = false
+  if (tile !== undefined) emitPatternSelection(tile)
 }
 
 watch([speedRatio, swapProps, reversePlane, bpm, scale, thick], () => {
@@ -742,7 +758,8 @@ defineExpose({
   opacity: 0;
 }
 
-.vtg-pattern-options span {
+.vtg-pattern-options span,
+.vtg-pattern-options button {
   display: grid;
   min-width: 6rem;
   min-height: 2.25rem;
@@ -761,13 +778,18 @@ defineExpose({
     border-color var(--transition-fast);
 }
 
+.vtg-pattern-options button {
+  font-family: inherit;
+}
+
 .vtg-pattern-options input:checked + span {
   color: var(--color-on-action-primary);
   background: var(--color-action-primary);
   border-color: var(--color-action-primary);
 }
 
-.vtg-pattern-options input:focus-visible + span {
+.vtg-pattern-options input:focus-visible + span,
+.vtg-pattern-options button:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }
