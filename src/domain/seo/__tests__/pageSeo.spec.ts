@@ -15,6 +15,11 @@ describe('page SEO metadata', () => {
       appTitle: 'About - Open-Source Flow Arts Rendering',
       robots: 'index, follow',
     })
+    expect(getPageSeo('/tips')).toMatchObject({
+      canonicalPath: '/tips',
+      appTitle: 'Tips - Keyboard Shortcuts and Timeline Controls',
+      robots: 'index, follow',
+    })
   })
 
   it('keeps application and unknown routes out of search indexes', () => {

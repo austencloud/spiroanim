@@ -34,6 +34,14 @@ const pageSeo: Record<string, PageSeo> = {
     robots: 'index, follow',
     title: 'About SpiroAnim - Open-Source Flow Arts Rendering',
   },
+  '/tips': {
+    appTitle: 'Tips - Keyboard Shortcuts and Timeline Controls',
+    canonicalPath: '/tips',
+    description:
+      'Learn SpiroAnim keyboard shortcuts, timeline selection gestures, and navigation controls.',
+    robots: 'index, follow',
+    title: 'SpiroAnim Tips - Shortcuts and Timeline Controls',
+  },
 }
 
 export function getPageSeo(path: string): PageSeo {

@@ -54,6 +54,16 @@
           <BaseIcon :path="mdiShareVariantOutline" :size="22" />
           <span>Share This</span>
         </button>
+        <RouterLink
+          class="menu-link"
+          exact-active-class="menu-link--active"
+          role="menuitem"
+          to="/tips"
+          @click="closeMenu"
+        >
+          <BaseIcon :path="mdiLightbulbOnOutline" :size="22" />
+          <span>Tips</span>
+        </RouterLink>
         <template v-if="playerVisible">
           <button
             class="menu-link menu-action export-image-menu-item"
@@ -126,6 +136,7 @@ import {
   mdiFullscreenExit,
   mdiHomeOutline,
   mdiInformationOutline,
+  mdiLightbulbOnOutline,
   mdiMovieOpenOutline,
   mdiPanoramaVariant,
   mdiShareVariantOutline,

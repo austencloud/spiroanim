@@ -474,6 +474,16 @@ function thumbClick(index: number, event: MouseEvent | KeyboardEvent) {
   //  PLAYING.value = false
   //}
   if (!editorVisible) PLAYING.value = false
+
+  // Pointer clicks should not leave a focus ring when a modifier key is pressed afterward.
+  // Keep focus intact for keyboard activation so thumbnails remain keyboard navigable.
+  const clickedThumbnail = event.currentTarget
+  if (
+    event instanceof MouseEvent &&
+    event.detail > 0 &&
+    clickedThumbnail instanceof HTMLImageElement
+  )
+    clickedThumbnail.blur()
 }
 
 // Requests images from worker upon events in onMounted

@@ -47,6 +47,7 @@ async function mountMenu() {
     routes: [
       { path: '/', component: { template: '<div>Home</div>' } },
       { path: '/about', component: { template: '<div>About</div>' } },
+      { path: '/tips', component: { template: '<div>Tips</div>' } },
       { path: '/player', component: { template: '<div>Player</div>' } },
       { path: '/editor', component: { template: '<div>Editor</div>' } },
       { path: '/timeline', component: { template: '<div>Timeline</div>' } },
@@ -104,6 +105,7 @@ describe('AppNavigationMenu', () => {
     expect(wrapper.findAll('[role="menuitem"]').map((item) => item.text())).toEqual([
       'Enter Full Screen',
       'Share This',
+      'Tips',
       'Export Image',
       'Export Video',
       'Tracer: Off',
@@ -150,6 +152,9 @@ describe('AppNavigationMenu', () => {
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Share This')
+
+    await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement?.textContent).toContain('Tips')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Export Image')
@@ -315,6 +320,7 @@ describe('AppNavigationMenu', () => {
 
     expect(spiroAnimItems.map((item) => item.text())).toEqual([
       'Share This',
+      'Tips',
       'Export Image',
       'Export Video',
       'Tracer: Off',
@@ -392,6 +398,7 @@ describe('AppNavigationMenu', () => {
     expect(wrapper.find('.fullscreen-menu-item').exists()).toBe(false)
     expect(wrapper.findAll('[role="menuitem"]').map((item) => item.text())).toEqual([
       'Share This',
+      'Tips',
       'Export Image',
       'Export Video',
       'Tracer: Off',

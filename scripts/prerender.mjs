@@ -63,6 +63,7 @@ async function writeRoute(route, html, includeCleanUrlFile = false) {
 
 const landing = await render('/')
 const about = await render('/about')
+const tips = await render('/tips')
 const appShell = clientShellHtml()
 
 await writeFile(path.join(clientDirectory, 'app-shell.html'), appShell)
@@ -70,6 +71,7 @@ await writeFile(path.join(clientDirectory, '404.html'), appShell)
 await writeRoute('/', pageHtml(landing.appHtml, landing.seo))
 await writeRoute('/index', pageHtml(landing.appHtml, landing.seo))
 await writeRoute('/about', pageHtml(about.appHtml, about.seo), true)
+await writeRoute('/tips', pageHtml(tips.appHtml, tips.seo), true)
 
 for (const route of clientOnlyPaths) await writeRoute(route, appShell, true)
 
@@ -80,12 +82,12 @@ const serviceWorkerResult = await generateSW({
   globIgnores: ['sw.js', 'workbox-*.js'],
   globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
   navigateFallback: 'app-shell.html',
-  navigateFallbackDenylist: [/^\/(?:index\/?|about\/?)?$/],
+  navigateFallbackDenylist: [/^\/(?:index\/?|about\/?|tips\/?)?$/],
   swDest: path.join(clientDirectory, 'sw.js'),
 })
 
 for (const warning of serviceWorkerResult.warnings) console.warn(warning)
 
 console.log(
-  `Prerendered / and /about; generated ${clientOnlyPaths.length} client-only route shells and precached ${serviceWorkerResult.count} final files.`,
+  `Prerendered /, /about, and /tips; generated ${clientOnlyPaths.length} client-only route shells and precached ${serviceWorkerResult.count} final files.`,
 )

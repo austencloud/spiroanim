@@ -129,6 +129,11 @@ describe('AnimTimeline', () => {
       wrapper.findAll('.timeline-cell').map((cell) => cell.classes('timeline-cell--selected')),
     ).toEqual([false, true, true])
 
+    const blurThumbnail = vi.spyOn(thumbs[1]!.element as HTMLImageElement, 'blur')
+    thumbs[1]!.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+    await nextTick()
+    expect(blurThumbnail).toHaveBeenCalledOnce()
+
     wrapper.unmount()
     await flushPromises()
     expect(FakeWorker.instances[0]!.terminate).toHaveBeenCalledOnce()

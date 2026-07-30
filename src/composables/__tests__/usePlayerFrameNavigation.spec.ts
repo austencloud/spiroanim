@@ -25,7 +25,7 @@ describe('usePlayerFrameNavigation', () => {
     expect(CURRENT.value).toBe(19)
   })
 
-  it('does not navigate outside the active selection', () => {
+  it('grows the active selection when navigating outward from either endpoint', () => {
     const playerStore = usePlayerStore('selection-navigation')
     const { CURRENT } = playerStore.raw()
     const { rewind, forward } = usePlayerFrameNavigation('selection-navigation')
@@ -36,11 +36,34 @@ describe('usePlayerFrameNavigation', () => {
     playerStore.INDEX = 1
     CURRENT.value = 10
     rewind()
-    expect(CURRENT.value).toBe(10)
+    expect(playerStore.SELECTED).toEqual([0, 2])
+    expect(CURRENT.value).toBe(0)
 
     playerStore.INDEX = 1
     CURRENT.value = 19
     forward()
-    expect(CURRENT.value).toBe(19)
+    expect(playerStore.SELECTED).toEqual([0, 3])
+    expect(CURRENT.value).toBe(20)
+  })
+
+  it('keeps selection growth within the timeline bounds', () => {
+    const playerStore = usePlayerStore('bounded-selection-navigation')
+    const { CURRENT } = playerStore.raw()
+    const { rewind, forward } = usePlayerFrameNavigation('bounded-selection-navigation')
+    playerStore.UTIMES = [0, 10, 20, 30]
+    playerStore.SELECTION = true
+    playerStore.SELECTED = [0, 3]
+
+    playerStore.INDEX = 0
+    CURRENT.value = 0
+    rewind()
+    expect(playerStore.SELECTED).toEqual([0, 3])
+    expect(CURRENT.value).toBe(0)
+
+    playerStore.INDEX = 2
+    CURRENT.value = 29
+    forward()
+    expect(playerStore.SELECTED).toEqual([0, 3])
+    expect(CURRENT.value).toBe(29)
   })
 })

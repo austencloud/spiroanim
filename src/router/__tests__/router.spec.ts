@@ -11,5 +11,6 @@ describe('application routes', () => {
     expect(router.resolve('/index').name).toBe('landing')
     expect(router.resolve('/app').name).toBe('main')
     expect(router.resolve('/about').name).toBe('about')
+    expect(router.resolve('/tips').name).toBe('tips')
   })
 })
