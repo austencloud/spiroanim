@@ -16,7 +16,7 @@ describe('ManagePanel', () => {
     document.body.innerHTML = ''
   })
 
-  it('explains all four management actions', async () => {
+  it('explains all five management actions', async () => {
     const wrapper = mount(ManagePanel, {
       global: {
         provide: { store: ref('manage-panel-tooltips') },
@@ -26,7 +26,7 @@ describe('ManagePanel', () => {
       },
     })
 
-    const expected = ['Insert Points', 'Delete Selection', 'Add Prop', 'Delete Props']
+    const expected = ['Insert Points', 'Delete Selection', 'Shift', 'Add Prop', 'Delete Props']
     const links = wrapper.findAll('a')
     expect(links.map((link) => link.text())).toEqual(expected)
     expect(wrapper.get('.manage-note').text()).toBe(
