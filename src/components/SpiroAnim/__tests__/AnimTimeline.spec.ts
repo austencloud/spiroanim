@@ -172,6 +172,54 @@ describe('AnimTimeline', () => {
     await flushPromises()
   })
 
+  it('enables and grows selection ranges with shift-click', async () => {
+    const store = usePlayerStore('timeline-shift-selection')
+    const runtime = store.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      bpm: 60,
+      props: [
+        {
+          anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }, { beats: 1 }, { beats: 1 }],
+        },
+      ],
+    }
+    await nextTick()
+
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: 'timeline-shift-selection',
+        dim: { width: 600, height: 400, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    runtime.CURRENT.value = 2000
+    await nextTick()
+
+    const thumbs = wrapper.findAll('img.thumb')
+    await thumbs[4]!.trigger('click', { shiftKey: true })
+
+    expect(store.SELECTION).toBe(true)
+    expect(store.SELECTED).toEqual([2, 4])
+    expect(runtime.CURRENT.value).toBe(4000)
+
+    await thumbs[1]!.trigger('click')
+    expect(store.SELECTED).toEqual([1, 2])
+
+    await thumbs[3]!.trigger('click', { shiftKey: true })
+    expect(store.SELECTED).toEqual([1, 4])
+
+    await thumbs[2]!.trigger('click', { shiftKey: true })
+    expect(store.SELECTED).toEqual([1, 3])
+
+    await thumbs[0]!.trigger('click', { shiftKey: true })
+    expect(store.SELECTED).toEqual([0, 3])
+
+    wrapper.unmount()
+    await flushPromises()
+  })
+
   it('shows markers only for selected props while the editor is visible', async () => {
     const storeId = 'timeline-prop-selection'
     const store = usePlayerStore(storeId)

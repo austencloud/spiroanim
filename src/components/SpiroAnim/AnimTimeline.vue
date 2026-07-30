@@ -25,9 +25,9 @@
           :style="thumbStyle"
           role="button"
           tabindex="0"
-          @click="thumbClick(index)"
-          @keydown.enter="thumbClick(index)"
-          @keydown.space.prevent="thumbClick(index)"
+          @click="thumbClick(index, $event)"
+          @keydown.enter="thumbClick(index, $event)"
+          @keydown.space.prevent="thumbClick(index, $event)"
         />
         <AppTooltip class="thumbStart" text="Index: Beat">
           <template #activator="{ props: tooltipProps }">
@@ -435,13 +435,26 @@ function truncateArray(arr: unknown[], len: number) {
 }
 
 // Handles thumbnail click logic: toggles selection on double click, updates CURRENT time
-function thumbClick(index: number) {
+function thumbClick(index: number, event: MouseEvent | KeyboardEvent) {
   const now = performance.now()
   const editorVisible = mainViews.value.editor == 'hidden'
+  const currentIndex = INDEX.value
+  const selectionWasActive = SELECTION.value
   UPDATE.value = Symbol()
 
-  // Toggle SELECTION mode on double click (within 500ms)
-  if (lastIndex === index && now - lastClick <= 500) {
+  if (event.shiftKey) {
+    const anchor = selectionWasActive ? (SELECTED.value[0] ?? currentIndex) : currentIndex
+    const selectedEnd = SELECTED.value[1] ?? anchor
+    const end = selectionWasActive
+      ? index < anchor
+        ? selectedEnd
+        : Math.min(index + 1, UTIMES.value.length - 1)
+      : anchor
+    SELECTION.value = true
+    SELECTED.value[0] = Math.min(anchor, index)
+    SELECTED.value[1] = Math.max(end, index)
+  } else if (lastIndex === index && now - lastClick <= 500) {
+    // Toggle SELECTION mode on double click (within 500ms)
     SELECTION.value = !SELECTION.value
     //if (SELECTION.value && !editorVisible) PLAYING.value = true
   } else {
@@ -452,7 +465,7 @@ function thumbClick(index: number) {
   // Update current time to selected index
   CURRENT.value = UTIMES.value[index]!
 
-  if (SELECTION.value) {
+  if (SELECTION.value && !event.shiftKey) {
     // Select range: [index, index+1] (or clamp to last index)
     const max = UTIMES.value.length - 1
     SELECTED.value[0] = index
