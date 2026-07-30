@@ -1,7 +1,13 @@
 <template>
   <label class="field">
     <span>{{ label }}</span>
-    <input v-model="val" inputmode="numeric" @input="handleInput" />
+    <input
+      v-model="val"
+      inputmode="numeric"
+      @focus="beginEditing"
+      @blur="endEditing"
+      @input="handleInput"
+    />
   </label>
 </template>
 
@@ -9,6 +15,8 @@
 // TODO: The old version of this was a NIGHTMARE! Can't believe it was functioning. So there's gotta be some unforseen bugs in here.
 
 import { VALUE } from '@/features/editor/composables/useProperties'
+import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { DynamicVal, ValRetType, SetterFunc } from '@/types/AnimTypes'
 
 let neg2 = false
@@ -21,6 +29,9 @@ const props = defineProps<{
 }>()
 
 const vals = props.vals
+const store = inject('store', ref('main'))
+const { ROOT } = usePlayerStore(store.value).raw()
+const { beginHistoryGroup, endHistoryGroup } = useQSMainStore()
 
 const name = computed(() => vals.name ?? false)
 const neg = computed(() => vals.neg ?? false)
@@ -79,6 +90,14 @@ const regex = computed(() => {
 const handleInput = (event: InputEvent) => {
   const target = event.target as HTMLInputElement
   if (!regex.value.test(target.value)) target.value = get()
+}
+
+const beginEditing = () => {
+  beginHistoryGroup(ROOT.value)
+}
+
+const endEditing = () => {
+  endHistoryGroup()
 }
 </script>
 

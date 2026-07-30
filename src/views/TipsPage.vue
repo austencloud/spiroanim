@@ -39,6 +39,18 @@
                 <dt><kbd>→</kbd></dt>
                 <dd>Move to the next frame. At a selection's end, grow the selection right.</dd>
               </div>
+              <div>
+                <dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Z</kbd></dt>
+                <dd>Undo the last completed edit or control interaction.</dd>
+              </div>
+              <div>
+                <dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></dt>
+                <dd>Redo the last undone edit.</dd>
+              </div>
+              <div>
+                <dt><kbd>Ctrl</kbd> + <kbd>Y</kbd></dt>
+                <dd>Redo the last undone edit on Windows and Linux.</dd>
+              </div>
             </dl>
             <p class="fine-print">
               App shortcuts pause while you are typing in a field or using another interactive
@@ -76,13 +88,6 @@
           </div>
         </section>
       </div>
-
-      <aside class="remember-note">
-        <span aria-hidden="true">✦</span>
-        <p>
-          <strong>Remember:</strong> Shift is the fast path from browsing frames to shaping a range.
-        </p>
-      </aside>
     </article>
 
     <footer>Render the Flow.</footer>
@@ -325,26 +330,6 @@ kbd,
 
 .gesture p {
   margin: 0;
-}
-
-.remember-note {
-  display: flex;
-  gap: var(--space-4);
-  align-items: center;
-  margin-block-start: var(--space-8);
-  padding: var(--space-4) var(--space-6);
-  color: var(--color-on-action-primary);
-  background: var(--color-action-primary);
-  border-radius: var(--radius-sm);
-}
-
-.remember-note span {
-  font-size: 1.5rem;
-}
-
-.remember-note p {
-  margin: 0;
-  line-height: 1.5;
 }
 
 footer {

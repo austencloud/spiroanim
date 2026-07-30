@@ -27,6 +27,8 @@
 <script setup lang="ts">
 import DecimalText from './DecimalTextForm.vue'
 import { VALUE } from '@/features/editor/composables/useProperties'
+import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { DynamicVal, ValRetType, SetterFunc } from '@/types/AnimTypes'
 
 const props = defineProps<{
@@ -36,6 +38,9 @@ const props = defineProps<{
 }>()
 
 const vals = props.vals
+const store = inject('store', ref('main'))
+const { ROOT } = usePlayerStore(store.value).raw()
+const { beginHistoryGroup, endHistoryGroup } = useQSMainStore()
 
 const name = computed(() => vals.name ?? '')
 const min = computed(() => vals.min ?? -10)
@@ -79,6 +84,7 @@ const multVal = computed(() => {
 })
 
 const start = (/*original: number*/) => {
+  beginHistoryGroup(ROOT.value)
   minFreeze.value = min.value
   maxFreeze.value = max.value
   multFreeze.value = mult.value
@@ -102,6 +108,7 @@ const updateInput = (event: Event) => {
 }
 
 const end = (/*final: number*/) => {
+  endHistoryGroup()
   minFreeze.value = maxFreeze.value = multFreeze.value = null
 
   from.value = false

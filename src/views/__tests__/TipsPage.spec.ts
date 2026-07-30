@@ -23,6 +23,8 @@ describe('Tips view', () => {
     expect(wrapper.text()).toContain('Move to the previous frame')
     expect(wrapper.text()).toContain('grow the selection left')
     expect(wrapper.text()).toContain('grow the selection right')
+    expect(wrapper.text()).toContain('Undo the last completed edit')
+    expect(wrapper.text()).toContain('Redo the last undone edit')
     expect(wrapper.text()).toContain('Shift')
     expect(wrapper.text()).toContain('Turn on selection mode')
     expect(wrapper.text()).toContain('Double-click')

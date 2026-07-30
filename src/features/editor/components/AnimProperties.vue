@@ -187,8 +187,7 @@ const {
 } = useProperties(props.store)
 
 const qsStore = useQSMainStore()
-const { decodeQS } = qsStore
-const { qsSkip, qsHistory } = storeToRefs(qsStore)
+const { undoQS } = qsStore
 
 const { parents: mainPaneParents } = storeToRefs(useMainPaneStore())
 const isInsideMainLeftPane = computed(() => mainPaneParents.value.editor === 'left')
@@ -246,18 +245,8 @@ function onSelectedChange() {
 }
 
 function clickUndo() {
-  const len = qsHistory.value.length
-  if (len > 1) {
-    qsSkip.value = true
-    qsHistory.value.pop()
-    const query = new URLSearchParams(qsHistory.value[len - 2]!),
-      obj: Record<string, string> = {}
-    query.forEach((value, key) => {
-      obj[key] = value
-    })
-    // TODO: Might need to use decodeVER instead? (which is async) Check if original URL is stored
-    ROOT.value = decodeQS(obj)
-  }
+  const previous = undoQS()
+  if (previous !== undefined) ROOT.value = previous
 }
 
 function circleColor(index: number) {

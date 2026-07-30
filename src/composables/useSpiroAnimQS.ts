@@ -1,6 +1,5 @@
 // src/composables/useSpiroAnimQS.ts
 
-import { debounce } from '@/utils/UtilFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
@@ -49,18 +48,33 @@ export async function useSpiroAnimQS(
 
   // Simple reactive state
   const qsHistory = ref<string[]>([])
+  const qsFuture = ref<string[]>([])
   const qsPause = ref(false)
   const qsSkip = ref(false)
+  let historyGroupActive = false
+  let historyGroupIndex = -1
 
   // Create config from imported functions
   const rootConfig = createRootConfig()
   const propConfig = createPropConfig()
 
-  // Debounced history tracker for query strings
-  const qsUpdateHistory = debounce((args: Record<string, string>) => {
-    qsHistory.value.push(new URLSearchParams(args).toString())
+  const qsUpdateHistory = (args: Record<string, string>) => {
+    const encoded = new URLSearchParams(args).toString()
+
+    if (historyGroupActive && historyGroupIndex >= 0) {
+      if (qsHistory.value[historyGroupIndex] === encoded) return
+      qsHistory.value[historyGroupIndex] = encoded
+      qsFuture.value = []
+      return
+    }
+
+    if (qsHistory.value.at(-1) === encoded) return
+
+    qsHistory.value.push(encoded)
+    qsFuture.value = []
     while (qsHistory.value.length > 500) qsHistory.value.shift()
-  }, 500)
+    if (historyGroupActive) historyGroupIndex = qsHistory.value.length - 1
+  }
 
   /**
    * Encodes a RootDataFinal object into a query string
@@ -89,6 +103,44 @@ export async function useSpiroAnimQS(
     }
 
     return query
+  }
+
+  const beginHistoryGroup = (root: RootDataFinal) => {
+    if (historyGroupActive) return
+
+    qsUpdateHistory(encodeQS(root, false))
+    historyGroupActive = true
+    historyGroupIndex = -1
+  }
+
+  const endHistoryGroup = () => {
+    historyGroupActive = false
+    historyGroupIndex = -1
+  }
+
+  const decodeHistoryEntry = (entry: string) => {
+    const query: Record<string, string> = {}
+    new URLSearchParams(entry).forEach((value, key) => {
+      query[key] = value
+    })
+    return decodeQS(query)
+  }
+
+  const undoQS = (): RootDataFinal | undefined => {
+    if (qsHistory.value.length <= 1) return undefined
+
+    qsSkip.value = true
+    qsFuture.value.push(qsHistory.value.pop()!)
+    return decodeHistoryEntry(qsHistory.value.at(-1)!)
+  }
+
+  const redoQS = (): RootDataFinal | undefined => {
+    const entry = qsFuture.value.pop()
+    if (entry === undefined) return undefined
+
+    qsSkip.value = true
+    qsHistory.value.push(entry)
+    return decodeHistoryEntry(entry)
   }
 
   /**
@@ -255,8 +307,13 @@ export async function useSpiroAnimQS(
   // Final return: exposed API
   return {
     qsHistory,
+    qsFuture,
     qsPause,
     qsSkip,
+    beginHistoryGroup,
+    endHistoryGroup,
+    undoQS,
+    redoQS,
     encodeQS,
     decodeQS,
     decodeVer,
