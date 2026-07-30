@@ -64,7 +64,7 @@ describe('ShiftFrames', () => {
   it('shifts every selected closed prop and leaves unselected props unchanged', async () => {
     const storeId = 'shift-selected'
     const player = usePlayerStore(storeId)
-    const { ROOT } = player.raw()
+    const { ROOT, COMPILED } = player.raw()
     ROOT.value = createRoot([closedFrames(), closedFrames(), openFrames()])
     player.PLAYING = false
 
@@ -80,6 +80,14 @@ describe('ShiftFrames', () => {
 
     expect(ROOT.value.props[0]!.anim[0]).toMatchObject({ arc: 90, beats: 3, scale: 8 })
     expect(ROOT.value.props[1]!.anim[0]).toMatchObject({ arc: 90, beats: 3, scale: 8 })
+    expect(COMPILED.value.props[0]!.anim.at(-1)).toMatchObject({
+      beats: 4,
+      scale: 8,
+    })
+    expect(COMPILED.value.props[1]!.anim.at(-1)).toMatchObject({
+      beats: 4,
+      scale: 8,
+    })
     expect(ROOT.value.props[2]!.anim).toEqual(unselected)
   })
 
@@ -146,5 +154,40 @@ describe('ShiftFrames', () => {
     expect(player.PTIMES[0]![3]).toBe(originalTimes[3])
     expect(player.PTIMES[0]![4]).toBe(originalTimes[4])
     expect(player.SELECTED).toEqual([1, 3])
+  })
+
+  it('shifts an entirely selected pattern and retains its final frame properties', async () => {
+    const storeId = 'shift-entire-selection'
+    const player = usePlayerStore(storeId)
+    const { ROOT, COMPILED } = player.raw()
+    ROOT.value = createRoot([closedFrames()])
+    player.PLAYING = false
+
+    const properties = usePropertiesStore(storeId)
+    properties.pSELECTED = { 0: true }
+    await nextTick()
+
+    const originalFinal = structuredClone(COMPILED.value.props[0]!.anim.at(-1)!)
+    const originalFinalTime = player.PTIMES[0]!.at(-1)
+    player.SELECTION = true
+    player.SELECTED = [0, 2]
+    await nextTick()
+
+    const wrapper = mount(ShiftFrames, {
+      global: { provide: { store: ref(storeId) } },
+    })
+    const link = wrapper.get('a')
+    expect(link.attributes('aria-disabled')).toBe('false')
+    await link.trigger('click')
+    await nextTick()
+
+    expect(COMPILED.value.props[0]!.anim.at(-1)).toMatchObject({
+      beats: originalFinal.beats,
+      scale: originalFinal.scale,
+      depth: originalFinal.depth,
+      adjust: originalFinal.adjust,
+    })
+    expect(player.PTIMES[0]!.at(-1)).toBe(originalFinalTime)
+    expect(player.SELECTED).toEqual([0, 2])
   })
 })

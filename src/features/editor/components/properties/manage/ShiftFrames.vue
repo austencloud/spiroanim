@@ -11,7 +11,8 @@
         Moves the first animation interval of every selected prop or selected timeline range to the
         end.<br />
         Existing position and rotation paths stay in place. Each prop must have matching compiled
-        position and rotation at its first and last frames.
+        position and rotation at its first and last frames. The final frame keeps its outgoing
+        properties.
       </template>
     </AppTooltip>
   </div>
@@ -85,7 +86,7 @@ const clickShift = async () => {
       COMPILED.value.props[propIndex]!.anim,
       startIndex,
       endIndex,
-      { preserveFinalOutgoing: SELECTION.value && endIndex < prop.anim.length - 1 },
+      { preserveFinalOutgoing: true },
     )
   })
   if (shiftedProps.some((frames) => frames === undefined)) return
