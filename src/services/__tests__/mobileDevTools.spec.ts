@@ -10,7 +10,7 @@ const mobileNavigator = {
 describe('mobile development tools', () => {
   it('loads Eruda on mobile devices away from the production hostname', () => {
     const sourceDocument = document.implementation.createHTMLDocument()
-    const init = vi.fn()
+    const init = vi.fn<() => void>()
     const sourceWindow = {
       location: { hostname: 'preview.example.test' },
       navigator: mobileNavigator,
@@ -22,7 +22,11 @@ describe('mobile development tools', () => {
     const script = sourceDocument.getElementById('spiroanim-eruda') as HTMLScriptElement
     expect(script.src).toBe('https://cdn.jsdelivr.net/npm/eruda')
 
-    sourceWindow.eruda = { init, show: vi.fn(), hide: vi.fn() }
+    sourceWindow.eruda = {
+      init,
+      show: vi.fn<() => void>(),
+      hide: vi.fn<() => void>(),
+    }
     script.onload?.(new Event('load'))
     expect(init).toHaveBeenCalledOnce()
   })

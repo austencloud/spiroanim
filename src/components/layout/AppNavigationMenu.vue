@@ -56,16 +56,6 @@
         </button>
         <template v-if="playerVisible">
           <button
-            class="menu-link menu-action tracer-menu-item"
-            type="button"
-            role="menuitem"
-            :aria-pressed="TRACER"
-            @click="toggleTracerMode"
-          >
-            <BaseIcon :path="tracerIcon" :size="22" />
-            <span>{{ tracerLabel }}</span>
-          </button>
-          <button
             class="menu-link menu-action export-image-menu-item"
             type="button"
             role="menuitem"
@@ -84,6 +74,16 @@
           >
             <BaseIcon :path="mdiMovieOpenOutline" :size="22" />
             <span>Export Video</span>
+          </button>
+          <button
+            class="menu-link menu-action tracer-menu-item"
+            type="button"
+            role="menuitem"
+            :aria-pressed="TRACER"
+            @click="toggleTracerMode"
+          >
+            <BaseIcon :path="tracerIcon" :size="22" />
+            <span>{{ tracerLabel }}</span>
           </button>
         </template>
       </section>

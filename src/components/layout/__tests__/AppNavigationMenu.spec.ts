@@ -104,9 +104,9 @@ describe('AppNavigationMenu', () => {
     expect(wrapper.findAll('[role="menuitem"]').map((item) => item.text())).toEqual([
       'Enter Full Screen',
       'Share This',
-      'Tracer: Off',
       'Export Image',
       'Export Video',
+      'Tracer: Off',
       'Home',
       'About',
     ])
@@ -152,13 +152,13 @@ describe('AppNavigationMenu', () => {
     expect(document.activeElement?.textContent).toContain('Share This')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
-    expect(document.activeElement?.textContent).toContain('Tracer: Off')
-
-    await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Export Image')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Export Video')
+
+    await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement?.textContent).toContain('Tracer: Off')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Home')
@@ -198,7 +198,7 @@ describe('AppNavigationMenu', () => {
     wrapper.unmount()
   })
 
-  it('opens image export settings beneath the tracer item', async () => {
+  it('places the tracer item beneath both export actions', async () => {
     const playerStore = usePlayerStore('main')
     playerStore.CANVAS_DIM = { width: 1280, height: 720 }
     const { wrapper } = await mountMenu()
@@ -209,8 +209,12 @@ describe('AppNavigationMenu', () => {
     const exportImageIndex = menuItems.findIndex((item) =>
       item.classes().includes('export-image-menu-item'),
     )
+    const exportVideoIndex = menuItems.findIndex((item) =>
+      item.classes().includes('export-video-menu-item'),
+    )
 
-    expect(exportImageIndex).toBe(tracerIndex + 1)
+    expect(exportVideoIndex).toBe(exportImageIndex + 1)
+    expect(tracerIndex).toBe(exportVideoIndex + 1)
     await wrapper.get('.export-image-menu-item').trigger('click')
 
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
@@ -311,9 +315,9 @@ describe('AppNavigationMenu', () => {
 
     expect(spiroAnimItems.map((item) => item.text())).toEqual([
       'Share This',
-      'Tracer: Off',
       'Export Image',
       'Export Video',
+      'Tracer: Off',
     ])
 
     await wrapper.get('.share-menu-item').trigger('click')
@@ -388,9 +392,9 @@ describe('AppNavigationMenu', () => {
     expect(wrapper.find('.fullscreen-menu-item').exists()).toBe(false)
     expect(wrapper.findAll('[role="menuitem"]').map((item) => item.text())).toEqual([
       'Share This',
-      'Tracer: Off',
       'Export Image',
       'Export Video',
+      'Tracer: Off',
       'Home',
       'About',
     ])
