@@ -203,11 +203,11 @@ describe('AnimTimeline', () => {
     await nextTick()
 
     const thumbs = wrapper.findAll('img.thumb')
-    await thumbs[4]!.trigger('click', { shiftKey: true })
+    await thumbs[3]!.trigger('click', { shiftKey: true })
 
     expect(store.SELECTION).toBe(true)
     expect(store.SELECTED).toEqual([2, 4])
-    expect(runtime.CURRENT.value).toBe(4000)
+    expect(runtime.CURRENT.value).toBe(3000)
 
     await thumbs[1]!.trigger('click')
     expect(store.SELECTED).toEqual([1, 2])
@@ -220,6 +220,12 @@ describe('AnimTimeline', () => {
 
     await thumbs[0]!.trigger('click', { shiftKey: true })
     expect(store.SELECTED).toEqual([0, 3])
+
+    store.SELECTION = false
+    runtime.CURRENT.value = 3000
+    await nextTick()
+    await thumbs[1]!.trigger('click', { shiftKey: true })
+    expect(store.SELECTED).toEqual([1, 4])
 
     wrapper.unmount()
     await flushPromises()

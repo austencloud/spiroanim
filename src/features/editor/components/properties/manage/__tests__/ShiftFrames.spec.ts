@@ -91,26 +91,57 @@ describe('ShiftFrames', () => {
     expect(ROOT.value.props[2]!.anim).toEqual(unselected)
   })
 
-  it('is disabled and changes nothing when any selected prop is not closed', async () => {
-    const storeId = 'shift-ineligible'
+  it('warns before shifting unmatched endpoints and can suppress the warning until remount', async () => {
+    const storeId = 'shift-unmatched'
     const player = usePlayerStore(storeId)
     const { ROOT } = player.raw()
-    ROOT.value = createRoot([closedFrames(), openFrames()])
+    ROOT.value = createRoot([openFrames()])
     player.PLAYING = false
 
     const properties = usePropertiesStore(storeId)
-    properties.pSELECTED = { 0: true, 1: true }
-    const original = structuredClone(ROOT.value.props)
+    properties.pSELECTED = { 0: true }
     await nextTick()
 
-    const wrapper = mount(ShiftFrames, {
+    let wrapper = mount(ShiftFrames, {
       global: { provide: { store: ref(storeId) } },
     })
     const link = wrapper.get('a')
-    expect(link.attributes('aria-disabled')).toBe('true')
-    await link.trigger('click')
+    expect(link.attributes('aria-disabled')).toBe('false')
+    expect(link.classes()).toContain('shift-link--warning')
 
-    expect(ROOT.value.props).toEqual(original)
+    const original = structuredClone(ROOT.value.props[0]!.anim)
+    await link.trigger('click')
+    expect(ROOT.value.props[0]!.anim).toEqual(original)
+    expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(true)
+
+    await wrapper.get('.shift-warning__cancel').trigger('click')
+    expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(false)
+    expect(ROOT.value.props[0]!.anim).toEqual(original)
+
+    await link.trigger('click')
+    await wrapper.get('.shift-warning__choice input').setValue(true)
+    await wrapper.get('.shift-warning__proceed').trigger('click')
+    await nextTick()
+
+    expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(false)
+    expect(ROOT.value.props[0]!.anim).not.toEqual(original)
+
+    ROOT.value = createRoot([openFrames()])
+    await nextTick()
+    const resetOpenFrames = structuredClone(ROOT.value.props[0]!.anim)
+    await link.trigger('click')
+    await nextTick()
+    expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(false)
+    expect(ROOT.value.props[0]!.anim).not.toEqual(resetOpenFrames)
+
+    wrapper.unmount()
+    ROOT.value = createRoot([openFrames()])
+    await nextTick()
+    wrapper = mount(ShiftFrames, {
+      global: { provide: { store: ref(storeId) } },
+    })
+    await wrapper.get('a').trigger('click')
+    expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(true)
   })
 
   it('shifts only a closed timeline selection and preserves its outgoing boundary', async () => {

@@ -123,6 +123,26 @@ describe('shiftAnimationFrames', () => {
     expect(shiftAnimationFrames(frames, compiled)).toBeUndefined()
   })
 
+  it('can shift unmatched endpoints when explicitly allowed', () => {
+    const frames: AnimData[] = [
+      { arc: 0, beats: 2, scale: 8 },
+      { arc: 45, beats: 3, scale: 9 },
+      { arc: 45, beats: 4, scale: 10 },
+    ]
+    const compiled = compileFrames(frames)
+
+    const shifted = shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1, {
+      allowEndpointMismatch: true,
+      preserveFinalOutgoing: true,
+    })
+
+    expect(shifted).toBeDefined()
+    expect(compileFrames(shifted!).at(-1)).toMatchObject({
+      beats: compiled.at(-1)!.beats,
+      scale: compiled.at(-1)!.scale,
+    })
+  })
+
   it('shifts a closed range and preserves its outgoing boundary values', () => {
     const frames: AnimData[] = [
       { arc: 0, beats: 5, scale: 15, depth: -2, adjust: 5, move: [1, 0, 0] },

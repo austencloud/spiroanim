@@ -449,7 +449,7 @@ function thumbClick(index: number, event: MouseEvent | KeyboardEvent) {
       ? index < anchor
         ? selectedEnd
         : Math.min(index + 1, UTIMES.value.length - 1)
-      : anchor
+      : Math.min(Math.max(anchor, index) + 1, UTIMES.value.length - 1)
     SELECTION.value = true
     SELECTED.value[0] = Math.min(anchor, index)
     SELECTED.value[1] = Math.max(end, index)

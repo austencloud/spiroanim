@@ -8,6 +8,7 @@ const endpointTolerance = 1e-6
 const integerSnapTolerance = 1e-9
 
 export interface ShiftAnimationRangeOptions {
+  allowEndpointMismatch?: boolean
   preserveFinalOutgoing?: boolean
 }
 
@@ -106,7 +107,8 @@ export const shiftAnimationFrameRange = (
     compiled.length !== frames.length ||
     startIndex < 0 ||
     endIndex >= frames.length ||
-    !animationRangeEndpointsAlign(compiled, startIndex, endIndex)
+    (!options.allowEndpointMismatch &&
+      !animationRangeEndpointsAlign(compiled, startIndex, endIndex))
   ) {
     return undefined
   }
@@ -229,8 +231,9 @@ export const shiftAnimationFrameRange = (
   })
 
   if (
-    !vectorsAlign(position.toArray(), shiftedFirstPosition.toArray()) ||
-    !vectorsAlign(rotation.toArray(), shiftedFirstRotation.toArray())
+    !options.allowEndpointMismatch &&
+    (!vectorsAlign(position.toArray(), shiftedFirstPosition.toArray()) ||
+      !vectorsAlign(rotation.toArray(), shiftedFirstRotation.toArray()))
   ) {
     return undefined
   }

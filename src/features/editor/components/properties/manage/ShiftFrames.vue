@@ -2,7 +2,13 @@
   <div class="shift-container">
     <AppTooltip>
       <template #activator="{ props: tooltipProps }">
-        <a v-bind="tooltipProps" href="#" :aria-disabled="!canShift" @click.prevent="clickShift">
+        <a
+          v-bind="tooltipProps"
+          href="#"
+          :aria-disabled="!canShift"
+          :class="{ 'shift-link--warning': canShift && endpointsMismatch }"
+          @click.prevent="clickShift"
+        >
           Shift
         </a>
       </template>
@@ -10,16 +16,38 @@
         <strong>Shift</strong><br />
         Moves the first animation interval of every selected prop or selected timeline range to the
         end.<br />
-        Existing position and rotation paths stay in place. Each prop must have matching compiled
-        position and rotation at its first and last frames. The final frame keeps its outgoing
+        Existing position and rotation paths stay in place when the first and last frames match. A
+        warning appears before shifting unmatched endpoints. The final frame keeps its outgoing
         properties.
       </template>
     </AppTooltip>
+    <BaseDialog
+      v-model="warningOpen"
+      class="shift-warning"
+      title="Shift unmatched endpoints?"
+      close-label="Close shift warning"
+    >
+      <p>
+        The first and last frames do not have matching positions and rotations. Shifting this
+        pattern may change its path in unexpected ways.
+      </p>
+      <label class="shift-warning__choice">
+        <input v-model="skipWarningChoice" type="checkbox" />
+        <span>Do not show again</span>
+      </label>
+      <div class="shift-warning__actions">
+        <button type="button" class="shift-warning__cancel" @click="cancelWarning">Cancel</button>
+        <button type="button" class="shift-warning__proceed" @click="confirmShift">
+          Shift anyway
+        </button>
+      </div>
+    </BaseDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import AppTooltip from '@/components/AppTooltip.vue'
+import BaseDialog from '@/components/ui/BaseDialog.vue'
 import { useProperties } from '@/features/editor/composables/useProperties'
 import {
   animationRangeEndpointsAlign,
@@ -34,6 +62,9 @@ const { ROOT, COMPILED } = playerStore.raw()
 const { PLAYING, SELECTION, SELECTED, UTIMES } = storeToRefs(playerStore)
 const { pSELECTED } = useProperties(store.value)
 const { propSelection } = useManageProperties(store.value)
+const warningOpen = ref(false)
+const skipWarningChoice = ref(false)
+const suppressMismatchWarning = ref(false)
 
 const selectedPropIndices = computed(() =>
   Object.keys(pSELECTED.value)
@@ -63,19 +94,29 @@ const shiftTargets = computed<ShiftTarget[]>(() => {
   return targets
 })
 
+const targetIsShiftable = ({ propIndex, startIndex, endIndex }: ShiftTarget) => {
+  const frames = COMPILED.value.props[propIndex]?.anim
+  return (
+    frames !== undefined &&
+    startIndex >= 0 &&
+    endIndex < frames.length &&
+    endIndex - startIndex >= 2
+  )
+}
+
 const canShift = computed(
   () =>
-    !PLAYING.value &&
-    shiftTargets.value.length > 0 &&
-    shiftTargets.value.every(({ propIndex, startIndex, endIndex }) => {
-      const frames = COMPILED.value.props[propIndex]?.anim
-      return frames !== undefined && animationRangeEndpointsAlign(frames, startIndex, endIndex)
-    }),
+    !PLAYING.value && shiftTargets.value.length > 0 && shiftTargets.value.every(targetIsShiftable),
 )
 
-const clickShift = async () => {
-  if (!canShift.value) return
+const endpointsMismatch = computed(() =>
+  shiftTargets.value.some(({ propIndex, startIndex, endIndex }) => {
+    const frames = COMPILED.value.props[propIndex]?.anim
+    return frames !== undefined && !animationRangeEndpointsAlign(frames, startIndex, endIndex)
+  }),
+)
 
+const performShift = async () => {
   const selectedTimes = SELECTION.value
     ? ([UTIMES.value[SELECTED.value[0]!], UTIMES.value[SELECTED.value[1]!]] as const)
     : undefined
@@ -86,7 +127,7 @@ const clickShift = async () => {
       COMPILED.value.props[propIndex]!.anim,
       startIndex,
       endIndex,
-      { preserveFinalOutgoing: true },
+      { allowEndpointMismatch: true, preserveFinalOutgoing: true },
     )
   })
   if (shiftedProps.some((frames) => frames === undefined)) return
@@ -107,6 +148,29 @@ const clickShift = async () => {
     if (startIndex >= 0 && endIndex >= 0) SELECTED.value = [startIndex, endIndex]
   }
 }
+
+const clickShift = async () => {
+  if (!canShift.value) return
+
+  if (endpointsMismatch.value && !suppressMismatchWarning.value) {
+    skipWarningChoice.value = false
+    warningOpen.value = true
+    return
+  }
+
+  await performShift()
+}
+
+const cancelWarning = () => {
+  warningOpen.value = false
+  skipWarningChoice.value = false
+}
+
+const confirmShift = async () => {
+  suppressMismatchWarning.value = skipWarningChoice.value
+  warningOpen.value = false
+  await performShift()
+}
 </script>
 
 <style scoped>
@@ -118,5 +182,64 @@ const clickShift = async () => {
   color: var(--color-text-muted);
   cursor: default;
   opacity: 0.65;
+}
+
+.shift-link--warning {
+  color: var(--color-text-muted);
+  opacity: 0.65;
+}
+
+:deep(.shift-warning .base-dialog__body) {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.shift-warning p {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.shift-warning__choice {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  font-weight: 700;
+}
+
+.shift-warning__choice input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--color-action-primary);
+}
+
+.shift-warning__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
+.shift-warning__actions button {
+  min-height: 2.75rem;
+  padding-inline: var(--space-4);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 750;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.shift-warning__actions .shift-warning__proceed {
+  color: var(--color-on-action-primary);
+  background: var(--color-action-primary);
+  border-color: var(--color-action-primary);
+}
+
+.shift-warning__actions button:focus-visible,
+.shift-warning__choice input:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
 }
 </style>
