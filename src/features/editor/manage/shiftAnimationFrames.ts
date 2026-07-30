@@ -7,20 +7,32 @@ import type { AnimData, AnimDataCompiled } from '@/types/AnimTypes'
 const endpointTolerance = 1e-6
 const integerSnapTolerance = 1e-9
 
+export interface ShiftAnimationRangeOptions {
+  preserveFinalOutgoing?: boolean
+}
+
 const vectorsAlign = (first: readonly number[], second: readonly number[]) =>
   first.length === second.length &&
   first.every((value, index) => Math.abs(value - second[index]!) <= endpointTolerance)
 
-export const animationEndpointsAlign = (frames: readonly AnimDataCompiled[]) => {
-  const first = frames[0]
-  const last = frames.at(-1)
+export const animationRangeEndpointsAlign = (
+  frames: readonly AnimDataCompiled[],
+  startIndex: number,
+  endIndex: number,
+) => {
+  const first = frames[startIndex]
+  const last = frames[endIndex]
   return (
+    endIndex - startIndex >= 2 &&
     first !== undefined &&
     last !== undefined &&
     vectorsAlign(first.pos, last.pos) &&
     vectorsAlign(first.rot, last.rot)
   )
 }
+
+export const animationEndpointsAlign = (frames: readonly AnimDataCompiled[]) =>
+  animationRangeEndpointsAlign(frames, 0, frames.length - 1)
 
 const snapNumber = (value: number) => {
   const nearestInteger = Math.round(value)
@@ -54,10 +66,10 @@ const signedRotationAround = (source: Vector3, target: Vector3, axis: Vector3, c
 
 const isZeroMove = (move: readonly number[]) => move.every((coordinate) => coordinate === 0)
 
-const compactFrames = (frames: readonly AnimData[]) =>
+const compactFrames = (frames: readonly AnimData[], preceding?: AnimDataCompiled) =>
   frames.map((frame, index) => {
     const compacted = { ...frame }
-    const previous = frames[index - 1]
+    const previous = index === 0 ? preceding : frames[index - 1]
 
     if (compacted.turns === (previous?.turns ?? 0)) delete compacted.turns
     if (compacted.beats === (previous?.beats ?? 1)) delete compacted.beats
@@ -78,30 +90,40 @@ const compactFrames = (frames: readonly AnimData[]) =>
 /**
  * Rotates a closed animation by one displayed interval.
  *
- * The first raw frame is not a segment arriving from another frame; it establishes
- * the initial compiled position and rotation from the application's fixed basis.
- * Shift therefore rebuilds that frame and recalculates its relative angles from
- * the compiled axes so every visible spatial path stays intact.
+ * The first frame in the shifted range is rebuilt from the preceding compiled
+ * state, or from the application's fixed basis when the range begins at frame 0.
+ * Relative angles are recalculated from compiled axes so every visible spatial
+ * path stays intact.
  */
-export const shiftAnimationFrames = (
+export const shiftAnimationFrameRange = (
   frames: readonly AnimData[],
   compiled: readonly AnimDataCompiled[],
+  startIndex: number,
+  endIndex: number,
+  options: ShiftAnimationRangeOptions = {},
 ): AnimData[] | undefined => {
   if (
-    frames.length < 3 ||
     compiled.length !== frames.length ||
-    !animationEndpointsAlign(compiled)
+    startIndex < 0 ||
+    endIndex >= frames.length ||
+    !animationRangeEndpointsAlign(compiled, startIndex, endIndex)
   ) {
     return undefined
   }
-
-  const lastIndex = frames.length - 1
-  const targetIndices = [...Array.from({ length: lastIndex }, (_, index) => index + 1), 1]
 
   const position = InitialPoint.clone()
   const positionReference = InitialOrtho.clone()
   const rotation = InitialPoint.clone()
   const rotationReference = InitialOrtho.clone()
+
+  const rangeLength = endIndex - startIndex + 1
+  const lastOutputIndex = rangeLength - 1
+  const targetIndices = [
+    ...Array.from({ length: lastOutputIndex }, (_, index) => startIndex + index + 1),
+    startIndex + 1,
+  ]
+  const preserveFinalOutgoing = options.preserveFinalOutgoing ?? false
+  const originalEnd = compiled[endIndex]!
 
   const targetPosition = new Vector3()
   const targetRotation = new Vector3()
@@ -114,9 +136,22 @@ export const shiftAnimationFrames = (
   const shiftedFirstPosition = new Vector3()
   const shiftedFirstRotation = new Vector3()
 
+  if (startIndex > 0) {
+    const preceding = compiled[startIndex - 1]!
+    position.fromArray(preceding.pos)
+    positionReference
+      .copy(position)
+      .applyAxisAngle(targetPositionAxis.fromArray(preceding.posx), Math.PI / 2)
+    rotation.fromArray(preceding.rot)
+    rotationReference
+      .copy(rotation)
+      .applyAxisAngle(targetRotationAxis.fromArray(preceding.rotx), Math.PI / 2)
+  }
+
   const shifted = targetIndices.map((targetIndex, outputIndex): AnimData => {
     const target = compiled[targetIndex]!
     const rebuildStart = outputIndex === 0
+    const preserveOutgoing = preserveFinalOutgoing && outputIndex === lastOutputIndex
     targetPosition.fromArray(target.pos)
     targetRotation.fromArray(target.rot)
 
@@ -162,26 +197,30 @@ export const shiftAnimationFrames = (
           )
         : target.adjust
 
-    const beatsSourceIndex = outputIndex < lastIndex - 1 ? outputIndex + 1 : 0
     const move =
       outputIndex === 0
         ? ([
-            compiled[0]!.move[0] + compiled[1]!.move[0],
-            compiled[0]!.move[1] + compiled[1]!.move[1],
-            compiled[0]!.move[2] + compiled[1]!.move[2],
+            compiled[startIndex]!.move[0] + compiled[startIndex + 1]!.move[0],
+            compiled[startIndex]!.move[1] + compiled[startIndex + 1]!.move[1],
+            compiled[startIndex]!.move[2] + compiled[startIndex + 1]!.move[2],
           ] satisfies [number, number, number])
-        : ([...target.move] satisfies [number, number, number])
+        : preserveOutgoing
+          ? ([0, 0, 0] satisfies [number, number, number])
+          : ([...target.move] satisfies [number, number, number])
 
     return {
       turns: snapNumber(
         MathUtils.radToDeg(rotationRadians) -
           (target.type === TTYPE.SPHE ? MathUtils.radToDeg(arcRadians) : 0),
       ),
-      beats: compiled[beatsSourceIndex]!.beats,
-      scale: target.scale,
-      depth: target.depth,
+      beats: preserveOutgoing
+        ? originalEnd.beats
+        : compiled[outputIndex < lastOutputIndex - 1 ? startIndex + outputIndex + 1 : startIndex]!
+            .beats,
+      scale: preserveOutgoing ? originalEnd.scale : target.scale,
+      depth: preserveOutgoing ? originalEnd.depth : target.depth,
       type: target.type,
-      adjust: snapNumber(adjust),
+      adjust: snapNumber(preserveOutgoing ? originalEnd.adjust : adjust),
       arc: snapNumber(MathUtils.radToDeg(arcRadians)),
       plane: snapSignedAngle(planeRadians),
       axis: snapSignedAngle(axisRadians),
@@ -196,5 +235,10 @@ export const shiftAnimationFrames = (
     return undefined
   }
 
-  return compactFrames(shifted)
+  return compactFrames(shifted, startIndex > 0 ? compiled[startIndex - 1] : undefined)
 }
+
+export const shiftAnimationFrames = (
+  frames: readonly AnimData[],
+  compiled: readonly AnimDataCompiled[],
+): AnimData[] | undefined => shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1)

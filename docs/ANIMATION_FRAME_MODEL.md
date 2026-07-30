@@ -214,6 +214,32 @@ When several props are selected, eligibility and reconstruction are calculated f
 before any root data is changed. The UI applies the results atomically; one ineligible selected
 prop disables the operation for all selected props.
 
+### Timeline selections
+
+When timeline selection mode is active, Shift operates only on each selected prop's frames within
+the selected time range. That range must contain at least three frames and its compiled first and
+last position and rotation must match, just like a complete animation.
+
+A selected range can begin after frame 0. Its reconstructed first frame therefore starts from the
+preceding compiled frame and the position and rotation references transported by that frame. The
+shifted raw range is compacted against the preceding frame's effective inherited values, not
+against first-frame defaults.
+
+The selected loop's final position and rotation move with the shifted loop. Values used as the
+starting state of the following, unselected interval retain their original final-range values:
+
+- `beats`
+- `scale`
+- `depth`
+- `adjust`
+- cumulative `move`
+
+The old final `move` delta has already moved earlier in the shifted range, so the new final frame
+uses a zero delta to keep the cumulative offset at the following frame unchanged. Rotating the
+visible durations preserves the selection's total duration, and retaining the final outgoing
+`beats` value keeps every later frame at its original timeline time. After timing is recalculated,
+the selection handles are restored to those same boundary times.
+
 ## Closure scope and unavoidable seam differences
 
 Shift intentionally gates on compiled position and base rotation because those are the requested
@@ -237,6 +263,7 @@ Shift tests cover:
 - Preservation of incoming `posx` and `rotx` segment axes.
 - Rotation of segment durations.
 - Cumulative move handling.
+- Closed timeline-range shifting and preservation of its outgoing boundary values.
 - Sparse raw output.
 - Atomic multi-prop behavior.
 - A two-prop VTG pattern through query-string encode/decode.

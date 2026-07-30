@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   animationEndpointsAlign,
+  animationRangeEndpointsAlign,
+  shiftAnimationFrameRange,
   shiftAnimationFrames,
 } from '@/features/editor/manage/shiftAnimationFrames'
 import { rootCompile } from '@/math/animation/AnimFunc'
@@ -119,5 +121,53 @@ describe('shiftAnimationFrames', () => {
 
     expect(animationEndpointsAlign(compiled)).toBe(false)
     expect(shiftAnimationFrames(frames, compiled)).toBeUndefined()
+  })
+
+  it('shifts a closed range and preserves its outgoing boundary values', () => {
+    const frames: AnimData[] = [
+      { arc: 0, beats: 5, scale: 15, depth: -2, adjust: 5, move: [1, 0, 0] },
+      { arc: 0, beats: 2, scale: 8, depth: 1, adjust: 10, move: [1, 0, 0] },
+      { arc: 90, beats: 3, scale: 9, depth: 2, adjust: 20, move: [2, 0, 0] },
+      {
+        arc: 90,
+        plane: 180,
+        beats: 7,
+        scale: 12,
+        depth: 4,
+        adjust: 30,
+        move: [3, 0, 0],
+      },
+      { arc: 45, beats: 11, scale: 14, depth: 6, adjust: 40, move: [4, 0, 0] },
+    ]
+    const original = compileFrames(frames)
+    expect(animationRangeEndpointsAlign(original, 1, 3)).toBe(true)
+
+    const shiftedRange = shiftAnimationFrameRange(frames, original, 1, 3, {
+      preserveFinalOutgoing: true,
+    })
+    expect(shiftedRange).toBeDefined()
+
+    const resultFrames = structuredClone(frames)
+    resultFrames.splice(1, 3, ...shiftedRange!)
+    const result = compileFrames(resultFrames)
+
+    expectVectorClose(result[1]!.pos, original[2]!.pos)
+    expectVectorClose(result[1]!.rot, original[2]!.rot)
+    expectVectorClose(result[2]!.pos, original[3]!.pos)
+    expectVectorClose(result[2]!.rot, original[3]!.rot)
+    expectVectorClose(result[3]!.pos, original[2]!.pos)
+    expectVectorClose(result[3]!.rot, original[2]!.rot)
+    expect(result[3]).toMatchObject({
+      beats: original[3]!.beats,
+      scale: original[3]!.scale,
+      depth: original[3]!.depth,
+      adjust: original[3]!.adjust,
+    })
+
+    const originalMove = original.slice(0, 4).reduce((total, frame) => total + frame.move[0], 0)
+    const resultMove = result.slice(0, 4).reduce((total, frame) => total + frame.move[0], 0)
+    expect(resultMove).toBe(originalMove)
+    expect(resultFrames[0]).toEqual(frames[0])
+    expect(resultFrames[4]).toEqual(frames[4])
   })
 })
