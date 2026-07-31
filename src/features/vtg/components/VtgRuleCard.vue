@@ -11,11 +11,16 @@
         data-role="vtg-rule-card"
       >
         <span class="vtg-rule-card__title">
-          <span v-for="label in props.labels" :key="label">{{ label }}</span>
+          <span v-for="(label, index) in visibleLabels" :key="index">{{ label }}</span>
         </span>
 
         <span class="vtg-rule-card__diagram" aria-hidden="true">
-          <span class="vtg-rule-card__divider" :style="dividerStyle" data-role="vtg-divider">
+          <span
+            v-if="props.showDivider"
+            class="vtg-rule-card__divider"
+            :style="dividerStyle"
+            data-role="vtg-divider"
+          >
             <span class="vtg-rule-card__divider-line" />
             <span class="vtg-rule-card__divider-end vtg-rule-card__divider-end--start" />
             <span class="vtg-rule-card__divider-end vtg-rule-card__divider-end--end" />
@@ -25,6 +30,7 @@
             v-for="(propPlacement, index) in props.diagram.props"
             :key="`prop-${index}`"
             class="vtg-rule-card__prop"
+            :class="`vtg-rule-card__prop--${propOrientation(propPlacement)}`"
             :style="propStyle(propPlacement)"
             data-role="vtg-prop"
           >
@@ -63,19 +69,27 @@ import type { VtgPropPlacement, VtgRuleDiagram, VtgRuleNumber } from '@/features
 const props = withDefaults(
   defineProps<{
     labels: readonly [string, string]
+    displayLabels?: readonly [string, string]
     number: VtgRuleNumber
     orientation: 'vertical' | 'horizontal'
     diagram: VtgRuleDiagram
     description: string
     accent?: boolean
+    showDivider?: boolean
   }>(),
   {
     accent: false,
+    showDivider: true,
   },
 )
 
+const visibleLabels = computed(() => props.displayLabels ?? props.labels)
+
+const propOrientation = (propPlacement: VtgPropPlacement) =>
+  propPlacement.orientation ?? props.orientation
+
 const propStyle = (propPlacement: VtgPropPlacement): CSSProperties =>
-  props.orientation === 'vertical'
+  propOrientation(propPlacement) === 'vertical'
     ? {
         insetBlockStart: `${propPlacement.start}%`,
         insetInlineStart: `${propPlacement.lane}%`,
@@ -241,12 +255,12 @@ const dividerStyle = computed<CSSProperties>(() =>
   opacity: 0.9;
 }
 
-.vtg-rule-card--vertical .vtg-rule-card__prop {
+.vtg-rule-card__prop--vertical {
   inline-size: var(--vtg-diagram-line-width);
   transform: translateX(-50%);
 }
 
-.vtg-rule-card--horizontal .vtg-rule-card__prop {
+.vtg-rule-card__prop--horizontal {
   block-size: var(--vtg-diagram-line-width);
   transform: translateY(-50%);
 }
@@ -259,21 +273,21 @@ const dividerStyle = computed<CSSProperties>(() =>
   transform: translate(-50%, -50%);
 }
 
-.vtg-rule-card--vertical .vtg-rule-card__prop-handle {
+.vtg-rule-card__prop--vertical .vtg-rule-card__prop-handle {
   inset-block-start: 0;
   inset-inline-start: 50%;
 }
 
-.vtg-rule-card--vertical .vtg-rule-card__prop-handle--end {
+.vtg-rule-card__prop--vertical .vtg-rule-card__prop-handle--end {
   inset-block-start: 100%;
 }
 
-.vtg-rule-card--horizontal .vtg-rule-card__prop-handle {
+.vtg-rule-card__prop--horizontal .vtg-rule-card__prop-handle {
   inset-block-start: 50%;
   inset-inline-start: 0;
 }
 
-.vtg-rule-card--horizontal .vtg-rule-card__prop-handle--end {
+.vtg-rule-card__prop--horizontal .vtg-rule-card__prop-handle--end {
   inset-inline-start: 100%;
 }
 

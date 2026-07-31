@@ -1,4 +1,4 @@
-import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { createDefaultVtgAnimation, removeVtgQuarterArc } from '@/features/vtg/createVtgAnimation'
 import type {
   VtgCellReference,
   VtgPatternMatch,
@@ -13,7 +13,7 @@ const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber
 const booleanOptions = [false, true] as const
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 
-type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale'>
+type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale' | 'quarters' | 'quartersAfterSwap'>
 
 let candidateCache: ReadonlyMap<string, readonly VtgCandidateMatch[]> | undefined
 
@@ -96,7 +96,7 @@ const buildCandidateCache = () => {
   return candidates
 }
 
-export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPatternMatch[] => {
+const findBaseVtgPatternMatches = (animation: RootDataFinal): readonly VtgPatternMatch[] => {
   const scale = getScale(animation)
   if (scale === undefined) return []
 
@@ -106,9 +106,26 @@ export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPat
   const candidates = candidateCache ?? buildCandidateCache()
   return (candidates.get(signature) ?? []).map((candidate) => ({
     ...candidate,
+    quarters: false,
+    quartersAfterSwap: false,
     bpm: animation.bpm,
     scale,
   }))
+}
+
+export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPatternMatch[] => {
+  const directMatches = findBaseVtgPatternMatches(animation)
+  if (directMatches.length > 0) return directMatches
+
+  return ([0, 1] as const).flatMap((propIndex) =>
+    findBaseVtgPatternMatches(removeVtgQuarterArc(animation, propIndex))
+      .filter((match) => propIndex === 0 || match.swapProps)
+      .map((match) => ({
+        ...match,
+        quarters: true,
+        quartersAfterSwap: match.swapProps && propIndex === 0,
+      })),
+  )
 }
 
 /**

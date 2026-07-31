@@ -450,10 +450,10 @@ history slot. Controls that make one discrete write generally do not need groupi
 Since undo snapshots are query strings, fields omitted by the V1 format are also omitted from undo
 snapshots. Query format coverage therefore defines undo coverage.
 
-## VTG controls are a separate property path
+## Concept controls are a separate property path
 
-The VTG panel does not use `PropertyPanel`, `DynamicVal`, or `useProperties.constraints()`.
-`VtgPane.vue` uses native controls and passes a `VtgPatternSelection` to the VTG builder.
+The Concepts pane does not use `PropertyPanel`, `DynamicVal`, or `useProperties.constraints()`.
+Its VTG panel uses native controls and sends a `VtgPatternSelection` to the VTG builder.
 
 Current VTG numeric behavior is:
 
@@ -482,13 +482,37 @@ VTG matching compiles geometry and identifies Scale from the first frame's inter
 Distance is not part of the VTG geometry signature, so a distance mismatch does not by itself stop
 a pattern match.
 
+The VTG `Quarters` option adds 90 degrees to the original first animation track's first-frame arc.
+Without Swap this is `props[0].anim[0].arc`; with Swap the adjusted track moves intact to `props[1]`.
+The temporary `Quarters After Swap` experiment changes that ordering: when enabled, Quarters
+instead adjusts output track `props[0]` after Swap has run. The two modes are identical when Swap is
+off. Matching recognizes both observable modes so a loaded or shared animation restores the toggle.
+VTG previews include the same transform, and VTG matching tries the corresponding track before
+using the shared VTG matcher so the selected cell and options can be recovered from loaded animation
+data. Quarters matrix and header display labels are configured separately in
+`vtgQuarterLabels.ts`; blank display labels do not replace the canonical VTG descriptions used for
+matching, tooltips, and accessibility. Quarters also hides every header divider, including rule 5's
+offset divider, without hiding the prop diagram.
+
+While Quarters is active, each left-header prop diagram is recalculated from the first compiled
+frame of the first cell in that row (`1-1` through `1-6`). The closest cardinal direction of `pos`
+selects top, right, bottom, or left. The sign of `pos dot rot` selects out or in. Placements reuse
+the exact bounds demonstrated by left rule 2 for left/right and bottom rule 2 for top/bottom. Swap
+and Reverse participate in this calculation; controls that do not change first-frame geometry do
+not.
+
+Each Quarters bottom-header prop diagram is also recalculated from its column's row-6 pattern.
+Columns 1-4 and 6 use compiled frame 4; column 5 uses compiled frame 2. These are one-based editor
+frame numbers. Anti also participates for the special row-6 Spin/Anti cells, along with Swap,
+Reverse, and the experimental Quarters ordering.
+
 ## How to change a slider safely
 
 Before changing a slider, answer these questions in order:
 
 1. **What value is the user controlling?** Is it the stored property itself, a relative delta, or
    a feature-level input that derives several stored properties?
-2. **Which UI owns it?** Editor property controls and VTG controls use different pipelines.
+2. **Which UI owns it?** Editor property controls and concept controls use different pipelines.
 3. **What are the stored units?** Scale and Depth are displayed as tenths but stored as integers;
    angles are stored in degrees.
 4. **Should the control round, floor, or preserve fractions?** Make this explicit before the query

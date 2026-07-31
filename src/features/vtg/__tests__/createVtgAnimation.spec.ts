@@ -114,6 +114,50 @@ describe('createVtgAnimation', () => {
     expect(createVtgAnimation(createCurrentAnimation(), selection)?.props[0]?.anim).toHaveLength(5)
   })
 
+  it('adds 90 degrees to only the first prop first-frame arc for Quarters', () => {
+    const selection = {
+      reference: '1-6',
+      speedRatio: '1:1',
+    } as const
+    const standard = createVtgAnimation(createCurrentAnimation(), selection)
+    const quarters = createVtgAnimation(createCurrentAnimation(), { ...selection, quarters: true })
+
+    expect(quarters?.props[0]?.anim[0]?.arc).toBe((standard?.props[0]?.anim[0]?.arc ?? 0) + 90)
+    expect(quarters?.props[0]?.anim.slice(1)).toEqual(standard?.props[0]?.anim.slice(1))
+    expect(quarters?.props[1]?.anim).toEqual(standard?.props[1]?.anim)
+  })
+
+  it('keeps the Quarters adjustment on its original track when Swap is enabled', () => {
+    const selection = {
+      reference: '2-1',
+      speedRatio: '1:3',
+      quarters: true,
+    } as const
+    const quarters = createVtgAnimation(createCurrentAnimation(), selection)
+    const swapped = createVtgAnimation(createCurrentAnimation(), { ...selection, swapProps: true })
+
+    expect(swapped?.props[0]?.anim).toEqual(quarters?.props[1]?.anim)
+    expect(swapped?.props[1]?.anim).toEqual(quarters?.props[0]?.anim)
+  })
+
+  it('can apply the Quarters adjustment after Swap for comparison', () => {
+    const selection = {
+      reference: '2-1',
+      speedRatio: '1:3',
+      swapProps: true,
+    } as const
+    const swapped = createVtgAnimation(createCurrentAnimation(), selection)
+    const experimental = createVtgAnimation(createCurrentAnimation(), {
+      ...selection,
+      quarters: true,
+      quartersAfterSwap: true,
+    })
+
+    expect(experimental?.props[0]?.anim[0]?.arc).toBe((swapped?.props[0]?.anim[0]?.arc ?? 0) + 90)
+    expect(experimental?.props[0]?.anim.slice(1)).toEqual(swapped?.props[0]?.anim.slice(1))
+    expect(experimental?.props[1]?.anim).toEqual(swapped?.props[1]?.anim)
+  })
+
   it('uses player VTG settings with preview-only visibility and thickness overrides', () => {
     const preview = createVtgPreviewAnimation({
       reference: '1-6',

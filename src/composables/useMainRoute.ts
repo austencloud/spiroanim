@@ -10,7 +10,7 @@ import type { ConceptKey } from '@/features/concepts/types'
 import { findKeyByValue } from '@/utils/UtilFunc'
 //import { encodeReadable } from '@/func/AnimReadableFunc'
 
-const routeKeys = ['play', 'time', 'edit', 'cnc', 'vtg', 'qst'] as const
+const routeKeys = ['play', 'time', 'edit', 'cnc', 'vtg'] as const
 
 const shortToView = {
   play: 'player',
@@ -18,7 +18,6 @@ const shortToView = {
   time: 'timeline',
   cnc: 'concepts',
   vtg: 'concepts',
-  qst: 'concepts',
 } as const
 
 type MainView = (typeof viewKeysMain)[number]
@@ -30,14 +29,13 @@ const fullToView = {
   timeline: 'timeline',
   concepts: 'concepts',
   vtg: 'concepts',
-  qst: 'concepts',
 } as const satisfies Record<string, MainView>
 
 type FullKey = keyof typeof fullToView
 
 const isShortKey = (value: string): value is ShortKey => value in shortToView
 const isFullKey = (value: string): value is FullKey => value in fullToView
-const isConceptKey = (value: string): value is ConceptKey => value === 'vtg' || value === 'qst'
+const isConceptKey = (value: string): value is ConceptKey => value === 'vtg'
 
 // Build all combo's for the two panes (also used in router/index.ts)
 export const paneSplits: string[] = routeKeys.flatMap((a) =>

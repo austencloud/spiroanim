@@ -30,20 +30,14 @@ describe('useConceptsStore', () => {
     localStorage.clear()
   })
 
-  it('defaults to VTG and persists the last selected pattern', () => {
-    const first = mountStore()
+  it('defaults to VTG', () => {
+    const { app, store } = mountStore()
 
-    expect(first.store.selectedConcept).toBe('vtg')
-    first.store.selectedConcept = 'qst'
-    first.app.unmount()
-
-    const second = mountStore()
-
-    expect(second.store.selectedConcept).toBe('qst')
-    second.app.unmount()
+    expect(store.selectedConcept).toBe('vtg')
+    app.unmount()
   })
 
-  it('resets an unsupported persisted pattern to VTG', () => {
+  it('resets an unsupported persisted concept to VTG', () => {
     localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: 'unknown' }))
 
     const { app, store } = mountStore()

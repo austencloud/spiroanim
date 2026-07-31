@@ -152,6 +152,10 @@ describe('SpiroAnim view', () => {
 
     expect(playerRoot.value).toEqual(expectedOneToThree)
 
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]').setValue(true)
+
+    expect(playerRoot.value.props.map((prop) => prop.anim[0]?.arc)).toEqual([180, 90])
+
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)
   })

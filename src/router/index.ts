@@ -3,15 +3,7 @@ import { createRouter, type RouteRecordRaw, type RouterHistory } from 'vue-route
 import { paneSplits } from '@/composables/useMainRoute'
 import { isBrowserSupported } from '@/services/browserSupport'
 
-const appRouteAliases = [
-  '/player',
-  '/timeline',
-  '/editor',
-  '/concepts',
-  '/vtg',
-  '/qst',
-  ...paneSplits,
-]
+const appRouteAliases = ['/player', '/timeline', '/editor', '/concepts', '/vtg', ...paneSplits]
 
 const routes: RouteRecordRaw[] = [
   {

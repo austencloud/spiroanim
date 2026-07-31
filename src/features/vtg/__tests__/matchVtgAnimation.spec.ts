@@ -43,7 +43,11 @@ describe('VTG animation matching', () => {
                 } satisfies VtgPatternSelection
                 const matches = findVtgPatternMatches(createAnimation(selection))
 
-                expect(matches).toContainEqual(selection)
+                expect(matches).toContainEqual({
+                  ...selection,
+                  quarters: false,
+                  quartersAfterSwap: false,
+                })
               }
             }
           }
@@ -63,7 +67,29 @@ describe('VTG animation matching', () => {
       scale: 0.6,
     } as const satisfies VtgPatternSelection
 
-    expect(findVtgPatternMatch(createAnimation(selection))).toEqual(selection)
+    expect(findVtgPatternMatch(createAnimation(selection))).toEqual({
+      ...selection,
+      quarters: false,
+      quartersAfterSwap: false,
+    })
+  })
+
+  it('recognizes the Quarters transform', () => {
+    const selection = {
+      reference: '3-4',
+      speedRatio: '1:5',
+      quarters: true,
+    } as const satisfies VtgPatternSelection
+
+    expect(findVtgPatternMatch(createAnimation(selection))).toEqual({
+      ...selection,
+      isAnti: false,
+      swapProps: false,
+      reversePlane: false,
+      bpm: 120,
+      scale: 0.8,
+      quartersAfterSwap: false,
+    })
   })
 
   it('recognizes a pattern regardless of non-pattern animation settings', () => {
@@ -148,6 +174,7 @@ describe('VTG animation matching', () => {
       isAnti: true,
       swapProps: true,
       reversePlane: true,
+      quarters: true,
       bpm: 101,
       scale: 1.2,
     } as const satisfies VtgPatternSelection
@@ -155,7 +182,25 @@ describe('VTG animation matching', () => {
     const query = codec.encodeQS(createAnimation(selection), false)
     const decoded = await codec.decodeVer(query)
 
-    expect(findVtgPatternMatch(decoded)).toEqual(selection)
+    expect(findVtgPatternMatch(decoded)).toEqual({ ...selection, quartersAfterSwap: false })
+  })
+
+  it('recovers the experimental Quarters-after-Swap transform', () => {
+    const selection = {
+      reference: '2-1',
+      speedRatio: '1:3',
+      swapProps: true,
+      quarters: true,
+      quartersAfterSwap: true,
+    } as const satisfies VtgPatternSelection
+
+    expect(findVtgPatternMatch(createAnimation(selection))).toEqual({
+      ...selection,
+      isAnti: false,
+      reversePlane: false,
+      bpm: 120,
+      scale: 0.8,
+    })
   })
 
   it('prefers unchecked controls when a transform has no observable effect', () => {

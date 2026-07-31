@@ -11,9 +11,7 @@ export const useConceptsStore = defineStore(
     persist: {
       pick: ['selectedConcept'],
       afterHydrate: ({ store }) => {
-        if (store.selectedConcept !== 'vtg' && store.selectedConcept !== 'qst') {
-          store.selectedConcept = 'vtg'
-        }
+        if (store.selectedConcept !== 'vtg') store.selectedConcept = 'vtg'
       },
     },
   },

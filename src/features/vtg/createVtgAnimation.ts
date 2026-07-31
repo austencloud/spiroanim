@@ -7,6 +7,31 @@ import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 
 const vtgFrameCount = 5
 
+const shiftPropArc = (
+  animation: RootDataFinal,
+  propIndex: 0 | 1,
+  amount: number,
+): RootDataFinal => {
+  const prop = animation.props[propIndex]
+  const firstFrame = prop?.anim[0]
+  if (!prop || !firstFrame) return animation
+
+  return {
+    ...animation,
+    props: animation.props.map((candidate, index) =>
+      index === propIndex
+        ? {
+            ...prop,
+            anim: [{ ...firstFrame, arc: (firstFrame.arc ?? 0) + amount }, ...prop.anim.slice(1)],
+          }
+        : candidate,
+    ),
+  }
+}
+
+export const removeVtgQuarterArc = (animation: RootDataFinal, propIndex: 0 | 1): RootDataFinal =>
+  shiftPropArc(animation, propIndex, -90)
+
 const addDefaultFrames = (pattern: VtgReadableAnimation): VtgReadableAnimation => ({
   ...pattern,
   props: pattern.props.map((prop, index) => {
@@ -57,13 +82,20 @@ export const createVtgAnimation = (
   })
   const decoded = decodeReadable(mergeWithCurrentAnimation(current, pattern))
 
-  return {
+  const animation = {
     ...rootFinal(decoded),
     speed: pattern.speed ?? current.speed,
     type: pattern.type ?? current.type,
     turns: pattern.turns ?? current.turns,
     depth: pattern.depth ?? current.depth,
   }
+
+  if (!selection.quarters) return animation
+
+  // The experimental post-Swap mode adjusts output track 0. Otherwise,
+  // Quarters belongs to the original first track and Swap moves it to index 1.
+  const propIndex = selection.quartersAfterSwap ? 0 : selection.swapProps ? 1 : 0
+  return shiftPropArc(animation, propIndex, 90)
 }
 
 /**

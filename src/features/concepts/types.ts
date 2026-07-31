@@ -1,3 +1,3 @@
-export const conceptKeys = ['vtg', 'qst'] as const
+export const conceptKeys = ['vtg'] as const
 
 export type ConceptKey = (typeof conceptKeys)[number]

@@ -8,6 +8,7 @@
     :data-blank-height="blankHeight"
     :data-selected-cell="selectedCellReference"
     :data-speed-ratio="speedRatio"
+    data-concept="vtg"
   >
     <h1 id="vtg-pane-title" class="vtg-pane__visually-hidden">VTG generator</h1>
 
@@ -24,14 +25,16 @@
     <div class="vtg-board">
       <div class="vtg-sidebar" data-role="vtg-sidebar">
         <VtgRuleCard
-          v-for="rule in sideRules"
+          v-for="rule in displayedSideRules"
           :key="`side-${rule.number}`"
           :labels="rule.labels"
+          :display-labels="quarters ? vtgQuarterSideRuleLabels[rule.number] : undefined"
           :number="rule.number"
           :diagram="rule.diagram"
           :description="rule.description"
           orientation="horizontal"
           :accent="rule.number === selectedCell?.row"
+          :show-divider="!quarters"
         />
       </div>
 
@@ -60,7 +63,7 @@
                 data-role="vtg-tile"
                 @click="selectTile(tile)"
               >
-                {{ tile.label }}
+                {{ quarters ? vtgQuarterCellLabels[tile.reference] : tile.label }}
               </button>
               <button
                 v-if="tile.reference === selectedCellReference && isSpinToggleCell(tile.reference)"
@@ -118,14 +121,16 @@
 
       <div class="vtg-footer" data-role="vtg-footer">
         <VtgRuleCard
-          v-for="rule in bottomRules"
+          v-for="rule in displayedBottomRules"
           :key="`bottom-${rule.number}`"
           :labels="rule.labels"
+          :display-labels="quarters ? vtgQuarterBottomRuleLabels[rule.number] : undefined"
           :number="rule.number"
           :diagram="rule.diagram"
           :description="rule.description"
           orientation="vertical"
           :accent="rule.number === selectedCell?.column"
+          :show-divider="!quarters"
         />
       </div>
     </div>
@@ -186,6 +191,14 @@
         <input v-model="reversePlane" type="checkbox" data-role="vtg-reverse" />
         <span>Reverse</span>
       </label>
+      <label>
+        <input v-model="quarters" type="checkbox" data-role="vtg-quarters" />
+        <span>Quarters</span>
+      </label>
+      <label>
+        <input v-model="quartersAfterSwap" type="checkbox" data-role="vtg-quarters-after-swap" />
+        <span>Quarters After Swap</span>
+      </label>
       <button type="button" data-role="vtg-reset" @click="resetPatternControls">Reset</button>
     </fieldset>
   </section>
@@ -207,7 +220,17 @@ import {
   vtgScaleControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
+import {
+  vtgQuarterBottomRuleLabels,
+  vtgQuarterCellLabels,
+  vtgQuarterSideRuleLabels,
+} from '@/features/vtg/data/vtgQuarterLabels'
 import { findVtgPatternMatch, matchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
+import {
+  createVtgQuarterBottomDiagram,
+  createVtgQuarterSideDiagram,
+  vtgPropBounds,
+} from '@/features/vtg/math/createVtgQuarterHeaderDiagram'
 import type {
   VtgCellAddress,
   VtgCellReference,
@@ -259,6 +282,8 @@ const reversePlane = ref(false)
 const bpm = ref<number>(vtgBpmControl.default)
 const scale = ref<number>(vtgScaleControl.default)
 const thick = ref<number>(vtgThickControl.default)
+const quarters = ref(false)
+const quartersAfterSwap = ref(false)
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 let suppressPatternEmit = false
 let hydrationVersion = 0
@@ -318,6 +343,8 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (bpm.value !== vtgBpmControl.default) selection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
   if (thick.value !== vtgThickControl.default) selection.thick = thick.value
+  if (quarters.value) selection.quarters = true
+  if (quartersAfterSwap.value) selection.quartersAfterSwap = true
   lastEmittedSelection = selection
   emit('patternSelect', selection)
 }
@@ -355,12 +382,14 @@ const resetPatternControls = async () => {
   bpm.value = vtgBpmControl.default
   scale.value = vtgScaleControl.default
   thick.value = vtgThickControl.default
+  quarters.value = false
+  quartersAfterSwap.value = false
   await nextTick()
   suppressPatternEmit = false
   if (tile !== undefined) emitPatternSelection(tile)
 }
 
-watch([speedRatio, swapProps, reversePlane, bpm, scale, thick], () => {
+watch([speedRatio, swapProps, reversePlane, bpm, scale, thick, quarters, quartersAfterSwap], () => {
   if (suppressPatternEmit) return
 
   const tile = matrixTiles.find(({ reference }) => reference === selectedCellReference.value)
@@ -368,7 +397,10 @@ watch([speedRatio, swapProps, reversePlane, bpm, scale, thick], () => {
 })
 
 const hydratePatternControls = (animation: RootDataFinal) => {
-  if (lastEmittedSelection && matchesVtgSelection(animation, lastEmittedSelection)) {
+  const matchesLastSelection = lastEmittedSelection
+    ? matchesVtgSelection(animation, lastEmittedSelection)
+    : false
+  if (matchesLastSelection) {
     lastEmittedSelection = undefined
     return
   }
@@ -388,6 +420,8 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
+    quarters.value = match.quarters
+    quartersAfterSwap.value = match.quartersAfterSwap
   } else {
     selectedCell.value = undefined
     speedRatio.value = vtgDefaultSpeedRatio
@@ -397,6 +431,8 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     bpm.value = vtgBpmControl.default
     scale.value = vtgScaleControl.default
     thick.value = vtgThickControl.default
+    quarters.value = false
+    quartersAfterSwap.value = false
   }
 
   void nextTick(() => {
@@ -415,6 +451,8 @@ const selectInitialRandomPattern = () => {
   bpm.value = vtgBpmControl.default
   scale.value = vtgScaleControl.default
   thick.value = vtgThickControl.default
+  quarters.value = false
+  quartersAfterSwap.value = false
   selectRandomTile()
 
   void nextTick(() => {
@@ -439,13 +477,6 @@ const syncPatternControls = () => {
 
 watch([() => props.animationReady, () => props.animation], syncPatternControls)
 
-const propBounds = {
-  outerStart: 4,
-  beforeDivider: 41,
-  afterDivider: 59,
-  outerEnd: 96,
-} as const
-
 const createSplitDiagram = (
   firstLargeEnd: VtgPropPlacement['largeEnd'],
   secondLargeEnd: VtgPropPlacement['largeEnd'],
@@ -453,14 +484,14 @@ const createSplitDiagram = (
   props: [
     {
       lane: 50,
-      start: propBounds.outerStart,
-      end: propBounds.beforeDivider,
+      start: vtgPropBounds.outerStart,
+      end: vtgPropBounds.beforeDivider,
       largeEnd: firstLargeEnd,
     },
     {
       lane: 50,
-      start: propBounds.afterDivider,
-      end: propBounds.outerEnd,
+      start: vtgPropBounds.afterDivider,
+      end: vtgPropBounds.outerEnd,
       largeEnd: secondLargeEnd,
     },
   ],
@@ -470,8 +501,8 @@ const createParallelDiagram = (
   dividerSide: 'before' | 'after',
   largeEnd: VtgPropPlacement['largeEnd'],
 ): VtgRuleDiagram => {
-  const start = dividerSide === 'before' ? propBounds.outerStart : propBounds.afterDivider
-  const end = dividerSide === 'before' ? propBounds.beforeDivider : propBounds.outerEnd
+  const start = dividerSide === 'before' ? vtgPropBounds.outerStart : vtgPropBounds.afterDivider
+  const end = dividerSide === 'before' ? vtgPropBounds.beforeDivider : vtgPropBounds.outerEnd
 
   return {
     props: [
@@ -490,8 +521,8 @@ const diagrams = {
     props: [
       {
         lane: 50,
-        start: propBounds.outerStart,
-        end: propBounds.beforeDivider,
+        start: vtgPropBounds.outerStart,
+        end: vtgPropBounds.beforeDivider,
         largeEnd: 'start',
       },
       {
@@ -593,6 +624,38 @@ const sideRules: readonly VtgRuleSpec[] = [
   },
 ]
 
+const quarterDiagramOptions = computed(() => ({
+  speedRatio: speedRatio.value,
+  swapProps: swapProps.value,
+  reversePlane: reversePlane.value,
+  quartersAfterSwap: quartersAfterSwap.value,
+}))
+
+const displayedBottomRules = computed<readonly VtgRuleSpec[]>(() => {
+  if (!quarters.value) return bottomRules
+
+  return bottomRules.map((rule) => ({
+    ...rule,
+    diagram: createVtgQuarterBottomDiagram({
+      ...quarterDiagramOptions.value,
+      column: rule.number,
+      isAnti: isAnti.value,
+    }),
+  }))
+})
+
+const displayedSideRules = computed<readonly VtgRuleSpec[]>(() => {
+  if (!quarters.value) return sideRules
+
+  return sideRules.map((rule) => ({
+    ...rule,
+    diagram: createVtgQuarterSideDiagram({
+      ...quarterDiagramOptions.value,
+      row: rule.number,
+    }),
+  }))
+})
+
 const paneElement = ref<HTMLElement>()
 const blankWidth = ref(0)
 const blankHeight = ref(0)
@@ -606,6 +669,8 @@ const { previewUrls, requestPreviews } = useVtgPreviews({
   swapProps,
   reversePlane,
   scale,
+  quarters,
+  quartersAfterSwap,
 })
 
 let blankObserver: ResizeObserver | undefined
@@ -657,6 +722,8 @@ defineExpose({
   reversePlane,
   bpm,
   scale,
+  quarters,
+  quartersAfterSwap,
   previewUrls,
 })
 </script>
@@ -664,11 +731,9 @@ defineExpose({
 <style scoped>
 .vtg-pane {
   width: 100%;
-  height: 100%;
   min-inline-size: 0;
   min-block-size: 0;
   padding-block-end: var(--size-pane-switch-bottom-clearance);
-  overflow: auto;
   color: var(--color-text);
   background: transparent;
 }
@@ -677,7 +742,7 @@ defineExpose({
   display: grid;
   width: 100%;
   min-width: 20rem;
-  padding: var(--space-2);
+  padding: 0 var(--space-2) var(--space-1);
   margin: 0;
   border: 0;
   justify-items: center;
@@ -688,7 +753,7 @@ defineExpose({
   width: min(100%, 14rem);
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-1);
-  margin-block-start: var(--space-1);
+  margin-block-start: 0;
 }
 
 .vtg-speed-ratio__options label {
@@ -734,9 +799,10 @@ defineExpose({
 .vtg-pattern-options {
   display: flex;
   min-width: 20rem;
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2) 0;
   margin: 0;
   border: 0;
+  flex-wrap: wrap;
   gap: var(--space-2);
   justify-content: center;
 }
@@ -792,18 +858,19 @@ defineExpose({
 .vtg-slider-controls {
   display: flex;
   width: min(100%, 45rem);
-  padding: var(--space-3) var(--space-2) 0;
+  padding: var(--space-1) var(--space-2) 0;
   margin: 0 auto;
   border: 0;
   flex-wrap: wrap;
-  gap: var(--space-4);
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
 }
 
 .vtg-slider-controls label {
   display: grid;
   flex: 1 1 9rem;
   min-width: 9rem;
-  gap: var(--space-1);
+  gap: 0;
 }
 
 .vtg-slider-controls__label {
@@ -821,6 +888,7 @@ defineExpose({
 
 .vtg-slider-controls input {
   width: 100%;
+  margin-block: 0;
   cursor: pointer;
   accent-color: var(--color-action-primary);
 }

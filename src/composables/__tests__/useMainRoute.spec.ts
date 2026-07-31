@@ -70,26 +70,20 @@ describe('useMainRoute', () => {
       '/play-edit',
       '/play-cnc',
       '/play-vtg',
-      '/play-qst',
       '/time-play',
       '/time-edit',
       '/time-cnc',
       '/time-vtg',
-      '/time-qst',
       '/edit-play',
       '/edit-time',
       '/edit-cnc',
       '/edit-vtg',
-      '/edit-qst',
       '/cnc-play',
       '/cnc-time',
       '/cnc-edit',
       '/vtg-play',
       '/vtg-time',
       '/vtg-edit',
-      '/qst-play',
-      '/qst-time',
-      '/qst-edit',
     ])
   })
 
@@ -161,9 +155,9 @@ describe('useMainRoute', () => {
     expect(router.currentRoute.value.path).toBe('/play-vtg')
   })
 
-  it('maps a child concept route to the full-width Concepts pane', async () => {
+  it('maps the VTG concept route to the full-width Concepts pane', async () => {
     const { paneStore, conceptsStore, splitterStore } = await mountRoute(
-      '/qst',
+      '/vtg',
       createLoadedAnimation(),
     )
 
@@ -173,18 +167,18 @@ describe('useMainRoute', () => {
       timeline: 'hidden',
       concepts: 'right',
     })
-    expect(conceptsStore.selectedConcept).toBe('qst')
+    expect(conceptsStore.selectedConcept).toBe('vtg')
     expect(splitterStore.leftPerc).toBe(0)
   })
 
-  it('canonicalizes a generic Concepts route to the remembered child', async () => {
-    localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: 'qst' }))
+  it('canonicalizes a generic Concepts route and unsupported saved state to VTG', async () => {
+    localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: 'unknown' }))
 
     const { conceptsStore, router } = await mountRoute('/play-cnc', createLoadedAnimation())
     await flushPromises()
 
-    expect(conceptsStore.selectedConcept).toBe('qst')
-    expect(router.currentRoute.value.path).toBe('/play-qst')
+    expect(conceptsStore.selectedConcept).toBe('vtg')
+    expect(router.currentRoute.value.path).toBe('/play-vtg')
   })
 
   it('canonicalizes the full Concepts route to VTG when no child has been saved', async () => {
@@ -193,23 +187,5 @@ describe('useMainRoute', () => {
 
     expect(conceptsStore.selectedConcept).toBe('vtg')
     expect(router.currentRoute.value.path).toBe('/vtg')
-  })
-
-  it('lets an explicit child route override the remembered pattern', async () => {
-    localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: 'qst' }))
-
-    const { conceptsStore, router } = await mountRoute('/play-vtg', createLoadedAnimation())
-
-    expect(conceptsStore.selectedConcept).toBe('vtg')
-    expect(router.currentRoute.value.path).toBe('/play-vtg')
-  })
-
-  it('updates the layout URL when the selected pattern changes', async () => {
-    const { conceptsStore, router } = await mountRoute('/play-vtg', createLoadedAnimation())
-
-    conceptsStore.selectedConcept = 'qst'
-    await flushPromises()
-
-    expect(router.currentRoute.value.path).toBe('/play-qst')
   })
 })
