@@ -3,27 +3,46 @@
 import { useQSMainStore } from '@/stores/useQSMainStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
-import { useMainPaneStore } from '@/stores/useMainPaneStore'
+import { useMainPaneStore, viewKeysMain } from '@/stores/useMainPaneStore'
+import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import type { ConceptKey } from '@/features/concepts/types'
 
 import { findKeyByValue } from '@/utils/UtilFunc'
 //import { encodeReadable } from '@/func/AnimReadableFunc'
 
-const possib = ['play', 'time', 'edit', 'vtg'] as const
+const routeKeys = ['play', 'time', 'edit', 'cnc', 'vtg', 'qst'] as const
 
-// Build all combo's for the two panes (also used in router/index.ts)
-export const paneSplits: string[] = possib.flatMap((a) =>
-  possib.filter((b) => a !== b).map((b) => `/${a}-${b}`),
-)
-
-const shortTo = {
+const shortToView = {
   play: 'player',
   edit: 'editor',
   time: 'timeline',
-  vtg: 'vtg',
+  cnc: 'concepts',
+  vtg: 'concepts',
+  qst: 'concepts',
 } as const
 
-type shortKey = keyof typeof shortTo
-type PageNames = (typeof shortTo)[shortKey]
+type MainView = (typeof viewKeysMain)[number]
+type ShortKey = keyof typeof shortToView
+
+const fullToView = {
+  player: 'player',
+  editor: 'editor',
+  timeline: 'timeline',
+  concepts: 'concepts',
+  vtg: 'concepts',
+  qst: 'concepts',
+} as const satisfies Record<string, MainView>
+
+type FullKey = keyof typeof fullToView
+
+const isShortKey = (value: string): value is ShortKey => value in shortToView
+const isFullKey = (value: string): value is FullKey => value in fullToView
+const isConceptKey = (value: string): value is ConceptKey => value === 'vtg' || value === 'qst'
+
+// Build all combo's for the two panes (also used in router/index.ts)
+export const paneSplits: string[] = routeKeys.flatMap((a) =>
+  routeKeys.filter((b) => shortToView[a] !== shortToView[b]).map((b) => `/${a}-${b}`),
+)
 
 export function useMainRoute() {
   const qsStore = useQSMainStore()
@@ -37,34 +56,49 @@ export function useMainRoute() {
   const paneStore = useMainPaneStore()
   const { rotatePane, setViewInPane } = paneStore
   const { parents } = storeToRefs(paneStore)
+  const { selectedConcept } = storeToRefs(useConceptsStore())
 
   const router = useRouter()
   const route = useRoute()
   const animationReady = ref(route.query.r === undefined)
 
-  const page = route.path.substring(1) as PageNames
+  const page = route.path.substring(1)
 
   // Just in case something funky happened in the local storage
   if (!findKeyByValue(parents.value, 'left')) rotatePane('left')
   if (!findKeyByValue(parents.value, 'right')) rotatePane('right')
 
-  // Update panes and splitter for the requested page
-  if (page && (page as string) != 'app')
+  let shouldCanonicalizeConceptRoute = false
+
+  // Update panes, selected concept, and splitter for the requested page.
+  if (page && page !== 'app')
     if (page.includes('-')) {
       // '-' splits short versions of the views
       const parts = page.split('-')
-      const left = shortTo[parts[0] as shortKey]
-      const right = shortTo[parts[1] as shortKey]
+      const leftKey = parts[0]
+      const rightKey = parts[1]
 
-      if (left in parents.value) setViewInPane(left, 'left')
-      if (right in parents.value) setViewInPane(right, 'right')
+      if (leftKey && rightKey && isShortKey(leftKey) && isShortKey(rightKey)) {
+        const left = shortToView[leftKey]
+        const right = shortToView[rightKey]
 
-      if (leftPerc.value == 0 || leftPerc.value == 100) leftPerc.value = 50
-    } else if (parents.value[page]) {
-      // assume its the full view name
-      switch (parents.value[page]) {
+        if (isConceptKey(leftKey)) selectedConcept.value = leftKey
+        if (isConceptKey(rightKey)) selectedConcept.value = rightKey
+        shouldCanonicalizeConceptRoute = leftKey === 'cnc' || rightKey === 'cnc'
+
+        setViewInPane(left, 'left')
+        setViewInPane(right, 'right')
+
+        if (leftPerc.value == 0 || leftPerc.value == 100) leftPerc.value = 50
+      }
+    } else if (isFullKey(page)) {
+      const view = fullToView[page]
+      if (isConceptKey(page)) selectedConcept.value = page
+      shouldCanonicalizeConceptRoute = page === 'concepts'
+
+      switch (parents.value[view]) {
         case 'hidden':
-          setViewInPane(page, 'left')
+          setViewInPane(view, 'left')
         // fall through to apply leftPerc = 100
         case 'left':
           leftPerc.value = 100
@@ -89,16 +123,30 @@ export function useMainRoute() {
     (val) => (query = val),
   )
 
+  const shortForView = (view: MainView) => {
+    switch (view) {
+      case 'player':
+        return 'play'
+      case 'editor':
+        return 'edit'
+      case 'timeline':
+        return 'time'
+      case 'concepts':
+        return selectedConcept.value
+    }
+  }
+
   const updatePath = () => {
-    let newPath
+    let newPath: string | null = null
     const left = findKeyByValue(parents.value, 'left')
     const right = findKeyByValue(parents.value, 'right')
 
     //console.log('change', left, right)
 
-    if (leftPerc.value == 100) newPath = left
-    else if (leftPerc.value == 0) newPath = right
-    else newPath = findKeyByValue(shortTo, left) + '-' + findKeyByValue(shortTo, right)
+    if (leftPerc.value == 100 && left) newPath = left === 'concepts' ? selectedConcept.value : left
+    else if (leftPerc.value == 0 && right)
+      newPath = right === 'concepts' ? selectedConcept.value : right
+    else if (left && right) newPath = `${shortForView(left)}-${shortForView(right)}`
 
     if (newPath)
       router.replace({
@@ -109,22 +157,25 @@ export function useMainRoute() {
       })
   }
 
-  const showVtgForEmptyAnimation = () => {
+  const showConceptsForEmptyAnimation = () => {
     if (!animationReady.value || ROOT.value.props.length > 0) return false
 
     setViewInPane('player', 'left')
-    setViewInPane('vtg', 'right')
+    setViewInPane('concepts', 'right')
     leftPerc.value = 50
     return true
   }
 
-  const switchedToVtg = showVtgForEmptyAnimation()
+  const switchedToConcepts = showConceptsForEmptyAnimation()
 
-  // Update path if page is / or app, or the empty startup state changed the requested layout.
-  if (!page || (page as string) == 'app' || switchedToVtg) updatePath()
+  // Update generic concept routes to the selected child and keep startup routes canonical.
+  if (!page || page === 'app' || switchedToConcepts || shouldCanonicalizeConceptRoute) updatePath()
 
   // Watch for view/pane changes
   watch(parents, updatePath)
+
+  // The selected child is part of the shareable pane layout path.
+  watch(selectedConcept, updatePath)
 
   // Watch for "snap" values from the splitter
   watch(leftPerc, (nval, oval) => {
@@ -163,7 +214,7 @@ export function useMainRoute() {
       })
       .finally(() => {
         animationReady.value = true
-        if (showVtgForEmptyAnimation()) updatePath()
+        if (showConceptsForEmptyAnimation()) updatePath()
       })
   }
 

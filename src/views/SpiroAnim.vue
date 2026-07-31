@@ -34,13 +34,13 @@
         :dim="dTimeline"
         :landscape="isLandscape"
       />
-      <VtgPane
-        v-if="viewVisible.vtg"
-        ref="cVtg"
+      <ConceptsPane
+        v-if="viewVisible.concepts"
+        ref="cConcepts"
         :animation="ROOT"
         :animation-ready="animationReady"
-        data-type="vtg"
-        data-role="vtg-view"
+        data-type="concepts"
+        data-role="concepts-view"
         @pattern-select="applyVtgPattern"
       />
     </div>
@@ -65,7 +65,7 @@ import AppNavigationMenu from '@/components/layout/AppNavigationMenu.vue'
 import Player from '@/components/SpiroAnim/AnimPlayer.vue'
 import Editor from '@/components/SpiroAnim/AnimEditor.vue'
 import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
-import VtgPane from '@/features/vtg/components/VtgPane.vue'
+import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import type { VtgPatternSelection } from '@/features/vtg/types'
 
@@ -99,7 +99,7 @@ const {
   ePlayer,
   eEditor,
   eTimeline,
-  eVtg,
+  eConcepts,
   eLeft,
   eRight,
   eHidden,
@@ -109,13 +109,13 @@ const {
 const cPlayer = ref<ComponentPublicInstance>()
 const cEditor = ref<ComponentPublicInstance>()
 const cTimeline = ref<ComponentPublicInstance>()
-const cVtg = ref<ComponentPublicInstance>()
+const cConcepts = ref<ComponentPublicInstance>()
 
 // Supply root elements from components to Pane Store
 registerComponentEl(cPlayer, ePlayer)
 registerComponentEl(cEditor, eEditor)
 registerComponentEl(cTimeline, eTimeline)
-registerComponentEl(cVtg, eVtg)
+registerComponentEl(cConcepts, eConcepts)
 
 const applyVtgPattern = (selection: VtgPatternSelection) => {
   const animation = createVtgAnimation(ROOT.value, selection)

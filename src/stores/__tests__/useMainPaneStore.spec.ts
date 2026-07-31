@@ -32,13 +32,13 @@ describe('useMainPaneStore', () => {
   it('exports the view and pane keys with their default assignments', () => {
     const { app, store } = mountStore()
 
-    expect(viewKeysMain).toEqual(['player', 'editor', 'timeline', 'vtg'])
+    expect(viewKeysMain).toEqual(['player', 'editor', 'timeline', 'concepts'])
     expect(paneKeysMain).toEqual(['left', 'right', 'hidden'])
     expect(store.parents).toEqual({
       player: 'left',
       editor: 'hidden',
       timeline: 'hidden',
-      vtg: 'right',
+      concepts: 'right',
     })
 
     app.unmount()
@@ -53,7 +53,7 @@ describe('useMainPaneStore', () => {
       player: 'hidden',
       editor: 'left',
       timeline: 'hidden',
-      vtg: 'right',
+      concepts: 'right',
     })
     app.unmount()
   })
@@ -67,7 +67,7 @@ describe('useMainPaneStore', () => {
       player: 'right',
       editor: 'hidden',
       timeline: 'hidden',
-      vtg: 'left',
+      concepts: 'left',
     })
     app.unmount()
   })
@@ -94,7 +94,12 @@ describe('useMainPaneStore', () => {
     const { app, store } = mountStore()
     await nextTick()
 
-    expect(store.viewVisible).toEqual({ player: true, editor: false, timeline: false, vtg: true })
+    expect(store.viewVisible).toEqual({
+      player: true,
+      editor: false,
+      timeline: false,
+      concepts: true,
+    })
 
     store.paneVisible.left = false
     await nextTick()
@@ -117,10 +122,29 @@ describe('useMainPaneStore', () => {
       player: 'hidden',
       editor: 'left',
       timeline: 'right',
-      vtg: 'hidden',
+      concepts: 'hidden',
     })
     expect(store.paneVisible.left).toBe(true)
     expect(store.paneVisible.right).toBe(true)
+    app.unmount()
+  })
+
+  it('migrates the persisted VTG pane assignment to Concepts', () => {
+    localStorage.setItem(
+      'sa-panes-main',
+      JSON.stringify({
+        parents: { player: 'left', editor: 'hidden', timeline: 'hidden', vtg: 'right' },
+      }),
+    )
+
+    const { app, store } = mountStore(true)
+
+    expect(store.parents).toEqual({
+      player: 'left',
+      editor: 'hidden',
+      timeline: 'hidden',
+      concepts: 'right',
+    })
     app.unmount()
   })
 })

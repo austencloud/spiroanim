@@ -4,7 +4,7 @@ SpiroAnim selectively prerenders its public information pages during `npm run bu
 
 - `/` and `/index` contain the rendered landing page.
 - `/about` contains the rendered About page.
-- `/app` and its player, editor, timeline, and pane-layout aliases use a client-only shell.
+- `/app` and its player, editor, timeline, Concepts, and pane-layout aliases use a client-only shell.
 
 This is static-site generation rather than a continuously running server. It gives crawlers useful
 HTML for the small set of indexable pages without evaluating Three.js, editor state, PWA behavior,

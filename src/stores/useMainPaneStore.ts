@@ -9,7 +9,7 @@ import { createPaneStore } from '@/stores/createPaneStore'
  * Example:
  * <PlayerComponent ref="ePlayer" data-type="player" />
  */
-export const viewKeysMain = ['player', 'editor', 'timeline', 'vtg'] as const
+export const viewKeysMain = ['player', 'editor', 'timeline', 'concepts'] as const
 
 /**
  * Defines the available panes that views can be moved between.
@@ -27,7 +27,7 @@ export const viewKeysMain = ['player', 'editor', 'timeline', 'vtg'] as const
  *    <PlayerComponent ref="ePlayer" data-type="player" />
  *    <EditorComponent ref="eEditor" data-type="editor" />
  *    <TimelineComponent ref="eTimeline" data-type="timeline" />
- *    <VtgComponent ref="eVtg" data-type="vtg" />
+ *    <ConceptsComponent ref="eConcepts" data-type="concepts" />
  *    ```
  *
  * 2. Each **pane container** must use the appropriate `ref` so the system can insert views:
@@ -59,7 +59,11 @@ export const viewKeysMain = ['player', 'editor', 'timeline', 'vtg'] as const
  *   <PlayerComponent v-if="parents.player !== 'hidden'" ref="ePlayer" data-type="player" />
  *   <EditorComponent v-if="parents.editor !== 'hidden'" ref="eEditor" data-type="editor" />
  *   <TimelineComponent v-if="parents.timeline !== 'hidden'" ref="eTimeline" data-type="timeline" />
- *   <VtgComponent v-if="parents.vtg !== 'hidden'" ref="eVtg" data-type="vtg" />
+ *   <ConceptsComponent
+ *     v-if="parents.concepts !== 'hidden'"
+ *     ref="eConcepts"
+ *     data-type="concepts"
+ *   />
  * </div>
  * ```
  */
@@ -78,7 +82,16 @@ export const paneKeysMain = ['left', 'right', 'hidden'] as const
  *   paneStore.setViewInPane('editor', 'right')
  *   paneStore.rotatePane('left')
  */
-export const useMainPaneStore = createPaneStore('main', viewKeysMain, paneKeysMain, 'hidden', {
-  left: 'player',
-  right: 'vtg',
-})
+export const useMainPaneStore = createPaneStore(
+  'main',
+  viewKeysMain,
+  paneKeysMain,
+  'hidden',
+  {
+    left: 'player',
+    right: 'concepts',
+  },
+  {
+    vtg: 'concepts',
+  },
+)

@@ -110,10 +110,14 @@ describe('SpiroAnim view', () => {
     if (!hydratedVtg) throw new Error('Expected a supported VTG animation')
     playerRoot.value = hydratedVtg
 
-    useMainPaneStore().setViewInPane('vtg', 'left')
+    useMainPaneStore().setViewInPane('concepts', 'left')
     await flushPromises()
     expect(wrapper.get('[data-role="left-pane"]').text()).toContain('VTG')
-    expect(wrapper.get('[data-role="vtg-view"]').attributes('data-selected-cell')).toBe('5-6')
+    expect(
+      wrapper
+        .get('[data-role="concepts-view"] [data-role="vtg-pane"]')
+        .attributes('data-selected-cell'),
+    ).toBe('5-6')
     expect(wrapper.get<HTMLInputElement>('input[value="1:3"]').element.checked).toBe(true)
     expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Anti')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(true)

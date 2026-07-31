@@ -107,7 +107,8 @@ Production hosting must:
 - serve the generated directory index files so `/`, `/index`, and `/about` return their prerendered
   HTML;
 - serve the generated client-only directory index files for `/app`, `/player`, `/editor`,
-  `/timeline`, and the pane-layout aliases. A blanket rewrite to `/index.html` would replace this
+  `/timeline`, `/concepts`, `/vtg`, `/qst`, and the pane-layout aliases. A blanket rewrite to
+  `/index.html` would replace this
   separation and should not be used;
 - serve both web manifests as `application/manifest+json`;
 - revalidate HTML files, `/manifest.webmanifest`, `/manifest-dev.webmanifest`, and `/sw.js` rather

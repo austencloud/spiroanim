@@ -25,6 +25,7 @@
  * @param hiddenPane - The name of the pane used to "hide" views not currently shown
  * @param defaults - Mapping of visible panes to their initially assigned views
  *                   (e.g., `{ left: 'player', right: 'timeline' }`). All other views default to hidden.
+ * @param legacyViewKeys - Mapping from persisted view names that have been renamed to their current names.
  *
  * @returns A Pinia store instance with:
  *   - `parents`: A reactive map of each view's assigned pane
@@ -54,6 +55,7 @@ export function createPaneStore<
   paneKeys: Panes,
   hiddenPane: Hidden,
   defaults?: Partial<Record<Exclude<Panes[number], Hidden>, Views[number]>>,
+  legacyViewKeys?: Readonly<Record<string, Views[number]>>,
 ) {
   // Type of individual view name (e.g. 'player' | 'editor')
   type ElementType = Views[number]
@@ -230,7 +232,11 @@ export function createPaneStore<
             for (const view of viewKeys) migratedParents[view as ElementType] = hiddenPane
 
             for (const view of viewKeys) {
-              const pane = Reflect.get(hydratedParents, view)
+              const legacyPane = Object.entries(legacyViewKeys ?? {})
+                .filter(([, currentView]) => currentView === view)
+                .map(([legacyView]) => Reflect.get(hydratedParents, legacyView))
+                .find(isPaneKey)
+              const pane = Reflect.get(hydratedParents, view) ?? legacyPane
               if (isPaneKey(pane)) migratedParents[view as ElementType] = pane
             }
 
