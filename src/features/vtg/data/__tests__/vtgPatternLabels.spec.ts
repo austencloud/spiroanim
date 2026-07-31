@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Vector3 } from 'three'
 
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
-import { vtgColumnPatterns } from '@/features/vtg/data/patterns/columns'
+import { vtgRowPatterns } from '@/features/vtg/data/patterns/rows'
 import {
   describeVtgPatternLabel,
   vtgPatternLabelsByRow,
@@ -20,12 +20,12 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
 
 const expectedLabelsByRow = {
-  6: ['SO/TS', 'SS/TO', 'SO/TS', 'SS/TO', 'SO/TO', 'SS/TS'],
-  5: ['TS/SO', 'TO/SS', 'TS/SO', 'TO/SS', 'TS/SS', 'TO/SO'],
-  4: ['SO/SO', 'SS/SS', 'SO/SO', 'SS/SS', 'SO/SS', 'SS/SO'],
-  3: ['TS/TS', 'TO/TO', 'TS/TS', 'TO/TO', 'TS/TO', 'TO/TS'],
-  2: ['SO/SO', 'SS/SS', 'SO/SO', 'SS/SS', 'SO/SS', 'SS/SO'],
-  1: ['TS/TS', 'TO/TO', 'TS/TS', 'TO/TO', 'TS/TO', 'TO/TS'],
+  1: ['TS/TS', 'SO/SO', 'TS/TS', 'SO/SO', 'TS/SO', 'SO/TS'],
+  2: ['TO/TO', 'SS/SS', 'TO/TO', 'SS/SS', 'TO/SS', 'SS/TO'],
+  3: ['TS/TS', 'SO/SO', 'TS/TS', 'SO/SO', 'TS/SO', 'SO/TS'],
+  4: ['TO/TO', 'SS/SS', 'TO/TO', 'SS/SS', 'TO/SS', 'SS/TO'],
+  5: ['TS/TO', 'SO/SS', 'TS/TO', 'SO/SS', 'TS/SS', 'SO/TO'],
+  6: ['TO/TS', 'SS/SO', 'TO/TS', 'SS/SO', 'TO/SO', 'SS/TS'],
 } as const satisfies Readonly<Record<VtgRuleNumber, readonly VtgPatternLabel[]>>
 
 const expectedDescriptions = {
@@ -116,7 +116,7 @@ describe('VTG pattern labels', () => {
         const reference: VtgCellReference = `${column}-${row}`
         const expectedLabel = expectedLabelsByRow[row][column - 1]
 
-        expect(vtgColumnPatterns[reference]?.label).toBe(expectedLabel)
+        expect(vtgRowPatterns[reference]?.label).toBe(expectedLabel)
       }
     }
   })

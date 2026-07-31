@@ -21,18 +21,21 @@ interface UseVtgPreviewsOptions {
 }
 
 export const vtgPreviewReferences = [
-  '1-6',
-  '3-6',
-  '5-6',
-  '1-4',
-  '3-4',
-  '5-4',
-  '1-2',
-  '3-2',
-  '5-2',
+  '1-1',
+  '3-1',
+  '5-1',
+  '1-3',
+  '3-3',
+  '5-3',
+  '1-5',
+  '3-5',
+  '5-5',
 ] as const satisfies readonly VtgCellReference[]
 
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
+const spinPreviewIndexes = vtgPreviewReferences.flatMap((reference, index) =>
+  spinToggleCells.has(reference) ? [index] : [],
+)
 
 const isBlobUrl = (url: string) => url.startsWith('blob:')
 
@@ -63,9 +66,16 @@ export const useVtgPreviews = ({
   let rendering = false
   let requestedVersion = 0
   let renderedVersion = 0
+  let requestedSpinVersion = 0
+  let renderedSpinVersion = 0
 
   const requestPreviews = () => {
     requestedVersion++
+    if (initialized && !rendering) void renderRequestedPreviews()
+  }
+
+  const requestSpinPreviews = () => {
+    requestedSpinVersion++
     if (initialized && !rendering) void renderRequestedPreviews()
   }
 
@@ -89,12 +99,25 @@ export const useVtgPreviews = ({
     rendering = true
 
     try {
-      while (!disposed && renderedVersion !== requestedVersion) {
+      while (
+        !disposed &&
+        (renderedVersion !== requestedVersion || renderedSpinVersion !== requestedSpinVersion)
+      ) {
+        const renderAll = renderedVersion !== requestedVersion
         const version = requestedVersion
+        const spinVersion = requestedSpinVersion
+        const previewIndexes = renderAll
+          ? vtgPreviewReferences.map((_, index) => index)
+          : spinPreviewIndexes
         let failed = false
 
-        for (let index = 0; index < vtgPreviewReferences.length; index++) {
-          if (disposed || version !== requestedVersion) break
+        for (const index of previewIndexes) {
+          if (
+            disposed ||
+            version !== requestedVersion ||
+            (!renderAll && spinVersion !== requestedSpinVersion)
+          )
+            break
 
           const reference = vtgPreviewReferences[index]
           const previewDimensions = dimensions[index]
@@ -131,7 +154,11 @@ export const useVtgPreviews = ({
             const nextUrl = urls[0]
             if (!nextUrl) continue
 
-            if (disposed || version !== requestedVersion) {
+            if (
+              disposed ||
+              version !== requestedVersion ||
+              (!renderAll && spinVersion !== requestedSpinVersion)
+            ) {
               revokePreviewUrl(nextUrl)
               break
             }
@@ -146,18 +173,26 @@ export const useVtgPreviews = ({
           }
         }
 
-        if (version === requestedVersion) renderedVersion = version
+        if (version === requestedVersion) {
+          if (renderAll) renderedVersion = version
+          if (spinVersion === requestedSpinVersion) renderedSpinVersion = spinVersion
+        }
         if (failed) break
       }
     } finally {
       rendering = false
-      if (!disposed && initialized && renderedVersion !== requestedVersion)
+      if (
+        !disposed &&
+        initialized &&
+        (renderedVersion !== requestedVersion || renderedSpinVersion !== requestedSpinVersion)
+      )
         void renderRequestedPreviews()
     }
   }
 
   // BPM changes animation timing only, so they intentionally do not invalidate still previews.
-  watch([speedRatio, isAnti, swapProps, reversePlane, scale], requestPreviews)
+  watch([speedRatio, swapProps, reversePlane, scale], requestPreviews)
+  watch(isAnti, requestSpinPreviews)
 
   onMounted(async () => {
     if (typeof Worker === 'undefined') return

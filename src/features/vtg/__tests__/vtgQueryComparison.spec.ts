@@ -2,13 +2,27 @@ import { describe, expect, it } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
+import type { VtgCellReference } from '@/features/vtg/types'
 import { encodeReadable } from '@/services/animation/AnimReadableFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import type { AnimReadable } from '@/types/AnimTypes'
 
-const withoutScale = (frames: readonly AnimReadable[]) =>
-  frames.map(({ scale: _scale, ...frame }) => frame)
+const effectiveFrames = (frames: readonly AnimReadable[]) => {
+  let arc = 0
+  let turns = 0
+
+  return frames.map(({ scale: _scale, ...frame }) => {
+    arc = frame.arc ?? arc
+    turns = frame.turns ?? turns
+    return { ...frame, plane: frame.plane ?? 0, arc, turns }
+  })
+}
+
+const transposeReference = (reference: VtgCellReference): VtgCellReference => {
+  const [column, row] = reference.split('-')
+  return `${row}-${column}` as VtgCellReference
+}
 
 describe('VTG query references', () => {
   it.each([
@@ -53,10 +67,10 @@ describe('VTG query references', () => {
         v: '1',
       }),
     )
-    const pattern = buildVtgPattern({ reference, speedRatio: '1:5' })
+    const pattern = buildVtgPattern({ reference: transposeReference(reference), speedRatio: '1:5' })
 
-    expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
-      readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
+    expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
+      readable.props.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
     )
   })
 
@@ -278,14 +292,14 @@ describe('VTG query references', () => {
       }),
     )
     const selection = {
-      reference,
+      reference: transposeReference(reference),
       speedRatio: '1:3',
       isAnti: 'isAnti' in query && query.isAnti,
     } as const
     const pattern = buildVtgPattern(selection)
 
-    expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
-      readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
+    expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
+      readable.props.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
     )
   })
 
@@ -366,11 +380,11 @@ describe('VTG query references', () => {
     const version = await loadSpiroAnimQSVersion(1)
     const queryCodec = await useSpiroAnimQS(version.VDEF, useBaseQS(version.VDEF), 1)
     const readable = encodeReadable(queryCodec.decodeQS({ r, p0, p1, v: '1' }))
-    const selection = { reference, speedRatio: '1:1' } as const
+    const selection = { reference: transposeReference(reference), speedRatio: '1:1' } as const
     const pattern = buildVtgPattern(selection)
 
-    expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
-      readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
+    expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
+      readable.props.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
     )
   })
 
@@ -445,11 +459,11 @@ describe('VTG query references', () => {
       v: '1',
     })
     const readable = encodeReadable(decoded)
-    const selection = { reference, speedRatio: '1:1' } as const
+    const selection = { reference: transposeReference(reference), speedRatio: '1:1' } as const
     const pattern = buildVtgPattern(selection)
 
-    expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
-      readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
+    expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
+      readable.props.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
     )
   })
 
@@ -523,11 +537,15 @@ describe('VTG query references', () => {
           v: '1',
         }),
       )
-      const selection = { reference, speedRatio: '1:1', isAnti } as const
+      const selection = {
+        reference: transposeReference(reference),
+        speedRatio: '1:1',
+        isAnti,
+      } as const
       const pattern = buildVtgPattern(selection)
 
-      expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
-        readable.props.map((prop) => withoutScale(prop.anim.slice(0, 2))),
+      expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
+        readable.props.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
       )
     },
   )
@@ -610,12 +628,16 @@ describe('VTG query references', () => {
           v: '1',
         }),
       )
-      const selection = { reference, speedRatio: '1:1', isAnti } as const
+      const selection = {
+        reference: transposeReference(reference),
+        speedRatio: '1:1',
+        isAnti,
+      } as const
       const pattern = buildVtgPattern(selection)
       const readableProps = reverseQueryProps ? [...readable.props].reverse() : readable.props
 
-      expect(pattern?.props.map((prop) => withoutScale(prop.anim))).toEqual(
-        readableProps.map((prop) => withoutScale(prop.anim.slice(0, 2))),
+      expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
+        readableProps.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
       )
     },
   )

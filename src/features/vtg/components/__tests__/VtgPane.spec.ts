@@ -173,7 +173,7 @@ describe('VtgPane', () => {
     await nextTick()
 
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
-      'Hands: Split / Opposite\nProps: Together / Same',
+      'Hands: Together / Opposite\nProps: Together / Same',
     )
 
     wrapper.unmount()
@@ -182,12 +182,12 @@ describe('VtgPane', () => {
   it('uses bottom-then-left references and highlights a selected matrix cross', async () => {
     const wrapper = mount(VtgPane)
     const pane = wrapper.get('[data-role="vtg-pane"]')
-    const exampleCell = wrapper.get('[data-cell-reference="1-5"]')
+    const exampleCell = wrapper.get('[data-cell-reference="5-1"]')
 
     expect(pane.attributes('data-selected-cell')).toBeUndefined()
     expect(exampleCell.element.tagName).toBe('BUTTON')
-    expect(exampleCell.attributes('data-board-column')).toBe('2')
-    expect(exampleCell.attributes('data-board-row')).toBe('2')
+    expect(exampleCell.attributes('data-board-column')).toBe('6')
+    expect(exampleCell.attributes('data-board-row')).toBe('1')
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(0)
     expect(
       wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]').attributes('aria-pressed'),
@@ -198,15 +198,15 @@ describe('VtgPane', () => {
 
     await exampleCell.trigger('click')
 
-    expect(pane.attributes('data-selected-cell')).toBe('1-5')
+    expect(pane.attributes('data-selected-cell')).toBe('5-1')
     expect(exampleCell.attributes('aria-pressed')).toBe('true')
     expect(exampleCell.classes()).toContain('vtg-tile--selected')
     expect(wrapper.findAll('.vtg-tile--selected')).toHaveLength(1)
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
     expect(
-      wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').attributes('aria-pressed'),
+      wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]').attributes('aria-pressed'),
     ).toBe('true')
-    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-5', speedRatio: '1:3' }]])
+    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '5-1', speedRatio: '1:3' }]])
   })
 
   it('includes the selected speed ratio in each pattern request', async () => {
@@ -354,9 +354,9 @@ describe('VtgPane', () => {
     })
     await nextTick()
 
-    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-6')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
     expect(wrapper.get<HTMLInputElement>('input[value="1:3"]').element.checked).toBe(true)
-    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:3' }]])
+    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-1', speedRatio: '1:3' }]])
   })
 
   it('waits for shared animation data before deciding whether to select a random pattern', async () => {
@@ -453,7 +453,7 @@ describe('VtgPane', () => {
     const toggle = wrapper.get('[data-role="vtg-spin-toggle"]')
     expect(toggle.text()).toBe('Spin')
     expect(toggle.attributes('aria-pressed')).toBe('false')
-    expect(toggle.classes()).not.toContain('vtg-tile__spin-toggle--lower-right')
+    expect(toggle.classes()).toContain('vtg-tile__spin-toggle--bottom')
     expect(wrapper.emitted('patternSelect')).toEqual([
       [{ reference: '5-6', speedRatio: '1:3', isAnti: false }],
     ])
@@ -468,8 +468,8 @@ describe('VtgPane', () => {
     await wrapper.get('[data-cell-reference="6-5"]').trigger('click')
 
     expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Anti')
-    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
-      'vtg-tile__spin-toggle--lower-right',
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).not.toContain(
+      'vtg-tile__spin-toggle--bottom',
     )
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
       { reference: '6-5', speedRatio: '1:3', isAnti: true },
@@ -499,9 +499,9 @@ describe('VtgPane', () => {
 
     await wrapper.get('.vtg-shuffle').trigger('click')
 
-    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-6')
-    expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-pressed')).toBe('true')
-    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:3' }]])
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
+    expect(wrapper.get('[data-cell-reference="1-1"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-1', speedRatio: '1:3' }]])
   })
 
   it('keeps the left column and bottom row inert for now', async () => {
@@ -530,23 +530,23 @@ describe('VtgPane', () => {
     const bottomSplitRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]')
     const bottomSplitProps = bottomSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
 
-    expect(bottomSplitProps.map(({ element }) => element.style.insetInlineStart)).toEqual([
+    expect(bottomSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
       '4%',
       '48%',
     ])
     expect(
-      bottomSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetInlineStart,
+      bottomSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
     ).toBe('97%')
 
     const sideSplitRule = wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
     const sideSplitProps = sideSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
 
-    expect(sideSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
+    expect(sideSplitProps.map(({ element }) => element.style.insetInlineStart)).toEqual([
       '4%',
       '48%',
     ])
     expect(
-      sideSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
+      sideSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetInlineStart,
     ).toBe('97%')
     expect(sideSplitRule.findAll('.vtg-rule-card__prop-handle')).toHaveLength(4)
   })
@@ -556,8 +556,8 @@ describe('VtgPane', () => {
     const togInRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 3"]')
     const props = togInRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
 
-    expect(props.map(({ element }) => element.style.insetInlineStart)).toEqual(['59%', '59%'])
-    expect(props.map(({ element }) => element.style.inlineSize)).toEqual(['37%', '37%'])
+    expect(props.map(({ element }) => element.style.insetBlockStart)).toEqual(['59%', '59%'])
+    expect(props.map(({ element }) => element.style.blockSize)).toEqual(['37%', '37%'])
   })
 
   it('tracks the live width and height of each blank preview', async () => {
@@ -588,7 +588,7 @@ describe('VtgPane', () => {
       wrapper
         .findAll('[data-role="vtg-preview"]')
         .map((preview) => preview.attributes('data-preview-reference')),
-    ).toEqual(['1-6', '3-6', '5-6', '1-4', '3-4', '5-4', '1-2', '3-2', '5-2'])
+    ).toEqual(['1-1', '3-1', '5-1', '1-3', '3-3', '5-3', '1-5', '3-5', '5-5'])
     expect(wrapper.findAll('[data-role="vtg-preview"]')).toHaveLength(9)
     expect(countWorkerMessages('data')).toBe(9)
     expect(countWorkerMessages('reqimgs')).toBe(9)
@@ -624,10 +624,11 @@ describe('VtgPane', () => {
     await expectNineMorePreviews(() =>
       wrapper.get<HTMLInputElement>('input[value="1:1"]').setValue(),
     )
-    await expectNineMorePreviews(async () => {
-      await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
-      await wrapper.get('[data-role="vtg-spin-toggle"]').trigger('click')
-    })
+    const beforeSpinChange = countWorkerMessages('data')
+    await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
+    await wrapper.get('[data-role="vtg-spin-toggle"]').trigger('click')
+    await settlePreviewRendering()
+    expect(countWorkerMessages('data')).toBe(beforeSpinChange + 1)
     await expectNineMorePreviews(() =>
       wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true),
     )

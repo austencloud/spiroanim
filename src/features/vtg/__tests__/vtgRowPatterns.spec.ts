@@ -29,25 +29,34 @@ const getExpectedOneToFiveTurns = (
   row: VtgRuleNumber,
   isAnti: boolean,
 ): readonly [number, number] => {
-  if (row >= 5) {
-    if (column >= 5) return isAnti ? [-540, -540] : [360, 360]
-    return [360, -540]
+  const oldColumn = row
+  const oldRow = column
+  let turns: readonly [number, number]
+
+  if (oldRow >= 5) {
+    turns = oldColumn >= 5 ? (isAnti ? [-540, -540] : [360, 360]) : [360, -540]
+  } else if (oldColumn <= 2) {
+    turns = oldRow <= 2 ? [360, 360] : [-540, -540]
+  } else if (oldColumn <= 4) {
+    turns = oldRow <= 2 ? [-540, -540] : [360, 360]
+  } else {
+    turns = oldRow <= 2 ? [360, -540] : [-540, 360]
   }
-  if (column <= 2) return row <= 2 ? [360, 360] : [-540, -540]
-  if (column <= 4) return row <= 2 ? [-540, -540] : [360, 360]
-  return row <= 2 ? [360, -540] : [-540, 360]
+
+  return turns
 }
 
-describe('VTG column patterns', () => {
-  it.each(vtgSpeedRatios)('shares each column starting frame across every %s row', (speedRatio) => {
-    for (const column of ruleNumbers) {
-      const topPattern = buildPattern(createReference(column, 6), speedRatio)
-      const topStarts = topPattern?.props.map((prop) => prop.anim[0])
+describe('VTG row patterns', () => {
+  it.each(vtgSpeedRatios)('shares each row starting frame across its %s columns', (speedRatio) => {
+    for (const row of ruleNumbers) {
+      const sharedStarts = buildPattern(createReference(1, row), speedRatio)?.props.map(
+        (prop) => prop.anim[0],
+      )
 
-      for (const row of ruleNumbers) {
+      for (const column of ruleNumbers) {
         const pattern = buildPattern(createReference(column, row), speedRatio)
         expect(pattern).toBeDefined()
-        expect(pattern?.props.map((prop) => prop.anim[0])).toEqual(topStarts)
+        expect(pattern?.props.map((prop) => prop.anim[0])).toEqual(sharedStarts)
       }
     }
   })
@@ -101,7 +110,9 @@ describe('VTG column patterns', () => {
             actualTurns.push(oneToFiveTurns)
           }
 
-          expect(actualTurns).toEqual(getExpectedOneToFiveTurns(column, row, isAnti))
+          expect(actualTurns, `${reference} anti=${isAnti}`).toEqual(
+            getExpectedOneToFiveTurns(column, row, isAnti),
+          )
         }
       }
     }

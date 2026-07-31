@@ -3,8 +3,8 @@ import type { PropReadable, RootDataFinal, RootReadable } from '@/types/AnimType
 export type VtgRuleNumber = 1 | 2 | 3 | 4 | 5 | 6
 
 /**
- * VTG matrix references always use the bottom-row number first, followed by
- * the left-column number. For example, `1-5` is board column 2, row 2.
+ * VTG matrix references use the bottom-header number first, followed by the
+ * left-header number. For example, `1-5` is their intersection.
  */
 export type VtgCellReference = `${VtgRuleNumber}-${VtgRuleNumber}`
 export type VtgRelationshipCode = `${'S' | 'T'}${'S' | 'O'}`

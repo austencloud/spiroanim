@@ -44,7 +44,7 @@ export const getVtgDistanceForScale = (scale: number) => {
 
   const distance = distanceStart + progress * (distanceEnd - distanceStart)
 
-  return Math.round(distance * 100) / 100
+  return Math.round(distance)
 }
 
 export const vtgPlayerSettings = {

@@ -1,4 +1,4 @@
-import { vtgColumnPatterns } from '@/features/vtg/data/patterns/columns'
+import { vtgRowPatterns } from '@/features/vtg/data/patterns/rows'
 import {
   clampVtgBpm,
   getVtgDistanceForScale,
@@ -13,7 +13,7 @@ import type {
 } from '@/features/vtg/types'
 
 const catalog: Readonly<Partial<Record<VtgCellReference, Readonly<VtgPatternDefinition>>>> = {
-  ...vtgColumnPatterns,
+  ...vtgRowPatterns,
 }
 
 export const buildVtgPattern = (

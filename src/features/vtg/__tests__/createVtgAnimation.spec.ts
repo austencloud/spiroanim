@@ -1,11 +1,29 @@
 import { describe, expect, it } from 'vitest'
 
-import { createVtgAnimation, createVtgPreviewAnimation } from '@/features/vtg/createVtgAnimation'
-import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
+import {
+  createVtgAnimation as createVtgAnimationForSelection,
+  createVtgPreviewAnimation as createVtgPreviewAnimationForSelection,
+} from '@/features/vtg/createVtgAnimation'
+import { buildVtgPattern as buildSelectedVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import type { VtgCellReference, VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
-import type { RootData } from '@/types/AnimTypes'
+import type { RootData, RootDataFinal } from '@/types/AnimTypes'
+
+const transposeSelection = (selection: VtgPatternSelection): VtgPatternSelection => {
+  const [column, row] = selection.reference.split('-')
+  return { ...selection, reference: `${row}-${column}` as VtgCellReference }
+}
+
+const createVtgAnimation = (current: RootDataFinal, selection: VtgPatternSelection) =>
+  createVtgAnimationForSelection(current, transposeSelection(selection))
+
+const createVtgPreviewAnimation = (selection: VtgPatternSelection) =>
+  createVtgPreviewAnimationForSelection(transposeSelection(selection))
+
+const buildVtgPattern = (selection: VtgPatternSelection) =>
+  buildSelectedVtgPattern(transposeSelection(selection))
 
 const createCurrentAnimation = () =>
   rootFinal({
@@ -159,7 +177,7 @@ describe('createVtgAnimation', () => {
       { plane: 180, arc: 90 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { plane: 0, arc: 90, scale: 8 },
+      { arc: 90, scale: 8 },
       { arc: 90, turns: -180 },
     ])
   })
@@ -188,10 +206,7 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props.map((prop) => prop.color)).toEqual([1, 6])
-    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, scale: 8 },
-      { arc: 90, turns: 0 },
-    ])
+    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([{ arc: 90, scale: 8 }, { arc: 90 }])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { plane: 180, arc: 90, turns: 180, scale: 8 },
       { plane: 180, arc: 90, turns: 0 },
@@ -226,7 +241,7 @@ describe('createVtgAnimation', () => {
       reversePlane: true,
     })
 
-    expect(original?.props.map((prop) => prop.anim[0]?.plane)).toEqual([180, 0])
+    expect(original?.props.map((prop) => prop.anim[0]?.plane)).toEqual([180, undefined])
     expect(reversed?.props.map((prop) => prop.anim[0]?.plane)).toEqual([0, 180])
     expect(reversed?.props.map((prop) => prop.anim[1])).toEqual(
       original?.props.map((prop) => prop.anim[1]),
@@ -241,7 +256,7 @@ describe('createVtgAnimation', () => {
   })
 
   it('caps BPM and Scale while mapping Scale to Distance', () => {
-    expect(vtgPlayerSettings.distance).toBe(17.5)
+    expect(vtgPlayerSettings.distance).toBe(18)
 
     const minimum = buildVtgPattern({
       reference: '1-6',

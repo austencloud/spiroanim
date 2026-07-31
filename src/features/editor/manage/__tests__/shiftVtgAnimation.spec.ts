@@ -17,7 +17,7 @@ const expectVectorClose = (actual: readonly number[], expected: readonly number[
 describe('VTG animation shifting', () => {
   it('preserves both props and their segment axes through query serialization', async () => {
     const animation = createDefaultVtgAnimation({
-      reference: '3-4',
+      reference: '4-3',
       speedRatio: '1:3',
     })
     if (!animation) throw new Error('Expected the VTG animation to be defined')

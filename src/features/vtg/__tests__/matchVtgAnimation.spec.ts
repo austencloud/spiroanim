@@ -125,7 +125,7 @@ describe('VTG animation matching', () => {
 
   it('recognizes query-normalized data and equivalent -180 degree planes', () => {
     const animation = createAnimation({
-      reference: '1-6',
+      reference: '6-1',
       speedRatio: '1:1',
       scale: 0.8,
     })
@@ -134,7 +134,7 @@ describe('VTG animation matching', () => {
     animation.props[1]!.anim[0]!.plane = -180
 
     expect(findVtgPatternMatch(animation)).toMatchObject({
-      reference: '1-6',
+      reference: '6-1',
       speedRatio: '1:1',
       bpm: 120,
       scale: 0.8,

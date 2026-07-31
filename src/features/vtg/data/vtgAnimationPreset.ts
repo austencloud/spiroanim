@@ -27,11 +27,25 @@ export const vtgAnimationPreset = {
   props: [
     {
       color: 'Green',
-      anim: [{ arc: 180 }, { arc: 90 }, {}, {}, {}],
+      // prettier-ignore
+      anim: [
+        { plane:   0, arc: 180, turns:    0 },
+        { plane:   0, arc:  90, turns:    0 },
+        { plane:   0, arc:  90, turns:    0 },
+        { plane:   0, arc:  90, turns:    0 },
+        { plane:   0, arc:  90, turns:    0 },
+      ],
     },
     {
       color: 'Orange',
-      anim: [{ plane: 180, arc: 0, turns: 180 }, { arc: 90, turns: -180 }, {}, {}, {}],
+      // prettier-ignore
+      anim: [
+        { plane: 180, arc:   0, turns:  180 },
+        { plane:   0, arc:  90, turns: -180 },
+        { plane:   0, arc:  90, turns: -180 },
+        { plane:   0, arc:  90, turns: -180 },
+        { plane:   0, arc:  90, turns: -180 },
+      ],
     },
   ],
 } satisfies VtgReadableAnimation

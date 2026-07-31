@@ -30,7 +30,7 @@
           :number="rule.number"
           :diagram="rule.diagram"
           :description="rule.description"
-          orientation="vertical"
+          orientation="horizontal"
           :accent="rule.number === selectedCell?.row"
         />
       </div>
@@ -67,7 +67,7 @@
                 type="button"
                 class="vtg-tile__spin-toggle"
                 :class="{
-                  'vtg-tile__spin-toggle--lower-right': isLowerRightSpinToggleCell(tile.reference),
+                  'vtg-tile__spin-toggle--bottom': isBottomSpinToggleCell(tile.reference),
                 }"
                 :aria-label="`Use ${isAnti ? 'Spin' : 'Anti'} pattern for cell ${tile.reference}`"
                 :aria-pressed="isAnti"
@@ -124,7 +124,7 @@
           :number="rule.number"
           :diagram="rule.diagram"
           :description="rule.description"
-          orientation="horizontal"
+          orientation="vertical"
           :accent="rule.number === selectedCell?.column"
         />
       </div>
@@ -267,22 +267,17 @@ let componentMounted = false
 let initialAnimationHandled = false
 
 const bottomRuleNumbers = [1, 2, 3, 4, 5, 6] as const
-const leftRuleNumbers = [6, 5, 4, 3, 2, 1] as const
-
-const getRuleNumber = (ruleNumbers: readonly VtgRuleNumber[], index: number): VtgRuleNumber => {
-  const ruleNumber = ruleNumbers[index]
-  if (ruleNumber === undefined) throw new Error(`Missing VTG rule number at index ${index}`)
-  return ruleNumber
-}
+const leftRuleNumbers = [1, 2, 3, 4, 5, 6] as const
 
 const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
   `${column}-${row}`
 
 const matrixTiles: readonly VtgMatrixTile[] = leftRuleNumbers.flatMap((rowNumber, rowIndex) => {
-  const row = vtgPatternLabelsByRow[rowNumber]
-
-  return row.map((label, columnIndex) => {
-    const columnNumber = getRuleNumber(bottomRuleNumbers, columnIndex)
+  return bottomRuleNumbers.map((columnNumber, columnIndex) => {
+    const label = vtgPatternLabelsByRow[rowNumber][columnNumber - 1]
+    if (label === undefined) {
+      throw new Error(`Missing VTG label for ${createCellReference(columnNumber, rowNumber)}`)
+    }
     const reference = createCellReference(columnNumber, rowNumber)
 
     return {
@@ -309,8 +304,8 @@ const isTileHighlighted = (tile: VtgMatrixTile) =>
   (tile.column === selectedCell.value.column || tile.row === selectedCell.value.row)
 
 const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(reference)
-const isLowerRightSpinToggleCell = (reference: VtgCellReference) =>
-  reference === '5-5' || reference === '6-5'
+const isBottomSpinToggleCell = (reference: VtgCellReference) =>
+  reference === '5-6' || reference === '6-6'
 
 const emitPatternSelection = (tile: VtgMatrixTile) => {
   const selection: VtgPatternSelection = {
@@ -520,30 +515,12 @@ const ruleDescriptions: Readonly<Record<VtgRuleNumber, string>> = {
   6: 'Split Tog - Hands are split but the props are facing the same direction.',
 }
 
-const sideRules: readonly VtgRuleSpec[] = [
+const bottomRules: readonly VtgRuleSpec[] = [
   {
-    labels: ['SPLIT', 'TOG'],
-    number: 6,
-    diagram: diagrams.alternatingSplit,
-    description: ruleDescriptions[6],
-  },
-  {
-    labels: ['TOG', 'SPLIT'],
-    number: 5,
-    diagram: diagrams.clusteredOutsideSplit,
-    description: ruleDescriptions[5],
-  },
-  {
-    labels: ['SPLIT', 'IN'],
-    number: 4,
-    diagram: diagrams.insideSplit,
-    description: ruleDescriptions[4],
-  },
-  {
-    labels: ['TOG', 'IN'],
-    number: 3,
-    diagram: diagrams.parallelAfterInside,
-    description: ruleDescriptions[3],
+    labels: ['TOG', 'OUT'],
+    number: 1,
+    diagram: diagrams.parallelAfterOutside,
+    description: ruleDescriptions[1],
   },
   {
     labels: ['SPLIT', 'OUT'],
@@ -552,14 +529,32 @@ const sideRules: readonly VtgRuleSpec[] = [
     description: ruleDescriptions[2],
   },
   {
-    labels: ['TOG', 'OUT'],
-    number: 1,
-    diagram: diagrams.parallelAfterOutside,
-    description: ruleDescriptions[1],
+    labels: ['TOG', 'IN'],
+    number: 3,
+    diagram: diagrams.parallelAfterInside,
+    description: ruleDescriptions[3],
+  },
+  {
+    labels: ['SPLIT', 'IN'],
+    number: 4,
+    diagram: diagrams.insideSplit,
+    description: ruleDescriptions[4],
+  },
+  {
+    labels: ['TOG', 'SPLIT'],
+    number: 5,
+    diagram: diagrams.clusteredOutsideSplit,
+    description: ruleDescriptions[5],
+  },
+  {
+    labels: ['SPLIT', 'TOG'],
+    number: 6,
+    diagram: diagrams.alternatingSplit,
+    description: ruleDescriptions[6],
   },
 ]
 
-const bottomRules: readonly VtgRuleSpec[] = [
+const sideRules: readonly VtgRuleSpec[] = [
   {
     labels: ['TOG', 'OUT'],
     number: 1,
@@ -927,7 +922,7 @@ defineExpose({
   position: absolute;
   z-index: 1;
   inset-block-start: max(0.2rem, 0.6cqi);
-  inset-inline-end: max(0.2rem, 0.6cqi);
+  inset-inline-start: 50%;
   padding: 0.3em 0.5em;
   color: var(--vtg-color-ink);
   cursor: pointer;
@@ -939,9 +934,10 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.025em;
   line-height: 1;
+  transform: translateX(-50%);
 }
 
-.vtg-tile__spin-toggle--lower-right {
+.vtg-tile__spin-toggle--bottom {
   inset-block-start: auto;
   inset-block-end: max(0.2rem, 0.6cqi);
 }

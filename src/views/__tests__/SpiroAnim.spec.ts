@@ -124,7 +124,7 @@ describe('SpiroAnim view', () => {
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(false)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').setValue(120)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(0.8)
-    await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
+    await wrapper.get('[data-cell-reference="6-1"]').trigger('click')
 
     expect(playerRoot.value).toMatchObject({
       aspectx: vtgPlayerSettings.aspectx,
@@ -140,11 +140,11 @@ describe('SpiroAnim view', () => {
     })
 
     const expectedOneToThree = createVtgAnimation(playerRoot.value, {
-      reference: '2-6',
+      reference: '6-2',
       speedRatio: '1:3',
     })
     await wrapper.get<HTMLInputElement>('input[value="1:3"]').setValue()
-    await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
+    await wrapper.get('[data-cell-reference="6-2"]').trigger('click')
 
     expect(playerRoot.value).toEqual(expectedOneToThree)
 
