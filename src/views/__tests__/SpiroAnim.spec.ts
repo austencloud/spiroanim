@@ -127,7 +127,7 @@ describe('SpiroAnim view', () => {
     await wrapper.get<HTMLInputElement>('input[value="1:1"]').setValue()
     await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(false)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(false)
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').setValue(120)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').setValue(60)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(0.8)
     await wrapper.get('[data-cell-reference="6-1"]').trigger('click')
 

@@ -57,7 +57,7 @@
         </label>
         <label>
           <input v-model="reversePlane" type="checkbox" data-role="vtg-reverse" />
-          <span>Reverse</span>
+          <span>Flip</span>
         </label>
         <button type="button" data-role="vtg-reset" @click="resetPatternControls">Reset</button>
       </fieldset>
@@ -108,7 +108,7 @@
                 data-role="vtg-tile"
                 @click="selectTile(tile)"
               >
-                {{ isQtr ? qtrCellLabels[tile.reference] : tile.label }}
+                {{ tile.label }}
               </button>
               <button
                 v-if="tile.reference === selectedCellReference && isSpinToggleCell(tile.reference)"
@@ -166,7 +166,7 @@
 
       <div class="vtg-footer" data-role="vtg-footer">
         <VtgRuleCard
-          v-for="rule in displayedBottomRules"
+          v-for="rule in bottomRules"
           :key="`bottom-${rule.number}`"
           :labels="rule.labels"
           :display-labels="isQtr ? qtrBottomRuleLabels[rule.number] : undefined"
@@ -178,7 +178,6 @@
           :show-divider="!isQtr"
           :show-props="!isQtr"
           :tooltip-disabled="isQtr"
-          :reversed="reversePlane"
           :mirror-props="!isQtr"
         />
       </div>
@@ -229,6 +228,11 @@
         />
       </label>
     </fieldset>
+
+    <p v-if="isQtr" class="qtr-development-note" data-role="qtr-development-note">
+      Quarter Spacing is experimental and still under development. It may change drastically or be
+      condensed in future releases.
+    </p>
   </section>
 </template>
 
@@ -238,28 +242,20 @@ import { mdiShuffleVariant } from '@mdi/js'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
+import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptKey, ConceptPatternSelection } from '@/features/concepts/types'
-import {
-  qtrBottomRuleLabels,
-  qtrCellLabels,
-  qtrSideRuleLabels,
-} from '@/features/qtr/data/qtrLabels'
+import { qtrBottomRuleLabels, qtrSideRuleLabels } from '@/features/qtr/data/qtrLabels'
+import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
 import { findQtrPatternMatch, matchesQtrSelection } from '@/features/qtr/matchQtrAnimation'
-import {
-  createQtrBottomDiagram,
-  createQtrSideDiagram,
-} from '@/features/qtr/math/createQtrHeaderDiagram'
+import { createQtrSideDiagram } from '@/features/qtr/math/createQtrHeaderDiagram'
 import type { QtrMode } from '@/features/qtr/types'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import {
   patternPreviewReferences,
   usePatternPreviews,
 } from '@/features/concepts/composables/usePatternPreviews'
-import {
-  describeVtgPatternLabel,
-  vtgPatternLabelsByRow,
-} from '@/features/vtg/data/vtgPatternLabels'
+import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import {
   vtgBpmControl,
   vtgPropSettings,
@@ -296,6 +292,8 @@ interface VtgMatrixTile {
   boardRow: number
   reference: VtgCellReference
 }
+
+type VtgMatrixAddress = Omit<VtgMatrixTile, 'label' | 'description'>
 
 const props = withDefaults(
   defineProps<{
@@ -347,29 +345,39 @@ const leftRuleNumbers = [1, 2, 3, 4, 5, 6] as const
 const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
   `${column}-${row}`
 
-const matrixTiles: readonly VtgMatrixTile[] = leftRuleNumbers.flatMap((rowNumber, rowIndex) => {
-  return bottomRuleNumbers.map((columnNumber, columnIndex) => {
-    const label = vtgPatternLabelsByRow[rowNumber][columnNumber - 1]
-    if (label === undefined) {
-      throw new Error(`Missing VTG label for ${createCellReference(columnNumber, rowNumber)}`)
-    }
-    const reference = createCellReference(columnNumber, rowNumber)
+const matrixAddresses: readonly VtgMatrixAddress[] = leftRuleNumbers.flatMap(
+  (rowNumber, rowIndex) => {
+    return bottomRuleNumbers.map((columnNumber, columnIndex) => {
+      return {
+        column: columnNumber,
+        row: rowNumber,
+        boardColumn: columnIndex + 2,
+        boardRow: rowIndex + 1,
+        reference: createCellReference(columnNumber, rowNumber),
+      }
+    })
+  },
+)
 
-    return {
-      label,
-      description: describeVtgPatternLabel(label),
-      column: columnNumber,
-      row: rowNumber,
-      boardColumn: columnIndex + 2,
-      boardRow: rowIndex + 1,
-      reference,
+const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
+  matrixAddresses.map((address) => {
+    const baseSelection: VtgPatternSelection = {
+      reference: address.reference,
+      speedRatio: speedRatio.value,
+      ...(spinToggleCells.has(address.reference) ? { isAnti: isAnti.value } : undefined),
+      ...(swapProps.value ? { swapProps: true } : undefined),
+      ...(reversePlane.value ? { reversePlane: true } : undefined),
     }
-  })
-})
+    const animation = isQtr.value
+      ? createDefaultQtrAnimation({ ...baseSelection, quarters: quarterMode.value })
+      : createDefaultVtgAnimation(baseSelection)
+    if (!animation) throw new Error(`Missing pattern animation for ${address.reference}`)
 
-const qtrPatternDescription = 'Hands: \nProps: '
-const getTileDescription = (tile: VtgMatrixTile) =>
-  isQtr.value ? qtrPatternDescription : tile.description
+    return { ...address, ...describePatternRelationships(animation) }
+  }),
+)
+
+const getTileDescription = (tile: VtgMatrixTile) => tile.description
 
 const selectedCell = ref<VtgCellAddress>()
 
@@ -417,7 +425,7 @@ const selectTile = (tile: VtgMatrixTile) => {
 }
 
 const selectRandomTile = () => {
-  const tile = matrixTiles[Math.floor(Math.random() * matrixTiles.length)]
+  const tile = matrixTiles.value[Math.floor(Math.random() * matrixTiles.value.length)]
   if (tile === undefined) throw new Error('Cannot select a random VTG cell from an empty matrix')
   selectTile(tile)
 }
@@ -428,7 +436,7 @@ const toggleSpinDirection = (tile: VtgMatrixTile) => {
 }
 
 const resetPatternControls = async () => {
-  const tile = matrixTiles.find(({ reference }) => reference === selectedCellReference.value)
+  const tile = matrixTiles.value.find(({ reference }) => reference === selectedCellReference.value)
   suppressPatternEmit = true
   speedRatio.value = vtgDefaultSpeedRatio
   isAnti.value = false
@@ -446,7 +454,7 @@ const resetPatternControls = async () => {
 watch([speedRatio, swapProps, reversePlane, bpm, scale, thick, activeQuarterMode], () => {
   if (suppressPatternEmit) return
 
-  const tile = matrixTiles.find(({ reference }) => reference === selectedCellReference.value)
+  const tile = matrixTiles.value.find(({ reference }) => reference === selectedCellReference.value)
   if (tile !== undefined) emitPatternSelection(tile)
 })
 
@@ -473,7 +481,7 @@ const hydratePatternControls = (animation: RootDataFinal) => {
   let tileToApply: VtgMatrixTile | undefined
 
   if (match) {
-    const tile = matrixTiles.find(({ reference }) => reference === match.reference)
+    const tile = matrixTiles.value.find(({ reference }) => reference === match.reference)
     selectedCell.value = tile ? { column: tile.column, row: tile.row } : undefined
     speedRatio.value = match.speedRatio
     isAnti.value = match.isAnti
@@ -693,19 +701,6 @@ const quarterDiagramOptions = computed(() => ({
   swapProps: swapProps.value,
   reversePlane: reversePlane.value,
 }))
-
-const displayedBottomRules = computed<readonly VtgRuleSpec[]>(() => {
-  if (!isQtr.value) return bottomRules
-
-  return bottomRules.map((rule) => ({
-    ...rule,
-    diagram: createQtrBottomDiagram({
-      ...quarterDiagramOptions.value,
-      column: rule.number,
-      isAnti: isAnti.value,
-    }),
-  }))
-})
 
 const displayedSideRules = computed<readonly VtgRuleSpec[]>(() => {
   if (!isQtr.value) return sideRules
@@ -958,6 +953,16 @@ defineExpose({
 .vtg-slider-controls input:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
+}
+
+.qtr-development-note {
+  width: min(100%, 45rem);
+  padding-inline: var(--space-2);
+  margin: var(--space-2) auto 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .vtg-board {

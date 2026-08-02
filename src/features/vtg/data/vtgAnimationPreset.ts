@@ -11,7 +11,7 @@ export const vtgAnimationPreset = {
   type: 0,
   turns: 0,
   depth: 0,
-  bpm: 120,
+  bpm: 60,
   color: 'Green',
   prop: 'POI',
   guides: false,

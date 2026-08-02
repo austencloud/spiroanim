@@ -456,7 +456,7 @@ snapshots. Query format coverage therefore defines undo coverage.
 The Concepts pane does not use `PropertyPanel`, `DynamicVal`, or `useProperties.constraints()`.
 Its VTG and Quarter Spacing panels use the same native matrix controls. VTG sends a
 `VtgPatternSelection` to the VTG builder, while Quarter Spacing sends a `QtrPatternSelection` to
-the Qtr builder. Speed Ratio, Swap, and Reverse are held in the shared Concepts store so their
+the Qtr builder. Speed Ratio, Swap, and Flip are held in the shared Concepts store so their
 values remain unchanged when switching between the two panels.
 
 Current VTG numeric behavior is:
@@ -496,13 +496,17 @@ adjustments move with their original tracks.
 
 Quarter Spacing previews and matching apply the Qtr transform around the shared VTG pattern builder
 and matcher so selected cells and shared options can be recovered when switching panels or loading
-animation data. Qtr matrix and header display labels are configured separately in `qtrLabels.ts`;
-blank display labels do not replace the canonical VTG descriptions used for matching and
-accessibility. Quarter Spacing disables all header tooltips because the normal VTG descriptions do
-not explain the transformed header states. Cell tooltips retain the `Hands:` and `Props:` lines but
-leave both generated descriptions blank. Quarter Spacing also hides every header divider, including
-rule 5's offset divider, and hides the prop diagrams in the bottom headers. The left-header prop
-diagrams remain visible.
+animation data. Matrix labels and cell tooltips are derived from each compiled pattern rather than a
+cell-label table. Hand timing compares the two compiled position vectors, prop timing compares the
+two rotation vectors, and direction compares their travel axes. Parallel timing is Together (`T`),
+antiparallel timing is Split (`S`), and orthogonal timing is Quarter (`Q`); direction remains Same
+(`S`) or Opposite (`O`). The generated tooltip expands those letters as `Hands: Timing / Direction`
+and `Props: Timing / Direction`.
+
+Qtr header display labels remain configured separately in `qtrLabels.ts`. Quarter Spacing disables
+all header tooltips because the normal VTG descriptions do not explain the transformed header
+states. It also hides every header divider, including rule 5's offset divider, and hides the prop
+diagrams in the bottom headers. The left-header prop diagrams remain visible.
 
 The visible Quarter Spacing header props mirror the rendered POI material colors. Each prop's large end is
 the head (`COLSET` slot 0), its small end is the handle (`COLSET` slot 1), and its connecting line is
@@ -513,17 +517,17 @@ In Quarter Spacing, each left-header prop diagram is recalculated from the first
 frame of the first cell in that row (`1-1` through `1-6`). The closest cardinal direction of `pos`
 selects top, right, bottom, or left. The sign of `pos dot rot` selects out or in. Placements reuse
 the exact bounds demonstrated by left rule 2 for left/right and bottom rule 2 for top/bottom. Swap
-and Reverse participate in this calculation; controls that do not change first-frame geometry do
+and Flip participate in this calculation; controls that do not change first-frame geometry do
 not.
 
 The bottom-header prop diagrams are not displayed in Quarter Spacing.
 
-Reverse mirrors each header along the header's layout axis: left headers mirror left-to-right and
-bottom headers mirror top-to-bottom. The title block, divider, and regular prop placements move
-together, including which end of a prop is rendered as the head. Reversed left-header titles are
-right-aligned against the right edge. Header numbers remain in their normal bottom-right position.
+Flip mirrors each left header from left to right. Its title block, divider, and regular prop
+placements move together, including which end of a prop is rendered as the head. Flipped
+left-header titles are right-aligned against the right edge. Header numbers remain in their normal
+bottom-right position. Bottom headers keep their normal layout when Flip is enabled.
 Quarter Spacing header props are not mirrored a second time because their positions already come
-from compiled frames that include the Reverse transform; the surrounding title layout still
+from compiled frames that include the Flip transform; the surrounding title layout still
 mirrors normally.
 
 ## How to change a slider safely

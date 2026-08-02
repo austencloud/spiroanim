@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  getQtrBottomPropStates,
-  getQtrSidePropStates,
-  qtrBottomFrameNumbers,
-} from '@/features/qtr/math/createQtrHeaderDiagram'
+import { getQtrSidePropStates } from '@/features/qtr/math/createQtrHeaderDiagram'
 import type { VtgRuleNumber } from '@/features/vtg/types'
 
 const getStates = (
@@ -69,7 +65,7 @@ describe('Quarters side-header prop states', () => {
     expect(getStates(row)).toEqual(expected)
   })
 
-  it('recalculates from the active Swap and Reverse forms', () => {
+  it('recalculates from the active Swap and Flip forms', () => {
     expect(getStates(5, { swapProps: true })).toEqual([
       { position: 'left', facing: 'in' },
       { position: 'top', facing: 'out' },
@@ -109,86 +105,5 @@ describe('Quarters side-header prop states', () => {
     expect(getQtrSidePropStates({ ...baseOptions, speedRatio: '1:1' })).toEqual(
       getQtrSidePropStates({ ...baseOptions, speedRatio: '1:5' }),
     )
-  })
-})
-
-describe('Quarters bottom-header prop states', () => {
-  it('uses the requested one-based row-6 frame for each column', () => {
-    expect(qtrBottomFrameNumbers).toEqual({
-      1: 4,
-      2: 4,
-      3: 4,
-      4: 4,
-      5: 2,
-      6: 4,
-    })
-  })
-
-  it.each([
-    [
-      1,
-      [
-        { position: 'left', facing: 'out' },
-        { position: 'bottom', facing: 'out' },
-      ],
-    ],
-    [
-      2,
-      [
-        { position: 'left', facing: 'out' },
-        { position: 'top', facing: 'out' },
-      ],
-    ],
-    [
-      3,
-      [
-        { position: 'left', facing: 'in' },
-        { position: 'bottom', facing: 'in' },
-      ],
-    ],
-    [
-      4,
-      [
-        { position: 'left', facing: 'in' },
-        { position: 'top', facing: 'in' },
-      ],
-    ],
-    [
-      5,
-      [
-        { position: 'right', facing: 'in' },
-        { position: 'top', facing: 'out' },
-      ],
-    ],
-    [
-      6,
-      [
-        { position: 'left', facing: 'in' },
-        { position: 'top', facing: 'out' },
-      ],
-    ],
-  ] as const)('derives column %i from its configured row-6 frame', (column, expected) => {
-    expect(
-      getQtrBottomPropStates({
-        column,
-        speedRatio: '1:3',
-        isAnti: false,
-        swapProps: false,
-        reversePlane: false,
-      }),
-    ).toEqual(expected)
-  })
-
-  it('recalculates special row-6 references when Anti changes', () => {
-    const getColumnFive = (isAnti: boolean) =>
-      getQtrBottomPropStates({
-        column: 5,
-        speedRatio: '1:3',
-        isAnti,
-        swapProps: false,
-        reversePlane: false,
-      })
-
-    expect(getColumnFive(true)).not.toEqual(getColumnFive(false))
   })
 })

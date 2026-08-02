@@ -28,21 +28,10 @@ export interface QtrSideDiagramOptions {
   reversePlane: boolean
 }
 
-export interface QtrBottomDiagramOptions {
-  column: VtgRuleNumber
-  speedRatio: VtgSpeedRatio
-  quarters?: QtrMode
-  isAnti: boolean
-  swapProps: boolean
-  reversePlane: boolean
-}
-
 interface QtrReferenceFrameOptions {
   reference: VtgCellReference
-  frameNumber: number
   speedRatio: VtgSpeedRatio
   quarters?: QtrMode
-  isAnti: boolean
   swapProps: boolean
   reversePlane: boolean
 }
@@ -86,10 +75,8 @@ const classifyQtrProp = (frame: AnimDataCompiled): QtrPropState => {
 
 const getVtgQuarterReferencePropStates = ({
   reference,
-  frameNumber,
   speedRatio,
   quarters = 1,
-  isAnti,
   swapProps,
   reversePlane,
 }: QtrReferenceFrameOptions): readonly [QtrPropState, QtrPropState] => {
@@ -97,19 +84,17 @@ const getVtgQuarterReferencePropStates = ({
     reference,
     speedRatio,
     quarters,
-    ...(isAnti ? { isAnti: true } : {}),
     ...(swapProps ? { swapProps: true } : {}),
     ...(reversePlane ? { reversePlane: true } : {}),
   })
   if (!animation)
     throw new Error(`Missing Quarters reference pattern ${reference} at ${speedRatio}`)
 
-  const frameIndex = frameNumber - 1
-  const frames = rootCompile(animation).props.map((prop) => prop.anim[frameIndex])
+  const frames = rootCompile(animation).props.map((prop) => prop.anim[0])
   const firstFrame = frames[0]
   const secondFrame = frames[1]
   if (!firstFrame || !secondFrame) {
-    throw new Error(`Missing compiled Quarters frame ${frameNumber} for reference ${reference}`)
+    throw new Error(`Missing compiled Quarters starting frame for reference ${reference}`)
   }
 
   return [classifyQtrProp(firstFrame), classifyQtrProp(secondFrame)]
@@ -126,31 +111,6 @@ export const getQtrSidePropStates = ({
   getVtgQuarterReferencePropStates({
     ...options,
     reference: `1-${row}`,
-    frameNumber: 1,
-    isAnti: false,
-  })
-
-export const qtrBottomFrameNumbers = {
-  1: 4,
-  2: 4,
-  3: 4,
-  4: 4,
-  5: 2,
-  6: 4,
-} as const satisfies Readonly<Record<VtgRuleNumber, number>>
-
-/**
- * Each bottom header uses its column's row-6 pattern at the domain-selected
- * compiled frame. Frame numbers are one-based to match the editor UI.
- */
-export const getQtrBottomPropStates = ({
-  column,
-  ...options
-}: QtrBottomDiagramOptions): readonly [QtrPropState, QtrPropState] =>
-  getVtgQuarterReferencePropStates({
-    ...options,
-    reference: `${column}-6`,
-    frameNumber: qtrBottomFrameNumbers[column],
   })
 
 const createPlacement = ({ position, facing }: QtrPropState): VtgPropPlacement => {
@@ -168,10 +128,5 @@ const createPlacement = ({ position, facing }: QtrPropState): VtgPropPlacement =
 
 export const createQtrSideDiagram = (options: QtrSideDiagramOptions): VtgRuleDiagram => {
   const [firstProp, secondProp] = getQtrSidePropStates(options)
-  return { props: [createPlacement(firstProp), createPlacement(secondProp)] }
-}
-
-export const createQtrBottomDiagram = (options: QtrBottomDiagramOptions): VtgRuleDiagram => {
-  const [firstProp, secondProp] = getQtrBottomPropStates(options)
   return { props: [createPlacement(firstProp), createPlacement(secondProp)] }
 }

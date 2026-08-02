@@ -124,17 +124,21 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--small')).toHaveLength(24)
     expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('SO/TS')
     expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('TO/TS')
+    expect(wrapper.find('[data-role="qtr-development-note"]').exists()).toBe(false)
   })
 
-  it('uses individually configurable blank cell and header labels for Quarters', async () => {
+  it('derives Quarter cell labels while keeping the Qtr header labels blank', async () => {
     const wrapper = mount(QtrPane)
     const matrixCells = wrapper.findAll('[data-role="vtg-tile"]')
     const headerLabels = wrapper.findAll('.vtg-rule-card__title')
 
     expect(matrixCells).toHaveLength(36)
-    expect(matrixCells.every((cell) => cell.text() === '')).toBe(true)
+    expect(matrixCells.every((cell) => /^Q[SO]\/Q[SO]$/.test(cell.text()))).toBe(true)
     expect(headerLabels).toHaveLength(12)
     expect(headerLabels.every((label) => label.text() === '')).toBe(true)
+    expect(wrapper.get('[data-role="qtr-development-note"]').text()).toBe(
+      'Quarter Spacing is experimental and still under development. It may change drastically or be condensed in future releases.',
+    )
     expect(wrapper.findAll('[data-role="vtg-rule-card"][aria-describedby]')).toHaveLength(0)
     expect(wrapper.findAll('[data-role="vtg-divider"]')).toHaveLength(0)
     expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(12)
@@ -166,13 +170,13 @@ describe('VtgPane', () => {
       '--vtg-rule-prop-tether-color: rgb(85,26,0)',
     )
 
-    expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-label')).toContain('TO/TS')
+    expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-label')).toContain('QO/QS')
     expect(
       wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]').attributes('aria-label'),
     ).toBe('TOG SPLIT rule 5')
   })
 
-  it('disables Qtr header tooltips and blanks the generated cell descriptions', async () => {
+  it('disables Qtr header tooltips and derives Quarter cell descriptions', async () => {
     vi.useFakeTimers()
     const wrapper = mount(QtrPane)
     const exampleCell = wrapper.get('[data-cell-reference="1-6"]')
@@ -184,7 +188,9 @@ describe('VtgPane', () => {
     vi.runAllTimers()
     await nextTick()
 
-    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe('Hands: \nProps: ')
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
+      'Hands: Quarter / Opposite\nProps: Quarter / Same',
+    )
 
     wrapper.unmount()
   })
@@ -297,7 +303,7 @@ describe('VtgPane', () => {
     ])
   })
 
-  it('offers Swap and Reverse checkboxes that reapply the current pattern', async () => {
+  it('offers Swap and Flip checkboxes that reapply the current pattern', async () => {
     const wrapper = mount(VtgPane)
     const swap = wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]')
     const reverse = wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]')
@@ -305,7 +311,7 @@ describe('VtgPane', () => {
     expect(swap.element.checked).toBe(false)
     expect(reverse.element.checked).toBe(false)
     expect(swap.element.nextElementSibling?.textContent).toBe('Swap')
-    expect(reverse.element.nextElementSibling?.textContent).toBe('Reverse')
+    expect(reverse.element.nextElementSibling?.textContent).toBe('Flip')
 
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
     await swap.setValue(true)
@@ -419,7 +425,7 @@ describe('VtgPane', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(false)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').element.value).toBe('0.8')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').element.value).toBe('4')
-    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('120')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('60')
     expect(wrapper.find('[data-role="vtg-quarters"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-quarters-2"]').exists()).toBe(false)
     expect(wrapper.emitted('patternSelect')).toHaveLength(emissionCount + 1)
@@ -445,10 +451,10 @@ describe('VtgPane', () => {
     expect(bpm.attributes()).toMatchObject({ min: '40', max: '140', step: '1' })
     expect(scale.attributes()).toMatchObject({ min: '0.5', max: '1.4', step: '0.1' })
     expect(thick.attributes()).toMatchObject({ min: '1', max: '15', step: '1' })
-    expect(bpm.element.value).toBe('120')
+    expect(bpm.element.value).toBe('60')
     expect(scale.element.value).toBe('0.8')
     expect(thick.element.value).toBe('4')
-    expect(outputs.map((output) => output.text())).toEqual(['0.8', '4', '120'])
+    expect(outputs.map((output) => output.text())).toEqual(['0.8', '4', '60'])
 
     await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
     await bpm.setValue(40)
@@ -707,7 +713,7 @@ describe('VtgPane', () => {
     expect(sideSplitRule.findAll('.vtg-rule-card__prop-handle')).toHaveLength(4)
   })
 
-  it('mirrors every regular header element when Reverse is enabled', async () => {
+  it('flips left header elements without mirroring bottom headers', async () => {
     const wrapper = mount(VtgPane)
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
@@ -731,17 +737,17 @@ describe('VtgPane', () => {
 
     const bottomSplitRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]')
     const bottomSplitProps = bottomSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
-    expect(bottomSplitRule.classes()).toContain('vtg-rule-card--reversed')
+    expect(bottomSplitRule.classes()).not.toContain('vtg-rule-card--reversed')
     expect(
       bottomSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
-    ).toBe('3%')
+    ).toBe('97%')
     expect(bottomSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
-      '59%',
-      '15%',
+      '4%',
+      '48%',
     ])
   })
 
-  it('does not mirror frame-derived Quarters props a second time', async () => {
+  it('does not mirror frame-derived Quarters props a second time when Flip is enabled', async () => {
     const wrapper = mount(QtrPane)
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)

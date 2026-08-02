@@ -1,5 +1,4 @@
 import { vtgBaseFrameSettings, vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
-import { vtgPatternLabelsByRow } from '@/features/vtg/data/vtgPatternLabels'
 import { vtgSpeedRatios } from '@/features/vtg/types'
 import type {
   VtgCellReference,
@@ -329,11 +328,7 @@ const catalog: Partial<Record<VtgCellReference, Readonly<VtgPatternDefinition>>>
 for (const row of ruleNumbers) {
   for (const column of ruleNumbers) {
     const reference: VtgCellReference = `${column}-${row}`
-    const label = vtgPatternLabelsByRow[row][column - 1]
-    if (label === undefined) throw new Error(`Missing VTG label for ${reference}`)
-
     catalog[reference] = {
-      label,
       patternsBySpeedRatio: createPatternBuilders(rowPatterns[row], column),
     }
   }

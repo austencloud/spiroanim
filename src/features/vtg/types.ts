@@ -7,7 +7,9 @@ export type VtgRuleNumber = 1 | 2 | 3 | 4 | 5 | 6
  * left-header number. For example, `1-5` is their intersection.
  */
 export type VtgCellReference = `${VtgRuleNumber}-${VtgRuleNumber}`
-export type VtgRelationshipCode = `${'S' | 'T'}${'S' | 'O'}`
+export type VtgTimingCode = 'S' | 'T' | 'Q'
+export type VtgDirectionCode = 'S' | 'O'
+export type VtgRelationshipCode = `${VtgTimingCode}${VtgDirectionCode}`
 export type VtgPatternLabel = `${VtgRelationshipCode}/${VtgRelationshipCode}`
 
 export interface VtgCellAddress {
@@ -49,7 +51,6 @@ export type VtgReadableAnimation = Partial<
 export type VtgPatternBuilder = (isAnti: boolean) => VtgReadableAnimation
 
 export interface VtgPatternDefinition {
-  label: VtgPatternLabel
   patternsBySpeedRatio: Readonly<Partial<Record<VtgSpeedRatio, VtgPatternBuilder>>>
 }
 

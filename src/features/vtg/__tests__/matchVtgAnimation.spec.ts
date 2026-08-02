@@ -49,7 +49,7 @@ describe('VTG animation matching', () => {
     }
   })
 
-  it('returns an observable Swap, Reverse, ratio, Anti, BPM, and Scale combination', () => {
+  it('returns an observable Swap, Flip, ratio, Anti, BPM, and Scale combination', () => {
     const selection = {
       reference: '5-6',
       speedRatio: '1:3',
@@ -133,7 +133,7 @@ describe('VTG animation matching', () => {
     expect(findVtgPatternMatch(animation)).toMatchObject({
       reference: '6-1',
       speedRatio: '1:1',
-      bpm: 120,
+      bpm: 60,
       scale: 0.8,
     })
   })

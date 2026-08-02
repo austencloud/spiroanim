@@ -28,7 +28,7 @@ describe('Qtr animation matching', () => {
       isAnti: false,
       swapProps: false,
       reversePlane: false,
-      bpm: 120,
+      bpm: 60,
       scale: 0.8,
     })
   })
@@ -47,7 +47,7 @@ describe('Qtr animation matching', () => {
           ...selection,
           isAnti: false,
           reversePlane: false,
-          bpm: 120,
+          bpm: 60,
           scale: 0.8,
         })
       }
