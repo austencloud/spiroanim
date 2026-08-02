@@ -2,7 +2,7 @@ import type { VtgCellReference, VtgRuleNumber } from '@/features/vtg/types'
 
 type VtgQuarterRuleLabels = readonly [string, string]
 
-export const vtgQuarterCellLabels = {
+export const qtrCellLabels = {
   '1-1': '',
   '2-1': '',
   '3-1': '',
@@ -41,7 +41,7 @@ export const vtgQuarterCellLabels = {
   '6-6': '',
 } as const satisfies Readonly<Record<VtgCellReference, string>>
 
-export const vtgQuarterBottomRuleLabels = {
+export const qtrBottomRuleLabels = {
   1: ['', ''],
   2: ['', ''],
   3: ['', ''],
@@ -50,7 +50,7 @@ export const vtgQuarterBottomRuleLabels = {
   6: ['', ''],
 } as const satisfies Readonly<Record<VtgRuleNumber, VtgQuarterRuleLabels>>
 
-export const vtgQuarterSideRuleLabels = {
+export const qtrSideRuleLabels = {
   1: ['', ''],
   2: ['', ''],
   3: ['', ''],

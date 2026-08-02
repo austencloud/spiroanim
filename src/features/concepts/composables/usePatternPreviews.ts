@@ -1,12 +1,10 @@
 import { PerspectiveCamera } from 'three'
 
+import { createQtrPreviewAnimation } from '@/features/qtr/createQtrAnimation'
+import type { ConceptPatternSelection } from '@/features/concepts/types'
+import type { QtrMode } from '@/features/qtr/types'
 import { createVtgPreviewAnimation } from '@/features/vtg/createVtgAnimation'
-import type {
-  VtgCellReference,
-  VtgPatternSelection,
-  VtgQuarterMode,
-  VtgSpeedRatio,
-} from '@/features/vtg/types'
+import type { VtgCellReference, VtgPatternSelection, VtgSpeedRatio } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 import { createMessageChannel } from '@/workers/createMessageChannel'
@@ -23,10 +21,10 @@ interface UseVtgPreviewsOptions {
   swapProps: Ref<boolean>
   reversePlane: Ref<boolean>
   scale: Ref<number>
-  quarters: Ref<VtgQuarterMode | false>
+  quarters: Ref<QtrMode | false>
 }
 
-export const vtgPreviewReferences = [
+export const patternPreviewReferences = [
   '1-1',
   '3-1',
   '5-1',
@@ -39,7 +37,7 @@ export const vtgPreviewReferences = [
 ] as const satisfies readonly VtgCellReference[]
 
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
-const spinPreviewIndexes = vtgPreviewReferences.flatMap((reference, index) =>
+const spinPreviewIndexes = patternPreviewReferences.flatMap((reference, index) =>
   spinToggleCells.has(reference) ? [index] : [],
 )
 
@@ -52,10 +50,10 @@ const revokePreviewUrl = (url: string) => {
 const hasRenderableDimensions = (
   dimensions: readonly VtgPreviewDimensions[],
 ): dimensions is readonly VtgPreviewDimensions[] =>
-  dimensions.length === vtgPreviewReferences.length &&
+  dimensions.length === patternPreviewReferences.length &&
   dimensions.every(({ width, height }) => width > 0 && height > 0)
 
-export const useVtgPreviews = ({
+export const usePatternPreviews = ({
   dimensions,
   speedRatio,
   isAnti,
@@ -64,7 +62,9 @@ export const useVtgPreviews = ({
   scale,
   quarters,
 }: UseVtgPreviewsOptions) => {
-  const previewUrls = ref<string[]>(Array.from({ length: vtgPreviewReferences.length }, () => ''))
+  const previewUrls = ref<string[]>(
+    Array.from({ length: patternPreviewReferences.length }, () => ''),
+  )
 
   let worker: Worker | undefined
   let channel: ReturnType<typeof createMessageChannel<AnimBridgeMap>> | undefined
@@ -86,7 +86,7 @@ export const useVtgPreviews = ({
     if (initialized && !rendering) void renderRequestedPreviews()
   }
 
-  const buildSelection = (reference: VtgCellReference): VtgPatternSelection => {
+  const buildSelection = (reference: VtgCellReference): ConceptPatternSelection => {
     const selection: VtgPatternSelection = {
       reference,
       speedRatio: speedRatio.value,
@@ -96,9 +96,7 @@ export const useVtgPreviews = ({
     if (spinToggleCells.has(reference)) selection.isAnti = isAnti.value
     if (swapProps.value) selection.swapProps = true
     if (reversePlane.value) selection.reversePlane = true
-    if (quarters.value) selection.quarters = quarters.value
-
-    return selection
+    return quarters.value ? { ...selection, quarters: quarters.value } : selection
   }
 
   const renderRequestedPreviews = async () => {
@@ -115,7 +113,7 @@ export const useVtgPreviews = ({
         const version = requestedVersion
         const spinVersion = requestedSpinVersion
         const previewIndexes = renderAll
-          ? vtgPreviewReferences.map((_, index) => index)
+          ? patternPreviewReferences.map((_, index) => index)
           : spinPreviewIndexes
         let failed = false
 
@@ -127,11 +125,15 @@ export const useVtgPreviews = ({
           )
             break
 
-          const reference = vtgPreviewReferences[index]
+          const reference = patternPreviewReferences[index]
           const previewDimensions = dimensions[index]
           if (!reference || !previewDimensions) continue
 
-          const animation = createVtgPreviewAnimation(buildSelection(reference))
+          const selection = buildSelection(reference)
+          const animation =
+            'quarters' in selection
+              ? createQtrPreviewAnimation(selection)
+              : createVtgPreviewAnimation(selection)
           if (!animation) continue
 
           const width = Math.max(1, Math.round(previewDimensions.width))

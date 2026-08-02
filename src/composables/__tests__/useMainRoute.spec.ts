@@ -70,20 +70,26 @@ describe('useMainRoute', () => {
       '/play-edit',
       '/play-cnc',
       '/play-vtg',
+      '/play-qtr',
       '/time-play',
       '/time-edit',
       '/time-cnc',
       '/time-vtg',
+      '/time-qtr',
       '/edit-play',
       '/edit-time',
       '/edit-cnc',
       '/edit-vtg',
+      '/edit-qtr',
       '/cnc-play',
       '/cnc-time',
       '/cnc-edit',
       '/vtg-play',
       '/vtg-time',
       '/vtg-edit',
+      '/qtr-play',
+      '/qtr-time',
+      '/qtr-edit',
     ])
   })
 
@@ -168,6 +174,22 @@ describe('useMainRoute', () => {
       concepts: 'right',
     })
     expect(conceptsStore.selectedConcept).toBe('vtg')
+    expect(splitterStore.leftPerc).toBe(0)
+  })
+
+  it('maps the Qtr concept route to the full-width Quarter Spacing pane', async () => {
+    const { paneStore, conceptsStore, splitterStore } = await mountRoute(
+      '/qtr',
+      createLoadedAnimation(),
+    )
+
+    expect(paneStore.parents).toEqual({
+      player: 'left',
+      editor: 'hidden',
+      timeline: 'hidden',
+      concepts: 'right',
+    })
+    expect(conceptsStore.selectedConcept).toBe('qtr')
     expect(splitterStore.leftPerc).toBe(0)
   })
 

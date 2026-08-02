@@ -1,10 +1,10 @@
 import { Vector3 } from 'three'
 
-import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
+import type { QtrMode } from '@/features/qtr/types'
 import type {
   VtgCellReference,
   VtgPropPlacement,
-  VtgQuarterMode,
   VtgRuleDiagram,
   VtgRuleNumber,
   VtgSpeedRatio,
@@ -12,36 +12,36 @@ import type {
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { AnimDataCompiled } from '@/types/AnimTypes'
 
-export type VtgQuarterCardinalPosition = 'top' | 'right' | 'bottom' | 'left'
-export type VtgQuarterFacing = 'in' | 'out'
+export type QtrCardinalPosition = 'top' | 'right' | 'bottom' | 'left'
+export type QtrFacing = 'in' | 'out'
 
-export interface VtgQuarterPropState {
-  position: VtgQuarterCardinalPosition
-  facing: VtgQuarterFacing
+export interface QtrPropState {
+  position: QtrCardinalPosition
+  facing: QtrFacing
 }
 
-export interface VtgQuarterSideDiagramOptions {
+export interface QtrSideDiagramOptions {
   row: VtgRuleNumber
   speedRatio: VtgSpeedRatio
-  quarters?: VtgQuarterMode
+  quarters?: QtrMode
   swapProps: boolean
   reversePlane: boolean
 }
 
-export interface VtgQuarterBottomDiagramOptions {
+export interface QtrBottomDiagramOptions {
   column: VtgRuleNumber
   speedRatio: VtgSpeedRatio
-  quarters?: VtgQuarterMode
+  quarters?: QtrMode
   isAnti: boolean
   swapProps: boolean
   reversePlane: boolean
 }
 
-interface VtgQuarterReferenceFrameOptions {
+interface QtrReferenceFrameOptions {
   reference: VtgCellReference
   frameNumber: number
   speedRatio: VtgSpeedRatio
-  quarters?: VtgQuarterMode
+  quarters?: QtrMode
   isAnti: boolean
   swapProps: boolean
   reversePlane: boolean
@@ -60,11 +60,11 @@ const cardinalDirections = [
   { position: 'bottom', direction: new Vector3(0, -1, 0) },
   { position: 'left', direction: new Vector3(1, 0, 0) },
 ] as const satisfies readonly {
-  position: VtgQuarterCardinalPosition
+  position: QtrCardinalPosition
   direction: Vector3
 }[]
 
-const classifyQuarterProp = (frame: AnimDataCompiled): VtgQuarterPropState => {
+const classifyQtrProp = (frame: AnimDataCompiled): QtrPropState => {
   const position = new Vector3().fromArray(frame.pos).normalize()
   const rotation = new Vector3().fromArray(frame.rot).normalize()
   let closest: (typeof cardinalDirections)[number] = cardinalDirections[0]
@@ -92,8 +92,8 @@ const getVtgQuarterReferencePropStates = ({
   isAnti,
   swapProps,
   reversePlane,
-}: VtgQuarterReferenceFrameOptions): readonly [VtgQuarterPropState, VtgQuarterPropState] => {
-  const animation = createDefaultVtgAnimation({
+}: QtrReferenceFrameOptions): readonly [QtrPropState, QtrPropState] => {
+  const animation = createDefaultQtrAnimation({
     reference,
     speedRatio,
     quarters,
@@ -112,17 +112,17 @@ const getVtgQuarterReferencePropStates = ({
     throw new Error(`Missing compiled Quarters frame ${frameNumber} for reference ${reference}`)
   }
 
-  return [classifyQuarterProp(firstFrame), classifyQuarterProp(secondFrame)]
+  return [classifyQtrProp(firstFrame), classifyQtrProp(secondFrame)]
 }
 
 /**
  * Each left header represents the starting state shared by its row. Compile
  * the row's first cell so this stays aligned with future pattern-form changes.
  */
-export const getVtgQuarterSidePropStates = ({
+export const getQtrSidePropStates = ({
   row,
   ...options
-}: VtgQuarterSideDiagramOptions): readonly [VtgQuarterPropState, VtgQuarterPropState] =>
+}: QtrSideDiagramOptions): readonly [QtrPropState, QtrPropState] =>
   getVtgQuarterReferencePropStates({
     ...options,
     reference: `1-${row}`,
@@ -130,7 +130,7 @@ export const getVtgQuarterSidePropStates = ({
     isAnti: false,
   })
 
-export const vtgQuarterBottomFrameNumbers = {
+export const qtrBottomFrameNumbers = {
   1: 4,
   2: 4,
   3: 4,
@@ -143,17 +143,17 @@ export const vtgQuarterBottomFrameNumbers = {
  * Each bottom header uses its column's row-6 pattern at the domain-selected
  * compiled frame. Frame numbers are one-based to match the editor UI.
  */
-export const getVtgQuarterBottomPropStates = ({
+export const getQtrBottomPropStates = ({
   column,
   ...options
-}: VtgQuarterBottomDiagramOptions): readonly [VtgQuarterPropState, VtgQuarterPropState] =>
+}: QtrBottomDiagramOptions): readonly [QtrPropState, QtrPropState] =>
   getVtgQuarterReferencePropStates({
     ...options,
     reference: `${column}-6`,
-    frameNumber: vtgQuarterBottomFrameNumbers[column],
+    frameNumber: qtrBottomFrameNumbers[column],
   })
 
-const createPlacement = ({ position, facing }: VtgQuarterPropState): VtgPropPlacement => {
+const createPlacement = ({ position, facing }: QtrPropState): VtgPropPlacement => {
   const isBeforeCenter = position === 'top' || position === 'left'
   const pointsOutFromStart = isBeforeCenter ? facing === 'out' : facing === 'in'
 
@@ -166,16 +166,12 @@ const createPlacement = ({ position, facing }: VtgQuarterPropState): VtgPropPlac
   }
 }
 
-export const createVtgQuarterSideDiagram = (
-  options: VtgQuarterSideDiagramOptions,
-): VtgRuleDiagram => {
-  const [firstProp, secondProp] = getVtgQuarterSidePropStates(options)
+export const createQtrSideDiagram = (options: QtrSideDiagramOptions): VtgRuleDiagram => {
+  const [firstProp, secondProp] = getQtrSidePropStates(options)
   return { props: [createPlacement(firstProp), createPlacement(secondProp)] }
 }
 
-export const createVtgQuarterBottomDiagram = (
-  options: VtgQuarterBottomDiagramOptions,
-): VtgRuleDiagram => {
-  const [firstProp, secondProp] = getVtgQuarterBottomPropStates(options)
+export const createQtrBottomDiagram = (options: QtrBottomDiagramOptions): VtgRuleDiagram => {
+  const [firstProp, secondProp] = getQtrBottomPropStates(options)
   return { props: [createPlacement(firstProp), createPlacement(secondProp)] }
 }

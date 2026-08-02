@@ -1,72 +1,11 @@
 import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
-import type {
-  VtgPatternSelection,
-  VtgQuarterMode,
-  VtgReadableAnimation,
-} from '@/features/vtg/types'
+import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 
 const vtgFrameCount = 5
-
-const normalizeArc = (arc: number): number => ((arc % 360) + 360) % 360
-
-const shiftPropArc = (
-  animation: RootDataFinal,
-  propIndex: 0 | 1,
-  amount: number,
-): RootDataFinal => {
-  const prop = animation.props[propIndex]
-  const firstFrame = prop?.anim[0]
-  if (!prop || !firstFrame) return animation
-
-  return {
-    ...animation,
-    props: animation.props.map((candidate, index) =>
-      index === propIndex
-        ? {
-            ...prop,
-            anim: [
-              { ...firstFrame, arc: normalizeArc((firstFrame.arc ?? 0) + amount) },
-              ...prop.anim.slice(1),
-            ],
-          }
-        : candidate,
-    ),
-  }
-}
-
-const propIndices = [0, 1] as const
-const firstQuarterArcAmounts = [90, 0] as const
-
-const getQuarterArcAmounts = (
-  animation: RootDataFinal,
-  quarterMode: VtgQuarterMode,
-  swapProps: boolean,
-): readonly [number, number] => {
-  const amounts = propIndices.map((outputIndex) => {
-    const originalIndex = swapProps ? propIndices[1 - outputIndex]! : outputIndex
-    const firstQuarterAmount = firstQuarterArcAmounts[originalIndex]
-    if (quarterMode === 1) return firstQuarterAmount
-
-    const plane = normalizeArc(animation.props[outputIndex]?.anim[0]?.plane ?? 0)
-    return firstQuarterAmount + (plane === 180 ? -90 : 90)
-  })
-
-  return [amounts[0], amounts[1]]
-}
-
-export const removeVtgQuarterArcs = (
-  animation: RootDataFinal,
-  quarterMode: VtgQuarterMode,
-  swapProps: boolean,
-): RootDataFinal => {
-  const amounts = getQuarterArcAmounts(animation, quarterMode, swapProps)
-
-  return shiftPropArc(shiftPropArc(animation, 0, -amounts[0]), 1, -amounts[1])
-}
 
 const addDefaultFrames = (pattern: VtgReadableAnimation): VtgReadableAnimation => ({
   ...pattern,
@@ -126,11 +65,7 @@ export const createVtgAnimation = (
     depth: pattern.depth ?? current.depth,
   }
 
-  if (!selection.quarters) return animation
-
-  const amounts = getQuarterArcAmounts(animation, selection.quarters, selection.swapProps === true)
-
-  return shiftPropArc(shiftPropArc(animation, 0, amounts[0]), 1, amounts[1])
+  return animation
 }
 
 /**
@@ -143,23 +78,23 @@ export const createDefaultVtgAnimation = (
 /**
  * Builds VTG data without inheriting settings from the active player.
  */
+export const toVtgPreviewAnimation = (animation: RootDataFinal): RootDataFinal => ({
+  ...animation,
+  hands: false,
+  thick: 15,
+  visible: false,
+  props: animation.props.map((prop) => ({
+    ...prop,
+    hands: false,
+    paths: animation.paths,
+    thick: 15,
+    visible: false,
+  })),
+})
+
 export const createVtgPreviewAnimation = (
   selection: VtgPatternSelection,
 ): RootDataFinal | undefined => {
   const animation = createDefaultVtgAnimation(selection)
-  if (!animation) return undefined
-
-  return {
-    ...animation,
-    hands: false,
-    thick: 15,
-    visible: false,
-    props: animation.props.map((prop) => ({
-      ...prop,
-      hands: false,
-      paths: animation.paths,
-      thick: 15,
-      visible: false,
-    })),
-  }
+  return animation ? toVtgPreviewAnimation(animation) : undefined
 }

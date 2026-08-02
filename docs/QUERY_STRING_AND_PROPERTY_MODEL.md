@@ -23,6 +23,7 @@ The authoritative implementations are:
 - `src/math/animation/AnimFunc.ts` for frame defaults, inheritance, and compilation.
 - `src/features/vtg/data/vtgPlayerSettings.ts` and
   `src/features/vtg/data/vtgPatternCatalog.ts` for VTG-specific controls and transforms.
+- `src/features/qtr/` for Quarter Spacing transforms, matching, labels, and frame-derived headers.
 
 ## The complete data path
 
@@ -453,7 +454,10 @@ snapshots. Query format coverage therefore defines undo coverage.
 ## Concept controls are a separate property path
 
 The Concepts pane does not use `PropertyPanel`, `DynamicVal`, or `useProperties.constraints()`.
-Its VTG panel uses native controls and sends a `VtgPatternSelection` to the VTG builder.
+Its VTG and Quarter Spacing panels use the same native matrix controls. VTG sends a
+`VtgPatternSelection` to the VTG builder, while Quarter Spacing sends a `QtrPatternSelection` to
+the Qtr builder. Speed Ratio, Swap, and Reverse are held in the shared Concepts store so their
+values remain unchanged when switching between the two panels.
 
 Current VTG numeric behavior is:
 
@@ -482,45 +486,44 @@ VTG matching compiles geometry and identifies Scale from the first frame's inter
 Distance is not part of the VTG geometry signature, so a distance mismatch does not by itself stop
 a pattern match.
 
-The VTG quarters radio group provides two mutually exclusive transforms. `Qtr #1` adds 90 degrees
-to the original first animation track's first-frame arc. `Qtr #2` rotates the complete Qtr #1
-pattern another 90 degrees using first-frame arc adjustments. Plane 0 receives +90 degrees and
-plane 180 receives -90 degrees so both planes rotate in the same spatial direction without changing
-their paths. Arc adjustments wrap within 0-359 degrees. Neither mode is selected by default.
-Selecting the active radio again, or using Reset, clears the selection and removes the Quarters
-transform. Without Swap these are `props[0].anim[0].arc` and, for Qtr #2,
-`props[1].anim[0].arc`. With Swap, the adjustments move with their original tracks.
+Quarter Spacing provides two mutually exclusive transforms and always has one selected. `Qtr #1`
+adds 90 degrees to the original first animation track's first-frame arc. `Qtr #2` rotates the
+complete Qtr #1 pattern another 90 degrees using first-frame arc adjustments. Plane 0 receives +90
+degrees and plane 180 receives -90 degrees so both planes rotate in the same spatial direction
+without changing their paths. Arc adjustments wrap within 0-359 degrees. Qtr #1 is the default;
+selecting an active radio again cannot clear it, and Reset returns to Qtr #1. With Swap, the
+adjustments move with their original tracks.
 
-VTG previews include the same transform, and VTG matching tries the corresponding track before
-using the shared VTG matcher so the selected cell and options can be recovered from loaded animation
-data. Quarters matrix and header display labels are configured separately in
-`vtgQuarterLabels.ts`; blank display labels do not replace the canonical VTG descriptions used for
-matching and accessibility. Quarters disables all header tooltips because the normal VTG
-descriptions do not explain the transformed header states. Quarters cell tooltips retain the
-`Hands:` and `Props:` lines but leave both generated descriptions blank. Quarters also hides every
-header divider, including rule 5's offset divider, and hides the prop diagrams in the bottom headers.
-The left-header prop diagrams remain visible.
+Quarter Spacing previews and matching apply the Qtr transform around the shared VTG pattern builder
+and matcher so selected cells and shared options can be recovered when switching panels or loading
+animation data. Qtr matrix and header display labels are configured separately in `qtrLabels.ts`;
+blank display labels do not replace the canonical VTG descriptions used for matching and
+accessibility. Quarter Spacing disables all header tooltips because the normal VTG descriptions do
+not explain the transformed header states. Cell tooltips retain the `Hands:` and `Props:` lines but
+leave both generated descriptions blank. Quarter Spacing also hides every header divider, including
+rule 5's offset divider, and hides the prop diagrams in the bottom headers. The left-header prop
+diagrams remain visible.
 
-The visible Quarters header props mirror the rendered POI material colors. Each prop's large end is
+The visible Quarter Spacing header props mirror the rendered POI material colors. Each prop's large end is
 the head (`COLSET` slot 0), its small end is the handle (`COLSET` slot 1), and its connecting line is
 the tether (`COLSET` slot 2). The first header prop uses VTG's Green color set and the second uses
 VTG's Orange color set, matching the generated animation's prop colors.
 
-While Quarters is active, each left-header prop diagram is recalculated from the first compiled
+In Quarter Spacing, each left-header prop diagram is recalculated from the first compiled
 frame of the first cell in that row (`1-1` through `1-6`). The closest cardinal direction of `pos`
 selects top, right, bottom, or left. The sign of `pos dot rot` selects out or in. Placements reuse
 the exact bounds demonstrated by left rule 2 for left/right and bottom rule 2 for top/bottom. Swap
 and Reverse participate in this calculation; controls that do not change first-frame geometry do
 not.
 
-The bottom-header prop diagrams are not displayed while Quarters is active.
+The bottom-header prop diagrams are not displayed in Quarter Spacing.
 
 Reverse mirrors each header along the header's layout axis: left headers mirror left-to-right and
 bottom headers mirror top-to-bottom. The title block, divider, and regular prop placements move
 together, including which end of a prop is rendered as the head. Reversed left-header titles are
 right-aligned against the right edge. Header numbers remain in their normal bottom-right position.
-Quarters header props are not mirrored a second time because their positions already come from
-compiled frames that include the Reverse transform; the surrounding Quarters title layout still
+Quarter Spacing header props are not mirrored a second time because their positions already come
+from compiled frames that include the Reverse transform; the surrounding title layout still
 mirrors normally.
 
 ## How to change a slider safely

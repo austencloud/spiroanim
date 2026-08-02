@@ -30,10 +30,13 @@ describe('useConceptsStore', () => {
     localStorage.clear()
   })
 
-  it('defaults to VTG', () => {
+  it('defaults to VTG with shared pattern controls', () => {
     const { app, store } = mountStore()
 
     expect(store.selectedConcept).toBe('vtg')
+    expect(store.speedRatio).toBe('1:3')
+    expect(store.swapProps).toBe(false)
+    expect(store.reversePlane).toBe(false)
     app.unmount()
   })
 
@@ -43,6 +46,26 @@ describe('useConceptsStore', () => {
     const { app, store } = mountStore()
 
     expect(store.selectedConcept).toBe('vtg')
+    app.unmount()
+  })
+
+  it('hydrates Quarter Spacing and its shared pattern controls', () => {
+    localStorage.setItem(
+      'sa-concepts',
+      JSON.stringify({
+        selectedConcept: 'qtr',
+        speedRatio: '1:5',
+        swapProps: true,
+        reversePlane: true,
+      }),
+    )
+
+    const { app, store } = mountStore()
+
+    expect(store.selectedConcept).toBe('qtr')
+    expect(store.speedRatio).toBe('1:5')
+    expect(store.swapProps).toBe(true)
+    expect(store.reversePlane).toBe(true)
     app.unmount()
   })
 })

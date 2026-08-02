@@ -1,6 +1,6 @@
 <template>
   <PatternMatrixPane
-    concept="vtg"
+    concept="qtr"
     :animation="animation"
     :animation-ready="animationReady"
     @pattern-select="forwardSelection"
@@ -9,9 +9,9 @@
 
 <script setup lang="ts">
 import PatternMatrixPane from '@/features/concepts/components/PatternMatrixPane.vue'
-import { isVtgPatternSelection } from '@/features/concepts/types'
+import { isQtrPatternSelection } from '@/features/concepts/types'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
-import type { VtgPatternSelection } from '@/features/vtg/types'
+import type { QtrPatternSelection } from '@/features/qtr/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 withDefaults(
@@ -23,10 +23,10 @@ withDefaults(
 )
 
 const emit = defineEmits<{
-  patternSelect: [selection: VtgPatternSelection]
+  patternSelect: [selection: QtrPatternSelection]
 }>()
 
 const forwardSelection = (selection: ConceptPatternSelection) => {
-  if (isVtgPatternSelection(selection)) emit('patternSelect', selection)
+  if (isQtrPatternSelection(selection)) emit('patternSelect', selection)
 }
 </script>

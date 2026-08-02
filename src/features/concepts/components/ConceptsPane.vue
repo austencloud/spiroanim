@@ -7,9 +7,17 @@
       data-role="concept-selector"
     >
       <option value="vtg">Vulkan Tech Gospel</option>
+      <option value="qtr">Quarter Spacing</option>
     </select>
 
     <VtgPane
+      v-if="selectedConcept === 'vtg'"
+      :animation="animation"
+      :animation-ready="animationReady"
+      @pattern-select="emit('patternSelect', $event)"
+    />
+    <QtrPane
+      v-else
       :animation="animation"
       :animation-ready="animationReady"
       @pattern-select="emit('patternSelect', $event)"
@@ -19,8 +27,9 @@
 
 <script setup lang="ts">
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
+import QtrPane from '@/features/qtr/components/QtrPane.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
-import type { VtgPatternSelection } from '@/features/vtg/types'
+import type { ConceptPatternSelection } from '@/features/concepts/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 defineProps<{
@@ -29,7 +38,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  patternSelect: [selection: VtgPatternSelection]
+  patternSelect: [selection: ConceptPatternSelection]
 }>()
 
 const { selectedConcept } = storeToRefs(useConceptsStore())

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  getVtgQuarterBottomPropStates,
-  getVtgQuarterSidePropStates,
-  vtgQuarterBottomFrameNumbers,
-} from '@/features/vtg/math/createVtgQuarterHeaderDiagram'
+  getQtrBottomPropStates,
+  getQtrSidePropStates,
+  qtrBottomFrameNumbers,
+} from '@/features/qtr/math/createQtrHeaderDiagram'
 import type { VtgRuleNumber } from '@/features/vtg/types'
 
 const getStates = (
@@ -14,7 +14,7 @@ const getStates = (
     reversePlane?: boolean
   } = {},
 ) =>
-  getVtgQuarterSidePropStates({
+  getQtrSidePropStates({
     row,
     speedRatio: '1:3',
     swapProps: options.swapProps ?? false,
@@ -106,15 +106,15 @@ describe('Quarters side-header prop states', () => {
       reversePlane: false,
     } as const
 
-    expect(getVtgQuarterSidePropStates({ ...baseOptions, speedRatio: '1:1' })).toEqual(
-      getVtgQuarterSidePropStates({ ...baseOptions, speedRatio: '1:5' }),
+    expect(getQtrSidePropStates({ ...baseOptions, speedRatio: '1:1' })).toEqual(
+      getQtrSidePropStates({ ...baseOptions, speedRatio: '1:5' }),
     )
   })
 })
 
 describe('Quarters bottom-header prop states', () => {
   it('uses the requested one-based row-6 frame for each column', () => {
-    expect(vtgQuarterBottomFrameNumbers).toEqual({
+    expect(qtrBottomFrameNumbers).toEqual({
       1: 4,
       2: 4,
       3: 4,
@@ -169,7 +169,7 @@ describe('Quarters bottom-header prop states', () => {
     ],
   ] as const)('derives column %i from its configured row-6 frame', (column, expected) => {
     expect(
-      getVtgQuarterBottomPropStates({
+      getQtrBottomPropStates({
         column,
         speedRatio: '1:3',
         isAnti: false,
@@ -181,7 +181,7 @@ describe('Quarters bottom-header prop states', () => {
 
   it('recalculates special row-6 references when Anti changes', () => {
     const getColumnFive = (isAnti: boolean) =>
-      getVtgQuarterBottomPropStates({
+      getQtrBottomPropStates({
         column: 5,
         speedRatio: '1:3',
         isAnti,

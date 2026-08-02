@@ -1,4 +1,4 @@
-import { createDefaultVtgAnimation, removeVtgQuarterArcs } from '@/features/vtg/createVtgAnimation'
+import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import type {
   VtgCellReference,
   VtgPatternMatch,
@@ -6,7 +6,6 @@ import type {
   VtgRuleNumber,
 } from '@/features/vtg/types'
 import { vtgSpeedRatios } from '@/features/vtg/types'
-import { vtgQuarterModes } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { AnimDataCompiled, RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 
@@ -14,7 +13,7 @@ const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber
 const booleanOptions = [false, true] as const
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 
-type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale' | 'quarters'>
+type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale'>
 
 let candidateCache: ReadonlyMap<string, readonly VtgCandidateMatch[]> | undefined
 
@@ -107,28 +106,13 @@ const findBaseVtgPatternMatches = (animation: RootDataFinal): readonly VtgPatter
   const candidates = candidateCache ?? buildCandidateCache()
   return (candidates.get(signature) ?? []).map((candidate) => ({
     ...candidate,
-    quarters: false,
     bpm: animation.bpm,
     scale,
   }))
 }
 
 export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPatternMatch[] => {
-  const directMatches = findBaseVtgPatternMatches(animation)
-  if (directMatches.length > 0) return directMatches
-
-  return vtgQuarterModes.flatMap((quarters) => {
-    const nonSwapMatches = findBaseVtgPatternMatches(
-      removeVtgQuarterArcs(animation, quarters, false),
-    )
-      .filter((match) => !match.swapProps)
-      .map((match) => ({ ...match, quarters }))
-    const swapMatches = findBaseVtgPatternMatches(removeVtgQuarterArcs(animation, quarters, true))
-      .filter((match) => match.swapProps)
-      .map((match) => ({ ...match, quarters }))
-
-    return [...nonSwapMatches, ...swapMatches]
-  })
+  return findBaseVtgPatternMatches(animation)
 }
 
 /**

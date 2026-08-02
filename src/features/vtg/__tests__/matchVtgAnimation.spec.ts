@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { findVtgPatternMatch, findVtgPatternMatches } from '@/features/vtg/matchVtgAnimation'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { vtgSpeedRatios } from '@/features/vtg/types'
-import { useBaseQS } from '@/services/query/createBaseQS'
-import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
 const booleanOptions = [false, true] as const
@@ -43,10 +40,7 @@ describe('VTG animation matching', () => {
                 } satisfies VtgPatternSelection
                 const matches = findVtgPatternMatches(createAnimation(selection))
 
-                expect(matches).toContainEqual({
-                  ...selection,
-                  quarters: false,
-                })
+                expect(matches).toContainEqual(selection)
               }
             }
           }
@@ -66,48 +60,7 @@ describe('VTG animation matching', () => {
       scale: 0.6,
     } as const satisfies VtgPatternSelection
 
-    expect(findVtgPatternMatch(createAnimation(selection))).toEqual({
-      ...selection,
-      quarters: false,
-    })
-  })
-
-  it('recognizes the Quarters transform', () => {
-    const selection = {
-      reference: '3-4',
-      speedRatio: '1:5',
-      quarters: 1,
-    } as const satisfies VtgPatternSelection
-
-    expect(findVtgPatternMatch(createAnimation(selection))).toEqual({
-      ...selection,
-      isAnti: false,
-      swapProps: false,
-      reversePlane: false,
-      bpm: 120,
-      scale: 0.8,
-    })
-  })
-
-  it('recognizes both Quarters modes with and without Swap', () => {
-    for (const quarters of [1, 2] as const) {
-      for (const swapProps of booleanOptions) {
-        const selection = {
-          reference: '2-1',
-          speedRatio: '1:3',
-          swapProps,
-          quarters,
-        } as const satisfies VtgPatternSelection
-
-        expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual({
-          ...selection,
-          isAnti: false,
-          reversePlane: false,
-          bpm: 120,
-          scale: 0.8,
-        })
-      }
-    }
+    expect(findVtgPatternMatch(createAnimation(selection))).toEqual(selection)
   })
 
   it('recognizes a pattern regardless of non-pattern animation settings', () => {
@@ -183,24 +136,6 @@ describe('VTG animation matching', () => {
       bpm: 120,
       scale: 0.8,
     })
-  })
-
-  it('recovers VTG controls after a complete shared-URL round trip', async () => {
-    const selection = {
-      reference: '5-6',
-      speedRatio: '1:5',
-      isAnti: true,
-      swapProps: true,
-      reversePlane: true,
-      quarters: 2,
-      bpm: 101,
-      scale: 1.2,
-    } as const satisfies VtgPatternSelection
-    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 1)
-    const query = codec.encodeQS(createAnimation(selection), false)
-    const decoded = await codec.decodeVer(query)
-
-    expect(findVtgPatternMatch(decoded)).toEqual(selection)
   })
 
   it('prefers unchecked controls when a transform has no observable effect', () => {

@@ -41,7 +41,7 @@
         :animation-ready="animationReady"
         data-type="concepts"
         data-role="concepts-view"
-        @pattern-select="applyVtgPattern"
+        @pattern-select="applyConceptPattern"
       />
     </div>
     <AppNavigationMenu />
@@ -66,8 +66,9 @@ import Player from '@/components/SpiroAnim/AnimPlayer.vue'
 import Editor from '@/components/SpiroAnim/AnimEditor.vue'
 import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
+import { createQtrAnimation } from '@/features/qtr/createQtrAnimation'
+import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
-import type { VtgPatternSelection } from '@/features/vtg/types'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useScrollSelectScale } from '@/composables/useScrollSelectScale'
@@ -117,8 +118,11 @@ registerComponentEl(cEditor, eEditor)
 registerComponentEl(cTimeline, eTimeline)
 registerComponentEl(cConcepts, eConcepts)
 
-const applyVtgPattern = (selection: VtgPatternSelection) => {
-  const animation = createVtgAnimation(ROOT.value, selection)
+const applyConceptPattern = (selection: ConceptPatternSelection) => {
+  const animation =
+    'quarters' in selection
+      ? createQtrAnimation(ROOT.value, selection)
+      : createVtgAnimation(ROOT.value, selection)
   if (animation) ROOT.value = animation
 }
 

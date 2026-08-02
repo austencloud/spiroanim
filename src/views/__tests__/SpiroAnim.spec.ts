@@ -8,6 +8,7 @@ import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { createQtrAnimation } from '@/features/qtr/createQtrAnimation'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 
 describe('SpiroAnim view', () => {
@@ -152,9 +153,24 @@ describe('SpiroAnim view', () => {
 
     expect(playerRoot.value).toEqual(expectedOneToThree)
 
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]').trigger('click')
+    const expectedQuarter = createQtrAnimation(playerRoot.value, {
+      reference: '6-2',
+      speedRatio: '1:3',
+      quarters: 1,
+    })
+    await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('qtr')
+    await flushPromises()
 
-    expect(playerRoot.value.props.map((prop) => prop.anim[0]?.arc)).toEqual([180, 90])
+    expect(playerRoot.value).toEqual(expectedQuarter)
+
+    const expectedVtgAgain = createVtgAnimation(playerRoot.value, {
+      reference: '6-2',
+      speedRatio: '1:3',
+    })
+    await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('vtg')
+    await flushPromises()
+
+    expect(playerRoot.value).toEqual(expectedVtgAgain)
 
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)
