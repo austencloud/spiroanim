@@ -222,6 +222,7 @@ const rightStyle = computed<CSSProperties>(() => ({
   flex: flexRight.value,
   position: 'relative',
   'overflow-x': 'auto',
+  'overflow-y': 'hidden',
 }))
 </script>
 

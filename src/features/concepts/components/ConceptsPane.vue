@@ -51,6 +51,7 @@ const { selectedConcept } = storeToRefs(useConceptsStore())
   min-inline-size: 0;
   min-block-size: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   color: var(--color-text);
 }
 
