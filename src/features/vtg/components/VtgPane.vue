@@ -35,6 +35,8 @@
           orientation="horizontal"
           :accent="rule.number === selectedCell?.row"
           :show-divider="!quarters"
+          :prop-colors="quarters ? vtgHeaderPropColors : undefined"
+          :tooltip-disabled="Boolean(quarters)"
         />
       </div>
 
@@ -44,7 +46,7 @@
             v-for="tile in matrixTiles"
             :key="tile.reference"
             class="vtg-tile-tooltip"
-            :text="tile.description"
+            :text="getTileDescription(tile)"
           >
             <template #activator="{ props: activatorProps }">
               <button
@@ -81,7 +83,7 @@
               </button>
             </template>
             <template #html>
-              <span class="vtg-tile-tooltip__text">{{ tile.description }}</span>
+              <span class="vtg-tile-tooltip__text">{{ getTileDescription(tile) }}</span>
             </template>
           </BaseTooltip>
         </div>
@@ -131,6 +133,8 @@
           orientation="vertical"
           :accent="rule.number === selectedCell?.column"
           :show-divider="!quarters"
+          :show-props="!quarters"
+          :tooltip-disabled="Boolean(quarters)"
         />
       </div>
     </div>
@@ -192,8 +196,26 @@
         <span>Reverse</span>
       </label>
       <label>
-        <input v-model="quarters" type="checkbox" data-role="vtg-quarters" />
-        <span>Quarters</span>
+        <input
+          :checked="quarters === 1"
+          type="radio"
+          name="vtg-quarters"
+          :value="1"
+          data-role="vtg-quarters"
+          @click="toggleQuarterMode(1)"
+        />
+        <span>Quarters #1</span>
+      </label>
+      <label>
+        <input
+          :checked="quarters === 2"
+          type="radio"
+          name="vtg-quarters"
+          :value="2"
+          data-role="vtg-quarters-2"
+          @click="toggleQuarterMode(2)"
+        />
+        <span>Quarters #2</span>
       </label>
       <label>
         <input v-model="quartersAfterSwap" type="checkbox" data-role="vtg-quarters-after-swap" />
@@ -209,6 +231,7 @@ import { mdiShuffleVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
+import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import { useVtgPreviews, vtgPreviewReferences } from '@/features/vtg/composables/useVtgPreviews'
 import {
@@ -217,6 +240,7 @@ import {
 } from '@/features/vtg/data/vtgPatternLabels'
 import {
   vtgBpmControl,
+  vtgPropSettings,
   vtgScaleControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
@@ -236,6 +260,7 @@ import type {
   VtgCellReference,
   VtgPatternLabel,
   VtgPropPlacement,
+  VtgQuarterMode,
   VtgRuleDiagram,
   VtgRuleNumber,
   VtgRuleSpec,
@@ -244,6 +269,7 @@ import type {
 } from '@/features/vtg/types'
 import { vtgDefaultSpeedRatio, vtgSpeedRatios } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { toColor } from '@/utils/UtilFunc'
 
 interface BlankDimensions {
   width: number
@@ -282,9 +308,27 @@ const reversePlane = ref(false)
 const bpm = ref<number>(vtgBpmControl.default)
 const scale = ref<number>(vtgScaleControl.default)
 const thick = ref<number>(vtgThickControl.default)
-const quarters = ref(false)
+const quarters = ref<VtgQuarterMode | false>(false)
 const quartersAfterSwap = ref(false)
+const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
+  const colorSet = COLSET[COLORS.indexOf(color)]
+  if (!colorSet) throw new Error(`Missing VTG prop color set for ${color}`)
+
+  // These map directly to the POI model's head, handle, and tether materials.
+  return {
+    head: toColor(colorSet[0]),
+    handle: toColor(colorSet[1]),
+    tether: toColor(colorSet[2]),
+  }
+})
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
+
+const toggleQuarterMode = (mode: VtgQuarterMode) => {
+  // Keep selection controlled so the same native click works for a label tap, mouse click,
+  // or keyboard activation without the browser restoring a canceled radio default action.
+  quarters.value = quarters.value === mode ? false : mode
+}
+
 let suppressPatternEmit = false
 let hydrationVersion = 0
 let lastEmittedSelection: VtgPatternSelection | undefined
@@ -317,6 +361,10 @@ const matrixTiles: readonly VtgMatrixTile[] = leftRuleNumbers.flatMap((rowNumber
   })
 })
 
+const vtgQuarterPatternDescription = 'Hands: \nProps: '
+const getTileDescription = (tile: VtgMatrixTile) =>
+  quarters.value ? vtgQuarterPatternDescription : tile.description
+
 const selectedCell = ref<VtgCellAddress>()
 
 const selectedCellReference = computed<VtgCellReference | undefined>(() => {
@@ -343,7 +391,7 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (bpm.value !== vtgBpmControl.default) selection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
   if (thick.value !== vtgThickControl.default) selection.thick = thick.value
-  if (quarters.value) selection.quarters = true
+  if (quarters.value) selection.quarters = quarters.value
   if (quartersAfterSwap.value) selection.quartersAfterSwap = true
   lastEmittedSelection = selection
   emit('patternSelect', selection)
@@ -626,6 +674,7 @@ const sideRules: readonly VtgRuleSpec[] = [
 
 const quarterDiagramOptions = computed(() => ({
   speedRatio: speedRatio.value,
+  quarters: quarters.value || 1,
   swapProps: swapProps.value,
   reversePlane: reversePlane.value,
   quartersAfterSwap: quartersAfterSwap.value,

@@ -482,17 +482,32 @@ VTG matching compiles geometry and identifies Scale from the first frame's inter
 Distance is not part of the VTG geometry signature, so a distance mismatch does not by itself stop
 a pattern match.
 
-The VTG `Quarters` option adds 90 degrees to the original first animation track's first-frame arc.
-Without Swap this is `props[0].anim[0].arc`; with Swap the adjusted track moves intact to `props[1]`.
-The temporary `Quarters After Swap` experiment changes that ordering: when enabled, Quarters
-instead adjusts output track `props[0]` after Swap has run. The two modes are identical when Swap is
-off. Matching recognizes both observable modes so a loaded or shared animation restores the toggle.
+The VTG quarters radio group provides two mutually exclusive transforms. `Quarters #1` adds 90
+degrees to the original first animation track's first-frame arc. `Quarters #2` adds 180 degrees to
+the original first animation track's first-frame arc and 90 degrees to the original second animation
+track's first-frame arc. Neither mode is selected by default. Selecting the active radio again, or
+using Reset, clears the selection and removes the Quarters transform. Without Swap these are
+`props[0].anim[0].arc` and, for Quarters #2, `props[1].anim[0].arc`. With Swap, the adjustments move
+with their original tracks.
+
+The temporary `Quarters After Swap` experiment changes that ordering: when enabled, the selected
+quarters transform applies its offsets directly to the output tracks after Swap has run. The two
+orderings are identical when Swap is off. Matching recognizes both observable orderings so a loaded
+or shared animation restores the toggle.
 VTG previews include the same transform, and VTG matching tries the corresponding track before
 using the shared VTG matcher so the selected cell and options can be recovered from loaded animation
 data. Quarters matrix and header display labels are configured separately in
 `vtgQuarterLabels.ts`; blank display labels do not replace the canonical VTG descriptions used for
-matching, tooltips, and accessibility. Quarters also hides every header divider, including rule 5's
-offset divider, without hiding the prop diagram.
+matching and accessibility. Quarters disables all header tooltips because the normal VTG
+descriptions do not explain the transformed header states. Quarters cell tooltips retain the
+`Hands:` and `Props:` lines but leave both generated descriptions blank. Quarters also hides every
+header divider, including rule 5's offset divider, and hides the prop diagrams in the bottom headers.
+The left-header prop diagrams remain visible.
+
+The visible Quarters header props mirror the rendered POI material colors. Each prop's large end is
+the head (`COLSET` slot 0), its small end is the handle (`COLSET` slot 1), and its connecting line is
+the tether (`COLSET` slot 2). The first header prop uses VTG's Green color set and the second uses
+VTG's Orange color set, matching the generated animation's prop colors.
 
 While Quarters is active, each left-header prop diagram is recalculated from the first compiled
 frame of the first cell in that row (`1-1` through `1-6`). The closest cardinal direction of `pos`
@@ -501,10 +516,7 @@ the exact bounds demonstrated by left rule 2 for left/right and bottom rule 2 fo
 and Reverse participate in this calculation; controls that do not change first-frame geometry do
 not.
 
-Each Quarters bottom-header prop diagram is also recalculated from its column's row-6 pattern.
-Columns 1-4 and 6 use compiled frame 4; column 5 uses compiled frame 2. These are one-based editor
-frame numbers. Anti also participates for the special row-6 Spin/Anti cells, along with Swap,
-Reverse, and the experimental Quarters ordering.
+The bottom-header prop diagrams are not displayed while Quarters is active.
 
 ## How to change a slider safely
 

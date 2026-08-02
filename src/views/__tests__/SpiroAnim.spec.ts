@@ -152,7 +152,7 @@ describe('SpiroAnim view', () => {
 
     expect(playerRoot.value).toEqual(expectedOneToThree)
 
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]').setValue(true)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]').trigger('click')
 
     expect(playerRoot.value.props.map((prop) => prop.anim[0]?.arc)).toEqual([180, 90])
 

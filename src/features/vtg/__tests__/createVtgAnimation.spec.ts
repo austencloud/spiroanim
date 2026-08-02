@@ -120,7 +120,7 @@ describe('createVtgAnimation', () => {
       speedRatio: '1:1',
     } as const
     const standard = createVtgAnimation(createCurrentAnimation(), selection)
-    const quarters = createVtgAnimation(createCurrentAnimation(), { ...selection, quarters: true })
+    const quarters = createVtgAnimation(createCurrentAnimation(), { ...selection, quarters: 1 })
 
     expect(quarters?.props[0]?.anim[0]?.arc).toBe((standard?.props[0]?.anim[0]?.arc ?? 0) + 90)
     expect(quarters?.props[0]?.anim.slice(1)).toEqual(standard?.props[0]?.anim.slice(1))
@@ -131,7 +131,7 @@ describe('createVtgAnimation', () => {
     const selection = {
       reference: '2-1',
       speedRatio: '1:3',
-      quarters: true,
+      quarters: 1,
     } as const
     const quarters = createVtgAnimation(createCurrentAnimation(), selection)
     const swapped = createVtgAnimation(createCurrentAnimation(), { ...selection, swapProps: true })
@@ -149,13 +149,27 @@ describe('createVtgAnimation', () => {
     const swapped = createVtgAnimation(createCurrentAnimation(), selection)
     const experimental = createVtgAnimation(createCurrentAnimation(), {
       ...selection,
-      quarters: true,
+      quarters: 1,
       quartersAfterSwap: true,
     })
 
     expect(experimental?.props[0]?.anim[0]?.arc).toBe((swapped?.props[0]?.anim[0]?.arc ?? 0) + 90)
     expect(experimental?.props[0]?.anim.slice(1)).toEqual(swapped?.props[0]?.anim.slice(1))
     expect(experimental?.props[1]?.anim).toEqual(swapped?.props[1]?.anim)
+  })
+
+  it('adds 180 degrees to prop 1 and 90 degrees to prop 2 for Quarters #2', () => {
+    const selection = {
+      reference: '1-6',
+      speedRatio: '1:1',
+    } as const
+    const standard = createVtgAnimation(createCurrentAnimation(), selection)
+    const quarters = createVtgAnimation(createCurrentAnimation(), { ...selection, quarters: 2 })
+
+    expect(quarters?.props[0]?.anim[0]?.arc).toBe((standard?.props[0]?.anim[0]?.arc ?? 0) + 180)
+    expect(quarters?.props[1]?.anim[0]?.arc).toBe((standard?.props[1]?.anim[0]?.arc ?? 0) + 90)
+    expect(quarters?.props[0]?.anim.slice(1)).toEqual(standard?.props[0]?.anim.slice(1))
+    expect(quarters?.props[1]?.anim.slice(1)).toEqual(standard?.props[1]?.anim.slice(1))
   })
 
   it('uses player VTG settings with preview-only visibility and thickness overrides', () => {

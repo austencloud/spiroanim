@@ -19,10 +19,13 @@ export const vtgSpeedRatios = ['1:1', '1:3', '1:5'] as const
 export type VtgSpeedRatio = (typeof vtgSpeedRatios)[number]
 export const vtgDefaultSpeedRatio = '1:3' satisfies VtgSpeedRatio
 
+export const vtgQuarterModes = [1, 2] as const
+export type VtgQuarterMode = (typeof vtgQuarterModes)[number]
+
 export interface VtgPatternSelection {
   reference: VtgCellReference
   speedRatio: VtgSpeedRatio
-  quarters?: boolean
+  quarters?: VtgQuarterMode
   quartersAfterSwap?: boolean
   isAnti?: boolean
   swapProps?: boolean
@@ -35,7 +38,7 @@ export interface VtgPatternSelection {
 export interface VtgPatternMatch {
   reference: VtgCellReference
   speedRatio: VtgSpeedRatio
-  quarters: boolean
+  quarters: VtgQuarterMode | false
   quartersAfterSwap: boolean
   isAnti: boolean
   swapProps: boolean

@@ -12,6 +12,12 @@ describe('useSplitHandle', () => {
     vi.restoreAllMocks()
   })
 
+  it('can load before the application installs Pinia', async () => {
+    setActivePinia(undefined)
+
+    await expect(import('@/composables/useSplitHandle')).resolves.toBeDefined()
+  })
+
   it('keeps the complete vertical handle inside the parent boundary', async () => {
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(32)
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(32)

@@ -4,6 +4,7 @@ import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import type {
   VtgCellReference,
   VtgPropPlacement,
+  VtgQuarterMode,
   VtgRuleDiagram,
   VtgRuleNumber,
   VtgSpeedRatio,
@@ -22,6 +23,7 @@ export interface VtgQuarterPropState {
 export interface VtgQuarterSideDiagramOptions {
   row: VtgRuleNumber
   speedRatio: VtgSpeedRatio
+  quarters?: VtgQuarterMode
   swapProps: boolean
   reversePlane: boolean
   quartersAfterSwap: boolean
@@ -30,6 +32,7 @@ export interface VtgQuarterSideDiagramOptions {
 export interface VtgQuarterBottomDiagramOptions {
   column: VtgRuleNumber
   speedRatio: VtgSpeedRatio
+  quarters?: VtgQuarterMode
   isAnti: boolean
   swapProps: boolean
   reversePlane: boolean
@@ -40,6 +43,7 @@ interface VtgQuarterReferenceFrameOptions {
   reference: VtgCellReference
   frameNumber: number
   speedRatio: VtgSpeedRatio
+  quarters?: VtgQuarterMode
   isAnti: boolean
   swapProps: boolean
   reversePlane: boolean
@@ -87,6 +91,7 @@ const getVtgQuarterReferencePropStates = ({
   reference,
   frameNumber,
   speedRatio,
+  quarters = 1,
   isAnti,
   swapProps,
   reversePlane,
@@ -95,7 +100,7 @@ const getVtgQuarterReferencePropStates = ({
   const animation = createDefaultVtgAnimation({
     reference,
     speedRatio,
-    quarters: true,
+    quarters,
     ...(isAnti ? { isAnti: true } : {}),
     ...(quartersAfterSwap ? { quartersAfterSwap: true } : {}),
     ...(swapProps ? { swapProps: true } : {}),

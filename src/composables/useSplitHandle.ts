@@ -17,8 +17,6 @@ type IconMap = {
   close: string
 }
 
-const { isVisible } = storeToRefs(useViewportStore())
-
 export function useSplitHandle({
   parent,
   object,
@@ -42,6 +40,7 @@ export function useSplitHandle({
   zIndex?: number
   //str?: string
 }) {
+  const { isVisible } = storeToRefs(useViewportStore())
   const snap = Math.max(5, Math.min(snapBack, 50))
 
   const perc = ref(0)

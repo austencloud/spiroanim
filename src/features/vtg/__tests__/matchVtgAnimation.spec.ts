@@ -78,7 +78,7 @@ describe('VTG animation matching', () => {
     const selection = {
       reference: '3-4',
       speedRatio: '1:5',
-      quarters: true,
+      quarters: 1,
     } as const satisfies VtgPatternSelection
 
     expect(findVtgPatternMatch(createAnimation(selection))).toEqual({
@@ -90,6 +90,32 @@ describe('VTG animation matching', () => {
       scale: 0.8,
       quartersAfterSwap: false,
     })
+  })
+
+  it('recognizes both Quarters modes before and after Swap', () => {
+    for (const quarters of [1, 2] as const) {
+      for (const swapProps of booleanOptions) {
+        const afterSwapOptions = swapProps ? booleanOptions : ([false] as const)
+
+        for (const quartersAfterSwap of afterSwapOptions) {
+          const selection = {
+            reference: '2-1',
+            speedRatio: '1:3',
+            swapProps,
+            quarters,
+            quartersAfterSwap,
+          } as const satisfies VtgPatternSelection
+
+          expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual({
+            ...selection,
+            isAnti: false,
+            reversePlane: false,
+            bpm: 120,
+            scale: 0.8,
+          })
+        }
+      }
+    }
   })
 
   it('recognizes a pattern regardless of non-pattern animation settings', () => {
@@ -174,7 +200,7 @@ describe('VTG animation matching', () => {
       isAnti: true,
       swapProps: true,
       reversePlane: true,
-      quarters: true,
+      quarters: 2,
       bpm: 101,
       scale: 1.2,
     } as const satisfies VtgPatternSelection
@@ -190,7 +216,7 @@ describe('VTG animation matching', () => {
       reference: '2-1',
       speedRatio: '1:3',
       swapProps: true,
-      quarters: true,
+      quarters: 1,
       quartersAfterSwap: true,
     } as const satisfies VtgPatternSelection
 

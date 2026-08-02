@@ -1,6 +1,10 @@
 import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
-import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
+import type {
+  VtgPatternSelection,
+  VtgQuarterMode,
+  VtgReadableAnimation,
+} from '@/features/vtg/types'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
@@ -29,8 +33,22 @@ const shiftPropArc = (
   }
 }
 
-export const removeVtgQuarterArc = (animation: RootDataFinal, propIndex: 0 | 1): RootDataFinal =>
-  shiftPropArc(animation, propIndex, -90)
+const quarterArcAmounts = {
+  1: [90, 0],
+  2: [180, 90],
+} as const satisfies Readonly<Record<VtgQuarterMode, readonly [number, number]>>
+
+export const removeVtgQuarterArcs = (
+  animation: RootDataFinal,
+  quarterMode: VtgQuarterMode,
+  swapProps: boolean,
+  quartersAfterSwap: boolean,
+): RootDataFinal => {
+  const amounts = quarterArcAmounts[quarterMode]
+  const outputAmounts = swapProps && !quartersAfterSwap ? [amounts[1], amounts[0]] : amounts
+
+  return shiftPropArc(shiftPropArc(animation, 0, -outputAmounts[0]), 1, -outputAmounts[1])
+}
 
 const addDefaultFrames = (pattern: VtgReadableAnimation): VtgReadableAnimation => ({
   ...pattern,
@@ -92,10 +110,14 @@ export const createVtgAnimation = (
 
   if (!selection.quarters) return animation
 
-  // The experimental post-Swap mode adjusts output track 0. Otherwise,
-  // Quarters belongs to the original first track and Swap moves it to index 1.
-  const propIndex = selection.quartersAfterSwap ? 0 : selection.swapProps ? 1 : 0
-  return shiftPropArc(animation, propIndex, 90)
+  const amounts = quarterArcAmounts[selection.quarters]
+  // By default, Quarters belongs to the original tracks and Swap moves the
+  // adjustments with them. The experimental post-Swap mode applies the same
+  // amounts directly to the output tracks instead.
+  const outputAmounts =
+    selection.swapProps && !selection.quartersAfterSwap ? [amounts[1], amounts[0]] : amounts
+
+  return shiftPropArc(shiftPropArc(animation, 0, outputAmounts[0]), 1, outputAmounts[1])
 }
 
 /**

@@ -1,4 +1,4 @@
-import { createDefaultVtgAnimation, removeVtgQuarterArc } from '@/features/vtg/createVtgAnimation'
+import { createDefaultVtgAnimation, removeVtgQuarterArcs } from '@/features/vtg/createVtgAnimation'
 import type {
   VtgCellReference,
   VtgPatternMatch,
@@ -6,6 +6,7 @@ import type {
   VtgRuleNumber,
 } from '@/features/vtg/types'
 import { vtgSpeedRatios } from '@/features/vtg/types'
+import { vtgQuarterModes } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { AnimDataCompiled, RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 
@@ -117,15 +118,26 @@ export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPat
   const directMatches = findBaseVtgPatternMatches(animation)
   if (directMatches.length > 0) return directMatches
 
-  return ([0, 1] as const).flatMap((propIndex) =>
-    findBaseVtgPatternMatches(removeVtgQuarterArc(animation, propIndex))
-      .filter((match) => propIndex === 0 || match.swapProps)
+  return vtgQuarterModes.flatMap((quarters) => {
+    const outputTrackMatches = findBaseVtgPatternMatches(
+      removeVtgQuarterArcs(animation, quarters, false, false),
+    ).map((match) => ({
+      ...match,
+      quarters,
+      quartersAfterSwap: match.swapProps,
+    }))
+    const originalTrackMatches = findBaseVtgPatternMatches(
+      removeVtgQuarterArcs(animation, quarters, true, false),
+    )
+      .filter((match) => match.swapProps)
       .map((match) => ({
         ...match,
-        quarters: true,
-        quartersAfterSwap: match.swapProps && propIndex === 0,
-      })),
-  )
+        quarters,
+        quartersAfterSwap: false,
+      }))
+
+    return [...outputTrackMatches, ...originalTrackMatches]
+  })
 }
 
 /**

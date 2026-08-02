@@ -1,7 +1,12 @@
 import { PerspectiveCamera } from 'three'
 
 import { createVtgPreviewAnimation } from '@/features/vtg/createVtgAnimation'
-import type { VtgCellReference, VtgPatternSelection, VtgSpeedRatio } from '@/features/vtg/types'
+import type {
+  VtgCellReference,
+  VtgPatternSelection,
+  VtgQuarterMode,
+  VtgSpeedRatio,
+} from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 import { createMessageChannel } from '@/workers/createMessageChannel'
@@ -18,7 +23,7 @@ interface UseVtgPreviewsOptions {
   swapProps: Ref<boolean>
   reversePlane: Ref<boolean>
   scale: Ref<number>
-  quarters: Ref<boolean>
+  quarters: Ref<VtgQuarterMode | false>
   quartersAfterSwap: Ref<boolean>
 }
 
@@ -93,7 +98,7 @@ export const useVtgPreviews = ({
     if (spinToggleCells.has(reference)) selection.isAnti = isAnti.value
     if (swapProps.value) selection.swapProps = true
     if (reversePlane.value) selection.reversePlane = true
-    if (quarters.value) selection.quarters = true
+    if (quarters.value) selection.quarters = quarters.value
     if (quartersAfterSwap.value) selection.quartersAfterSwap = true
 
     return selection

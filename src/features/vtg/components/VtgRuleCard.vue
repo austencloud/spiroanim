@@ -1,8 +1,8 @@
 <template>
-  <BaseTooltip :text="props.description">
+  <BaseTooltip :text="props.description" :disabled="props.tooltipDisabled">
     <template #activator="{ props: activatorProps }">
       <button
-        v-bind="activatorProps"
+        v-bind="props.tooltipDisabled ? {} : activatorProps"
         type="button"
         class="vtg-rule-card"
         :class="[`vtg-rule-card--${props.orientation}`, { 'vtg-rule-card--accent': props.accent }]"
@@ -27,11 +27,11 @@
           </span>
 
           <span
-            v-for="(propPlacement, index) in props.diagram.props"
+            v-for="(propPlacement, index) in props.showProps ? props.diagram.props : []"
             :key="`prop-${index}`"
             class="vtg-rule-card__prop"
             :class="`vtg-rule-card__prop--${propOrientation(propPlacement)}`"
-            :style="propStyle(propPlacement)"
+            :style="[propStyle(propPlacement), propColorStyle(index)]"
             data-role="vtg-prop"
           >
             <span class="vtg-rule-card__prop-line" />
@@ -66,6 +66,12 @@
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import type { VtgPropPlacement, VtgRuleDiagram, VtgRuleNumber } from '@/features/vtg/types'
 
+interface VtgPropPartColors {
+  head: string
+  handle: string
+  tether: string
+}
+
 const props = withDefaults(
   defineProps<{
     labels: readonly [string, string]
@@ -76,10 +82,15 @@ const props = withDefaults(
     description: string
     accent?: boolean
     showDivider?: boolean
+    showProps?: boolean
+    propColors?: readonly VtgPropPartColors[]
+    tooltipDisabled?: boolean
   }>(),
   {
     accent: false,
     showDivider: true,
+    showProps: true,
+    tooltipDisabled: false,
   },
 )
 
@@ -100,6 +111,17 @@ const propStyle = (propPlacement: VtgPropPlacement): CSSProperties =>
         insetInlineStart: `${propPlacement.start}%`,
         inlineSize: `${propPlacement.end - propPlacement.start}%`,
       }
+
+const propColorStyle = (index: number): CSSProperties => {
+  const colors = props.propColors?.[index]
+  if (!colors) return {}
+
+  return {
+    '--vtg-rule-prop-head-color': colors.head,
+    '--vtg-rule-prop-handle-color': colors.handle,
+    '--vtg-rule-prop-tether-color': colors.tether,
+  }
+}
 
 const dividerStyle = computed<CSSProperties>(() =>
   props.orientation === 'vertical'
@@ -251,7 +273,7 @@ const dividerStyle = computed<CSSProperties>(() =>
   position: absolute;
   inset: 0;
   display: block;
-  background: currentColor;
+  background: var(--vtg-rule-prop-tether-color, currentColor);
   opacity: 0.9;
 }
 
@@ -294,22 +316,24 @@ const dividerStyle = computed<CSSProperties>(() =>
 .vtg-rule-card__prop-handle--large {
   z-index: 2;
   width: max(0.42rem, 1cqi);
-  background: var(--vtg-color-line);
-  border: max(1px, 0.12cqi) solid color-mix(in srgb, currentColor 64%, transparent);
-  box-shadow: 0 0 0 max(1px, 0.06cqi) color-mix(in srgb, currentColor 20%, transparent);
+  background: var(--vtg-rule-prop-head-color, var(--vtg-color-line));
+  border: max(1px, 0.12cqi) solid
+    color-mix(in srgb, var(--vtg-rule-prop-head-color, currentColor) 64%, transparent);
+  box-shadow: 0 0 0 max(1px, 0.06cqi)
+    color-mix(in srgb, var(--vtg-rule-prop-head-color, currentColor) 20%, transparent);
 }
 
 .vtg-rule-card__prop-handle--small {
   width: max(2.5px, 0.36cqi);
-  background: currentColor;
+  background: var(--vtg-rule-prop-handle-color, currentColor);
 }
 
 .vtg-rule-card--accent .vtg-rule-card__prop-handle--large {
-  background: var(--vtg-color-ink);
-  border-color: var(--vtg-color-secondary);
+  background: var(--vtg-rule-prop-head-color, var(--vtg-color-ink));
+  border-color: var(--vtg-rule-prop-head-color, var(--vtg-color-secondary));
 }
 
 .vtg-rule-card--accent .vtg-rule-card__prop-handle--small {
-  background: var(--vtg-color-ink);
+  background: var(--vtg-rule-prop-handle-color, var(--vtg-color-ink));
 }
 </style>
