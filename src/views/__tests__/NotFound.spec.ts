@@ -28,6 +28,11 @@ describe('NotFound view', () => {
 
     expect(wrapper.get('h1').text()).toBe('This path drifted out of frame.')
     expect(wrapper.get('.error-code').text()).toBe('Error 404')
+    expect(wrapper.get('.update-hint').text()).toContain(
+      "If you opened someone's link and have previously visited spiroanim.com",
+    )
+    expect(wrapper.get('.update-hint').text()).toContain('Update Now')
+    expect(wrapper.get('.update-hint').attributes('aria-label')).toBe('Possible app update')
     expect(wrapper.get('nav').attributes('aria-label')).toBe('Page recovery')
     expect(wrapper.get('.action-link--primary').attributes('href')).toBe('/')
     expect(wrapper.get('.action-link--secondary').attributes('href')).toBe('/app')

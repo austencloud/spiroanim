@@ -192,7 +192,7 @@ const positionFillStyle = computed<CSSProperties>(() => {
 })
 
 const sliderStyle = computed<CSSProperties>(() => ({
-  width: `${Math.max((dim?.width ?? 0) - 45, 0)}px`,
+  width: `${Math.max((dim?.width ?? 0) - 34, 0)}px`,
   position: 'absolute',
   bottom: 'var(--space-workspace-bottom-offset)',
   right: '0px',

@@ -10,6 +10,7 @@ const appRouteAliases = [
   '/concepts',
   '/vtg',
   '/qtr',
+  '/8stp',
   ...paneSplits,
 ]
 

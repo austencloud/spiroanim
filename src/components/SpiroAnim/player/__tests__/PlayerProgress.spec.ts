@@ -28,6 +28,7 @@ describe('PlayerProgress', () => {
     expect(wrapper.get('.slider').attributes('style')).toContain(
       'bottom: var(--space-workspace-bottom-offset)',
     )
+    expect(wrapper.get('.slider').attributes('style')).toContain('width: 566px')
   })
 
   it('updates the current position and reports the modification', async () => {

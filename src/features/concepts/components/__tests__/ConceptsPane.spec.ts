@@ -20,6 +20,7 @@ describe('ConceptsPane', () => {
     expect(selector.findAll('option').map((option) => option.text())).toEqual([
       'Vulkan Tech Gospel',
       'Quarter Spacing',
+      'Eight Step',
     ])
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
 
@@ -65,5 +66,17 @@ describe('ConceptsPane', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(true)
     expect(wrapper.find('[data-role="vtg-quarters"]').exists()).toBe(false)
+  })
+
+  it('shows the Eight Step coming-soon pane without selecting a pattern', async () => {
+    const wrapper = mount(ConceptsPane)
+    const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
+
+    await selector.setValue('8stp')
+
+    expect(wrapper.find('[data-role="vtg-pane"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="qtr-pane"]').exists()).toBe(false)
+    expect(wrapper.get('#eight-step-status').text()).toBe('Coming soon!')
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 })

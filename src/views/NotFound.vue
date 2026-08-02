@@ -17,6 +17,18 @@
           animation.
         </p>
 
+        <aside class="update-hint" aria-label="Possible app update">
+          <BaseIcon class="update-hint__icon" :path="mdiUpdate" :size="24" />
+          <div>
+            <strong>Wait!</strong>
+            <p>
+              If you opened someone's link and have previously visited spiroanim.com, the app may
+              still be updating. If an <b>Update Now</b> prompt appears, clicking it may resolve
+              this page.
+            </p>
+          </div>
+        </aside>
+
         <nav class="not-found-actions" aria-label="Page recovery">
           <RouterLink class="action-link action-link--primary" to="/">
             <BaseIcon :path="mdiHomeOutline" :size="21" />
@@ -45,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { mdiCreationOutline, mdiHomeOutline } from '@mdi/js'
+import { mdiCreationOutline, mdiHomeOutline, mdiUpdate } from '@mdi/js'
 import { RouterLink } from 'vue-router'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
@@ -163,6 +175,42 @@ h1 {
   color: var(--color-text-muted);
   font-size: clamp(1rem, 2vw, 1.15rem);
   line-height: 1.65;
+}
+
+.update-hint {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  margin-block-start: var(--space-6);
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-action-primary) 9%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-action-primary) 45%, var(--color-border));
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px color-mix(in srgb, var(--color-on-action-primary) 12%, transparent);
+}
+
+.update-hint__icon {
+  margin-block-start: 0.1rem;
+  color: var(--color-action-primary);
+}
+
+.update-hint strong {
+  color: var(--color-action-primary);
+  font-size: 0.8rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.update-hint p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.update-hint b {
+  color: var(--color-text);
 }
 
 .not-found-actions {

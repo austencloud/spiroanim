@@ -71,16 +71,19 @@ describe('useMainRoute', () => {
       '/play-cnc',
       '/play-vtg',
       '/play-qtr',
+      '/play-8stp',
       '/time-play',
       '/time-edit',
       '/time-cnc',
       '/time-vtg',
       '/time-qtr',
+      '/time-8stp',
       '/edit-play',
       '/edit-time',
       '/edit-cnc',
       '/edit-vtg',
       '/edit-qtr',
+      '/edit-8stp',
       '/cnc-play',
       '/cnc-time',
       '/cnc-edit',
@@ -90,6 +93,9 @@ describe('useMainRoute', () => {
       '/qtr-play',
       '/qtr-time',
       '/qtr-edit',
+      '/8stp-play',
+      '/8stp-time',
+      '/8stp-edit',
     ])
   })
 
@@ -190,6 +196,22 @@ describe('useMainRoute', () => {
       concepts: 'right',
     })
     expect(conceptsStore.selectedConcept).toBe('qtr')
+    expect(splitterStore.leftPerc).toBe(0)
+  })
+
+  it('maps the 8stp concept route to the full-width Eight Step pane', async () => {
+    const { paneStore, conceptsStore, splitterStore } = await mountRoute(
+      '/8stp',
+      createLoadedAnimation(),
+    )
+
+    expect(paneStore.parents).toEqual({
+      player: 'left',
+      editor: 'hidden',
+      timeline: 'hidden',
+      concepts: 'right',
+    })
+    expect(conceptsStore.selectedConcept).toBe('8stp')
     expect(splitterStore.leftPerc).toBe(0)
   })
 

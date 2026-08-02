@@ -5,12 +5,13 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore, viewKeysMain } from '@/stores/useMainPaneStore'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import { conceptKeys } from '@/features/concepts/types'
 import type { ConceptKey } from '@/features/concepts/types'
 
 import { findKeyByValue } from '@/utils/UtilFunc'
 //import { encodeReadable } from '@/func/AnimReadableFunc'
 
-const routeKeys = ['play', 'time', 'edit', 'cnc', 'vtg', 'qtr'] as const
+const routeKeys = ['play', 'time', 'edit', 'cnc', 'vtg', 'qtr', '8stp'] as const
 
 const shortToView = {
   play: 'player',
@@ -19,6 +20,7 @@ const shortToView = {
   cnc: 'concepts',
   vtg: 'concepts',
   qtr: 'concepts',
+  '8stp': 'concepts',
 } as const
 
 type MainView = (typeof viewKeysMain)[number]
@@ -31,13 +33,15 @@ const fullToView = {
   concepts: 'concepts',
   vtg: 'concepts',
   qtr: 'concepts',
+  '8stp': 'concepts',
 } as const satisfies Record<string, MainView>
 
 type FullKey = keyof typeof fullToView
 
 const isShortKey = (value: string): value is ShortKey => value in shortToView
 const isFullKey = (value: string): value is FullKey => value in fullToView
-const isConceptKey = (value: string): value is ConceptKey => value === 'vtg' || value === 'qtr'
+const isConceptKey = (value: string): value is ConceptKey =>
+  conceptKeys.some((concept) => concept === value)
 
 // Build all combo's for the two panes (also used in router/index.ts)
 export const paneSplits: string[] = routeKeys.flatMap((a) =>

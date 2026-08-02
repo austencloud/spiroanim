@@ -1,3 +1,4 @@
+import { conceptKeys } from '@/features/concepts/types'
 import type { ConceptKey } from '@/features/concepts/types'
 import { vtgDefaultSpeedRatio } from '@/features/vtg/types'
 import type { VtgSpeedRatio } from '@/features/vtg/types'
@@ -16,7 +17,7 @@ export const useConceptsStore = defineStore(
     persist: {
       pick: ['selectedConcept', 'speedRatio', 'swapProps', 'reversePlane'],
       afterHydrate: ({ store }) => {
-        if (store.selectedConcept !== 'vtg' && store.selectedConcept !== 'qtr') {
+        if (!conceptKeys.some((concept) => concept === store.selectedConcept)) {
           store.selectedConcept = 'vtg'
         }
         if (!['1:1', '1:3', '1:5'].includes(store.speedRatio)) {

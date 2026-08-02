@@ -68,4 +68,13 @@ describe('useConceptsStore', () => {
     expect(store.reversePlane).toBe(true)
     app.unmount()
   })
+
+  it('hydrates Eight Step as the selected concept', () => {
+    localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: '8stp' }))
+
+    const { app, store } = mountStore()
+
+    expect(store.selectedConcept).toBe('8stp')
+    app.unmount()
+  })
 })
