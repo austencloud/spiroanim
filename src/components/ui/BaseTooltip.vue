@@ -28,7 +28,6 @@ import {
   deactivateTooltip,
   DEFAULT_TOOLTIP_DELAY,
   MOBILE_TOOLTIP_DISMISS_DELAY,
-  MOBILE_TOOLTIP_TOGGLE_DELAY,
   type TooltipPlacement,
 } from '@/components/ui/tooltip'
 import { isTouchDevice } from '@/utils/device'
@@ -57,7 +56,6 @@ const position = reactive({ left: 0, top: 0 })
 let showTimeout: ReturnType<typeof setTimeout> | undefined
 let dismissTimeout: ReturnType<typeof setTimeout> | undefined
 let dismissAfterShow = false
-let lastMobileClickAt: number | undefined
 
 const contentStyle = computed<CSSProperties>(() => ({
   left: `${position.left}px`,
@@ -114,7 +112,6 @@ const hide = () => {
   showTimeout = undefined
   dismissTimeout = undefined
   dismissAfterShow = false
-  lastMobileClickAt = undefined
   visible.value = false
   deactivateTooltip(hide)
 }
@@ -136,18 +133,8 @@ const handleMobileClick = (event: MouseEvent) => {
       window.matchMedia('(hover: none), (pointer: coarse)').matches)
 
   if (!isPointerClick || !isMobileDevice) return
-  const clickTime = Date.now()
-  const isQuickSecondClick =
-    lastMobileClickAt !== undefined && clickTime - lastMobileClickAt <= MOBILE_TOOLTIP_TOGGLE_DELAY
-
-  if (isQuickSecondClick && (visible.value || showTimeout !== undefined)) {
-    hide()
-    return
-  }
-
-  lastMobileClickAt = clickTime
   if (visible.value) {
-    startDismissTimer()
+    hide()
     return
   }
 
