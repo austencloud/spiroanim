@@ -20,6 +20,7 @@ const compileFrames = (frames: AnimData[]) =>
       guides: false,
       paths: true,
       hands: true,
+      arms: false,
       visible: true,
       nodes: false,
       anchors: false,

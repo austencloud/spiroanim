@@ -54,6 +54,9 @@ export const createVtgAnimation = (
   const pattern = addDefaultFrames({
     ...selectedPattern,
     ...(selection.thick === undefined ? {} : { thick: selection.thick }),
+    paths: selection.paths ?? vtgPlayerSettings.paths,
+    hands: selection.hands ?? vtgPlayerSettings.hands,
+    arms: selection.arms ?? vtgPlayerSettings.arms,
   })
   const decoded = decodeReadable(mergeWithCurrentAnimation(current, pattern))
 
@@ -80,13 +83,16 @@ export const createDefaultVtgAnimation = (
  */
 export const toVtgPreviewAnimation = (animation: RootDataFinal): RootDataFinal => ({
   ...animation,
+  paths: vtgPlayerSettings.paths,
   hands: false,
+  arms: false,
   thick: 15,
   visible: false,
   props: animation.props.map((prop) => ({
     ...prop,
     hands: false,
-    paths: animation.paths,
+    arms: false,
+    paths: vtgPlayerSettings.paths,
     thick: 15,
     visible: false,
   })),

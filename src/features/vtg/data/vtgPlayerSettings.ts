@@ -60,6 +60,7 @@ export const vtgPlayerSettings = {
   nodes: false,
   paths: true,
   hands: false,
+  arms: true,
   visible: true,
   aspectx: 1,
   aspecty: 1,

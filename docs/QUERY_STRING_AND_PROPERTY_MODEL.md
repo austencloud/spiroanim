@@ -14,8 +14,8 @@ The authoritative implementations are:
 - `src/features/editor/composables/useProperties.ts` for property reads, writes, display values,
   and editor-side range constraints.
 - `src/features/editor/stores/usePropertiesStore.ts` for the active prop/frame selection.
-- `src/services/query/versions/SpiroAnimQSv1.ts` for version 1 ranges, bit widths, field order, and
-  segment layout.
+- `src/services/query/versions/SpiroAnimQSv1.ts` and `SpiroAnimQSv2.ts` for versioned ranges, bit
+  widths, field order, and segment layouts.
 - `src/services/query/createBaseQueryCodec.ts` for integer normalization and bit packing.
 - `src/composables/useSpiroAnimQS.ts` for root/prop/frame encoding, decoding, and query history.
 - `src/composables/useMainRoute.ts` for synchronization between `ROOT` and the browser URL.
@@ -38,14 +38,14 @@ Form control (slider, text, select, checkbox)
         v
 rootSet / propSet / animSet
         |
-        +-- constraints() clamps to the version 1 VDEF range
+        +-- constraints() clamps to the current-version VDEF range
         |
         v
 ROOT (sparse editable RootDataFinal)
         |
         +-- player-store watcher --> rootCompile() --> worker-ready data
         |
-        +-- route watcher --> encodeQS() --> ?r=...&p0=...&v=1
+        +-- route watcher --> encodeQS() --> ?r=...&p0=...&v=2
 ```
 
 Loading a shared URL follows the reverse path:
@@ -228,10 +228,10 @@ The constraint function does **not**:
 After a setter mutates the shallow root object, it calls `triggerRef(ROOT)`. This is required to
 run compilation and URL watchers after nested mutations.
 
-## Version 1 query schema
+## Query schema definitions
 
-`SpiroAnimQSv1.ts` is both a serialization schema and the range source currently used by editor
-setters. Every definition is:
+`SpiroAnimQSv1.ts` defines the shared ranges used by both supported layouts and by editor setters.
+Every definition is:
 
 ```text
 [minimum, maximum, bit width, optional decode transform]
@@ -249,6 +249,7 @@ with `N` bits has at most `2^N - 1` defined codes.
 | `guides`   |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
 | `paths`    |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
 | `hands`    |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
+| `arms`     |           0..1 |      2 | Root and prop in V2; decoded with `Boolean`           |
 | `visible`  |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
 | `nodes`    |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
 | `anchors`  |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
@@ -279,6 +280,7 @@ Notable omissions from V1 include:
 - Root `speed`, `type`, `turns`, and `depth`. `rootFinal()` supplies their runtime defaults after
   decode.
 - Root `smooth`, despite having a `VDEF` entry.
+- Root and prop `arms`; V1 decoding supplies the new root default of `false` after decode.
 - Prop-level `thick`, despite `PropData` allowing it and `VDEF` defining `thick`.
 - Runtime/editor fields such as prop `active` and `click`.
 - Calculated UI concepts `point`, `path`, and `direct`.
@@ -317,6 +319,17 @@ Each frame may contain, in order:
 6. One character: `depth`.
 7. Two characters: `adjust`.
 8. Three characters: `move.x`, `move.y`, `move.z`.
+
+## Version 2 segment layout
+
+Version 2 keeps every V1 field in the same position and uses previously unused bits for `arms`:
+
+- The root's second four-character group appends root `arms` after `thick`.
+- The prop's one-character group appends inherited prop `arms` after `prop`.
+- Frame groups are unchanged.
+
+Newly generated URLs use `v=2`. Version 1 URLs remain supported and decode with root `arms` set to
+`false`; an omitted prop value inherits that root default.
 
 Field order, group order, group length, bit width, and the query alphabet are persisted-data
 contracts. Reordering a list without changing its types still changes every encoded URL.
@@ -448,8 +461,8 @@ Continuous decimal interactions use `beginHistoryGroup()` and `endHistoryGroup()
 state and final encoded state remain, while intermediate slider/input events replace the same
 history slot. Controls that make one discrete write generally do not need grouping.
 
-Since undo snapshots are query strings, fields omitted by the V1 format are also omitted from undo
-snapshots. Query format coverage therefore defines undo coverage.
+Since undo snapshots are query strings, fields omitted by the active format are also omitted from
+undo snapshots. Query format coverage therefore defines undo coverage.
 
 ## Concept controls are a separate property path
 
@@ -462,6 +475,12 @@ values remain unchanged when switching between the two panels.
 Each VTG and Quarter Spacing slider gesture is one undo step. Scale, Thick, and BPM begin a query
 history group on pointer-down or key-down and end it on pointer-up, pointer-cancel, key-up, or blur,
 matching the editor slider interaction boundary.
+
+Paths, Hands, and Arms are native checkbox controls below the sliders. VTG and Quarter Spacing
+players default to Paths on, Hands off, and Arms on; non-default choices are added to the pattern
+selection before the player animation is built. These choices are intentionally excluded from
+`usePatternPreviews`: thumbnail animations always use their canonical Paths-on, Hands-off,
+Arms-off rendering settings.
 
 Current VTG numeric behavior is:
 
@@ -483,8 +502,9 @@ Scale 1.4 -> Distance 25
 Values between those points are linearly interpolated within their side of the pivot and then
 rounded. For example, Scale `0.8` produces Distance `18`.
 
-VTG builds a new two-prop pattern, merges most current root settings, replaces pattern props, and
-then assigns `ROOT.value`. The normal route watcher subsequently serializes it.
+VTG builds a new two-prop pattern, merges most current root settings, applies the selected rendering
+features, replaces pattern props, and then assigns `ROOT.value`. The normal route watcher
+subsequently serializes it.
 
 VTG matching compiles geometry and identifies Scale from the first frame's internal scale. Root
 Distance is not part of the VTG geometry signature, so a distance mismatch does not by itself stop

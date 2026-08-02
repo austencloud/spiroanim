@@ -11,6 +11,7 @@ import {
   MeshBasicMaterial,
   Group,
   CatmullRomCurve3,
+  type InterleavedBufferAttribute,
 } from 'three'
 
 import {
@@ -108,6 +109,7 @@ export const createSpiroAnimator = (vars: {
     guides = data.guides ?? false,
     paths = data.paths ?? true,
     hands = data.hands ?? true,
+    arms = data.arms ?? false,
     visible = data.visible ?? true,
     nodes = data.nodes ?? true,
     rsize = (data.thick ?? 4) * 0.01,
@@ -117,6 +119,7 @@ export const createSpiroAnimator = (vars: {
     nodesGroup: Group = new Group(),
     pathsGroup: Group = new Group(),
     handsGroup: Group = new Group(),
+    armsGroup: Group = new Group(),
     modelGroup: Group = new Group(),
     modelProp: ModelGroup = props[PROPSR[prop]](multi, color, girth),
     // Vectors used for computations over continuous cycles
@@ -135,6 +138,7 @@ export const createSpiroAnimator = (vars: {
     offsetCalc = new Vector3()
 
   let apoint: Mesh,
+    armPositionAttribute: InterleavedBufferAttribute | undefined,
     anchors = data.anchors ?? true,
     playing = true,
     loop = 0,
@@ -270,6 +274,18 @@ export const createSpiroAnimator = (vars: {
       // Apply Radius, Scale, and add Offset
       modelGroup.position.multiplyScalar(RADIUS * scalePerc).add(offsetCalc)
 
+      // Keep the arm connected to the moving animation center and the hand / prop origin.
+      if (armPositionAttribute) {
+        const positions = armPositionAttribute.data.array
+        positions[0] = offsetCalc.x
+        positions[1] = offsetCalc.y
+        positions[2] = offsetCalc.z
+        positions[3] = modelGroup.position.x
+        positions[4] = modelGroup.position.y
+        positions[5] = modelGroup.position.z
+        armPositionAttribute.needsUpdate = true
+      }
+
       // Calculate the current rotation based on RotationPerform and angleApply
       crot.copy(Rot).applyAxisAngle(RotX, perc * angleApply + RotationPerform * perc)
 
@@ -369,6 +385,20 @@ export const createSpiroAnimator = (vars: {
       //line.computeLineDistances() // Needed for dashed lines; safe to call regardless
       return line
     }
+
+  if (arms) {
+    const armLine = createLine2(
+      [new Vector3(), new Vector3()],
+      COLSET[color]![1],
+      (rsize + 0.04) * girth * multi,
+    )
+    const armGeometry = armLine.geometry as LineGeometry
+
+    // The arm's bounds move every frame; bypass stale bounds instead of recomputing them each tick.
+    armLine.frustumCulled = false
+    armPositionAttribute = armGeometry.getAttribute('instanceStart') as InterleavedBufferAttribute
+    armsGroup.add(armLine)
+  }
 
   // Offsets for each
   for (let i = 0; i < anim.length; i++)
@@ -508,7 +538,7 @@ export const createSpiroAnimator = (vars: {
         if (hands) posTmp.push(...posPoints)
         else if (active) {
           // Otherwise create individual lines for each frame
-          const posLine = createLine2(posPoints, COLSET[color]![1], rsize * girth * multi)
+          const posLine = createLine2(posPoints, COLSET[color]![2], rsize * girth * multi)
           posLines.push(posLine)
           scene.add(posLine)
         }
@@ -519,7 +549,7 @@ export const createSpiroAnimator = (vars: {
     if (rotTmp.length > 0)
       pathsGroup.add(createLine2(rotTmp, COLSET[color]![0], rsize * girth * multi))
     if (posTmp.length > 0)
-      handsGroup.add(createLine2(posTmp, COLSET[color]![1], rsize * girth * multi))
+      handsGroup.add(createLine2(posTmp, COLSET[color]![2], rsize * girth * multi))
   }
 
   if (guides) {
@@ -561,6 +591,7 @@ export const createSpiroAnimator = (vars: {
   scene.add(guidesGroup)
   scene.add(pathsGroup)
   scene.add(handsGroup)
+  scene.add(armsGroup)
 
   const exportGroups: Record<ImageExportFeature, Group> = {
     paths: pathsGroup,

@@ -9,8 +9,8 @@ The authoritative implementations are:
 - `src/math/animation/AnimFunc.ts` for compilation.
 - `src/math/animation/OrthogonalFunc.ts` for chained spherical rotations.
 - `src/workers/animation/createSpiroAnimator.ts` for playback and path rendering.
-- `src/composables/useSpiroAnimQS.ts` and
-  `src/services/query/versions/SpiroAnimQSv1.ts` for query-string serialization.
+- `src/composables/useSpiroAnimQS.ts` and `src/services/query/versions/` for query-string
+  serialization.
 
 ## Frames and displayed segments
 

@@ -43,6 +43,7 @@ export const usePlayerStore = (id: string) => {
             guides: false,
             paths: true,
             hands: true,
+            arms: false,
             visible: true,
             nodes: true,
             anchors: true,

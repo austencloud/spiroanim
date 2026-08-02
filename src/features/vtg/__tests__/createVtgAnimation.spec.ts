@@ -36,6 +36,7 @@ const createCurrentAnimation = () =>
     guides: true,
     paths: false,
     hands: true,
+    arms: false,
     visible: true,
     nodes: true,
     anchors: true,
@@ -58,6 +59,32 @@ describe('createVtgAnimation', () => {
 
     expect(animation?.thick).toBe(12)
     expect(preview?.thick).toBe(15)
+  })
+
+  it('applies rendering controls to the player without changing thumbnail rendering', () => {
+    const selection = {
+      reference: '1-6',
+      speedRatio: '1:3',
+      paths: false,
+      hands: true,
+      arms: true,
+    } as const
+    const animation = createVtgAnimation(createCurrentAnimation(), selection)
+    const preview = createVtgPreviewAnimation(selection)
+    if (!animation || !preview) throw new Error('Expected player and preview animations')
+
+    expect(animation).toMatchObject({ paths: false, hands: true, arms: true })
+    expect(
+      rootCompile(animation).props.every(
+        (prop) => !prop.paths && prop.hands === true && prop.arms === true,
+      ),
+    ).toBe(true)
+    expect(preview).toMatchObject({ paths: true, hands: false, arms: false })
+    expect(
+      preview.props.every(
+        (prop) => prop.paths === true && prop.hands === false && prop.arms === false,
+      ),
+    ).toBe(true)
   })
 
   it('builds the first SO/TS cell from the edited readable template', () => {
@@ -127,6 +154,7 @@ describe('createVtgAnimation', () => {
       bpm: vtgPlayerSettings.bpm,
       paths: vtgPlayerSettings.paths,
       hands: vtgPlayerSettings.hands,
+      arms: false,
       distance: vtgPlayerSettings.distance,
       visible: false,
       thick: 15,
@@ -137,6 +165,7 @@ describe('createVtgAnimation', () => {
         (prop) =>
           prop.paths === vtgPlayerSettings.paths &&
           prop.hands === false &&
+          prop.arms === false &&
           prop.visible === false &&
           prop.thick === 15,
       ),
@@ -145,6 +174,7 @@ describe('createVtgAnimation', () => {
       rootCompile(preview).props.every(
         (prop) =>
           prop.hands === false &&
+          prop.arms === false &&
           prop.visible === false &&
           prop.thick === 15 &&
           prop.anim.length === 5,

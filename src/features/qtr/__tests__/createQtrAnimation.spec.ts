@@ -31,6 +31,7 @@ const createCurrentAnimation = () =>
     guides: true,
     paths: false,
     hands: true,
+    arms: false,
     visible: true,
     nodes: true,
     anchors: true,

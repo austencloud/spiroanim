@@ -16,6 +16,8 @@ export async function loadSpiroAnimQSVersion(version: number): Promise<SpiroAnim
   switch (version) {
     case 1:
       return import('@/services/query/versions/SpiroAnimQSv1')
+    case 2:
+      return import('@/services/query/versions/SpiroAnimQSv2')
     default:
       throw new RangeError(`Unsupported SpiroAnim query-string version: ${version}`)
   }

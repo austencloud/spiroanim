@@ -247,6 +247,22 @@
       </label>
     </fieldset>
 
+    <fieldset class="vtg-pattern-options vtg-render-options">
+      <legend class="vtg-pane__visually-hidden">Rendered features</legend>
+      <label>
+        <input v-model="paths" type="checkbox" data-role="vtg-paths" />
+        <span>Paths</span>
+      </label>
+      <label>
+        <input v-model="hands" type="checkbox" data-role="vtg-hands" />
+        <span>Hands</span>
+      </label>
+      <label>
+        <input v-model="arms" type="checkbox" data-role="vtg-arms" />
+        <span>Arms</span>
+      </label>
+    </fieldset>
+
     <p v-if="isQtr" class="qtr-development-note" data-role="qtr-development-note">
       Quarter Spacing is experimental and still under development. It may change drastically or be
       condensed in future releases.
@@ -276,6 +292,7 @@ import {
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import {
   vtgBpmControl,
+  vtgPlayerSettings,
   vtgPropSettings,
   vtgScaleControl,
   vtgThickControl,
@@ -338,6 +355,9 @@ const isAnti = ref(false)
 const bpm = ref<number>(vtgBpmControl.default)
 const scale = ref<number>(vtgScaleControl.default)
 const thick = ref<number>(vtgThickControl.default)
+const paths = ref<boolean>(vtgPlayerSettings.paths)
+const hands = ref<boolean>(vtgPlayerSettings.hands)
+const arms = ref<boolean>(vtgPlayerSettings.arms)
 const quarterMode = ref<QtrMode>(1)
 const activeQuarterMode = computed<QtrMode | false>(() => (isQtr.value ? quarterMode.value : false))
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
@@ -442,6 +462,9 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) baseSelection.scale = scale.value
   if (thick.value !== vtgThickControl.default) baseSelection.thick = thick.value
+  if (paths.value !== vtgPlayerSettings.paths) baseSelection.paths = paths.value
+  if (hands.value !== vtgPlayerSettings.hands) baseSelection.hands = hands.value
+  if (arms.value !== vtgPlayerSettings.arms) baseSelection.arms = arms.value
   const selection: ConceptPatternSelection = isQtr.value
     ? { ...baseSelection, quarters: quarterMode.value }
     : baseSelection
@@ -482,18 +505,26 @@ const resetPatternControls = async () => {
   bpm.value = vtgBpmControl.default
   scale.value = vtgScaleControl.default
   thick.value = vtgThickControl.default
+  paths.value = vtgPlayerSettings.paths
+  hands.value = vtgPlayerSettings.hands
+  arms.value = vtgPlayerSettings.arms
   quarterMode.value = 1
   await nextTick()
   suppressPatternEmit = false
   if (tile !== undefined) emitPatternSelection(tile)
 }
 
-watch([speedRatio, swapProps, reversePlane, bpm, scale, thick, activeQuarterMode], () => {
-  if (suppressPatternEmit) return
+watch(
+  [speedRatio, swapProps, reversePlane, bpm, scale, thick, paths, hands, arms, activeQuarterMode],
+  () => {
+    if (suppressPatternEmit) return
 
-  const tile = matrixTiles.value.find(({ reference }) => reference === selectedCellReference.value)
-  if (tile !== undefined) emitPatternSelection(tile)
-})
+    const tile = matrixTiles.value.find(
+      ({ reference }) => reference === selectedCellReference.value,
+    )
+    if (tile !== undefined) emitPatternSelection(tile)
+  },
+)
 
 const hydratePatternControls = (animation: RootDataFinal) => {
   const matchesLastSelection = lastEmittedSelection
@@ -527,6 +558,9 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
+    paths.value = animation.paths
+    hands.value = animation.hands ?? vtgPlayerSettings.hands
+    arms.value = animation.arms
     if (qtrMatch) quarterMode.value = qtrMatch.quarters
     if (shouldApplyCurrentConcept) tileToApply = tile
   } else {
@@ -538,6 +572,9 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     bpm.value = vtgBpmControl.default
     scale.value = vtgScaleControl.default
     thick.value = vtgThickControl.default
+    paths.value = vtgPlayerSettings.paths
+    hands.value = vtgPlayerSettings.hands
+    arms.value = vtgPlayerSettings.arms
     quarterMode.value = 1
   }
 
@@ -560,6 +597,9 @@ const selectInitialRandomPattern = () => {
   bpm.value = vtgBpmControl.default
   scale.value = vtgScaleControl.default
   thick.value = vtgThickControl.default
+  paths.value = vtgPlayerSettings.paths
+  hands.value = vtgPlayerSettings.hands
+  arms.value = vtgPlayerSettings.arms
   quarterMode.value = 1
   selectRandomTile()
 
@@ -816,6 +856,10 @@ defineExpose({
   reversePlane,
   bpm,
   scale,
+  thick,
+  paths,
+  hands,
+  arms,
   quarterMode,
   previewUrls,
 })
@@ -947,6 +991,12 @@ defineExpose({
 .vtg-pattern-options button:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
+}
+
+.vtg-render-options {
+  width: min(100%, 45rem);
+  margin: var(--space-1) auto 0;
+  justify-content: center;
 }
 
 .vtg-slider-controls {

@@ -30,6 +30,9 @@ export interface VtgPatternSelection {
   bpm?: number
   scale?: number
   thick?: number
+  paths?: boolean
+  hands?: boolean
+  arms?: boolean
 }
 
 export interface VtgPatternMatch {

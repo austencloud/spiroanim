@@ -16,6 +16,14 @@
       <br /><i>When undefined, this property inherits from <strong>ROOT</strong>.</i>
     </template>
 
+    <template #arms>
+      <strong>Arms</strong><br />
+      Toggles the display of a line from the animation center to the hand for this prop.<br />
+      The line follows the hand throughout the animation and uses the configured
+      <strong>Thick</strong> value.<br />
+      <br /><i>When undefined, this property inherits from <strong>ROOT</strong>.</i>
+    </template>
+
     <template #visible>
       <strong>Visible</strong><br />
       Toggles visual display of the object.<br />
@@ -76,6 +84,7 @@ const data = ref({}),
   vals = [
     { name: 'paths', text: 'Paths', component: 'Boolean', undef: true },
     { name: 'hands', text: 'Hands', component: 'Boolean', undef: true },
+    { name: 'arms', text: 'Arms', component: 'Boolean', undef: true },
     { name: 'visible', text: 'Visible', component: 'Boolean', undef: true },
     { name: 'nodes', text: 'Nodes', component: 'Boolean', undef: true },
     { name: 'anchors', text: 'Anchors', component: 'Boolean', undef: true },

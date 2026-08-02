@@ -29,6 +29,7 @@ describe('AnimFunc', () => {
       smooth: true,
       guides: true,
       paths: false,
+      arms: false,
       nodes: true,
       anchors: false,
       props: [{ anim: [{ beats: 2, turns: 90 }, {}] }],
@@ -41,7 +42,13 @@ describe('AnimFunc', () => {
 
     const compiled = rootCompile(final)
 
-    expect(compiled.props[0]).toMatchObject({ prop: 1, color: 2, guides: true, thick: 4 })
+    expect(compiled.props[0]).toMatchObject({
+      prop: 1,
+      color: 2,
+      guides: true,
+      arms: false,
+      thick: 4,
+    })
     expect(compiled.props[0]!.anim[0]).toMatchObject({ beats: 2, turns: 90, scale: 10 })
     expect(compiled.props[0]!.anim[1]).toMatchObject({ beats: 2, turns: 90 })
     expect(final.props[0]!.anim[1]).toEqual({})

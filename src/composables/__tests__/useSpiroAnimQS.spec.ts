@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
+import { VDEF as VDEF_V2 } from '@/services/query/versions/SpiroAnimQSv2'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const createRoot = (): RootDataFinal => ({
@@ -19,6 +20,7 @@ const createRoot = (): RootDataFinal => ({
   nodes: true,
   paths: true,
   hands: true,
+  arms: false,
   visible: true,
   aspectx: 16,
   aspecty: 9,
@@ -44,7 +46,27 @@ describe('useSpiroAnimQS', () => {
       p0: 'O--.biQmw-------wuu',
       v: '1',
     })
-    expect(query.encodeQS(query.decodeQS(encoded), false)).toEqual(encoded)
+    const decoded = query.decodeQS(encoded)
+    expect(decoded.arms).toBe(false)
+    expect(query.encodeQS(decoded, false)).toEqual(encoded)
+  })
+
+  it('round-trips inherited Arms values in version 2', async () => {
+    const query = await useSpiroAnimQS(VDEF_V2, useBaseQS(VDEF_V2), 2)
+    const root = createRoot()
+    root.arms = true
+    root.props[0]!.arms = false
+
+    const encoded = query.encodeQS(root, false)
+    const decoded = query.decodeQS(encoded)
+
+    expect(encoded).toEqual({
+      r: 'GE28Eji9g',
+      p0: 'O--f.biQmw-------wuu',
+      v: '2',
+    })
+    expect(decoded.arms).toBe(true)
+    expect(decoded.props[0]!.arms).toBe(false)
   })
 
   it('falls back to the current decoder for unavailable versions', async () => {

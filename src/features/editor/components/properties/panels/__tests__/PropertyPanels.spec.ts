@@ -52,6 +52,7 @@ describe('editor property panel organization', () => {
     expect(propertyNames(RootPanel, 'root-panel-order')).toEqual([
       'paths',
       'hands',
+      'arms',
       'visible',
       'nodes',
       'anchors',

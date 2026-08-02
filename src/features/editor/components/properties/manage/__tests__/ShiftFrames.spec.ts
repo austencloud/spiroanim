@@ -41,6 +41,7 @@ const createRoot = (props: AnimData[][]) =>
     guides: false,
     paths: true,
     hands: true,
+    arms: false,
     visible: true,
     nodes: false,
     anchors: false,

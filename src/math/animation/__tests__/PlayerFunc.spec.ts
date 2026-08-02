@@ -12,6 +12,7 @@ describe('PlayerFunc', () => {
       smooth: false,
       guides: false,
       paths: false,
+      arms: false,
       nodes: false,
       anchors: false,
       props: [],
@@ -21,7 +22,7 @@ describe('PlayerFunc', () => {
       thick: 4,
     }
 
-    expect(rootFinal(root)).toMatchObject({ speed: 1, type: 0, turns: 0, depth: 0 })
+    expect(rootFinal(root)).toMatchObject({ arms: false, speed: 1, type: 0, turns: 0, depth: 0 })
   })
 
   it('rounds milliseconds to the nearest beat', () => {

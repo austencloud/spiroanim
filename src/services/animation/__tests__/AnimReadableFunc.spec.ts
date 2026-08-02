@@ -11,6 +11,7 @@ describe('AnimReadableFunc', () => {
     smooth: true,
     guides: false,
     paths: true,
+    arms: false,
     nodes: true,
     anchors: false,
     props: [{ prop: 0, color: 3, anim: [{ type: 1, turns: 90 }] }],

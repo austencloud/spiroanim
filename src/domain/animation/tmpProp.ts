@@ -18,6 +18,7 @@ export const tmpProp = decodeReadable({
   nodes: true,
   paths: true,
   hands: true,
+  arms: false,
   visible: true,
   aspectx: 16,
   aspecty: 9,

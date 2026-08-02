@@ -64,6 +64,9 @@ const copyRootValue = (prop: PropDataFinal, root: RootDataFinal, key: (typeof PR
     case 'hands':
       prop.hands = root.hands
       break
+    case 'arms':
+      prop.arms = root.arms
+      break
     case 'visible':
       prop.visible = root.visible
       break
