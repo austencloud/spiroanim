@@ -26,14 +26,20 @@ const shortToView = {
 type MainView = (typeof viewKeysMain)[number]
 type ShortKey = keyof typeof shortToView
 
+const fullPathByConcept = {
+  vtg: 'vulkantechgospel',
+  qtr: 'quarterspacing',
+  '8stp': '8-step',
+} as const satisfies Record<ConceptKey, string>
+
 const fullToView = {
   player: 'player',
   editor: 'editor',
   timeline: 'timeline',
   concepts: 'concepts',
-  vtg: 'concepts',
-  qtr: 'concepts',
-  '8stp': 'concepts',
+  vulkantechgospel: 'concepts',
+  quarterspacing: 'concepts',
+  '8-step': 'concepts',
 } as const satisfies Record<string, MainView>
 
 type FullKey = keyof typeof fullToView
@@ -76,7 +82,24 @@ export function useMainRoute() {
 
   // Update panes, selected concept, and splitter for the requested page.
   if (page && page !== 'app')
-    if (page.includes('-')) {
+    if (isFullKey(page)) {
+      const view = fullToView[page]
+      const requestedConcept = conceptKeys.find((concept) => fullPathByConcept[concept] === page)
+      if (requestedConcept) selectedConcept.value = requestedConcept
+      shouldCanonicalizeConceptRoute = page === 'concepts'
+
+      switch (parents.value[view]) {
+        case 'hidden':
+          setViewInPane(view, 'left')
+        // fall through to apply leftPerc = 100
+        case 'left':
+          leftPerc.value = 100
+          break
+        case 'right':
+          leftPerc.value = 0
+          break
+      }
+    } else if (page.includes('-')) {
       // '-' splits short versions of the views
       const parts = page.split('-')
       const leftKey = parts[0]
@@ -94,22 +117,6 @@ export function useMainRoute() {
         setViewInPane(right, 'right')
 
         if (leftPerc.value == 0 || leftPerc.value == 100) leftPerc.value = 50
-      }
-    } else if (isFullKey(page)) {
-      const view = fullToView[page]
-      if (isConceptKey(page)) selectedConcept.value = page
-      shouldCanonicalizeConceptRoute = page === 'concepts'
-
-      switch (parents.value[view]) {
-        case 'hidden':
-          setViewInPane(view, 'left')
-        // fall through to apply leftPerc = 100
-        case 'left':
-          leftPerc.value = 100
-          break
-        case 'right':
-          leftPerc.value = 0
-          break
       }
     }
 
@@ -147,9 +154,10 @@ export function useMainRoute() {
 
     //console.log('change', left, right)
 
-    if (leftPerc.value == 100 && left) newPath = left === 'concepts' ? selectedConcept.value : left
-    else if (leftPerc.value == 0 && right)
-      newPath = right === 'concepts' ? selectedConcept.value : right
+    const fullConceptPath = fullPathByConcept[selectedConcept.value]
+
+    if (leftPerc.value == 100 && left) newPath = left === 'concepts' ? fullConceptPath : left
+    else if (leftPerc.value == 0 && right) newPath = right === 'concepts' ? fullConceptPath : right
     else if (left && right) newPath = `${shortForView(left)}-${shortForView(right)}`
 
     if (newPath)

@@ -8,9 +8,9 @@ const appRouteAliases = [
   '/timeline',
   '/editor',
   '/concepts',
-  '/vtg',
-  '/qtr',
-  '/8stp',
+  '/vulkantechgospel',
+  '/quarterspacing',
+  '/8-step',
   ...paneSplits,
 ]
 

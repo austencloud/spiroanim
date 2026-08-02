@@ -167,9 +167,9 @@ describe('useMainRoute', () => {
     expect(router.currentRoute.value.path).toBe('/play-vtg')
   })
 
-  it('maps the VTG concept route to the full-width Concepts pane', async () => {
-    const { paneStore, conceptsStore, splitterStore } = await mountRoute(
-      '/vtg',
+  it('maps the Vulkan Tech Gospel route to the full-width Concepts pane', async () => {
+    const { paneStore, conceptsStore, router, splitterStore } = await mountRoute(
+      '/vulkantechgospel',
       createLoadedAnimation(),
     )
 
@@ -181,11 +181,12 @@ describe('useMainRoute', () => {
     })
     expect(conceptsStore.selectedConcept).toBe('vtg')
     expect(splitterStore.leftPerc).toBe(0)
+    expect(router.currentRoute.value.path).toBe('/vulkantechgospel')
   })
 
-  it('maps the Qtr concept route to the full-width Quarter Spacing pane', async () => {
-    const { paneStore, conceptsStore, splitterStore } = await mountRoute(
-      '/qtr',
+  it('maps the Quarter Spacing route to its full-width concept pane', async () => {
+    const { paneStore, conceptsStore, router, splitterStore } = await mountRoute(
+      '/quarterspacing',
       createLoadedAnimation(),
     )
 
@@ -197,11 +198,12 @@ describe('useMainRoute', () => {
     })
     expect(conceptsStore.selectedConcept).toBe('qtr')
     expect(splitterStore.leftPerc).toBe(0)
+    expect(router.currentRoute.value.path).toBe('/quarterspacing')
   })
 
-  it('maps the 8stp concept route to the full-width Eight Step pane', async () => {
-    const { paneStore, conceptsStore, splitterStore } = await mountRoute(
-      '/8stp',
+  it('maps the 8-step route to the full-width Eight Step pane', async () => {
+    const { paneStore, conceptsStore, router, splitterStore } = await mountRoute(
+      '/8-step',
       createLoadedAnimation(),
     )
 
@@ -213,6 +215,15 @@ describe('useMainRoute', () => {
     })
     expect(conceptsStore.selectedConcept).toBe('8stp')
     expect(splitterStore.leftPerc).toBe(0)
+    expect(router.currentRoute.value.path).toBe('/8-step')
+
+    conceptsStore.selectedConcept = 'qtr'
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/quarterspacing')
+
+    conceptsStore.selectedConcept = '8stp'
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/8-step')
   })
 
   it('canonicalizes a generic Concepts route and unsupported saved state to VTG', async () => {
@@ -230,6 +241,6 @@ describe('useMainRoute', () => {
     await flushPromises()
 
     expect(conceptsStore.selectedConcept).toBe('vtg')
-    expect(router.currentRoute.value.path).toBe('/vtg')
+    expect(router.currentRoute.value.path).toBe('/vulkantechgospel')
   })
 })
