@@ -459,6 +459,10 @@ Its VTG and Quarter Spacing panels use the same native matrix controls. VTG send
 the Qtr builder. Speed Ratio, Swap, and Flip are held in the shared Concepts store so their
 values remain unchanged when switching between the two panels.
 
+Each VTG and Quarter Spacing slider gesture is one undo step. Scale, Thick, and BPM begin a query
+history group on pointer-down or key-down and end it on pointer-up, pointer-cancel, key-up, or blur,
+matching the editor slider interaction boundary.
+
 Current VTG numeric behavior is:
 
 | Control                | UI range and step    | Stored transform                                                    |

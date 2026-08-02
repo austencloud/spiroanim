@@ -197,6 +197,12 @@
           :max="vtgScaleControl.max"
           :step="vtgScaleControl.step"
           data-role="vtg-scale"
+          @pointerdown="beginSliderHistory"
+          @pointerup="endSliderHistory"
+          @pointercancel="endSliderHistory"
+          @keydown="beginSliderHistory"
+          @keyup="endSliderHistory"
+          @blur="endSliderHistory"
         />
       </label>
       <label>
@@ -211,6 +217,12 @@
           :max="vtgThickControl.max"
           :step="vtgThickControl.step"
           data-role="vtg-thick"
+          @pointerdown="beginSliderHistory"
+          @pointerup="endSliderHistory"
+          @pointercancel="endSliderHistory"
+          @keydown="beginSliderHistory"
+          @keyup="endSliderHistory"
+          @blur="endSliderHistory"
         />
       </label>
       <label>
@@ -225,6 +237,12 @@
           :max="vtgBpmControl.max"
           :step="vtgBpmControl.step"
           data-role="vtg-bpm"
+          @pointerdown="beginSliderHistory"
+          @pointerup="endSliderHistory"
+          @pointercancel="endSliderHistory"
+          @keydown="beginSliderHistory"
+          @keyup="endSliderHistory"
+          @blur="endSliderHistory"
         />
       </label>
     </fieldset>
@@ -275,6 +293,7 @@ import type {
   VtgPatternSelection,
 } from '@/features/vtg/types'
 import { vtgDefaultSpeedRatio, vtgSpeedRatios } from '@/features/vtg/types'
+import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { toColor } from '@/utils/UtilFunc'
 
@@ -314,6 +333,7 @@ const isQtr = computed(() => props.concept === 'qtr')
 const speedRatios = vtgSpeedRatios
 const conceptsStore = useConceptsStore()
 const { speedRatio, swapProps, reversePlane } = storeToRefs(conceptsStore)
+const { beginHistoryGroup, endHistoryGroup } = useQSMainStore()
 const isAnti = ref(false)
 const bpm = ref<number>(vtgBpmControl.default)
 const scale = ref<number>(vtgScaleControl.default)
@@ -338,6 +358,23 @@ let hydrationVersion = 0
 let lastEmittedSelection: ConceptPatternSelection | undefined
 let componentMounted = false
 let initialAnimationHandled = false
+let sliderHistoryActive = false
+
+const beginSliderHistory = () => {
+  if (sliderHistoryActive || props.animation === undefined) return
+
+  beginHistoryGroup(props.animation)
+  sliderHistoryActive = true
+}
+
+const endSliderHistory = () => {
+  if (!sliderHistoryActive) return
+
+  sliderHistoryActive = false
+  endHistoryGroup()
+}
+
+onBeforeUnmount(endSliderHistory)
 
 const bottomRuleNumbers = [1, 2, 3, 4, 5, 6] as const
 const leftRuleNumbers = [1, 2, 3, 4, 5, 6] as const

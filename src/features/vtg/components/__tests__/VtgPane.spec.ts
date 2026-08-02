@@ -6,6 +6,7 @@ import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import QtrPane from '@/features/qtr/components/QtrPane.vue'
 import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { useQSMainStore } from '@/stores/useQSMainStore'
 
 class FakeResizeObserver {
   static callback: ResizeObserverCallback | undefined
@@ -468,6 +469,38 @@ describe('VtgPane', () => {
       [{ reference: '1-6', speedRatio: '1:3', bpm: 40, scale: 1.4, thick: 15 }],
     ])
     expect(outputs.map((output) => output.text())).toEqual(['1.4', '15', '40'])
+  })
+
+  it('groups pointer and keyboard slider gestures into individual undo steps', async () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+
+    const historyStore = useQSMainStore()
+    const beginHistoryGroup = vi.spyOn(historyStore, 'beginHistoryGroup')
+    const endHistoryGroup = vi.spyOn(historyStore, 'endHistoryGroup')
+    const wrapper = mount(VtgPane, { props: { animation } })
+    const scale = wrapper.get('[data-role="vtg-scale"]')
+    const thick = wrapper.get('[data-role="vtg-thick"]')
+    const bpm = wrapper.get('[data-role="vtg-bpm"]')
+
+    await scale.trigger('pointerdown')
+    await scale.trigger('pointerdown')
+    expect(beginHistoryGroup).toHaveBeenCalledTimes(1)
+    expect(beginHistoryGroup).toHaveBeenLastCalledWith(animation)
+    await scale.trigger('pointerup')
+
+    await thick.trigger('pointerdown')
+    await thick.trigger('pointercancel')
+
+    await bpm.trigger('keydown')
+    await bpm.trigger('keydown')
+    await bpm.trigger('keyup')
+
+    await bpm.trigger('keydown')
+    await bpm.trigger('blur')
+
+    expect(beginHistoryGroup).toHaveBeenCalledTimes(4)
+    expect(endHistoryGroup).toHaveBeenCalledTimes(4)
   })
 
   it('hydrates every VTG control from a supported animation without selecting it again', async () => {
