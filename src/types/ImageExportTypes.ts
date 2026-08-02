@@ -1,5 +1,12 @@
 export type ImageExportFileType = 'image/png' | 'image/jpeg' | 'image/webp'
-export type ImageExportFeature = 'paths' | 'hands' | 'visible' | 'nodes' | 'anchors' | 'guides'
+export type ImageExportFeature =
+  | 'paths'
+  | 'hands'
+  | 'arms'
+  | 'visible'
+  | 'nodes'
+  | 'anchors'
+  | 'guides'
 export type ImageExportFeatureAvailability = Record<ImageExportFeature, boolean>
 
 export interface ImageExportSettings {

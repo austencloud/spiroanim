@@ -596,6 +596,7 @@ export const createSpiroAnimator = (vars: {
   const exportGroups: Record<ImageExportFeature, Group> = {
     paths: pathsGroup,
     hands: handsGroup,
+    arms: armsGroup,
     visible: modelGroup,
     nodes: nodesGroup,
     anchors: anchorsGroup,

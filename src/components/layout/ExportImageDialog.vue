@@ -154,6 +154,7 @@ const {
 const featureOptions: { value: ImageExportFeature; label: string }[] = [
   { value: 'paths', label: 'Paths' },
   { value: 'hands', label: 'Hands' },
+  { value: 'arms', label: 'Arms' },
   { value: 'visible', label: 'Visible props' },
   { value: 'nodes', label: 'Nodes' },
   { value: 'anchors', label: 'Anchors' },
@@ -162,6 +163,7 @@ const featureOptions: { value: ImageExportFeature; label: string }[] = [
 const availableFeatures = ref<ImageExportFeatureAvailability>({
   paths: false,
   hands: false,
+  arms: false,
   visible: false,
   nodes: false,
   anchors: false,
@@ -209,6 +211,7 @@ function open(
   features: ImageExportFeatureAvailability = {
     paths: false,
     hands: false,
+    arms: false,
     visible: false,
     nodes: false,
     anchors: false,

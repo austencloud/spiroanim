@@ -53,6 +53,7 @@ describe('ExportImageDialog', () => {
     const features = {
       paths: true,
       hands: false,
+      arms: true,
       visible: true,
       nodes: false,
       anchors: true,
@@ -63,22 +64,29 @@ describe('ExportImageDialog', () => {
     await nextTick()
     expect(wrapper.findAll('.feature-options label').map((label) => label.text())).toEqual([
       'Paths',
+      'Arms',
       'Visible props',
       'Anchors',
     ])
 
     const checkboxes = wrapper.findAll<HTMLInputElement>('.feature-options input')
     await checkboxes[0]!.setValue(true)
-    await checkboxes[2]!.setValue(true)
+    await checkboxes[1]!.setValue(true)
+    await checkboxes[3]!.setValue(true)
 
     wrapper.vm.open({ width: 960, height: 540 }, [16, 9], features)
     await nextTick()
     const remembered = wrapper.findAll<HTMLInputElement>('.feature-options input')
-    expect(remembered.map((checkbox) => checkbox.element.checked)).toEqual([true, false, true])
+    expect(remembered.map((checkbox) => checkbox.element.checked)).toEqual([
+      true,
+      true,
+      false,
+      true,
+    ])
     await wrapper.get('.export-button').trigger('click')
 
     expect(wrapper.emitted('export')?.[0]?.[0]).toMatchObject({
-      hiddenFeatures: ['paths', 'anchors'],
+      hiddenFeatures: ['paths', 'arms', 'anchors'],
     })
     wrapper.unmount()
   })

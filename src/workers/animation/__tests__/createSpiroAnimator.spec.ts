@@ -103,4 +103,16 @@ describe('createSpiroAnimator Arms rendering', () => {
     const material = handLine.material as LineMaterial2
     expect(material.color.getHex()).toBe(COLSET[2]![2])
   })
+
+  it('can hide and restore Arms for image export', () => {
+    const { animator, scene } = createAnimator(true)
+    const armLine = scene.getObjectsByProperty('isLine2', true)[0]
+    if (!(armLine instanceof Line2)) throw new Error('Expected an Arms Line2')
+
+    animator.setExportHidden(['arms'], true)
+    expect(armLine.parent?.visible).toBe(false)
+
+    animator.setExportHidden(['arms'], false)
+    expect(armLine.parent?.visible).toBe(true)
+  })
 })

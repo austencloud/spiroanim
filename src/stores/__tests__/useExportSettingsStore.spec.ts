@@ -23,6 +23,7 @@ describe('useExportSettingsStore', () => {
     store.imageResolution = '1920x1080'
     store.imageFileType = 'image/webp'
     store.imageHiddenFeatures.paths = true
+    store.imageHiddenFeatures.arms = true
     store.videoResolution = '3840x2160'
     store.videoFramerate = 30
     store.videoCodec = 'vp09.00.10.08'
@@ -36,8 +37,21 @@ describe('useExportSettingsStore', () => {
     expect(restored.imageResolution).toBe('1920x1080')
     expect(restored.imageFileType).toBe('image/webp')
     expect(restored.imageHiddenFeatures.paths).toBe(true)
+    expect(restored.imageHiddenFeatures.arms).toBe(true)
     expect(restored.videoResolution).toBe('3840x2160')
     expect(restored.videoFramerate).toBe(30)
     expect(restored.videoCodec).toBe('vp09.00.10.08')
+  })
+
+  it('defaults Arms to visible when hydrating preferences saved before Arms existed', () => {
+    localStorage.setItem(
+      'sa-export-settings-v1',
+      JSON.stringify({ imageHiddenFeatures: { paths: true, hands: false } }),
+    )
+
+    const store = useExportSettingsStore()
+
+    expect(store.imageHiddenFeatures.paths).toBe(true)
+    expect(store.imageHiddenFeatures.arms).toBe(false)
   })
 })
