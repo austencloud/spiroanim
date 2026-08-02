@@ -410,8 +410,11 @@ register(
       resize(dim)
       camera.aspect = width / height
       camera.updateProjectionMatrix()
-      renderer.autoClear = true
+      // Preserve Tracer mode during export. Resizing clears the live framebuffer, so the exported
+      // trail starts clean and then accumulates across the deterministic frame sequence.
+      renderer.autoClear = previous.autoClear
       renderer.setClearColor(backgroundColor, transparent ? 0 : 1)
+      renderer.clear()
 
       const format = container === 'mp4' ? new Mp4OutputFormat() : new WebMOutputFormat()
       const target = new BufferTarget()
