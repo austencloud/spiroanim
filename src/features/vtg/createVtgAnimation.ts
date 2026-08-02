@@ -11,6 +11,8 @@ import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 
 const vtgFrameCount = 5
 
+const normalizeArc = (arc: number): number => ((arc % 360) + 360) % 360
+
 const shiftPropArc = (
   animation: RootDataFinal,
   propIndex: 0 | 1,
@@ -26,28 +28,44 @@ const shiftPropArc = (
       index === propIndex
         ? {
             ...prop,
-            anim: [{ ...firstFrame, arc: (firstFrame.arc ?? 0) + amount }, ...prop.anim.slice(1)],
+            anim: [
+              { ...firstFrame, arc: normalizeArc((firstFrame.arc ?? 0) + amount) },
+              ...prop.anim.slice(1),
+            ],
           }
         : candidate,
     ),
   }
 }
 
-const quarterArcAmounts = {
-  1: [90, 0],
-  2: [180, 90],
-} as const satisfies Readonly<Record<VtgQuarterMode, readonly [number, number]>>
+const propIndices = [0, 1] as const
+const firstQuarterArcAmounts = [90, 0] as const
+
+const getQuarterArcAmounts = (
+  animation: RootDataFinal,
+  quarterMode: VtgQuarterMode,
+  swapProps: boolean,
+): readonly [number, number] => {
+  const amounts = propIndices.map((outputIndex) => {
+    const originalIndex = swapProps ? propIndices[1 - outputIndex]! : outputIndex
+    const firstQuarterAmount = firstQuarterArcAmounts[originalIndex]
+    if (quarterMode === 1) return firstQuarterAmount
+
+    const plane = normalizeArc(animation.props[outputIndex]?.anim[0]?.plane ?? 0)
+    return firstQuarterAmount + (plane === 180 ? -90 : 90)
+  })
+
+  return [amounts[0], amounts[1]]
+}
 
 export const removeVtgQuarterArcs = (
   animation: RootDataFinal,
   quarterMode: VtgQuarterMode,
   swapProps: boolean,
-  quartersAfterSwap: boolean,
 ): RootDataFinal => {
-  const amounts = quarterArcAmounts[quarterMode]
-  const outputAmounts = swapProps && !quartersAfterSwap ? [amounts[1], amounts[0]] : amounts
+  const amounts = getQuarterArcAmounts(animation, quarterMode, swapProps)
 
-  return shiftPropArc(shiftPropArc(animation, 0, -outputAmounts[0]), 1, -outputAmounts[1])
+  return shiftPropArc(shiftPropArc(animation, 0, -amounts[0]), 1, -amounts[1])
 }
 
 const addDefaultFrames = (pattern: VtgReadableAnimation): VtgReadableAnimation => ({
@@ -110,14 +128,9 @@ export const createVtgAnimation = (
 
   if (!selection.quarters) return animation
 
-  const amounts = quarterArcAmounts[selection.quarters]
-  // By default, Quarters belongs to the original tracks and Swap moves the
-  // adjustments with them. The experimental post-Swap mode applies the same
-  // amounts directly to the output tracks instead.
-  const outputAmounts =
-    selection.swapProps && !selection.quartersAfterSwap ? [amounts[1], amounts[0]] : amounts
+  const amounts = getQuarterArcAmounts(animation, selection.quarters, selection.swapProps === true)
 
-  return shiftPropArc(shiftPropArc(animation, 0, outputAmounts[0]), 1, outputAmounts[1])
+  return shiftPropArc(shiftPropArc(animation, 0, amounts[0]), 1, amounts[1])
 }
 
 /**

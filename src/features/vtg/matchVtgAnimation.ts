@@ -14,7 +14,7 @@ const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber
 const booleanOptions = [false, true] as const
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 
-type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale' | 'quarters' | 'quartersAfterSwap'>
+type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale' | 'quarters'>
 
 let candidateCache: ReadonlyMap<string, readonly VtgCandidateMatch[]> | undefined
 
@@ -108,7 +108,6 @@ const findBaseVtgPatternMatches = (animation: RootDataFinal): readonly VtgPatter
   return (candidates.get(signature) ?? []).map((candidate) => ({
     ...candidate,
     quarters: false,
-    quartersAfterSwap: false,
     bpm: animation.bpm,
     scale,
   }))
@@ -119,24 +118,16 @@ export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPat
   if (directMatches.length > 0) return directMatches
 
   return vtgQuarterModes.flatMap((quarters) => {
-    const outputTrackMatches = findBaseVtgPatternMatches(
-      removeVtgQuarterArcs(animation, quarters, false, false),
-    ).map((match) => ({
-      ...match,
-      quarters,
-      quartersAfterSwap: match.swapProps,
-    }))
-    const originalTrackMatches = findBaseVtgPatternMatches(
-      removeVtgQuarterArcs(animation, quarters, true, false),
+    const nonSwapMatches = findBaseVtgPatternMatches(
+      removeVtgQuarterArcs(animation, quarters, false),
     )
+      .filter((match) => !match.swapProps)
+      .map((match) => ({ ...match, quarters }))
+    const swapMatches = findBaseVtgPatternMatches(removeVtgQuarterArcs(animation, quarters, true))
       .filter((match) => match.swapProps)
-      .map((match) => ({
-        ...match,
-        quarters,
-        quartersAfterSwap: false,
-      }))
+      .map((match) => ({ ...match, quarters }))
 
-    return [...outputTrackMatches, ...originalTrackMatches]
+    return [...nonSwapMatches, ...swapMatches]
   })
 }
 

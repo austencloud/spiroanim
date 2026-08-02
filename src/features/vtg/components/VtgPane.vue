@@ -12,15 +12,56 @@
   >
     <h1 id="vtg-pane-title" class="vtg-pane__visually-hidden">VTG generator</h1>
 
-    <fieldset class="vtg-speed-ratio">
-      <legend class="vtg-pane__visually-hidden">Speed ratio</legend>
-      <div class="vtg-speed-ratio__options">
-        <label v-for="ratio in speedRatios" :key="ratio">
-          <input v-model="speedRatio" type="radio" name="vtg-speed-ratio" :value="ratio" />
-          <span>{{ ratio }}</span>
+    <div class="vtg-top-options">
+      <fieldset class="vtg-speed-ratio">
+        <legend class="vtg-pane__visually-hidden">Speed ratio</legend>
+        <div class="vtg-radio-options">
+          <label v-for="ratio in speedRatios" :key="ratio">
+            <input v-model="speedRatio" type="radio" name="vtg-speed-ratio" :value="ratio" />
+            <span>{{ ratio }}</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="vtg-radio-options vtg-quarter-options">
+        <legend class="vtg-pane__visually-hidden">Quarters</legend>
+        <label>
+          <input
+            :checked="quarters === 1"
+            type="radio"
+            name="vtg-quarters"
+            :value="1"
+            data-role="vtg-quarters"
+            @click="toggleQuarterMode(1)"
+          />
+          <span>Qtr #1</span>
         </label>
-      </div>
-    </fieldset>
+        <label>
+          <input
+            :checked="quarters === 2"
+            type="radio"
+            name="vtg-quarters"
+            :value="2"
+            data-role="vtg-quarters-2"
+            @click="toggleQuarterMode(2)"
+          />
+          <span>Qtr #2</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="vtg-pattern-options">
+        <legend class="vtg-pane__visually-hidden">Pattern options</legend>
+        <label>
+          <input v-model="swapProps" type="checkbox" data-role="vtg-swap" />
+          <span>Swap</span>
+        </label>
+        <label>
+          <input v-model="reversePlane" type="checkbox" data-role="vtg-reverse" />
+          <span>Reverse</span>
+        </label>
+        <button type="button" data-role="vtg-reset" @click="resetPatternControls">Reset</button>
+      </fieldset>
+    </div>
 
     <div class="vtg-board">
       <div class="vtg-sidebar" data-role="vtg-sidebar">
@@ -37,6 +78,8 @@
           :show-divider="!quarters"
           :prop-colors="quarters ? vtgHeaderPropColors : undefined"
           :tooltip-disabled="Boolean(quarters)"
+          :reversed="reversePlane"
+          :mirror-props="!quarters"
         />
       </div>
 
@@ -135,6 +178,8 @@
           :show-divider="!quarters"
           :show-props="!quarters"
           :tooltip-disabled="Boolean(quarters)"
+          :reversed="reversePlane"
+          :mirror-props="!quarters"
         />
       </div>
     </div>
@@ -183,45 +228,6 @@
           data-role="vtg-bpm"
         />
       </label>
-    </fieldset>
-
-    <fieldset class="vtg-pattern-options">
-      <legend class="vtg-pane__visually-hidden">Pattern options</legend>
-      <label>
-        <input v-model="swapProps" type="checkbox" data-role="vtg-swap" />
-        <span>Swap</span>
-      </label>
-      <label>
-        <input v-model="reversePlane" type="checkbox" data-role="vtg-reverse" />
-        <span>Reverse</span>
-      </label>
-      <label>
-        <input
-          :checked="quarters === 1"
-          type="radio"
-          name="vtg-quarters"
-          :value="1"
-          data-role="vtg-quarters"
-          @click="toggleQuarterMode(1)"
-        />
-        <span>Quarters #1</span>
-      </label>
-      <label>
-        <input
-          :checked="quarters === 2"
-          type="radio"
-          name="vtg-quarters"
-          :value="2"
-          data-role="vtg-quarters-2"
-          @click="toggleQuarterMode(2)"
-        />
-        <span>Quarters #2</span>
-      </label>
-      <label>
-        <input v-model="quartersAfterSwap" type="checkbox" data-role="vtg-quarters-after-swap" />
-        <span>Quarters After Swap</span>
-      </label>
-      <button type="button" data-role="vtg-reset" @click="resetPatternControls">Reset</button>
     </fieldset>
   </section>
 </template>
@@ -309,7 +315,6 @@ const bpm = ref<number>(vtgBpmControl.default)
 const scale = ref<number>(vtgScaleControl.default)
 const thick = ref<number>(vtgThickControl.default)
 const quarters = ref<VtgQuarterMode | false>(false)
-const quartersAfterSwap = ref(false)
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
   const colorSet = COLSET[COLORS.indexOf(color)]
   if (!colorSet) throw new Error(`Missing VTG prop color set for ${color}`)
@@ -392,7 +397,6 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
   if (thick.value !== vtgThickControl.default) selection.thick = thick.value
   if (quarters.value) selection.quarters = quarters.value
-  if (quartersAfterSwap.value) selection.quartersAfterSwap = true
   lastEmittedSelection = selection
   emit('patternSelect', selection)
 }
@@ -431,13 +435,12 @@ const resetPatternControls = async () => {
   scale.value = vtgScaleControl.default
   thick.value = vtgThickControl.default
   quarters.value = false
-  quartersAfterSwap.value = false
   await nextTick()
   suppressPatternEmit = false
   if (tile !== undefined) emitPatternSelection(tile)
 }
 
-watch([speedRatio, swapProps, reversePlane, bpm, scale, thick, quarters, quartersAfterSwap], () => {
+watch([speedRatio, swapProps, reversePlane, bpm, scale, thick, quarters], () => {
   if (suppressPatternEmit) return
 
   const tile = matrixTiles.find(({ reference }) => reference === selectedCellReference.value)
@@ -469,7 +472,6 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     scale.value = match.scale
     thick.value = animation.thick
     quarters.value = match.quarters
-    quartersAfterSwap.value = match.quartersAfterSwap
   } else {
     selectedCell.value = undefined
     speedRatio.value = vtgDefaultSpeedRatio
@@ -480,7 +482,6 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     scale.value = vtgScaleControl.default
     thick.value = vtgThickControl.default
     quarters.value = false
-    quartersAfterSwap.value = false
   }
 
   void nextTick(() => {
@@ -500,7 +501,6 @@ const selectInitialRandomPattern = () => {
   scale.value = vtgScaleControl.default
   thick.value = vtgThickControl.default
   quarters.value = false
-  quartersAfterSwap.value = false
   selectRandomTile()
 
   void nextTick(() => {
@@ -677,7 +677,6 @@ const quarterDiagramOptions = computed(() => ({
   quarters: quarters.value || 1,
   swapProps: swapProps.value,
   reversePlane: reversePlane.value,
-  quartersAfterSwap: quartersAfterSwap.value,
 }))
 
 const displayedBottomRules = computed<readonly VtgRuleSpec[]>(() => {
@@ -719,7 +718,6 @@ const { previewUrls, requestPreviews } = useVtgPreviews({
   reversePlane,
   scale,
   quarters,
-  quartersAfterSwap,
 })
 
 let blankObserver: ResizeObserver | undefined
@@ -772,7 +770,6 @@ defineExpose({
   bpm,
   scale,
   quarters,
-  quartersAfterSwap,
   previewUrls,
 })
 </script>
@@ -787,39 +784,43 @@ defineExpose({
   background: transparent;
 }
 
-.vtg-speed-ratio {
-  display: grid;
-  width: 100%;
+.vtg-top-options {
+  display: flex;
   min-width: 20rem;
   padding: 0 var(--space-2) var(--space-1);
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  justify-content: center;
+}
+
+.vtg-top-options fieldset {
+  padding: 0;
   margin: 0;
   border: 0;
-  justify-items: center;
 }
 
-.vtg-speed-ratio__options {
+.vtg-radio-options {
   display: grid;
-  width: min(100%, 14rem);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-columns: max-content;
+  grid-auto-flow: column;
   gap: var(--space-1);
-  margin-block-start: 0;
 }
 
-.vtg-speed-ratio__options label {
+.vtg-radio-options label {
   position: relative;
   cursor: pointer;
 }
 
-.vtg-speed-ratio__options input {
+.vtg-radio-options input {
   position: absolute;
   width: 1px;
   height: 1px;
   opacity: 0;
 }
 
-.vtg-speed-ratio__options span {
+.vtg-radio-options span {
   display: grid;
-  min-height: 2rem;
+  padding: var(--space-2);
   color: var(--color-text);
   font-size: 0.875rem;
   font-weight: 700;
@@ -834,26 +835,25 @@ defineExpose({
     border-color var(--transition-fast);
 }
 
-.vtg-speed-ratio__options input:checked + span {
+.vtg-radio-options input:checked + span {
   color: var(--color-on-action-primary);
   background: var(--color-action-primary);
   border-color: var(--color-action-primary);
 }
 
-.vtg-speed-ratio__options input:focus-visible + span {
+.vtg-radio-options input:focus-visible + span {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }
 
 .vtg-pattern-options {
-  display: flex;
-  min-width: 20rem;
-  padding: var(--space-1) var(--space-2) 0;
+  display: grid;
+  grid-auto-columns: max-content;
+  grid-auto-flow: column;
+  padding: 0;
   margin: 0;
   border: 0;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  justify-content: center;
+  gap: var(--space-1);
 }
 
 .vtg-pattern-options label {
@@ -871,9 +871,7 @@ defineExpose({
 .vtg-pattern-options span,
 .vtg-pattern-options button {
   display: grid;
-  min-width: 6rem;
-  min-height: 2.25rem;
-  padding-inline: var(--space-3);
+  padding: var(--space-2);
   color: var(--color-text);
   font-size: 0.875rem;
   font-weight: 700;
@@ -1040,7 +1038,7 @@ defineExpose({
   z-index: 1;
   inset-block-start: max(0.2rem, 0.6cqi);
   inset-inline-start: 50%;
-  padding: 0.3em 0.5em;
+  padding: 0.3em;
   color: var(--vtg-color-ink);
   cursor: pointer;
   background: var(--vtg-color-secondary);

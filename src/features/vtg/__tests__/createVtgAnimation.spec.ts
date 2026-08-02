@@ -1,3 +1,4 @@
+import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -140,36 +141,51 @@ describe('createVtgAnimation', () => {
     expect(swapped?.props[1]?.anim).toEqual(quarters?.props[0]?.anim)
   })
 
-  it('can apply the Quarters adjustment after Swap for comparison', () => {
-    const selection = {
-      reference: '2-1',
-      speedRatio: '1:3',
-      swapProps: true,
-    } as const
-    const swapped = createVtgAnimation(createCurrentAnimation(), selection)
-    const experimental = createVtgAnimation(createCurrentAnimation(), {
-      ...selection,
-      quarters: 1,
-      quartersAfterSwap: true,
-    })
+  it.each(['1-1', '2-2', '5-5', '6-6'] as const)(
+    'rotates every compiled Qtr #1 path by 90 degrees for Qtr #2 at %s',
+    (reference) => {
+      const selection = { reference, speedRatio: '1:3' } as const
+      const firstQuarter = createVtgAnimation(createCurrentAnimation(), {
+        ...selection,
+        quarters: 1,
+      })
+      const secondQuarter = createVtgAnimation(createCurrentAnimation(), {
+        ...selection,
+        quarters: 2,
+      })
+      if (!firstQuarter || !secondQuarter) throw new Error('Expected both quarter modes')
 
-    expect(experimental?.props[0]?.anim[0]?.arc).toBe((swapped?.props[0]?.anim[0]?.arc ?? 0) + 90)
-    expect(experimental?.props[0]?.anim.slice(1)).toEqual(swapped?.props[0]?.anim.slice(1))
-    expect(experimental?.props[1]?.anim).toEqual(swapped?.props[1]?.anim)
-  })
+      const firstCompiled = rootCompile(firstQuarter)
+      const secondCompiled = rootCompile(secondQuarter)
+      const frontAxis = new Vector3(0, 0, 1)
 
-  it('adds 180 degrees to prop 1 and 90 degrees to prop 2 for Quarters #2', () => {
-    const selection = {
-      reference: '1-6',
-      speedRatio: '1:1',
-    } as const
-    const standard = createVtgAnimation(createCurrentAnimation(), selection)
-    const quarters = createVtgAnimation(createCurrentAnimation(), { ...selection, quarters: 2 })
+      for (const [propIndex, secondProp] of secondCompiled.props.entries()) {
+        const firstProp = firstCompiled.props[propIndex]!
+        for (const [frameIndex, secondFrame] of secondProp.anim.entries()) {
+          const firstFrame = firstProp.anim[frameIndex]!
+          for (const key of ['pos', 'rot', 'posx', 'rotx'] as const) {
+            const expected = new Vector3()
+              .fromArray(firstFrame[key])
+              .applyAxisAngle(frontAxis, Math.PI / 2)
+            secondFrame[key].forEach((coordinate, axis) =>
+              expect(coordinate).toBeCloseTo(expected.getComponent(axis), 9),
+            )
+          }
+        }
+      }
+    },
+  )
 
-    expect(quarters?.props[0]?.anim[0]?.arc).toBe((standard?.props[0]?.anim[0]?.arc ?? 0) + 180)
-    expect(quarters?.props[1]?.anim[0]?.arc).toBe((standard?.props[1]?.anim[0]?.arc ?? 0) + 90)
-    expect(quarters?.props[0]?.anim.slice(1)).toEqual(standard?.props[0]?.anim.slice(1))
-    expect(quarters?.props[1]?.anim.slice(1)).toEqual(standard?.props[1]?.anim.slice(1))
+  it('keeps paired Qtr #2 starting positions distinct', () => {
+    const create = (reference: '1-1' | '2-2') =>
+      createVtgAnimation(createCurrentAnimation(), {
+        reference,
+        speedRatio: '1:3',
+        quarters: 2,
+      })
+
+    expect(create('1-1')?.props.map((prop) => prop.anim[0]?.arc)).toEqual([90, 0])
+    expect(create('2-2')?.props.map((prop) => prop.anim[0]?.arc)).toEqual([90, 180])
   })
 
   it('uses player VTG settings with preview-only visibility and thickness overrides', () => {

@@ -26,7 +26,6 @@ export interface VtgQuarterSideDiagramOptions {
   quarters?: VtgQuarterMode
   swapProps: boolean
   reversePlane: boolean
-  quartersAfterSwap: boolean
 }
 
 export interface VtgQuarterBottomDiagramOptions {
@@ -36,7 +35,6 @@ export interface VtgQuarterBottomDiagramOptions {
   isAnti: boolean
   swapProps: boolean
   reversePlane: boolean
-  quartersAfterSwap: boolean
 }
 
 interface VtgQuarterReferenceFrameOptions {
@@ -47,7 +45,6 @@ interface VtgQuarterReferenceFrameOptions {
   isAnti: boolean
   swapProps: boolean
   reversePlane: boolean
-  quartersAfterSwap: boolean
 }
 
 export const vtgPropBounds = {
@@ -95,14 +92,12 @@ const getVtgQuarterReferencePropStates = ({
   isAnti,
   swapProps,
   reversePlane,
-  quartersAfterSwap,
 }: VtgQuarterReferenceFrameOptions): readonly [VtgQuarterPropState, VtgQuarterPropState] => {
   const animation = createDefaultVtgAnimation({
     reference,
     speedRatio,
     quarters,
     ...(isAnti ? { isAnti: true } : {}),
-    ...(quartersAfterSwap ? { quartersAfterSwap: true } : {}),
     ...(swapProps ? { swapProps: true } : {}),
     ...(reversePlane ? { reversePlane: true } : {}),
   })

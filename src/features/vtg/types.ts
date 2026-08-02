@@ -26,7 +26,6 @@ export interface VtgPatternSelection {
   reference: VtgCellReference
   speedRatio: VtgSpeedRatio
   quarters?: VtgQuarterMode
-  quartersAfterSwap?: boolean
   isAnti?: boolean
   swapProps?: boolean
   reversePlane?: boolean
@@ -39,7 +38,6 @@ export interface VtgPatternMatch {
   reference: VtgCellReference
   speedRatio: VtgSpeedRatio
   quarters: VtgQuarterMode | false
-  quartersAfterSwap: boolean
   isAnti: boolean
   swapProps: boolean
   reversePlane: boolean

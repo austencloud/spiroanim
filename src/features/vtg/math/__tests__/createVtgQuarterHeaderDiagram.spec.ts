@@ -12,7 +12,6 @@ const getStates = (
   options: {
     swapProps?: boolean
     reversePlane?: boolean
-    quartersAfterSwap?: boolean
   } = {},
 ) =>
   getVtgQuarterSidePropStates({
@@ -20,7 +19,6 @@ const getStates = (
     speedRatio: '1:3',
     swapProps: options.swapProps ?? false,
     reversePlane: options.reversePlane ?? false,
-    quartersAfterSwap: options.quartersAfterSwap ?? false,
   })
 
 describe('Quarters side-header prop states', () => {
@@ -101,27 +99,11 @@ describe('Quarters side-header prop states', () => {
     ])
   })
 
-  it('can apply Quarters after Swap for comparison', () => {
-    expect(getStates(1, { swapProps: true, quartersAfterSwap: true })).toEqual([
-      { position: 'top', facing: 'out' },
-      { position: 'right', facing: 'out' },
-    ])
-    expect(getStates(2, { swapProps: true, quartersAfterSwap: true })).toEqual([
-      { position: 'top', facing: 'out' },
-      { position: 'right', facing: 'out' },
-    ])
-    expect(getStates(5, { swapProps: true, quartersAfterSwap: true })).toEqual([
-      { position: 'top', facing: 'in' },
-      { position: 'left', facing: 'out' },
-    ])
-  })
-
   it('does not change when only Speed Ratio changes', () => {
     const baseOptions = {
       row: 6,
       swapProps: false,
       reversePlane: false,
-      quartersAfterSwap: false,
     } as const
 
     expect(getVtgQuarterSidePropStates({ ...baseOptions, speedRatio: '1:1' })).toEqual(
@@ -193,7 +175,6 @@ describe('Quarters bottom-header prop states', () => {
         isAnti: false,
         swapProps: false,
         reversePlane: false,
-        quartersAfterSwap: false,
       }),
     ).toEqual(expected)
   })
@@ -206,7 +187,6 @@ describe('Quarters bottom-header prop states', () => {
         isAnti,
         swapProps: false,
         reversePlane: false,
-        quartersAfterSwap: false,
       })
 
     expect(getColumnFive(true)).not.toEqual(getColumnFive(false))

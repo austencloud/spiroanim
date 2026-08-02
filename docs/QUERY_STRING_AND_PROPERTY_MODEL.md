@@ -482,18 +482,15 @@ VTG matching compiles geometry and identifies Scale from the first frame's inter
 Distance is not part of the VTG geometry signature, so a distance mismatch does not by itself stop
 a pattern match.
 
-The VTG quarters radio group provides two mutually exclusive transforms. `Quarters #1` adds 90
-degrees to the original first animation track's first-frame arc. `Quarters #2` adds 180 degrees to
-the original first animation track's first-frame arc and 90 degrees to the original second animation
-track's first-frame arc. Neither mode is selected by default. Selecting the active radio again, or
-using Reset, clears the selection and removes the Quarters transform. Without Swap these are
-`props[0].anim[0].arc` and, for Quarters #2, `props[1].anim[0].arc`. With Swap, the adjustments move
-with their original tracks.
+The VTG quarters radio group provides two mutually exclusive transforms. `Qtr #1` adds 90 degrees
+to the original first animation track's first-frame arc. `Qtr #2` rotates the complete Qtr #1
+pattern another 90 degrees using first-frame arc adjustments. Plane 0 receives +90 degrees and
+plane 180 receives -90 degrees so both planes rotate in the same spatial direction without changing
+their paths. Arc adjustments wrap within 0-359 degrees. Neither mode is selected by default.
+Selecting the active radio again, or using Reset, clears the selection and removes the Quarters
+transform. Without Swap these are `props[0].anim[0].arc` and, for Qtr #2,
+`props[1].anim[0].arc`. With Swap, the adjustments move with their original tracks.
 
-The temporary `Quarters After Swap` experiment changes that ordering: when enabled, the selected
-quarters transform applies its offsets directly to the output tracks after Swap has run. The two
-orderings are identical when Swap is off. Matching recognizes both observable orderings so a loaded
-or shared animation restores the toggle.
 VTG previews include the same transform, and VTG matching tries the corresponding track before
 using the shared VTG matcher so the selected cell and options can be recovered from loaded animation
 data. Quarters matrix and header display labels are configured separately in
@@ -517,6 +514,14 @@ and Reverse participate in this calculation; controls that do not change first-f
 not.
 
 The bottom-header prop diagrams are not displayed while Quarters is active.
+
+Reverse mirrors each header along the header's layout axis: left headers mirror left-to-right and
+bottom headers mirror top-to-bottom. The title block, divider, and regular prop placements move
+together, including which end of a prop is rendered as the head. Reversed left-header titles are
+right-aligned against the right edge. Header numbers remain in their normal bottom-right position.
+Quarters header props are not mirrored a second time because their positions already come from
+compiled frames that include the Reverse transform; the surrounding Quarters title layout still
+mirrors normally.
 
 ## How to change a slider safely
 

@@ -24,7 +24,6 @@ interface UseVtgPreviewsOptions {
   reversePlane: Ref<boolean>
   scale: Ref<number>
   quarters: Ref<VtgQuarterMode | false>
-  quartersAfterSwap: Ref<boolean>
 }
 
 export const vtgPreviewReferences = [
@@ -64,7 +63,6 @@ export const useVtgPreviews = ({
   reversePlane,
   scale,
   quarters,
-  quartersAfterSwap,
 }: UseVtgPreviewsOptions) => {
   const previewUrls = ref<string[]>(Array.from({ length: vtgPreviewReferences.length }, () => ''))
 
@@ -99,7 +97,6 @@ export const useVtgPreviews = ({
     if (swapProps.value) selection.swapProps = true
     if (reversePlane.value) selection.reversePlane = true
     if (quarters.value) selection.quarters = quarters.value
-    if (quartersAfterSwap.value) selection.quartersAfterSwap = true
 
     return selection
   }
@@ -202,7 +199,7 @@ export const useVtgPreviews = ({
   }
 
   // BPM changes animation timing only, so they intentionally do not invalidate still previews.
-  watch([speedRatio, swapProps, reversePlane, scale, quarters, quartersAfterSwap], requestPreviews)
+  watch([speedRatio, swapProps, reversePlane, scale, quarters], requestPreviews)
   watch(isAnti, requestSpinPreviews)
 
   onMounted(async () => {

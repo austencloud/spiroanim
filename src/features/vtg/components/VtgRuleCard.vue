@@ -5,7 +5,13 @@
         v-bind="props.tooltipDisabled ? {} : activatorProps"
         type="button"
         class="vtg-rule-card"
-        :class="[`vtg-rule-card--${props.orientation}`, { 'vtg-rule-card--accent': props.accent }]"
+        :class="[
+          `vtg-rule-card--${props.orientation}`,
+          {
+            'vtg-rule-card--accent': props.accent,
+            'vtg-rule-card--reversed': props.reversed,
+          },
+        ]"
         :aria-label="`${props.labels.join(' ')} rule ${props.number}`"
         :aria-pressed="props.accent"
         data-role="vtg-rule-card"
@@ -27,7 +33,7 @@
           </span>
 
           <span
-            v-for="(propPlacement, index) in props.showProps ? props.diagram.props : []"
+            v-for="(propPlacement, index) in visiblePropPlacements"
             :key="`prop-${index}`"
             class="vtg-rule-card__prop"
             :class="`vtg-rule-card__prop--${propOrientation(propPlacement)}`"
@@ -85,16 +91,41 @@ const props = withDefaults(
     showProps?: boolean
     propColors?: readonly VtgPropPartColors[]
     tooltipDisabled?: boolean
+    reversed?: boolean
+    mirrorProps?: boolean
   }>(),
   {
     accent: false,
     showDivider: true,
     showProps: true,
     tooltipDisabled: false,
+    reversed: false,
+    mirrorProps: true,
   },
 )
 
 const visibleLabels = computed(() => props.displayLabels ?? props.labels)
+
+const mirrorPlacement = (placement: VtgPropPlacement): VtgPropPlacement => {
+  const placementOrientation = placement.orientation ?? props.orientation
+  if (placementOrientation !== props.orientation) {
+    return { ...placement, lane: 100 - placement.lane }
+  }
+
+  return {
+    ...placement,
+    start: 100 - placement.end,
+    end: 100 - placement.start,
+    largeEnd: placement.largeEnd === 'start' ? 'end' : 'start',
+  }
+}
+
+const visiblePropPlacements = computed(() => {
+  if (!props.showProps) return []
+  if (!props.reversed || !props.mirrorProps) return props.diagram.props
+
+  return props.diagram.props.map(mirrorPlacement)
+})
 
 const propOrientation = (propPlacement: VtgPropPlacement) =>
   propPlacement.orientation ?? props.orientation
@@ -123,11 +154,14 @@ const propColorStyle = (index: number): CSSProperties => {
   }
 }
 
-const dividerStyle = computed<CSSProperties>(() =>
-  props.orientation === 'vertical'
-    ? { insetBlockStart: `${props.diagram.divider ?? 50}%` }
-    : { insetInlineStart: `${props.diagram.divider ?? 50}%` },
-)
+const dividerStyle = computed<CSSProperties>(() => {
+  const divider = props.diagram.divider ?? 50
+  const position = props.reversed ? 100 - divider : divider
+
+  return props.orientation === 'vertical'
+    ? { insetBlockStart: `${position}%` }
+    : { insetInlineStart: `${position}%` }
+})
 </script>
 
 <style scoped>
@@ -178,6 +212,19 @@ const dividerStyle = computed<CSSProperties>(() =>
   font-weight: 900;
   line-height: 0.88;
   text-rendering: geometricPrecision;
+}
+
+.vtg-rule-card--horizontal.vtg-rule-card--reversed .vtg-rule-card__title {
+  inset-inline-start: auto;
+  inset-inline-end: 0.6cqi;
+  text-align: right;
+}
+
+.vtg-rule-card--vertical.vtg-rule-card--reversed .vtg-rule-card__title {
+  inset-block-start: auto;
+  inset-block-end: 0.5cqi;
+  flex-direction: column-reverse;
+  text-align: left;
 }
 
 .vtg-rule-card__diagram {
