@@ -4,9 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ExportVideoDialog from '@/components/layout/ExportVideoDialog.vue'
 import type { VideoExportCodec } from '@/services/videoExportSupport'
+import type { VideoExportProbeSettings } from '@/services/videoExportSupport'
 
 const probe = vi.hoisted(() =>
-  vi.fn<() => Promise<VideoExportCodec[]>>(async () => [
+  vi.fn<(settings: VideoExportProbeSettings) => Promise<VideoExportCodec[]>>(async () => [
     {
       codec: 'avc1.640028',
       container: 'mp4',
@@ -52,6 +53,53 @@ describe('ExportVideoDialog', () => {
     wrapper.unmount()
   })
 
+  it('offers 120 and 240 FPS and probes the selected frame rate', async () => {
+    const wrapper = mount(ExportVideoDialog, { attachTo: document.body })
+
+    await wrapper.vm.open(true, { width: 1280, height: 720 }, [16, 9])
+    await flushPromises()
+    const framerate = wrapper.get<HTMLSelectElement>('[data-role="export-video-framerate"]')
+
+    expect(framerate.findAll('option').map((option) => option.text())).toEqual([
+      '30 FPS',
+      '60 FPS',
+      '120 FPS',
+      '240 FPS',
+    ])
+
+    await framerate.setValue('240')
+    await flushPromises()
+
+    expect(probe).toHaveBeenLastCalledWith(
+      expect.objectContaining({ width: 1280, height: 720, framerate: 240 }),
+    )
+    wrapper.unmount()
+  })
+
+  it('offers higher bitrates for reducing compression artifacts', async () => {
+    const wrapper = mount(ExportVideoDialog, { attachTo: document.body })
+
+    await wrapper.vm.open(true, { width: 1280, height: 720 }, [16, 9])
+    await flushPromises()
+    const quality = wrapper.get<HTMLSelectElement>('[data-role="export-video-quality"]')
+
+    expect(quality.findAll('option').map((option) => option.text())).toEqual([
+      'Standard',
+      'High',
+      'Very high',
+      'Ultra',
+      'Maximum',
+    ])
+
+    await quality.setValue('100000000')
+    await flushPromises()
+
+    expect(probe).toHaveBeenLastCalledWith(
+      expect.objectContaining({ width: 1280, height: 720, bitrate: 100_000_000 }),
+    )
+    wrapper.unmount()
+  })
+
   it('uses the last successfully exported file name', async () => {
     const wrapper = mount(ExportVideoDialog, { attachTo: document.body })
 
@@ -87,6 +135,13 @@ describe('ExportVideoDialog', () => {
     const checkbox = wrapper.get<HTMLInputElement>('.alpha-field input')
     expect(checkbox.element.disabled).toBe(false)
     await checkbox.setValue(true)
+    expect(
+      wrapper
+        .findAll<HTMLInputElement>('.background-field input')
+        .every((input) => !input.element.disabled),
+    ).toBe(true)
+    expect(wrapper.get('.background-field').text()).toContain('Transparency matte color')
+    expect(wrapper.get('.background-field small').text()).toContain('choose a color similar')
     await wrapper.get('.export-button').trigger('click')
 
     expect(wrapper.emitted('export')?.[0]?.[0]).toMatchObject({

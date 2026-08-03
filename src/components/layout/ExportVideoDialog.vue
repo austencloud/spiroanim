@@ -43,9 +43,10 @@
 
         <label>
           <span>Frame rate</span>
-          <select v-model.number="framerate">
-            <option :value="30">30 FPS</option>
-            <option :value="60">60 FPS</option>
+          <select v-model.number="framerate" data-role="export-video-framerate">
+            <option v-for="rate in videoExportFramerates" :key="rate" :value="rate">
+              {{ rate }} FPS
+            </option>
           </select>
         </label>
 
@@ -88,24 +89,24 @@
 
         <label>
           <span>Quality</span>
-          <select v-model.number="bitrate">
+          <select v-model.number="bitrate" data-role="export-video-quality">
             <option :value="8_000_000">Standard</option>
             <option :value="16_000_000">High</option>
             <option :value="30_000_000">Very high</option>
+            <option :value="60_000_000">Ultra</option>
+            <option :value="100_000_000">Maximum</option>
           </select>
         </label>
 
         <label class="background-field">
-          <span>Background color</span>
+          <span>{{ transparent ? 'Transparency matte color' : 'Background color' }}</span>
           <span class="color-control">
-            <input v-model="backgroundColor" type="color" :disabled="transparent" />
-            <input
-              v-model="backgroundColor"
-              type="text"
-              pattern="#[0-9a-fA-F]{6}"
-              :disabled="transparent"
-            />
+            <input v-model="backgroundColor" type="color" />
+            <input v-model="backgroundColor" type="text" pattern="#[0-9a-fA-F]{6}" />
           </span>
+          <small v-if="transparent">
+            For cleaner edges, choose a color similar to where the video will be used.
+          </small>
         </label>
 
         <label v-if="alphaAvailable" class="alpha-field">
@@ -190,6 +191,7 @@ const {
   customHeight,
 })
 let probeGeneration = 0
+const videoExportFramerates = [30, 60, 120, 240] as const
 
 const availabilityStatus = computed(() => {
   if (isChecking.value) return 'Checking this configuration...'
@@ -365,6 +367,7 @@ label {
   accent-color: var(--color-action-primary);
 }
 
+.background-field small,
 .alpha-field small {
   color: var(--color-text-muted);
   font-size: 0.75rem;
