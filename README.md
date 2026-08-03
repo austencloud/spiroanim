@@ -73,12 +73,13 @@ npm run generate:pwa-assets
 npm run test:pwa
 ```
 
-See [docs/PWA.md](docs/PWA.md) for installation behavior, offline caching, icon generation, and
-production hosting requirements.
+See [docs/README.md](docs/README.md) for the documentation index. PWA runtime behavior is covered in
+[docs/PWA.md](docs/PWA.md), icon generation in [docs/APP_ICONS.md](docs/APP_ICONS.md), and production
+delivery in [docs/HOSTING.md](docs/HOSTING.md).
 
-The production build also prerenders the landing and About pages for search engines while keeping
-the editor and PWA browser-only. See [docs/SEO.md](docs/SEO.md) for the route boundary and hosting
-requirements, and [docs/PRERENDERING.md](docs/PRERENDERING.md) when adding another public page.
+The production build also prerenders the landing, About, and Tips pages for search engines while
+keeping the editor and PWA browser-only. See [docs/SEO.md](docs/SEO.md) for the route boundary and
+[docs/PRERENDERING.md](docs/PRERENDERING.md) when adding another public page.
 
 ### Lint with [ESLint](https://eslint.org/)
 

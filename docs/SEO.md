@@ -4,7 +4,9 @@ SpiroAnim selectively prerenders its public information pages during `npm run bu
 
 - `/` and `/index` contain the rendered landing page.
 - `/about` contains the rendered About page.
-- `/app` and its player, editor, timeline, Concepts, and pane-layout aliases use a client-only shell.
+- `/tips` contains the rendered Tips page.
+- `/app` and its player, editor, timeline, Concepts, concept-specific, and pane-layout aliases use a
+  client-only shell.
 
 This is static-site generation rather than a continuously running server. It gives crawlers useful
 HTML for the small set of indexable pages without evaluating Three.js, editor state, PWA behavior,
@@ -34,7 +36,7 @@ browser-only APIs must defer that behavior until mounting or keep it in the clie
 Follow the complete step-by-step checklist in [PRERENDERING.md](PRERENDERING.md).
 
 Hosting must serve directory index files. Do not rewrite every request to the root `index.html`,
-because doing so would discard both the prerendered About document and the explicit client-only app
+because doing so would discard the prerendered public documents and the explicit client-only app
 shells. The build also emits clean-URL files such as `about.html` and `app.html` for static servers
-that resolve `/about` or `/app` that way. See `docs/PWA.md` for the complete production hosting
-requirements.
+that resolve `/about` or `/app` that way. See [HOSTING.md](HOSTING.md) for the complete production
+hosting requirements.

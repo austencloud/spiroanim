@@ -1,8 +1,8 @@
 # Animation Frame Model
 
 This document describes how editable animation frames become compiled animation data, how the
-worker interprets that data, and the invariants required by frame-management operations such as
-Shift.
+worker interprets that data, and how sparse frames can be compacted safely. The Shift management
+operation is documented separately in [`SHIFT.md`](./SHIFT.md).
 
 The authoritative implementations are:
 
@@ -143,11 +143,7 @@ When the old second frame becomes the new first frame, its original world offset
 their incoming move deltas, and the moved first segment retains the old `move[1]` delta at the new
 end.
 
-## Query-string sparsity
-
-Each frame is encoded independently. Undefined fields use the reserved all-ones bit pattern, and
-trailing undefined groups are stripped. Consecutive empty frames therefore add only their dot
-separators.
+## Sparse frame compaction
 
 After a management operation, frames should be compacted against the same rules used by the
 compiler:
@@ -161,109 +157,5 @@ compiler:
 Version 1 query values are integer-based. Derived floating-point noise near an integer must be
 snapped before it reaches the editor or serializer.
 
-## Shift
-
-Shift rotates one displayed interval to the end. Let the original compiled states be:
-
-```text
-C0, C1, C2, ... Cn
-```
-
-Eligibility requires at least three frames and:
-
-```text
-C0.pos == Cn.pos
-C0.rot == Cn.rot
-```
-
-Comparisons use a small floating-point tolerance. Raw object equality is not meaningful because
-frames can express the same result through inheritance or equivalent rotations.
-
-The shifted compiled state order is:
-
-```text
-C1, C2, ... Cn, C1
-```
-
-The incoming segment definitions on frames after the new first frame map as:
-
-```text
-old frame 2, old frame 3, ... old frame n, old frame 1
-```
-
-Their original `posx`, `rotx`, `arc`, transition type, turns, and adjustment are preserved. Because
-`plane` and `axis` are relative to transported references, their raw degree values are recalculated
-from those compiled axes.
-
-Shift changes the timeline's starting point while leaving the complete spatial position and
-rotation paths where they were.
-
-The new first frame's incoming path is not displayed, so a minimal position and rotation are used.
-Its adjustment is re-expressed around the reconstructed rotation axis.
-
-Durations belong to the segment's starting frame, so the used duration order becomes:
-
-```text
-old beats 1, old beats 2, ... old beats n - 1, old beats 0
-```
-
-The unused final `beats` value repeats old frame 0 so it can normally remain sparse and repeated
-Shift operations continue rotating durations correctly.
-
-When several props are selected, eligibility and reconstruction are calculated for every prop
-before any root data is changed. The UI applies the results atomically; one ineligible selected
-prop disables the operation for all selected props.
-
-### Timeline selections
-
-When timeline selection mode is active, Shift operates only on each selected prop's frames within
-the selected time range. That range must contain at least three frames and its compiled first and
-last position and rotation must match, just like a complete animation.
-
-A selected range can begin after frame 0. Its reconstructed first frame therefore starts from the
-preceding compiled frame and the position and rotation references transported by that frame. The
-shifted raw range is compacted against the preceding frame's effective inherited values, not
-against first-frame defaults.
-
-The selected loop's final position and rotation move with the shifted loop. Values used as the
-starting state of the following, unselected interval retain their original final-range values:
-
-- `beats`
-- `scale`
-- `depth`
-- `adjust`
-- cumulative `move`
-
-The old final `move` delta has already moved earlier in the shifted range, so the new final frame
-uses a zero delta to keep the cumulative offset at the following frame unchanged. Rotating the
-visible durations preserves the selection's total duration, and retaining the final outgoing
-`beats` value keeps every later frame at its original timeline time. After timing is recalculated,
-the selection handles are restored to those same boundary times.
-
-## Closure scope and unavoidable seam differences
-
-Shift intentionally gates on compiled position and base rotation because those are the requested
-loop invariants. It does not require the first and last frame to match scale, depth, adjustment, or
-cumulative move offset.
-
-If those additional states differ at the original seam, no cyclic reorder can preserve both
-adjacent segments perfectly: one output frame would need to be the old final state for the segment
-arriving at it and the old first state for the segment leaving it. The current behavior rotates the
-compiled keyframe states and preserves the requested position/rotation path. Authors who need a
-fully seamless loop should also make scale, depth, adjustment, and offset agree at the original
-first and last frames.
-
-## Regression coverage
-
-Shift tests cover:
-
-- Position and rotation closure checks.
-- Rejection when either endpoint invariant fails.
-- Reconstructed starting state.
-- Preservation of incoming `posx` and `rotx` segment axes.
-- Rotation of segment durations.
-- Cumulative move handling.
-- Closed timeline-range shifting and preservation of its outgoing boundary values.
-- Sparse raw output.
-- Atomic multi-prop behavior.
-- A two-prop VTG pattern through query-string encode/decode.
+The URL-level representation of undefined fields, empty frames, separators, and stripped trailing
+groups belongs to [`QUERY_STRING_FORMAT.md`](./QUERY_STRING_FORMAT.md).
