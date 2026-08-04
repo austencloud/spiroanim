@@ -219,7 +219,7 @@ describe('EightStepPane', () => {
     ).toEqual([
       ['Handpaths.pdf', '/docs/8-step/Handpaths_swapped.pdf'],
       ['TeachingSheets.pdf', '/docs/8-step/TeachingSheets_swapped.pdf'],
-      ['HandpathsV2.pdf', '/docs/8-step/TeachingSheetsV2_swapped.pdf'],
+      ['HandpathsV2.pdf', '/docs/8-step/TeachingSheets.pdf'],
     ])
     expect(
       wrapper

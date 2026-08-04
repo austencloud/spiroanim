@@ -147,7 +147,7 @@
           </li>
           <li>
             <a
-              href="/docs/8-step/TeachingSheetsV2_swapped.pdf"
+              href="/docs/8-step/TeachingSheets.pdf"
               target="_blank"
               rel="noopener noreferrer"
             >

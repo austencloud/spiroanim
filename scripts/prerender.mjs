@@ -82,7 +82,7 @@ const serviceWorkerResult = await generateSW({
   globIgnores: ['sw.js', 'workbox-*.js'],
   globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
   navigateFallback: 'app-shell.html',
-  navigateFallbackDenylist: [/^\/(?:index\/?|about\/?|tips\/?)?$/],
+  navigateFallbackDenylist: [/^\/(?:index\/?|about\/?|tips\/?)?$/, /^\/docs(?:\/|$)/],
   swDest: path.join(clientDirectory, 'sw.js'),
 })
 
