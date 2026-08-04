@@ -40,51 +40,70 @@
         {{ group.label }}
       </div>
 
-      <div
+      <BaseTooltip
         v-for="(row, rowIndex) in eightStepRows"
         :key="`row-${row}`"
-        class="eight-step-row-header"
-        :class="{
-          'eight-step-header--accent': row === selectedCell?.row,
-        }"
+        class="eight-step-row-tooltip"
+        :text="getRowDescription(row)"
         :style="{ gridRow: rowIndex + 2 }"
-        :aria-label="row"
-        :aria-pressed="row === selectedCell?.row"
-        data-role="eight-step-row-header"
       >
-        <span class="eight-step-row-header__first">{{ row[0] }}</span>
-        <span class="eight-step-row-header__second">{{ row[1] }}</span>
-      </div>
+        <template #activator="{ props: activatorProps }">
+          <div
+            v-bind="activatorProps"
+            class="eight-step-row-header"
+            :class="{
+              'eight-step-header--accent': row === selectedCell?.row,
+            }"
+            :aria-label="row"
+            :aria-pressed="row === selectedCell?.row"
+            data-role="eight-step-row-header"
+          >
+            <span class="eight-step-row-header__first">{{ row[0] }}</span>
+            <span class="eight-step-row-header__second">{{ row[1] }}</span>
+          </div>
+        </template>
+      </BaseTooltip>
 
-      <button
+      <BaseTooltip
         v-for="cell in cells"
         :key="cell.reference"
-        type="button"
-        class="eight-step-cell"
-        :class="{
-          'eight-step-cell--highlighted': isCellHighlighted(cell),
-          'eight-step-cell--marked': isMarkedCell(cell),
-          'eight-step-cell--selected': cell.reference === selectedCell?.reference,
-        }"
+        class="eight-step-cell-tooltip"
+        :text="getCellDescription(cell)"
         :style="cell.style"
-        :aria-label="`Select Eight Step cell ${cell.reference}`"
-        :aria-pressed="cell.reference === selectedCell?.reference"
-        :data-board-column="cell.column"
-        :data-board-row="cell.row"
-        :data-cell-reference="cell.reference"
-        :data-preview-row-index="cell.rowIndex"
-        data-role="eight-step-cell"
-        @click="selectCell(cell)"
       >
-        <img
-          v-if="previewUrls[cell.rowIndex]"
-          :src="previewUrls[cell.rowIndex]"
-          alt=""
-          class="eight-step-cell__preview"
-          data-role="eight-step-preview"
-          :data-preview-reference="eightStepPreviewReferences[cell.rowIndex]"
-        />
-      </button>
+        <template #activator="{ props: activatorProps }">
+          <button
+            v-bind="activatorProps"
+            type="button"
+            class="eight-step-cell"
+            :class="{
+              'eight-step-cell--highlighted': isCellHighlighted(cell),
+              'eight-step-cell--marked': isMarkedCell(cell),
+              'eight-step-cell--selected': cell.reference === selectedCell?.reference,
+            }"
+            :aria-label="`${getCellDescription(cell)}, cell ${cell.reference}`"
+            :aria-pressed="cell.reference === selectedCell?.reference"
+            :data-board-column="cell.column"
+            :data-board-row="cell.row"
+            :data-cell-reference="cell.reference"
+            :data-preview-row-index="cell.rowIndex"
+            data-role="eight-step-cell"
+            @click="selectCell(cell)"
+          >
+            <img
+              v-if="previewUrls[cell.rowIndex]"
+              :src="previewUrls[cell.rowIndex]"
+              alt=""
+              class="eight-step-cell__preview"
+              data-role="eight-step-preview"
+              :data-preview-reference="eightStepPreviewReferences[cell.rowIndex]"
+            />
+          </button>
+        </template>
+        <template #html>
+          <span class="eight-step-cell-tooltip__text">{{ getCellDescription(cell) }}</span>
+        </template>
+      </BaseTooltip>
     </div>
 
     <ConceptAnimationControls :animation="animation" role-prefix="eight-step" />
@@ -95,6 +114,7 @@
 import { mdiShuffleVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
@@ -157,6 +177,28 @@ const columnGroups = [
   { label: 'Quarter Aligned', columns: [5, 6] },
   { label: 'Quarter Opposed', columns: [7, 8] },
 ] as const satisfies readonly EightStepColumnGroup[]
+
+const rowDescriptions = {
+  AA: 'Anti vs Anti',
+  AE: 'Anti vs Ext',
+  AI: 'Anti vs In',
+  EA: 'Ext vs Anti',
+  EE: 'Ext vs Ext',
+  EI: 'Ext vs In',
+  IA: 'In vs Anti',
+  IE: 'In vs Ext',
+  II: 'In vs In',
+} as const satisfies Readonly<Record<(typeof eightStepRows)[number], string>>
+
+const getRowDescription = (row: (typeof eightStepRows)[number]) => rowDescriptions[row]
+
+const getCellDescription = (cell: EightStepPatternDefinition) => {
+  const group = columnGroups.find(({ columns }) =>
+    columns.some((column) => column === cell.column),
+  )
+  if (!group) throw new Error(`Missing Eight Step column group for column ${cell.column}`)
+  return `${group.label}\n${getRowDescription(cell.row)}`
+}
 
 const markedCellReferences: ReadonlySet<string> = new Set([
   '1-AE',
@@ -484,13 +526,23 @@ defineExpose({
 }
 
 .eight-step-row-header {
-  grid-column: 1;
   display: flex;
   gap: 0.04em;
   align-items: center;
   justify-content: center;
   font-size: max(0.62rem, 1.7cqi);
   letter-spacing: 0.08em;
+}
+
+.eight-step-row-tooltip {
+  grid-column: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.eight-step-row-tooltip > .eight-step-row-header {
+  width: 100%;
+  height: 100%;
 }
 
 .eight-step-header--accent {
@@ -530,6 +582,21 @@ defineExpose({
     background var(--transition-fast),
     box-shadow var(--transition-fast);
   place-items: center;
+}
+
+.eight-step-cell-tooltip {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.eight-step-cell-tooltip > .eight-step-cell {
+  width: 100%;
+  height: 100%;
+}
+
+.eight-step-cell-tooltip__text {
+  white-space: pre-line;
 }
 
 .eight-step-cell__preview {

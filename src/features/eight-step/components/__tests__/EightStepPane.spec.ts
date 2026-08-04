@@ -107,6 +107,35 @@ describe('EightStepPane', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+
+  it('uses shared tooltips for row relationships and cell descriptions', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(EightStepPane)
+
+    const rowHeaders = wrapper.findAll('[data-role="eight-step-row-header"]')
+    const cells = wrapper.findAll('[data-role="eight-step-cell"]')
+    expect(rowHeaders).toHaveLength(9)
+    expect(cells).toHaveLength(72)
+    expect(rowHeaders.every((header) => header.attributes('aria-describedby'))).toBe(true)
+    expect(cells.every((cell) => cell.attributes('aria-describedby'))).toBe(true)
+
+    await wrapper.get('[data-role="eight-step-row-header"][aria-label="AA"]').trigger('mouseenter')
+    vi.runAllTimers()
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe('Anti vs Anti')
+
+    await wrapper.get('[data-role="eight-step-row-header"][aria-label="AA"]').trigger('mouseleave')
+    await nextTick()
+    await wrapper.get('[data-cell-reference="1-AA"]').trigger('mouseenter')
+    vi.runAllTimers()
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
+      'Opposite\nAnti vs Anti',
+    )
+
+    wrapper.unmount()
   })
 
   it('renders four paired column groups, nine coded rows, and 72 blank cells', () => {
