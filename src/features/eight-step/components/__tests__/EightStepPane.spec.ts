@@ -173,16 +173,16 @@ describe('EightStepPane', () => {
       [
         '1-AE',
         '1-AI',
-        '2-EE',
-        '2-EI',
-        '2-IE',
-        '2-II',
+        '2-AE',
+        '2-AI',
         '3-EE',
         '3-EI',
         '3-IE',
         '3-II',
-        '4-AE',
-        '4-AI',
+        '4-EE',
+        '4-EI',
+        '4-IE',
+        '4-II',
         '5-EE',
         '5-EI',
         '5-IE',
@@ -369,8 +369,8 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[aria-label="AA"]').classes()).not.toContain('eight-step-header--accent')
     expect(wrapper.findAll('.eight-step-cell--highlighted')).toHaveLength(16)
 
-    await wrapper.get('[data-cell-reference="2-EE"]').trigger('click')
-    expect(wrapper.get('[data-cell-reference="2-EE"]').classes()).toEqual(
+    await wrapper.get('[data-cell-reference="2-AE"]').trigger('click')
+    expect(wrapper.get('[data-cell-reference="2-AE"]').classes()).toEqual(
       expect.arrayContaining(['eight-step-cell--marked', 'eight-step-cell--selected']),
     )
   })

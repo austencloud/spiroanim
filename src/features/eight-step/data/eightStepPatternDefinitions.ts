@@ -36,11 +36,11 @@ export const eightStepHandpathsByPage: Readonly<Record<EightStepPage, EightStepH
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
   },
   3: {
-    green: ['T', 'R', 'B', 'R', 'B', 'L', 'B', 'L', 'T', 'L', 'T', 'R'],
+    green: ['B', 'R', 'T', 'R', 'T', 'L', 'T', 'L', 'B', 'L', 'B', 'R'],
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
   },
   4: {
-    green: ['T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L'],
+    green: ['B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
   5: {
@@ -52,11 +52,11 @@ export const eightStepHandpathsByPage: Readonly<Record<EightStepPage, EightStepH
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
   },
   7: {
-    green: ['B', 'R', 'T', 'R', 'T', 'L', 'T', 'L', 'B', 'L', 'B', 'R'],
+    green: ['T', 'R', 'B', 'R', 'B', 'L', 'B', 'L', 'T', 'L', 'T', 'R'],
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
   },
   8: {
-    green: ['B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L'],
+    green: ['T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
   9: {

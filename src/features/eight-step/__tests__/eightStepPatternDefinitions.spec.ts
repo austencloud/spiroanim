@@ -24,7 +24,7 @@ const flippedHandpaths = {
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
   },
   4: {
-    green: ['T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L'],
+    green: ['B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
   6: {
@@ -32,7 +32,7 @@ const flippedHandpaths = {
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
   },
   8: {
-    green: ['B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L'],
+    green: ['T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
   16: {
