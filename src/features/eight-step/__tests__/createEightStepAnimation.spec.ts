@@ -1,0 +1,92 @@
+import { describe, expect, it } from 'vitest'
+
+import {
+  createDefaultEightStepAnimation,
+  createEightStepAnimation,
+} from '@/features/eight-step/createEightStepAnimation'
+import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import { rootFinal } from '@/math/animation/PlayerFunc'
+import { decodeReadable } from '@/services/animation/AnimReadableFunc'
+
+const current = rootFinal(
+  decodeReadable({
+    bpm: 99,
+    color: 'Blue',
+    prop: 'Staff',
+    smooth: false,
+    guides: true,
+    anchors: true,
+    nodes: true,
+    paths: false,
+    hands: true,
+    arms: false,
+    visible: false,
+    aspectx: 2,
+    aspecty: 3,
+    distance: 40,
+    thick: 9,
+    props: [],
+  }),
+)
+
+describe('createEightStepAnimation', () => {
+  it('builds a closed two-prop animation while preserving unrelated player settings', () => {
+    const animation = createEightStepAnimation(current, {
+      concept: '8stp',
+      reference: '1-AA',
+    })
+
+    expect(animation).toBeDefined()
+    expect(animation).toMatchObject({
+      bpm: vtgPlayerSettings.bpm,
+      aspectx: vtgPlayerSettings.aspectx,
+      aspecty: vtgPlayerSettings.aspecty,
+      smooth: current.smooth,
+      props: [{ color: 1 }, { color: 6 }],
+    })
+    expect(animation?.props.map(({ anim }) => anim.length)).toEqual([13, 13])
+  })
+
+  it('applies shared player controls and swaps complete tracks', () => {
+    const base = createDefaultEightStepAnimation({ concept: '8stp', reference: '5-II' })
+    const transformed = createEightStepAnimation(current, {
+      concept: '8stp',
+      reference: '5-II',
+      swapProps: true,
+      reversePlane: true,
+      bpm: 84,
+      scale: 1.2,
+      thick: 11,
+      paths: false,
+      hands: true,
+      arms: false,
+    })
+
+    expect(base).toBeDefined()
+    expect(transformed).toBeDefined()
+    expect(transformed).toMatchObject({
+      bpm: 84,
+      distance: 23,
+      thick: 11,
+      paths: false,
+      hands: true,
+      arms: false,
+    })
+    expect(transformed?.props.map(({ color }) => color)).toEqual([1, 6])
+    expect(transformed?.props.every(({ anim }) => anim[0]?.scale === 12)).toBe(true)
+    expect(transformed?.props[0]?.anim).not.toEqual(base?.props[1]?.anim)
+  })
+
+  it('does not mutate independently owned source definitions', () => {
+    const first = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '1-AI',
+      reversePlane: true,
+      scale: 1.4,
+    })
+    const second = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AI' })
+
+    expect(first?.props[0]?.anim[0]?.scale).toBe(14)
+    expect(second?.props[0]?.anim[0]?.scale).toBe(8)
+  })
+})

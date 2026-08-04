@@ -23,7 +23,12 @@
       :animation-ready="animationReady"
       @pattern-select="emit('patternSelect', $event)"
     />
-    <EightStepPane v-else />
+    <EightStepPane
+      v-else
+      :animation="animation"
+      :animation-ready="animationReady"
+      @pattern-select="emit('patternSelect', $event)"
+    />
   </section>
 </template>
 

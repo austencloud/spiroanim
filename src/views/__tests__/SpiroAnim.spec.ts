@@ -9,6 +9,7 @@ import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createQtrAnimation } from '@/features/qtr/createQtrAnimation'
+import { createEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 
 describe('SpiroAnim view', () => {
@@ -173,6 +174,16 @@ describe('SpiroAnim view', () => {
     await flushPromises()
 
     expect(playerRoot.value).toEqual(expectedVtgAgain)
+
+    const expectedEightStep = createEightStepAnimation(playerRoot.value, {
+      concept: '8stp',
+      reference: '8-II',
+    })
+    await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('8stp')
+    await wrapper.get('[data-cell-reference="8-II"]').trigger('click')
+
+    expect(playerRoot.value).toEqual(expectedEightStep)
+    expect(playerRoot.value.props.map(({ anim }) => anim.length)).toEqual([13, 13])
 
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)

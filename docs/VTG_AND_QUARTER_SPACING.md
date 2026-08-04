@@ -5,6 +5,9 @@ including player settings, transforms, matching, relationship classification, an
 These controls are separate from the editor property-panel pipeline documented in
 [`PROPERTY_CONTROLS.md`](./PROPERTY_CONTROLS.md).
 
+Eight Step uses the same shared Concepts controls but has a separate pattern model documented in
+[`EIGHT_STEP.md`](./EIGHT_STEP.md).
+
 The authoritative implementations are:
 
 - `src/features/vtg/data/vtgPlayerSettings.ts` for numeric controls and rendering settings.
@@ -16,10 +19,12 @@ The authoritative implementations are:
 ## Control and player behavior
 
 The Concepts pane does not use `PropertyPanel`, `DynamicVal`, or `useProperties.constraints()`.
-Its VTG and Quarter Spacing panels use the same native matrix controls. VTG sends a
+Its VTG, Quarter Spacing, and Eight Step panels use the same native player and transform controls.
+VTG sends a
 `VtgPatternSelection` to the VTG builder, while Quarter Spacing sends a `QtrPatternSelection` to
-the Qtr builder. Speed Ratio, Swap, and Flip are held in the shared Concepts store so their values
-remain unchanged when switching between the two panels.
+the Qtr builder. Eight Step sends an `EightStepPatternSelection` to its builder. Speed Ratio, Swap,
+Flip, and the player controls are held in the shared Concepts store so their applicable values
+remain unchanged when switching panels.
 
 Each VTG and Quarter Spacing slider gesture is one undo step. Scale, Thick, and BPM begin a query
 history group on pointer-down or key-down and end it on pointer-up, pointer-cancel, key-up, or blur,

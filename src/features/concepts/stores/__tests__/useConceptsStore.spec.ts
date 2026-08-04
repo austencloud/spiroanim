@@ -37,6 +37,50 @@ describe('useConceptsStore', () => {
     expect(store.speedRatio).toBe('1:3')
     expect(store.swapProps).toBe(false)
     expect(store.reversePlane).toBe(false)
+    expect(store.bpm).toBe(60)
+    expect(store.scale).toBe(0.8)
+    expect(store.thick).toBe(4)
+    expect(store.paths).toBe(true)
+    expect(store.hands).toBe(false)
+    expect(store.arms).toBe(true)
+    app.unmount()
+  })
+
+  it('resets every shared pattern control', () => {
+    const { app, store } = mountStore()
+    store.speedRatio = '1:5'
+    store.swapProps = true
+    store.reversePlane = true
+    store.bpm = 90
+    store.scale = 1.2
+    store.thick = 12
+    store.paths = false
+    store.hands = true
+    store.arms = false
+
+    store.resetPatternControls()
+
+    expect({
+      speedRatio: store.speedRatio,
+      swapProps: store.swapProps,
+      reversePlane: store.reversePlane,
+      bpm: store.bpm,
+      scale: store.scale,
+      thick: store.thick,
+      paths: store.paths,
+      hands: store.hands,
+      arms: store.arms,
+    }).toEqual({
+      speedRatio: '1:3',
+      swapProps: false,
+      reversePlane: false,
+      bpm: 60,
+      scale: 0.8,
+      thick: 4,
+      paths: true,
+      hands: false,
+      arms: true,
+    })
     app.unmount()
   })
 

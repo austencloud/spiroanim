@@ -1,4 +1,5 @@
 import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
+import { toConceptPreviewAnimation } from '@/features/concepts/data/toConceptPreviewAnimation'
 import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
 import { rootFinal } from '@/math/animation/PlayerFunc'
@@ -81,22 +82,7 @@ export const createDefaultVtgAnimation = (
 /**
  * Builds VTG data without inheriting settings from the active player.
  */
-export const toVtgPreviewAnimation = (animation: RootDataFinal): RootDataFinal => ({
-  ...animation,
-  paths: vtgPlayerSettings.paths,
-  hands: false,
-  arms: false,
-  thick: 15,
-  visible: false,
-  props: animation.props.map((prop) => ({
-    ...prop,
-    hands: false,
-    arms: false,
-    paths: vtgPlayerSettings.paths,
-    thick: 15,
-    visible: false,
-  })),
-})
+export const toVtgPreviewAnimation = toConceptPreviewAnimation
 
 export const createVtgPreviewAnimation = (
   selection: VtgPatternSelection,

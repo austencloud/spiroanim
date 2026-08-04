@@ -66,7 +66,9 @@ import Player from '@/components/SpiroAnim/AnimPlayer.vue'
 import Editor from '@/components/SpiroAnim/AnimEditor.vue'
 import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
+import { createEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
 import { createQtrAnimation } from '@/features/qtr/createQtrAnimation'
+import { isEightStepPatternSelection, isQtrPatternSelection } from '@/features/concepts/types'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 
@@ -119,8 +121,9 @@ registerComponentEl(cTimeline, eTimeline)
 registerComponentEl(cConcepts, eConcepts)
 
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
-  const animation =
-    'quarters' in selection
+  const animation = isEightStepPatternSelection(selection)
+    ? createEightStepAnimation(ROOT.value, selection)
+    : isQtrPatternSelection(selection)
       ? createQtrAnimation(ROOT.value, selection)
       : createVtgAnimation(ROOT.value, selection)
   if (animation) ROOT.value = animation

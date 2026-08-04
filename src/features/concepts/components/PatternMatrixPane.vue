@@ -49,18 +49,7 @@
         </label>
       </fieldset>
 
-      <fieldset class="vtg-pattern-options">
-        <legend class="vtg-pane__visually-hidden">Pattern options</legend>
-        <label>
-          <input v-model="swapProps" type="checkbox" data-role="vtg-swap" />
-          <span>Swap</span>
-        </label>
-        <label>
-          <input v-model="reversePlane" type="checkbox" data-role="vtg-reverse" />
-          <span>Flip</span>
-        </label>
-        <button type="button" data-role="vtg-reset" @click="resetPatternControls">Reset</button>
-      </fieldset>
+      <PatternTransformControls @reset="resetPatternControls" />
     </div>
 
     <div class="vtg-board">
@@ -183,85 +172,7 @@
       </div>
     </div>
 
-    <fieldset class="vtg-slider-controls">
-      <legend class="vtg-pane__visually-hidden">Animation settings</legend>
-      <label>
-        <span class="vtg-slider-controls__label">
-          <span>Scale</span>
-          <output>{{ scale.toFixed(1) }}</output>
-        </span>
-        <input
-          v-model.number="scale"
-          type="range"
-          :min="vtgScaleControl.min"
-          :max="vtgScaleControl.max"
-          :step="vtgScaleControl.step"
-          data-role="vtg-scale"
-          @pointerdown="beginSliderHistory"
-          @pointerup="endSliderHistory"
-          @pointercancel="endSliderHistory"
-          @keydown="beginSliderHistory"
-          @keyup="endSliderHistory"
-          @blur="endSliderHistory"
-        />
-      </label>
-      <label>
-        <span class="vtg-slider-controls__label">
-          <span>Thick</span>
-          <output>{{ thick }}</output>
-        </span>
-        <input
-          v-model.number="thick"
-          type="range"
-          :min="vtgThickControl.min"
-          :max="vtgThickControl.max"
-          :step="vtgThickControl.step"
-          data-role="vtg-thick"
-          @pointerdown="beginSliderHistory"
-          @pointerup="endSliderHistory"
-          @pointercancel="endSliderHistory"
-          @keydown="beginSliderHistory"
-          @keyup="endSliderHistory"
-          @blur="endSliderHistory"
-        />
-      </label>
-      <label>
-        <span class="vtg-slider-controls__label">
-          <span>BPM</span>
-          <output>{{ bpm }}</output>
-        </span>
-        <input
-          v-model.number="bpm"
-          type="range"
-          :min="vtgBpmControl.min"
-          :max="vtgBpmControl.max"
-          :step="vtgBpmControl.step"
-          data-role="vtg-bpm"
-          @pointerdown="beginSliderHistory"
-          @pointerup="endSliderHistory"
-          @pointercancel="endSliderHistory"
-          @keydown="beginSliderHistory"
-          @keyup="endSliderHistory"
-          @blur="endSliderHistory"
-        />
-      </label>
-    </fieldset>
-
-    <fieldset class="vtg-pattern-options vtg-render-options">
-      <legend class="vtg-pane__visually-hidden">Rendered features</legend>
-      <label>
-        <input v-model="paths" type="checkbox" data-role="vtg-paths" />
-        <span>Paths</span>
-      </label>
-      <label>
-        <input v-model="hands" type="checkbox" data-role="vtg-hands" />
-        <span>Hands</span>
-      </label>
-      <label>
-        <input v-model="arms" type="checkbox" data-role="vtg-arms" />
-        <span>Arms</span>
-      </label>
-    </fieldset>
+    <ConceptAnimationControls :animation="animation" />
 
     <p v-if="isQtr" class="qtr-development-note" data-role="qtr-development-note">
       Quarter Spacing is experimental and still under development. It may change drastically or be
@@ -276,6 +187,8 @@ import { mdiShuffleVariant } from '@mdi/js'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
+import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
+import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptKey, ConceptPatternSelection } from '@/features/concepts/types'
@@ -283,7 +196,7 @@ import { qtrBottomRuleLabels, qtrSideRuleLabels } from '@/features/qtr/data/qtrL
 import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
 import { findQtrPatternMatch, matchesQtrSelection } from '@/features/qtr/matchQtrAnimation'
 import { createQtrSideDiagram } from '@/features/qtr/math/createQtrHeaderDiagram'
-import type { QtrMode } from '@/features/qtr/types'
+import type { QtrMode, QtrPatternSelection } from '@/features/qtr/types'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import {
   patternPreviewReferences,
@@ -309,8 +222,7 @@ import type {
   VtgRuleSpec,
   VtgPatternSelection,
 } from '@/features/vtg/types'
-import { vtgDefaultSpeedRatio, vtgSpeedRatios } from '@/features/vtg/types'
-import { useQSMainStore } from '@/stores/useQSMainStore'
+import { vtgSpeedRatios } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { toColor } from '@/utils/UtilFunc'
 
@@ -349,15 +261,9 @@ const emit = defineEmits<{
 const isQtr = computed(() => props.concept === 'qtr')
 const speedRatios = vtgSpeedRatios
 const conceptsStore = useConceptsStore()
-const { speedRatio, swapProps, reversePlane } = storeToRefs(conceptsStore)
-const { beginHistoryGroup, endHistoryGroup } = useQSMainStore()
+const { speedRatio, swapProps, reversePlane, bpm, scale, thick, paths, hands, arms } =
+  storeToRefs(conceptsStore)
 const isAnti = ref(false)
-const bpm = ref<number>(vtgBpmControl.default)
-const scale = ref<number>(vtgScaleControl.default)
-const thick = ref<number>(vtgThickControl.default)
-const paths = ref<boolean>(vtgPlayerSettings.paths)
-const hands = ref<boolean>(vtgPlayerSettings.hands)
-const arms = ref<boolean>(vtgPlayerSettings.arms)
 const quarterMode = ref<QtrMode>(1)
 const activeQuarterMode = computed<QtrMode | false>(() => (isQtr.value ? quarterMode.value : false))
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
@@ -375,26 +281,9 @@ const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5
 
 let suppressPatternEmit = false
 let hydrationVersion = 0
-let lastEmittedSelection: ConceptPatternSelection | undefined
+let lastEmittedSelection: VtgPatternSelection | QtrPatternSelection | undefined
 let componentMounted = false
 let initialAnimationHandled = false
-let sliderHistoryActive = false
-
-const beginSliderHistory = () => {
-  if (sliderHistoryActive || props.animation === undefined) return
-
-  beginHistoryGroup(props.animation)
-  sliderHistoryActive = true
-}
-
-const endSliderHistory = () => {
-  if (!sliderHistoryActive) return
-
-  sliderHistoryActive = false
-  endHistoryGroup()
-}
-
-onBeforeUnmount(endSliderHistory)
 
 const bottomRuleNumbers = [1, 2, 3, 4, 5, 6] as const
 const leftRuleNumbers = [1, 2, 3, 4, 5, 6] as const
@@ -498,16 +387,8 @@ const toggleSpinDirection = (tile: VtgMatrixTile) => {
 const resetPatternControls = async () => {
   const tile = matrixTiles.value.find(({ reference }) => reference === selectedCellReference.value)
   suppressPatternEmit = true
-  speedRatio.value = vtgDefaultSpeedRatio
+  conceptsStore.resetPatternControls()
   isAnti.value = false
-  swapProps.value = false
-  reversePlane.value = false
-  bpm.value = vtgBpmControl.default
-  scale.value = vtgScaleControl.default
-  thick.value = vtgThickControl.default
-  paths.value = vtgPlayerSettings.paths
-  hands.value = vtgPlayerSettings.hands
-  arms.value = vtgPlayerSettings.arms
   quarterMode.value = 1
   await nextTick()
   suppressPatternEmit = false
@@ -565,16 +446,7 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     if (shouldApplyCurrentConcept) tileToApply = tile
   } else {
     selectedCell.value = undefined
-    speedRatio.value = vtgDefaultSpeedRatio
     isAnti.value = false
-    swapProps.value = false
-    reversePlane.value = false
-    bpm.value = vtgBpmControl.default
-    scale.value = vtgScaleControl.default
-    thick.value = vtgThickControl.default
-    paths.value = vtgPlayerSettings.paths
-    hands.value = vtgPlayerSettings.hands
-    arms.value = vtgPlayerSettings.arms
     quarterMode.value = 1
   }
 
@@ -590,16 +462,8 @@ const selectInitialRandomPattern = () => {
   const version = ++hydrationVersion
   suppressPatternEmit = true
   selectedCell.value = undefined
-  speedRatio.value = vtgDefaultSpeedRatio
+  conceptsStore.resetPatternControls()
   isAnti.value = false
-  swapProps.value = false
-  reversePlane.value = false
-  bpm.value = vtgBpmControl.default
-  scale.value = vtgScaleControl.default
-  thick.value = vtgThickControl.default
-  paths.value = vtgPlayerSettings.paths
-  hands.value = vtgPlayerSettings.hands
-  arms.value = vtgPlayerSettings.arms
   quarterMode.value = 1
   selectRandomTile()
 
@@ -933,111 +797,6 @@ defineExpose({
 }
 
 .vtg-radio-options input:focus-visible + span {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: 2px;
-}
-
-.vtg-pattern-options {
-  display: grid;
-  grid-auto-columns: max-content;
-  grid-auto-flow: column;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  gap: var(--space-1);
-}
-
-.vtg-pattern-options label {
-  position: relative;
-  cursor: pointer;
-}
-
-.vtg-pattern-options input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-}
-
-.vtg-pattern-options span,
-.vtg-pattern-options button {
-  display: grid;
-  padding: var(--space-2);
-  color: var(--color-text);
-  font-size: 0.875rem;
-  font-weight: 700;
-  cursor: pointer;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  place-items: center;
-  transition:
-    color var(--transition-fast),
-    background var(--transition-fast),
-    border-color var(--transition-fast);
-}
-
-.vtg-pattern-options button {
-  font-family: inherit;
-}
-
-.vtg-pattern-options input:checked + span {
-  color: var(--color-on-action-primary);
-  background: var(--color-action-primary);
-  border-color: var(--color-action-primary);
-}
-
-.vtg-pattern-options input:focus-visible + span,
-.vtg-pattern-options button:focus-visible {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: 2px;
-}
-
-.vtg-render-options {
-  width: min(100%, 45rem);
-  margin: var(--space-1) auto 0;
-  justify-content: center;
-}
-
-.vtg-slider-controls {
-  display: flex;
-  width: min(100%, 45rem);
-  padding: var(--space-1) var(--space-2) 0;
-  margin: 0 auto;
-  border: 0;
-  flex-wrap: wrap;
-  column-gap: var(--space-4);
-  row-gap: var(--space-1);
-}
-
-.vtg-slider-controls label {
-  display: grid;
-  flex: 1 1 9rem;
-  min-width: 9rem;
-  gap: 0;
-}
-
-.vtg-slider-controls__label {
-  display: flex;
-  color: var(--color-text);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  justify-content: space-between;
-}
-
-.vtg-slider-controls output {
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.vtg-slider-controls input {
-  width: 100%;
-  margin-block: 0;
-  cursor: pointer;
-  accent-color: var(--color-action-primary);
-}
-
-.vtg-slider-controls input:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }
