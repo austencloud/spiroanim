@@ -467,6 +467,7 @@ defineExpose({
   --eight-step-color-marked-selected: #ff0000;
   --eight-step-color-preview: #071421;
   --eight-step-board-gap: 0.65cqi;
+  --eight-step-top-header-min-height: 2.5rem;
 
   container-type: inline-size;
   display: grid;
@@ -474,7 +475,10 @@ defineExpose({
   min-width: 20rem;
   aspect-ratio: 8.5 / 9.5;
   grid-template-columns: minmax(0, 0.5fr) repeat(8, minmax(0, 1fr));
-  grid-template-rows: minmax(1.5rem, max-content) repeat(9, minmax(0, 1fr));
+  grid-template-rows: minmax(var(--eight-step-top-header-min-height), auto) repeat(
+      9,
+      minmax(0, 1fr)
+    );
   gap: 0.65%;
   padding: 0.65%;
 }
@@ -516,6 +520,7 @@ defineExpose({
 
 .eight-step-column-header {
   grid-row: 1;
+  min-height: var(--eight-step-top-header-min-height);
   padding-block: 0.2em;
   padding-inline: 0.25em;
   font-size: max(0.7rem, 2cqi);
