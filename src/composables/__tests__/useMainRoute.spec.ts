@@ -25,11 +25,13 @@ const mountRoute = async (path: string, initialAnimation?: RootDataFinal) => {
   await router.isReady()
 
   const pinia = createPinia().use(piniaPluginPersistedstate)
+  let animationReady: ReturnType<typeof useMainRoute>['animationReady'] | undefined
   const app = createApp(
     defineComponent({
       setup() {
         if (initialAnimation) usePlayerStore('main').raw().ROOT.value = initialAnimation
-        useMainRoute()
+        const routeState = useMainRoute()
+        animationReady = routeState.animationReady
         return () => h('div')
       },
     }),
@@ -39,8 +41,10 @@ const mountRoute = async (path: string, initialAnimation?: RootDataFinal) => {
   app.mount(document.createElement('div'))
   mountedApps.push(app)
   await nextTick()
+  if (!animationReady) throw new Error('Main route state was not created')
 
   return {
+    animationReady,
     router,
     paneStore: useMainPaneStore(pinia),
     conceptsStore: useConceptsStore(pinia),
@@ -148,18 +152,24 @@ describe('useMainRoute', () => {
     expect(router.currentRoute.value.path).toBe('/editor')
   })
 
-  it('preserves the animation and route when a future query version is unsupported', async () => {
-    const initialAnimation = createLoadedAnimation()
+  it('preserves the empty animation, requested panes, and route when a future version is unsupported', async () => {
     const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    const { playerStore, queryVersionStore, router } = await mountRoute(
-      '/play-edit?r=future-format&p0=untouched&v=999',
-      initialAnimation,
-    )
+    const { animationReady, paneStore, playerStore, queryVersionStore, router, splitterStore } =
+      await mountRoute('/editor?r=future-format&p0=untouched&v=999')
+    const initialAnimation = structuredClone(toRaw(playerStore.raw().ROOT.value))
     await flushPromises()
 
     expect(playerStore.raw().ROOT.value).toEqual(initialAnimation)
-    expect(router.currentRoute.value.fullPath).toBe('/play-edit?r=future-format&p0=untouched&v=999')
+    expect(paneStore.parents).toEqual({
+      player: 'hidden',
+      editor: 'left',
+      timeline: 'hidden',
+      concepts: 'right',
+    })
+    expect(splitterStore.leftPerc).toBe(100)
+    expect(router.currentRoute.value.fullPath).toBe('/editor?r=future-format&p0=untouched&v=999')
     expect(queryVersionStore.unsupportedVersion).toBe(999)
+    expect(animationReady.value).toBe(false)
     expect(consoleWarn).toHaveBeenCalledWith(
       'Failed to load animation data from the route.',
       expect.objectContaining({ name: 'UnsupportedSpiroAnimQSVersionError', version: 999 }),

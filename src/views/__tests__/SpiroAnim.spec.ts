@@ -188,4 +188,46 @@ describe('SpiroAnim view', () => {
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)
   })
+
+  it('does not auto-select a Concepts pattern for unsupported animation data', async () => {
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const pinia = createPinia().use(piniaPluginPersistedstate)
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    })
+    await router.push('/vulkantechgospel?r=future-format&p0=untouched&v=999')
+    await router.isReady()
+    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+
+    const wrapper = mount(SpiroAnim, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Player: { template: '<div>Player</div>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBeUndefined()
+
+    await selector.setValue('qtr')
+    await flushPromises()
+    expect(wrapper.get('[data-role="qtr-pane"]').attributes('data-selected-cell')).toBeUndefined()
+
+    await selector.setValue('8stp')
+    await flushPromises()
+    expect(
+      wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell'),
+    ).toBeUndefined()
+    expect(consoleWarn).toHaveBeenCalledWith(
+      'Failed to load animation data from the route.',
+      expect.objectContaining({ name: 'UnsupportedSpiroAnimQSVersionError', version: 999 }),
+    )
+
+    wrapper.unmount()
+  })
 })

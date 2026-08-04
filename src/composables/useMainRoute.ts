@@ -70,6 +70,7 @@ export function useMainRoute() {
   const { rotatePane, setViewInPane } = paneStore
   const { parents } = storeToRefs(paneStore)
   const { selectedConcept } = storeToRefs(useConceptsStore())
+  const { unsupportedVersion } = storeToRefs(queryVersionStore)
 
   const router = useRouter()
   const route = useRoute()
@@ -173,7 +174,12 @@ export function useMainRoute() {
   }
 
   const showConceptsForEmptyAnimation = () => {
-    if (!animationReady.value || ROOT.value.props.length > 0) return false
+    if (
+      !animationReady.value ||
+      unsupportedVersion.value !== undefined ||
+      ROOT.value.props.length > 0
+    )
+      return false
 
     setViewInPane('player', 'left')
     setViewInPane('concepts', 'right')
@@ -231,6 +237,8 @@ export function useMainRoute() {
         console.warn('Failed to load animation data from the route.', error)
       })
       .finally(() => {
+        if (unsupportedVersion.value !== undefined) return
+
         animationReady.value = true
         if (showConceptsForEmptyAnimation()) updatePath()
       })
