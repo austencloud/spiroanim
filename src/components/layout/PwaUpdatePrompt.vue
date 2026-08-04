@@ -1,22 +1,57 @@
 <template>
-  <aside v-if="offlineReady || needRefresh" class="pwa-update" role="status" aria-live="polite">
+  <aside
+    v-if="offlineReady || needRefresh || unsupportedVersion !== undefined"
+    class="pwa-update"
+    role="alert"
+    aria-live="assertive"
+  >
     <p>{{ message }}</p>
     <div class="pwa-update-actions">
       <button v-if="needRefresh" class="primary-action" type="button" @click="applyUpdate">
         Update Now
       </button>
-      <button type="button" @click="dismiss">{{ needRefresh ? 'Later' : 'Dismiss' }}</button>
+      <button
+        v-else-if="unsupportedVersion !== undefined"
+        class="primary-action"
+        type="button"
+        @click="reloadPage"
+      >
+        Reload and Check Again
+      </button>
+      <button type="button" @click="dismissPrompt">
+        {{ needRefresh ? 'Later' : 'Dismiss' }}
+      </button>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { usePwaUpdate } from '@/composables/usePwaUpdate'
+import { useQueryVersionStore } from '@/stores/useQueryVersionStore'
 
 const { applyUpdate, dismiss, needRefresh, offlineReady } = usePwaUpdate()
-const message = computed(() =>
-  needRefresh.value ? 'A new version of SpiroAnim is available.' : 'SpiroAnim is ready offline.',
-)
+const queryVersionStore = useQueryVersionStore()
+const { unsupportedVersion } = storeToRefs(queryVersionStore)
+const { clearUnsupportedVersion } = queryVersionStore
+
+const message = computed(() => {
+  if (needRefresh.value) {
+    return unsupportedVersion.value === undefined
+      ? 'A new version of SpiroAnim is available.'
+      : `This URL uses unsupported format v${unsupportedVersion.value}. A newer version of SpiroAnim is available and may be required to open it safely.`
+  }
+  if (unsupportedVersion.value !== undefined) {
+    return `This URL uses unsupported format v${unsupportedVersion.value}. Its data has not been loaded or changed. SpiroAnim may need to update; make sure you are online, then reload to check again.`
+  }
+  return 'SpiroAnim is ready offline.'
+})
+
+const reloadPage = () => window.location.reload()
+
+const dismissPrompt = () => {
+  dismiss()
+  clearUnsupportedVersion()
+}
 </script>
 
 <style scoped>

@@ -99,12 +99,13 @@ describe('useSpiroAnimQS', () => {
     expect(decodedV2.props[0]!.arms).toBe(false)
   })
 
-  it('falls back to the current decoder for unavailable versions', async () => {
+  it('rejects unavailable versions instead of decoding them with the wrong codec', async () => {
     const query = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 1)
 
-    const decoded = await query.decodeVer({ r: 'GE28EPi9g', v: '999' })
-
-    expect(decoded).toMatchObject({ bpm: 60, speed: 1, type: 0 })
+    await expect(query.decodeVer({ r: 'GE28EPi9g', v: '999' })).rejects.toMatchObject({
+      name: 'UnsupportedSpiroAnimQSVersionError',
+      version: 999,
+    })
   })
 
   it('groups rapid interaction updates into one undo history entry', async () => {

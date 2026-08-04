@@ -1,6 +1,7 @@
 // src\composables\SpiroAnim\useMainRoute.ts
 
 import { useQSMainStore } from '@/stores/useQSMainStore'
+import { useQueryVersionStore } from '@/stores/useQueryVersionStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore, viewKeysMain } from '@/stores/useMainPaneStore'
@@ -9,6 +10,7 @@ import { conceptKeys } from '@/features/concepts/types'
 import type { ConceptKey } from '@/features/concepts/types'
 
 import { findKeyByValue } from '@/utils/UtilFunc'
+import { UnsupportedSpiroAnimQSVersionError } from '@/services/query/versions'
 //import { encodeReadable } from '@/func/AnimReadableFunc'
 
 const routeKeys = ['play', 'time', 'edit', 'cnc', 'vtg', 'qtr', '8stp'] as const
@@ -56,6 +58,7 @@ export const paneSplits: string[] = routeKeys.flatMap((a) =>
 
 export function useMainRoute() {
   const qsStore = useQSMainStore()
+  const queryVersionStore = useQueryVersionStore()
   const { encodeQS, decodeVer } = qsStore
   const { qsPause } = storeToRefs(qsStore)
 
@@ -222,6 +225,9 @@ export function useMainRoute() {
     decodeVer(route.query)
       .then((data) => (ROOT.value = data))
       .catch((error: unknown) => {
+        if (error instanceof UnsupportedSpiroAnimQSVersionError) {
+          queryVersionStore.reportUnsupportedVersion(error.version)
+        }
         console.warn('Failed to load animation data from the route.', error)
       })
       .finally(() => {

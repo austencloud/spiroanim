@@ -9,6 +9,16 @@ export interface SpiroAnimQSVersion {
   createPropConfig(): ConfigData<AllVars>
 }
 
+export class UnsupportedSpiroAnimQSVersionError extends RangeError {
+  readonly version: number
+
+  constructor(version: number) {
+    super(`Unsupported SpiroAnim query-string version: ${version}`)
+    this.name = 'UnsupportedSpiroAnimQSVersionError'
+    this.version = version
+  }
+}
+
 /**
  * Explicit version loading keeps supported formats discoverable by Vite while retaining the legacy
  * contract that older shared URLs can select their matching decoder.
@@ -22,6 +32,6 @@ export async function loadSpiroAnimQSVersion(version: number): Promise<SpiroAnim
     case 3:
       return import('@/services/query/versions/SpiroAnimQSv3')
     default:
-      throw new RangeError(`Unsupported SpiroAnim query-string version: ${version}`)
+      throw new UnsupportedSpiroAnimQSVersionError(version)
   }
 }

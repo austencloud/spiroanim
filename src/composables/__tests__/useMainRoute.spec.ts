@@ -3,13 +3,14 @@ import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { createApp, defineComponent, h } from 'vue'
 import { flushPromises } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { paneSplits, useMainRoute } from '@/composables/useMainRoute'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useQueryVersionStore } from '@/stores/useQueryVersionStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -44,6 +45,7 @@ const mountRoute = async (path: string, initialAnimation?: RootDataFinal) => {
     paneStore: useMainPaneStore(pinia),
     conceptsStore: useConceptsStore(pinia),
     playerStore: usePlayerStore('main'),
+    queryVersionStore: useQueryVersionStore(pinia),
     splitterStore: useSplitterStore('main'),
   }
 }
@@ -144,6 +146,24 @@ describe('useMainRoute', () => {
     })
     expect(splitterStore.leftPerc).toBe(100)
     expect(router.currentRoute.value.path).toBe('/editor')
+  })
+
+  it('preserves the animation and route when a future query version is unsupported', async () => {
+    const initialAnimation = createLoadedAnimation()
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const { playerStore, queryVersionStore, router } = await mountRoute(
+      '/play-edit?r=future-format&p0=untouched&v=999',
+      initialAnimation,
+    )
+    await flushPromises()
+
+    expect(playerStore.raw().ROOT.value).toEqual(initialAnimation)
+    expect(router.currentRoute.value.fullPath).toBe('/play-edit?r=future-format&p0=untouched&v=999')
+    expect(queryVersionStore.unsupportedVersion).toBe(999)
+    expect(consoleWarn).toHaveBeenCalledWith(
+      'Failed to load animation data from the route.',
+      expect.objectContaining({ name: 'UnsupportedSpiroAnimQSVersionError', version: 999 }),
+    )
   })
 
   it('maps short split routes and resets a persisted snapped splitter', async () => {

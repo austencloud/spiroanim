@@ -27,14 +27,12 @@ export async function useSpiroAnimQS(
   const decodeVer: (route: LocationQuery) => Promise<RootDataFinal> = async (route) => {
     const v = Number(route.v ?? VER)
     if (v != VER) {
-      try {
-        const { CHARSET: charset, VDEF: VDEF2 } = await loadSpiroAnimQSVersion(v)
-        const PAQS = await useSpiroAnimQS(VDEF2, useBaseQS(VDEF2, { charset }), v)
-        return PAQS.decodeQS(route)
-      } catch {
-        console.warn(`Falling back to v${VER} due to load failure for v${v}`)
-        return decodeQS(route)
-      }
+      // Never decode an unknown format with the current codec. Installed PWAs can briefly run an
+      // older bundle after a newer shared URL is deployed; preserving the route unchanged allows
+      // the service-worker update flow to reload it with the matching decoder.
+      const { CHARSET: charset, VDEF: VDEF2 } = await loadSpiroAnimQSVersion(v)
+      const PAQS = await useSpiroAnimQS(VDEF2, useBaseQS(VDEF2, { charset }), v)
+      return PAQS.decodeQS(route)
     } else {
       return decodeQS(route)
     }
