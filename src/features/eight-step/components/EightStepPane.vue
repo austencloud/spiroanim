@@ -132,19 +132,37 @@
         <p>8-Step Concepts by Gage DeMello.</p>
         <ul class="eight-step-more__links">
           <li>
-            <a href="/docs/8-step/Handpaths_swapped.pdf">Handpaths.pdf</a>
+            <a href="/docs/8-step/Handpaths_swapped.pdf" target="_blank" rel="noopener noreferrer">
+              Handpaths.pdf
+            </a>
           </li>
           <li>
-            <a href="/docs/8-step/TeachingSheets_swapped.pdf">TeachingSheets.pdf</a>
+            <a
+              href="/docs/8-step/TeachingSheets_swapped.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              TeachingSheets.pdf
+            </a>
           </li>
           <li>
-            <a href="/docs/8-step/TeachingSheetsV2_swapped.pdf">HandpathsV2.pdf</a>
+            <a
+              href="/docs/8-step/TeachingSheetsV2_swapped.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              HandpathsV2.pdf
+            </a>
             <span>
               - Additional highlights / notes that I personally added for myself to reference from
               printed copies.
             </span>
           </li>
         </ul>
+        <p class="eight-step-more__print-note">
+          Printing from Adobe Acrobat or Adobe Acrobat Reader is recommended. Printing from a web
+          browser may distort some elements.
+        </p>
       </div>
     </details>
   </section>
@@ -592,7 +610,7 @@ defineExpose({
   padding: var(--space-4);
 }
 
-.eight-step-more__content p {
+.eight-step-more__content > p:first-child {
   margin: 0 0 var(--space-2);
 }
 
@@ -605,6 +623,15 @@ defineExpose({
 
 .eight-step-more__links a {
   color: var(--color-action-primary);
+}
+
+.eight-step-more__print-note {
+  padding-block-start: var(--space-3);
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  border-block-start: 1px solid var(--color-border);
 }
 
 .eight-step-board {

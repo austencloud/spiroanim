@@ -221,6 +221,18 @@ describe('EightStepPane', () => {
       ['TeachingSheets.pdf', '/docs/8-step/TeachingSheets_swapped.pdf'],
       ['HandpathsV2.pdf', '/docs/8-step/TeachingSheetsV2_swapped.pdf'],
     ])
+    expect(
+      wrapper
+        .findAll('[data-role="eight-step-more-content"] a')
+        .every(
+          (link) =>
+            link.attributes('target') === '_blank' &&
+            link.attributes('rel') === 'noopener noreferrer',
+        ),
+    ).toBe(true)
+    expect(wrapper.get('.eight-step-more__print-note').text()).toBe(
+      'Printing from Adobe Acrobat or Adobe Acrobat Reader is recommended. Printing from a web browser may distort some elements.',
+    )
 
     await toggle.trigger('click')
     expect(disclosure.attributes('open')).toBeUndefined()
