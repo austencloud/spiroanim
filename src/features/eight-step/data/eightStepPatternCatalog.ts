@@ -24,6 +24,8 @@ export const buildEightStepPattern = (
 
   const transformedProps = sourceProps.map((prop) => {
     const initialArc = prop.anim[0]?.arc ?? 0
+    const initialPlane = prop.anim[0]?.plane ?? 0
+    const boxArcDelta = Math.abs(initialPlane) === 180 ? -45 : 45
     const firstContinuationArc = prop.anim[1]?.arc ?? initialArc
 
     return {
@@ -31,7 +33,7 @@ export const buildEightStepPattern = (
       anim: prop.anim.map((frame, frameIndex) => ({
         ...frame,
         ...(selection.shape === 'box' && frameIndex === 0
-          ? { arc: (initialArc + 45) % 360 }
+          ? { arc: (initialArc + boxArcDelta + 360) % 360 }
           : undefined),
         ...(selection.shape === 'box' && frameIndex === 1
           ? { arc: firstContinuationArc }

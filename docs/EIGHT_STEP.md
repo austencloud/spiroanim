@@ -155,9 +155,11 @@ Eight Step has one unlabeled pair of radio controls immediately to the right of 
 Arms: Diamond and Box. Diamond is the default and reproduces the original generated definitions.
 Because it is the default, Diamond is omitted from a compact selection.
 
-Box adds 45 degrees to frame 0's initial `arc` for both source props. Only the initial state is
-rotated. The original first continuation arc is made explicit when Box is built so sparse-frame
-inheritance cannot accidentally carry the 45-degree adjustment into later frames.
+Box applies a 45-degree spatial rotation through frame 0's initial `arc` for both source props. It
+uses `+45` on plane 0 and `-45` on plane 180 because those plane coordinates rotate in opposite
+spatial directions. This keeps flipped Quarter Aligned and Quarter Opposed props one quarter apart.
+It does not modify `turns`. The original first continuation arc is made explicit when Box is built
+so sparse-frame inheritance cannot accidentally carry the adjustment into later frames.
 
 The Box transformation occurs after the odd/even handpath has been chosen by Flip and before the
 tracks are exchanged by Swap. It applies to all row families and both props. Selecting Box refreshes
@@ -271,7 +273,7 @@ The regression suite validates:
 - closed first/final prop orientation;
 - the capping and continual curve-family turn sequences;
 - all eight generated Flip results against the supplied even-page handpath table;
-- Box's 45-degree initial arcs without altering continuation arcs;
+- Box's 45-degree initial arcs without altering continuation arcs or `turns`;
 - Swap/Flip/Box composition, matching, hydration, and full player application;
 - paired top-header, exact row-header, row/column cell highlighting, active-prop header colors,
   marked borders, and tooltips;

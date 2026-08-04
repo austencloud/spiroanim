@@ -94,7 +94,7 @@ describe('createEightStepAnimation', () => {
     expect(second?.props[0]?.anim[0]?.scale).toBe(8)
   })
 
-  it('adds 45 degrees only to both initial prop arcs in Box mode', () => {
+  it('adds 45 degrees only to both initial arcs in Box mode', () => {
     const diamond = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AI' })
     const box = createDefaultEightStepAnimation({
       concept: '8stp',
@@ -115,7 +115,11 @@ describe('createEightStepAnimation', () => {
     const diamondCompiled = rootCompile(diamond)
     const boxCompiled = rootCompile(box)
     expect(boxCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
-      diamondCompiled.props.map((prop) => (prop.anim[0]!.arc + 45) % 360),
+      diamondCompiled.props.map((prop) => {
+        const initial = prop.anim[0]!
+        const delta = Math.abs(initial.plane) === 180 ? -45 : 45
+        return (initial.arc + delta + 360) % 360
+      }),
     )
     expect(boxCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
       diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
@@ -123,6 +127,34 @@ describe('createEightStepAnimation', () => {
     expect(boxSwapped?.props.map((prop) => prop.anim[0]?.arc)).toEqual(
       box.props.map((prop) => prop.anim[0]?.arc).reverse(),
     )
+  })
+
+  it('keeps quarter-column hand positions one quarter apart in Box mode', () => {
+    for (const column of [5, 6, 7, 8] as const) {
+      for (const reversePlane of [false, true]) {
+        const animation = createDefaultEightStepAnimation({
+          concept: '8stp',
+          reference: `${column}-AA`,
+          shape: 'box',
+          reversePlane,
+        })
+        expect(animation).toBeDefined()
+        if (!animation) continue
+
+        const [first, second] = rootCompile(animation).props
+        for (const [frameIndex, firstFrame] of first!.anim.entries()) {
+          const secondFrame = second!.anim[frameIndex]!
+          const dot = firstFrame.pos.reduce(
+            (sum, coordinate, index) => sum + coordinate * secondFrame.pos[index]!,
+            0,
+          )
+          expect(dot, `column ${column}, Flip ${reversePlane}, frame ${frameIndex}`).toBeCloseTo(
+            0,
+            7,
+          )
+        }
+      }
+    }
   })
 
   it('round-trips through a compact shared URL without changing playback', async () => {
