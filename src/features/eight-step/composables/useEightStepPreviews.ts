@@ -1,13 +1,18 @@
 import type { ConceptPreviewDimensions } from '@/features/concepts/composables/useConceptPreviewRenderer'
 import { useConceptPreviewRenderer } from '@/features/concepts/composables/useConceptPreviewRenderer'
 import { createEightStepPreviewAnimation } from '@/features/eight-step/createEightStepAnimation'
-import type { EightStepCellReference, EightStepPatternSelection } from '@/features/eight-step/types'
+import type {
+  EightStepCellReference,
+  EightStepPatternSelection,
+  EightStepShape,
+} from '@/features/eight-step/types'
 
 interface UseEightStepPreviewsOptions {
   dimensions: readonly ConceptPreviewDimensions[]
   swapProps: Ref<boolean>
   reversePlane: Ref<boolean>
   scale: Ref<number>
+  shape: Ref<EightStepShape>
 }
 
 export const eightStepPreviewReferences = [
@@ -27,6 +32,7 @@ export const useEightStepPreviews = ({
   swapProps,
   reversePlane,
   scale,
+  shape,
 }: UseEightStepPreviewsOptions) => {
   const renderer = useConceptPreviewRenderer({
     dimensions,
@@ -37,6 +43,7 @@ export const useEightStepPreviews = ({
         concept: '8stp',
         reference,
         scale: scale.value,
+        shape: shape.value,
       }
 
       if (swapProps.value) selection.swapProps = true
@@ -46,7 +53,7 @@ export const useEightStepPreviews = ({
   })
 
   // BPM affects timing only; visual controls use the same fixed preview presentation as VTG/QTR.
-  watch([swapProps, reversePlane, scale], renderer.requestPreviews)
+  watch([swapProps, reversePlane, scale, shape], renderer.requestPreviews)
 
   return {
     previewUrls: renderer.previewUrls,

@@ -79,6 +79,7 @@
       <input v-model="arms" type="checkbox" :data-role="`${rolePrefix}-arms`" />
       <span>Arms</span>
     </label>
+    <slot name="after-controls" />
   </fieldset>
 </template>
 

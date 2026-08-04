@@ -13,6 +13,7 @@ describe('matchEightStepAnimation', () => {
       reference: '7-IE',
       swapProps: true,
       reversePlane: true,
+      shape: 'diamond',
       bpm: 91,
       scale: 1.1,
     } as const
@@ -25,8 +26,35 @@ describe('matchEightStepAnimation', () => {
       reference: '7-IE',
       swapProps: true,
       reversePlane: true,
+      shape: 'diamond',
       bpm: 91,
       scale: 1.1,
+    })
+    expect(matchesEightStepSelection(animation, selection)).toBe(true)
+  })
+
+  it('recovers the Box shape mode', () => {
+    const selection = {
+      concept: '8stp',
+      reference: '6-AI',
+      swapProps: true,
+      reversePlane: true,
+      shape: 'box',
+      bpm: 87,
+      scale: 1.3,
+    } as const
+    const animation = createDefaultEightStepAnimation(selection)
+
+    expect(animation).toBeDefined()
+    if (!animation) return
+
+    expect(findEightStepPatternMatch(animation)).toEqual({
+      reference: '6-AI',
+      swapProps: true,
+      reversePlane: true,
+      shape: 'box',
+      bpm: 87,
+      scale: 1.3,
     })
     expect(matchesEightStepSelection(animation, selection)).toBe(true)
   })

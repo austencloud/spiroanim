@@ -261,6 +261,9 @@ describe('EightStepPane', () => {
     await expectNineMorePreviews(() =>
       wrapper.get<HTMLInputElement>('[data-role="eight-step-scale"]').setValue(1.1),
     )
+    await expectNineMorePreviews(() =>
+      wrapper.get<HTMLInputElement>('[data-role="eight-step-shape-box"]').setValue(),
+    )
 
     const beforeRenderingControls = countWorkerMessages('data')
     await wrapper.get<HTMLInputElement>('[data-role="eight-step-paths"]').setValue(false)
@@ -270,6 +273,50 @@ describe('EightStepPane', () => {
     expect(countWorkerMessages('data')).toBe(beforeRenderingControls)
 
     await expectNineMorePreviews(() => reportAllPreviewDimensions(80, 76))
+  })
+
+  it('offers Diamond and Box modes and warns about unvalidated Box patterns', async () => {
+    const wrapper = mount(EightStepPane)
+    const diamond = wrapper.get<HTMLInputElement>('[data-role="eight-step-shape-diamond"]')
+    const box = wrapper.get<HTMLInputElement>('[data-role="eight-step-shape-box"]')
+
+    expect(diamond.element.checked).toBe(true)
+    expect(box.element.checked).toBe(false)
+    expect(diamond.element.name).toBe('eight-step-shape')
+    expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('DiamondBox')
+    expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
+    const sliderControls = wrapper.get('.concept-slider-controls').element
+    const shapeControls = wrapper.get('[data-role="eight-step-shape-controls"]').element
+    const renderControls = wrapper.get('.concept-render-options').element
+    expect(
+      sliderControls.compareDocumentPosition(renderControls) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      renderControls.compareDocumentPosition(shapeControls) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+
+    await wrapper.get('[data-cell-reference="1-AI"]').trigger('click')
+    await box.setValue()
+
+    expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('DiamondBox')
+    expect(wrapper.findAll('.eight-step-cell--marked')).toHaveLength(0)
+    expect(wrapper.get('[data-role="eight-step-box-note"]').text()).toBe(
+      'Box mode is experimental, and its patterns have not been validated. Difficult / Impossible highlighting for patterns performed in Wall-Plane is disabled.',
+    )
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      {
+        concept: '8stp',
+        reference: '1-AI',
+        shape: 'box',
+      },
+    ])
+
+    await wrapper.get('[data-role="eight-step-reset"]').trigger('click')
+    expect(diamond.element.checked).toBe(true)
+    expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { concept: '8stp', reference: '1-AI' },
+    ])
   })
 
   it('places the random control in the top-left and selects from all cells', async () => {
@@ -406,7 +453,7 @@ describe('EightStepPane', () => {
   it('hydrates the selected cell and controls from compiled Eight Step data', async () => {
     const animation = createDefaultEightStepAnimation({
       concept: '8stp',
-      reference: '6-EI',
+      reference: '6-AI',
       swapProps: true,
       reversePlane: true,
       bpm: 93,
@@ -415,6 +462,7 @@ describe('EightStepPane', () => {
       paths: false,
       hands: true,
       arms: false,
+      shape: 'box',
     })
     expect(animation).toBeDefined()
 
@@ -422,7 +470,7 @@ describe('EightStepPane', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell')).toBe(
-      '6-EI',
+      '6-AI',
     )
     expect(wrapper.get<HTMLInputElement>('[data-role="eight-step-swap"]').element.checked).toBe(
       true,
@@ -434,6 +482,9 @@ describe('EightStepPane', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="eight-step-scale"]').element.value).toBe(
       '1.1',
     )
+    expect(
+      wrapper.get<HTMLInputElement>('[data-role="eight-step-shape-box"]').element.checked,
+    ).toBe(true)
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 })

@@ -1,5 +1,6 @@
 import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
 import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
+import { eightStepShapes } from '@/features/eight-step/types'
 import type { EightStepPatternMatch, EightStepPatternSelection } from '@/features/eight-step/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { AnimDataCompiled, RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
@@ -43,23 +44,31 @@ const buildCandidateCache = () => {
   const candidates = new Map<string, EightStepCandidateMatch[]>()
 
   for (const definition of eightStepPatternDefinitions) {
-    for (const swapProps of booleanOptions) {
-      for (const reversePlane of booleanOptions) {
-        const selection: EightStepPatternSelection = {
-          concept: '8stp',
-          reference: definition.reference,
-          swapProps,
-          reversePlane,
+    for (const shape of eightStepShapes) {
+      for (const swapProps of booleanOptions) {
+        for (const reversePlane of booleanOptions) {
+          const selection: EightStepPatternSelection = {
+            concept: '8stp',
+            reference: definition.reference,
+            swapProps,
+            reversePlane,
+            shape,
+          }
+          const animation = createDefaultEightStepAnimation(selection)
+          if (!animation) continue
+
+          const signature = createSignature(animation)
+          if (!signature) continue
+
+          const matches = candidates.get(signature) ?? []
+          matches.push({
+            reference: definition.reference,
+            swapProps,
+            reversePlane,
+            shape,
+          })
+          candidates.set(signature, matches)
         }
-        const animation = createDefaultEightStepAnimation(selection)
-        if (!animation) continue
-
-        const signature = createSignature(animation)
-        if (!signature) continue
-
-        const matches = candidates.get(signature) ?? []
-        matches.push({ reference: definition.reference, swapProps, reversePlane })
-        candidates.set(signature, matches)
       }
     }
   }

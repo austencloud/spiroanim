@@ -94,12 +94,44 @@ describe('createEightStepAnimation', () => {
     expect(second?.props[0]?.anim[0]?.scale).toBe(8)
   })
 
+  it('adds 45 degrees only to both initial prop arcs in Box mode', () => {
+    const diamond = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AI' })
+    const box = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '1-AI',
+      shape: 'box',
+    })
+    const boxSwapped = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '1-AI',
+      shape: 'box',
+      swapProps: true,
+    })
+
+    expect(diamond).toBeDefined()
+    expect(box).toBeDefined()
+    if (!diamond || !box) return
+
+    const diamondCompiled = rootCompile(diamond)
+    const boxCompiled = rootCompile(box)
+    expect(boxCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
+      diamondCompiled.props.map((prop) => (prop.anim[0]!.arc + 45) % 360),
+    )
+    expect(boxCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
+      diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
+    )
+    expect(boxSwapped?.props.map((prop) => prop.anim[0]?.arc)).toEqual(
+      box.props.map((prop) => prop.anim[0]?.arc).reverse(),
+    )
+  })
+
   it('round-trips through a compact shared URL without changing playback', async () => {
     const animation = createDefaultEightStepAnimation({
       concept: '8stp',
-      reference: '6-II',
+      reference: '6-AI',
       swapProps: true,
       reversePlane: true,
+      shape: 'box',
       bpm: 101,
       scale: 1.2,
       thick: 11,

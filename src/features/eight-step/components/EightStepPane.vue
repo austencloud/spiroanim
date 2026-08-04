@@ -78,7 +78,7 @@
             class="eight-step-cell"
             :class="{
               'eight-step-cell--highlighted': isCellHighlighted(cell),
-              'eight-step-cell--marked': isMarkedCell(cell),
+              'eight-step-cell--marked': shape === 'diamond' && isMarkedCell(cell),
               'eight-step-cell--selected': cell.reference === selectedCell?.reference,
             }"
             :aria-label="`${getCellDescription(cell)}, cell ${cell.reference}`"
@@ -106,7 +106,16 @@
       </BaseTooltip>
     </div>
 
-    <ConceptAnimationControls :animation="animation" role-prefix="eight-step" />
+    <ConceptAnimationControls :animation="animation" role-prefix="eight-step">
+      <template #after-controls>
+        <EightStepShapeControls v-model:shape="shape" />
+      </template>
+    </ConceptAnimationControls>
+
+    <p v-if="shape === 'box'" class="eight-step-development-note" data-role="eight-step-box-note">
+      Box mode is experimental, and its patterns have not been validated. Difficult / Impossible
+      highlighting for patterns performed in Wall-Plane is disabled.
+    </p>
   </section>
 </template>
 
@@ -123,6 +132,7 @@ import {
   eightStepPreviewReferences,
   useEightStepPreviews,
 } from '@/features/eight-step/composables/useEightStepPreviews'
+import EightStepShapeControls from '@/features/eight-step/components/EightStepShapeControls.vue'
 import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
 import {
   findEightStepPatternMatch,
@@ -133,6 +143,7 @@ import type {
   EightStepColumn,
   EightStepPatternDefinition,
   EightStepPatternSelection,
+  EightStepShape,
 } from '@/features/eight-step/types'
 import {
   vtgBpmControl,
@@ -229,6 +240,7 @@ const conceptsStore = useConceptsStore()
 const { swapProps, reversePlane, bpm, scale, thick, paths, hands, arms } =
   storeToRefs(conceptsStore)
 const selectedCell = ref<EightStepPatternDefinition>()
+const shape = ref<EightStepShape>('diamond')
 
 let suppressPatternEmit = false
 let hydrationVersion = 0
@@ -271,6 +283,7 @@ const { previewUrls, requestPreviews } = useEightStepPreviews({
   swapProps,
   reversePlane,
   scale,
+  shape,
 })
 
 let previewObserver: ResizeObserver | undefined
@@ -295,6 +308,7 @@ const createSelection = (cell: EightStepPatternDefinition): EightStepPatternSele
 
   if (swapProps.value) selection.swapProps = true
   if (reversePlane.value) selection.reversePlane = true
+  if (shape.value !== 'diamond') selection.shape = shape.value
   if (bpm.value !== vtgBpmControl.default) selection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
   if (thick.value !== vtgThickControl.default) selection.thick = thick.value
@@ -325,12 +339,13 @@ const selectRandomCell = () => {
 const resetPatternControls = async () => {
   suppressPatternEmit = true
   conceptsStore.resetPatternControls()
+  shape.value = 'diamond'
   await nextTick()
   suppressPatternEmit = false
   if (selectedCell.value) emitPatternSelection(selectedCell.value)
 }
 
-watch([swapProps, reversePlane, bpm, scale, thick, paths, hands, arms], () => {
+watch([swapProps, reversePlane, shape, bpm, scale, thick, paths, hands, arms], () => {
   if (!suppressPatternEmit && selectedCell.value) emitPatternSelection(selectedCell.value)
 })
 
@@ -349,6 +364,7 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     selectedCell.value = cells.find(({ reference }) => reference === match.reference)
     swapProps.value = match.swapProps
     reversePlane.value = match.reversePlane
+    shape.value = match.shape
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
@@ -368,6 +384,7 @@ const selectInitialRandomPattern = () => {
   const version = ++hydrationVersion
   suppressPatternEmit = true
   conceptsStore.resetPatternControls()
+  shape.value = 'diamond'
   selectRandomCell()
 
   void nextTick(() => {
@@ -429,6 +446,7 @@ defineExpose({
   selectedCell,
   swapProps,
   reversePlane,
+  shape,
   bpm,
   scale,
   thick,
@@ -453,6 +471,16 @@ defineExpose({
   min-width: 20rem;
   padding: 0 var(--space-2) var(--space-1);
   justify-content: center;
+}
+
+.eight-step-development-note {
+  width: min(100%, 45rem);
+  padding-inline: var(--space-2);
+  margin: var(--space-2) auto 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .eight-step-board {

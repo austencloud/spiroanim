@@ -22,15 +22,26 @@ export const buildEightStepPattern = (
     ? createFlippedEightStepProps(definition)
     : definition.props
 
-  const transformedProps = sourceProps.map((prop) => ({
-    ...prop,
-    anim: prop.anim.map((frame, frameIndex) => ({
-      ...frame,
-      ...(frameIndex === 0 && selection.scale !== undefined
-        ? { scale: toVtgInternalScale(selection.scale) }
-        : undefined),
-    })),
-  }))
+  const transformedProps = sourceProps.map((prop) => {
+    const initialArc = prop.anim[0]?.arc ?? 0
+    const firstContinuationArc = prop.anim[1]?.arc ?? initialArc
+
+    return {
+      ...prop,
+      anim: prop.anim.map((frame, frameIndex) => ({
+        ...frame,
+        ...(selection.shape === 'box' && frameIndex === 0
+          ? { arc: (initialArc + 45) % 360 }
+          : undefined),
+        ...(selection.shape === 'box' && frameIndex === 1
+          ? { arc: firstContinuationArc }
+          : undefined),
+        ...(frameIndex === 0 && selection.scale !== undefined
+          ? { scale: toVtgInternalScale(selection.scale) }
+          : undefined),
+      })),
+    }
+  })
 
   return {
     ...vtgPlayerSettings,
