@@ -28,8 +28,8 @@ export async function useSpiroAnimQS(
     const v = Number(route.v ?? VER)
     if (v != VER) {
       try {
-        const { VDEF: VDEF2 } = await loadSpiroAnimQSVersion(v)
-        const PAQS = await useSpiroAnimQS(VDEF2, useBaseQS(VDEF2), v)
+        const { CHARSET: charset, VDEF: VDEF2 } = await loadSpiroAnimQSVersion(v)
+        const PAQS = await useSpiroAnimQS(VDEF2, useBaseQS(VDEF2, { charset }), v)
         return PAQS.decodeQS(route)
       } catch {
         console.warn(`Falling back to v${VER} due to load failure for v${v}`)

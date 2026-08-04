@@ -6,6 +6,9 @@ import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 import type { VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { AllVars } from '@/types/AnimTypes'
 
+// The serialized alphabet is part of this version's durable shared-URL contract.
+export const CHARSET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-'
+
 // Defines minimum, maximum, and how values get packed into and out of Query Strings
 export const VDEF = {
   //export const VDEF: { [K in AllVars]: VDefEntry } = {

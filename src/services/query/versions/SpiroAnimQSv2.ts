@@ -1,11 +1,12 @@
 // Version 2 adds the inherited Arms flag without changing any version 1 field positions.
 
-import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
+import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 import type { AllVars } from '@/types/AnimTypes'
 
-export { VDEF }
+// Version 2 retains version 1's serialized alphabet and padding character.
+export { CHARSET, VDEF }
 
 export function createRootConfig(): ConfigData<AllVars> {
   return [

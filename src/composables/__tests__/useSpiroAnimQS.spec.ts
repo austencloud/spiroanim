@@ -4,6 +4,7 @@ import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 import { VDEF as VDEF_V2 } from '@/services/query/versions/SpiroAnimQSv2'
+import { CHARSET as CHARSET_V3, VDEF as VDEF_V3 } from '@/services/query/versions/SpiroAnimQSv3'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const createRoot = (): RootDataFinal => ({
@@ -67,6 +68,35 @@ describe('useSpiroAnimQS', () => {
     })
     expect(decoded.arms).toBe(true)
     expect(decoded.props[0]!.arms).toBe(false)
+  })
+
+  it('uses underscore padding in version 3 while retaining version 2 compatibility', async () => {
+    const query = await useSpiroAnimQS(VDEF_V3, useBaseQS(VDEF_V3, { charset: CHARSET_V3 }), 3)
+    const root = createRoot()
+    root.arms = true
+    root.props[0]!.arms = false
+
+    const encoded = query.encodeQS(root, false)
+
+    expect(encoded).toEqual({
+      r: 'GE28Eji9g',
+      p0: 'O__f.biQmw_______wuu',
+      v: '3',
+    })
+    expect(query.decodeQS(encoded)).toEqual(
+      expect.objectContaining({
+        arms: true,
+        props: [expect.objectContaining({ arms: false })],
+      }),
+    )
+
+    const decodedV2 = await query.decodeVer({
+      r: 'GE28Eji9g',
+      p0: 'O--f.biQmw-------wuu',
+      v: '2',
+    })
+    expect(decodedV2.arms).toBe(true)
+    expect(decodedV2.props[0]!.arms).toBe(false)
   })
 
   it('falls back to the current decoder for unavailable versions', async () => {

@@ -3,6 +3,7 @@ import type { VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 
 export interface SpiroAnimQSVersion {
+  CHARSET: string
   VDEF: Record<AllVars, VDefEntry>
   createRootConfig(): ConfigData<AllVars>
   createPropConfig(): ConfigData<AllVars>
@@ -18,6 +19,8 @@ export async function loadSpiroAnimQSVersion(version: number): Promise<SpiroAnim
       return import('@/services/query/versions/SpiroAnimQSv1')
     case 2:
       return import('@/services/query/versions/SpiroAnimQSv2')
+    case 3:
+      return import('@/services/query/versions/SpiroAnimQSv3')
     default:
       throw new RangeError(`Unsupported SpiroAnim query-string version: ${version}`)
   }
