@@ -93,11 +93,17 @@ describe('eightStepPatternDefinitions', () => {
   })
 
   it('assigns the supplied capping and continual curve-family turn sequences', () => {
-    const turns = (reference: string, propIndex: 0 | 1) =>
-      eightStepPatternDefinitions
-        .find((definition) => definition.reference === reference)
-        ?.props[propIndex].anim.slice(1, 4)
-        .map((frame) => frame.turns)
+    const turns = (
+      reference: (typeof eightStepPatternDefinitions)[number]['reference'],
+      propIndex: 0 | 1,
+    ) => {
+      const animation = createDefaultEightStepAnimation({ concept: '8stp', reference })
+      return animation
+        ? rootCompile(animation)
+            .props[propIndex]!.anim.slice(1, 4)
+            .map((frame) => frame.turns)
+        : undefined
+    }
 
     expect(turns('1-AA', 0)).toEqual([-360, -360, 0])
     expect(turns('1-AA', 1)).toEqual([-360, -360, -360])
@@ -105,6 +111,18 @@ describe('eightStepPatternDefinitions', () => {
     expect(turns('1-AI', 1)).toEqual([180, 180, 0])
     expect(turns('1-EA', 0)).toEqual([0, 0, -360])
     expect(turns('1-IA', 0)).toEqual([180, 180, -360])
+  })
+
+  it('stores sparse frames without changing each cell compiled geometry', () => {
+    for (const definition of eightStepPatternDefinitions) {
+      for (const prop of definition.props) {
+        expect(prop.anim[0]?.scale).toBe(8)
+        expect(prop.anim.every((frame) => frame.plane !== 0)).toBe(true)
+        expect(
+          prop.anim.every((frame) => frame.axis === undefined || frame.axis !== frame.plane),
+        ).toBe(true)
+      }
+    }
   })
 
   it('compiles every source track to its twelve cardinal positions and exact incoming axes', () => {

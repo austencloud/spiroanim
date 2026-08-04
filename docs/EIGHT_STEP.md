@@ -39,6 +39,12 @@ per track. Nothing is inherited from another row or column. Frame 0 establishes 
 starting hand and prop state; frames 1 through 12 are the displayed steps, including the step-12
 wrap back to step 1.
 
+Those independently owned frames use the application's sparse animation representation. Repeated
+inherited values such as `arc`, `turns`, and `scale` are omitted; zero `plane` values are omitted;
+and `axis` is omitted when it equals the same frame's `plane`. `rootCompile()` reconstructs the
+complete effective values. This keeps generated Eight Step query strings compact without storing a
+separate static animation catalog or changing playback geometry.
+
 ## Cardinal handpaths and frame solving
 
 `T`, `R`, `B`, and `L` map to the application's middle top, right, bottom, and left points. Every
@@ -130,5 +136,6 @@ The regression suite compiles every one of the 144 source tracks and verifies:
 - each FLIP result against the supplied even-page handpath table;
 - Swap, player controls, matching, component hydration, and full player application.
 - nine-source thumbnail rendering, row-wide image reuse, resize refresh, and control invalidation.
+- sparse query encoding and complete compiled-playback equivalence after a URL round trip.
 
 The axis checks are required because equal endpoints alone can conceal a wrong spherical path.

@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
+import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import {
   createDefaultEightStepAnimation,
   createEightStepAnimation,
 } from '@/features/eight-step/createEightStepAnimation'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { rootFinal } from '@/math/animation/PlayerFunc'
+import { rootCompile } from '@/math/animation/AnimFunc'
 import { decodeReadable } from '@/services/animation/AnimReadableFunc'
+import { useBaseQS } from '@/services/query/createBaseQS'
+import { VDEF } from '@/services/query/versions/SpiroAnimQSv2'
 
 const current = rootFinal(
   decodeReadable({
@@ -88,5 +92,37 @@ describe('createEightStepAnimation', () => {
 
     expect(first?.props[0]?.anim[0]?.scale).toBe(14)
     expect(second?.props[0]?.anim[0]?.scale).toBe(8)
+  })
+
+  it('round-trips through a compact shared URL without changing playback', async () => {
+    const animation = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '6-II',
+      swapProps: true,
+      reversePlane: true,
+      bpm: 101,
+      scale: 1.2,
+      thick: 11,
+      paths: false,
+      hands: true,
+      arms: false,
+    })
+    expect(animation).toBeDefined()
+    if (!animation) return
+
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 2)
+    const query = codec.encodeQS(animation, false)
+    const decoded = await codec.decodeVer(query)
+
+    expect(new URLSearchParams(query).toString().length).toBeLessThan(180)
+    expect(decoded).toMatchObject({
+      bpm: animation.bpm,
+      distance: animation.distance,
+      thick: animation.thick,
+      paths: animation.paths,
+      hands: animation.hands,
+      arms: animation.arms,
+    })
+    expect(rootCompile(decoded).props).toEqual(rootCompile(animation).props)
   })
 })

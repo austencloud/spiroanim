@@ -313,6 +313,11 @@ describe('VtgPane', () => {
     expect(reverse.element.checked).toBe(false)
     expect(swap.element.nextElementSibling?.textContent).toBe('Swap')
     expect(reverse.element.nextElementSibling?.textContent).toBe('Flip')
+    expect(
+      wrapper
+        .findAll('.vtg-top-options .concept-pattern-options > label span')
+        .map((option) => option.text()),
+    ).toEqual(['Flip', 'Swap'])
 
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
     await swap.setValue(true)

@@ -143,6 +143,26 @@ const solveIncomingAngle = (
   return MathUtils.degToRad(normalizeAngle(MathUtils.radToDeg(angle)))
 }
 
+const compactFrames = (frames: readonly AnimReadable[]): AnimReadable[] =>
+  frames.map((frame, index) => {
+    const compacted = { ...frame }
+    const previous = frames[index - 1]
+
+    if (compacted.turns === (previous?.turns ?? 0)) delete compacted.turns
+    if (compacted.beats === (previous?.beats ?? 1)) delete compacted.beats
+    if (compacted.scale === (previous?.scale ?? 10)) delete compacted.scale
+    if (compacted.depth === (previous?.depth ?? 0)) delete compacted.depth
+    if (compacted.adjust === (previous?.adjust ?? 0)) delete compacted.adjust
+    if (compacted.arc === (previous?.arc ?? 0)) delete compacted.arc
+
+    const plane = compacted.plane ?? 0
+    if ((compacted.axis ?? plane) === plane) delete compacted.axis
+    if (compacted.plane === 0) delete compacted.plane
+    if (compacted.move?.every((coordinate) => coordinate === 0)) delete compacted.move
+
+    return compacted
+  })
+
 const createPropDefinition = (
   handpath: EightStepHandpath,
   letter: EightStepPatternLetter,
@@ -194,7 +214,7 @@ const createPropDefinition = (
     }
   })
 
-  return { anim: [startingFrame, ...continuationFrames] }
+  return { anim: compactFrames([startingFrame, ...continuationFrames]) }
 }
 
 const createCellReference = (column: EightStepColumn, row: EightStepRow): EightStepCellReference =>
