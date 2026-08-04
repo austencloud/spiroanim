@@ -193,9 +193,7 @@ const rowDescriptions = {
 const getRowDescription = (row: (typeof eightStepRows)[number]) => rowDescriptions[row]
 
 const getCellDescription = (cell: EightStepPatternDefinition) => {
-  const group = columnGroups.find(({ columns }) =>
-    columns.some((column) => column === cell.column),
-  )
+  const group = columnGroups.find(({ columns }) => columns.some((column) => column === cell.column))
   if (!group) throw new Error(`Missing Eight Step column group for column ${cell.column}`)
   return `${group.label}\n${getRowDescription(cell.row)}`
 }
@@ -476,7 +474,7 @@ defineExpose({
   min-width: 20rem;
   aspect-ratio: 8.5 / 9.5;
   grid-template-columns: minmax(0, 0.5fr) repeat(8, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 0.5fr) repeat(9, minmax(0, 1fr));
+  grid-template-rows: minmax(1.5rem, max-content) repeat(9, minmax(0, 1fr));
   gap: 0.65%;
   padding: 0.65%;
 }
@@ -518,11 +516,13 @@ defineExpose({
 
 .eight-step-column-header {
   grid-row: 1;
+  padding-block: 0.2em;
   padding-inline: 0.25em;
   font-size: max(0.7rem, 2cqi);
   font-weight: 800;
   line-height: 0.95;
   text-align: center;
+  text-wrap: balance;
 }
 
 .eight-step-row-header {
