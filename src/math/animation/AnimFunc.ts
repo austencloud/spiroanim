@@ -19,7 +19,8 @@ const allPoints = Object.keys(PPOS).map((val) => parseInt(val, 10))
 // Distance between two sets of Radians
 export const angularDistance = (angle1: number, angle2: number) => {
   const diff = angle2 - angle1,
-    wrappedDiff = ((diff + Math.PI) % (2 * Math.PI)) - Math.PI
+    fullRotation = 2 * Math.PI,
+    wrappedDiff = ((((diff + Math.PI) % fullRotation) + fullRotation) % fullRotation) - Math.PI
   return Math.abs(wrappedDiff)
 }
 

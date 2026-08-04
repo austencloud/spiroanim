@@ -11,6 +11,9 @@ describe('AnimFunc', () => {
     expect(angularDistance((10 * Math.PI) / 180, (350 * Math.PI) / 180)).toBeCloseTo(
       (20 * Math.PI) / 180,
     )
+    expect(angularDistance((350 * Math.PI) / 180, (10 * Math.PI) / 180)).toBeCloseTo(
+      (20 * Math.PI) / 180,
+    )
   })
 
   it('finds the closest point from all points or a restricted guide', () => {

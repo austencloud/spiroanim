@@ -21,12 +21,13 @@ describe('OrthogonalFunc', () => {
     const nextReference = reference.clone()
     const direction = new Vector3()
 
-    orthoNext(Math.PI / 4, Math.PI / 3, nextSource, nextReference, direction)
+    for (let step = 0; step < 1000; step++)
+      orthoNext(Math.PI / 4 + step * 0.001, Math.PI / 3, nextSource, nextReference, direction)
 
-    expect(nextSource.length()).toBeCloseTo(1)
-    expect(nextReference.length()).toBeCloseTo(1)
-    expect(nextSource.dot(nextReference)).toBeCloseTo(0)
-    expect(direction.length()).toBeCloseTo(1)
+    expect(nextSource.length()).toBeCloseTo(1, 12)
+    expect(nextReference.length()).toBeCloseTo(1, 12)
+    expect(nextSource.dot(nextReference)).toBeCloseTo(0, 12)
+    expect(direction.length()).toBeCloseTo(1, 12)
   })
 
   it('returns zero for identical and antipodal targets', () => {

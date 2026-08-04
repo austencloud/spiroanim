@@ -94,13 +94,13 @@ export const orthoNext = (
   orthoPoint(angle, normSrc, normRef, normProjected)
 
   // Directional vector for use with applyAxisAngle
-  normCross.crossVectors(normSrc, normProjected)
+  normCross.crossVectors(normSrc, normProjected).normalize()
 
   // Compute current Positon
   normSrc.applyAxisAngle(normCross, arc).normalize() // Occasional bug fix
 
   // Update Othogonal Path / Axis for the next loop
-  normRef.copy(normSrc).applyAxisAngle(normCross, Angle90)
+  normRef.copy(normSrc).applyAxisAngle(normCross, Angle90).normalize()
 }
 
 // Pre-allocated vectors for reuse in calculations (to avoid creating new objects in each function call).
