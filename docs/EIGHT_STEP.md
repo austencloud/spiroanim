@@ -10,7 +10,7 @@ authoritative for the prop-rotation relationship on each visible step.
 
 The primary implementations are:
 
-- `src/features/eight-step/data/eightStepPatternDefinitions.ts`: odd-page handpaths, curve-family
+- `src/features/eight-step/data/eightStepPatternDefinitions.ts`: source-page handpaths, curve-family
   rules, frame solving, sparse-frame compaction, and generation of all 72 cell definitions.
 - `src/features/eight-step/data/eightStepPatternCatalog.ts`: Flip, Swap, Scale, BPM, and Diamond/Box
   transformations.
@@ -43,19 +43,19 @@ The first letter describes the first, normally Green, capping prop. The second d
 second, normally Orange, continual prop. `A`, `E`, and `I` mean Antispin, Extension, and Inspin.
 These relationships are also exposed as tooltips on the row headers.
 
-The eight columns select the eight odd source pages. Pairs of columns share a visible category
+The eight columns select eight source pages. Pairs of columns share a visible category
 header:
 
-| Column | Odd source page | Header group    |
-| -----: | --------------: | --------------- |
-|      1 |               1 | Opposite        |
-|      2 |               3 | Opposite        |
-|      3 |               5 | Same            |
-|      4 |               7 | Same            |
-|      5 |               9 | Quarter Aligned |
-|      6 |              11 | Quarter Aligned |
-|      7 |              13 | Quarter Opposed |
-|      8 |              15 | Quarter Opposed |
+| Column | Source page | Header group    |
+| -----: | ----------: | --------------- |
+|      1 |           1 | Opposite        |
+|      2 |           3 | Opposite        |
+|      3 |           5 | Same            |
+|      4 |           7 | Same            |
+|      5 |           9 | Quarter Aligned |
+|      6 |          11 | Quarter Aligned |
+|      7 |          13 | Quarter Opposed |
+|      8 |          15 | Quarter Opposed |
 
 A cell reference places the column first and row second, such as `1-AA` or `6-IE`. Cell tooltips
 combine the column relationship and row relationship on separate lines, for example `Opposite`
@@ -63,7 +63,7 @@ and `Anti vs Anti`.
 
 ## Pattern ownership and generation
 
-The application stores the eight odd-page Green/Orange handpath pairs and generates all 72 matrix
+The application stores the eight source-page Green/Orange handpath pairs and generates all 72 matrix
 cells from them. Every generated cell owns:
 
 - two distinct prop objects;
@@ -133,21 +133,22 @@ underlying Green/Orange handpaths. All 72 combinations are generated separately.
 
 The controls are displayed in the order Flip, Swap, Reset.
 
-Flip selects the authoritative even-page partner while the implementation stores only the odd
-source page:
+Flip selects the corrected companion-page handpaths stored from Gage's source data. Gage's original
+second-half document placed its four base sheets at pages 9, 10, 11, and 12. Eight Step corrects
+that ordering to base pages 9, 11, 13, and 15, with their opposites at 10, 12, 14, and 16:
 
 - Pages 1/2, 3/4, 5/6, and 7/8 mirror both handpaths left-to-right.
-- Pages 9/10, 11/12, 13/14, and 15/16 rotate the Green handpath by 180 degrees while Orange remains
-  the anchor handpath.
+- Pages 9/10, 11/12, 13/14, and 15/16 mirror both handpaths left-to-right.
 
-The even-page props are regenerated from the transformed handpaths, including fresh frame solving;
-they are not created by blindly changing planes on the odd-page animation.
+All 16 corrected handpath pages are stored as authoritative runtime data. Flip reads the companion
+page and regenerates its complete props, planes, and axes; complete encoded animations are not
+duplicated or stored.
 
 Swap exchanges the two complete source animation tracks before the standard player prop defaults
 are applied. The animation, initial state, and any Box adjustment travel together. Green and Orange
 remain player prop slots, so Swap also changes which source track receives each slot's defaults.
-Flip and Swap are independent operations. In particular, an even-page Green track is not obtained
-by substituting the odd-page Orange track.
+Flip and Swap are independent operations. In particular, a paired-page Green track is not obtained
+by substituting the source-page Orange track.
 
 ## Diamond and Box
 
@@ -161,7 +162,7 @@ spatial directions. This keeps flipped Quarter Aligned and Quarter Opposed props
 It does not modify `turns`. The original first continuation arc is made explicit when Box is built
 so sparse-frame inheritance cannot accidentally carry the adjustment into later frames.
 
-The Box transformation occurs after the odd/even handpath has been chosen by Flip and before the
+The Box transformation occurs after the source/paired handpath has been chosen by Flip and before the
 tracks are exchanged by Swap. It applies to all row families and both props. Selecting Box refreshes
 the row previews and can be recovered by compiled-geometry matching. While Box is selected, a note
 below the controls explains that the mode is experimental, its patterns have not been validated,
@@ -272,7 +273,7 @@ The regression suite validates:
 - all 13 compiled cardinal positions and all 12 incoming position axes for every source track;
 - closed first/final prop orientation;
 - the capping and continual curve-family turn sequences;
-- all eight generated Flip results against the supplied even-page handpath table;
+- all eight generated Flip results against the supplied paired-page handpath table;
 - Box's 45-degree initial arcs without altering continuation arcs or `turns`;
 - Swap/Flip/Box composition, matching, hydration, and full player application;
 - paired top-header, exact row-header, row/column cell highlighting, active-prop header colors,

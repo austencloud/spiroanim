@@ -6,9 +6,11 @@ import type {
   EightStepCellReference,
   EightStepColumn,
   EightStepCurveFamily,
+  EightStepFlipPage,
   EightStepPage,
   EightStepPatternDefinition,
   EightStepRow,
+  EightStepSourcePage,
   EightStepToken,
 } from '@/features/eight-step/types'
 import { vtgBaseFrameSettings } from '@/features/vtg/data/vtgPlayerSettings'
@@ -29,32 +31,64 @@ export const eightStepHandpathsByPage: Readonly<Record<EightStepPage, EightStepH
     green: ['T', 'R', 'B', 'R', 'B', 'L', 'B', 'L', 'T', 'L', 'T', 'R'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
+  2: {
+    green: ['T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L'],
+    orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
+  },
   3: {
     green: ['T', 'R', 'B', 'R', 'B', 'L', 'B', 'L', 'T', 'L', 'T', 'R'],
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
+  },
+  4: {
+    green: ['T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L'],
+    orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
   5: {
     green: ['B', 'R', 'T', 'R', 'T', 'L', 'T', 'L', 'B', 'L', 'B', 'R'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
+  6: {
+    green: ['B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L'],
+    orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
+  },
   7: {
     green: ['B', 'R', 'T', 'R', 'T', 'L', 'T', 'L', 'B', 'L', 'B', 'R'],
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
+  },
+  8: {
+    green: ['B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L'],
+    orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
   9: {
     green: ['L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L', 'B', 'L', 'T'],
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
   },
+  10: {
+    green: ['R', 'T', 'L', 'T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T'],
+    orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
+  },
   11: {
+    green: ['R', 'B', 'L', 'B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B'],
+    orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
+  },
+  12: {
+    green: ['L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L', 'T', 'L', 'B'],
+    orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
+  },
+  13: {
     green: ['L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L', 'T', 'L', 'B'],
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
   },
-  13: {
-    green: ['L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L', 'B', 'L', 'T'],
+  14: {
+    green: ['R', 'B', 'L', 'B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
   15: {
-    green: ['L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L', 'T', 'L', 'B'],
+    green: ['R', 'T', 'L', 'T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T'],
+    orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
+  },
+  16: {
+    green: ['L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L', 'B', 'L', 'T'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
 }
@@ -258,45 +292,25 @@ export const getEightStepPatternDefinition = (
 ): EightStepPatternDefinition | undefined =>
   eightStepPatternDefinitions.find((definition) => definition.reference === reference)
 
-const mirrorTokenHorizontally = (token: EightStepToken): EightStepToken => {
-  if (token === 'L') return 'R'
-  if (token === 'R') return 'L'
-  return token
+const flipPageBySource: Readonly<Record<EightStepSourcePage, EightStepFlipPage>> = {
+  1: 2,
+  3: 4,
+  5: 6,
+  7: 8,
+  9: 10,
+  11: 12,
+  13: 14,
+  15: 16,
 }
 
-const rotateTokenHalfTurn = (token: EightStepToken): EightStepToken => {
-  if (token === 'T') return 'B'
-  if (token === 'B') return 'T'
-  return mirrorTokenHorizontally(token)
-}
-
-/** Builds the even-page partner without storing a second page definition. */
+/** Builds Flip from Gage's corrected companion page rather than transforming the source page. */
 export const createFlippedEightStepProps = (
   definition: EightStepPatternDefinition,
 ): readonly [PropReadable, PropReadable] => {
-  const handpaths = eightStepHandpathsByPage[definition.page]
-  const transformHandpath = (handpath: EightStepHandpath, propIndex: 0 | 1): EightStepHandpath => {
-    // Opposite/Same pages flip both tracks left-to-right. The quarter-page
-    // partners rotate Green by 180 degrees while Orange remains the anchor.
-    const transform =
-      definition.page < 9
-        ? mirrorTokenHorizontally
-        : propIndex === 0
-          ? rotateTokenHalfTurn
-          : (token: EightStepToken) => token
-    return handpath.map(transform)
-  }
+  const handpaths = eightStepHandpathsByPage[flipPageBySource[definition.page]]
 
   return [
-    createPropDefinition(
-      transformHandpath(handpaths.green, 0),
-      getPatternLetter(definition.row, 0),
-      true,
-    ),
-    createPropDefinition(
-      transformHandpath(handpaths.orange, 1),
-      getPatternLetter(definition.row, 1),
-      false,
-    ),
+    createPropDefinition(handpaths.green, getPatternLetter(definition.row, 0), true),
+    createPropDefinition(handpaths.orange, getPatternLetter(definition.row, 1), false),
   ]
 }

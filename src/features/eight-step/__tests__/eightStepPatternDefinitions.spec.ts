@@ -18,7 +18,7 @@ const tokenPoints: Readonly<Record<EightStepToken, Vector3>> = {
   L: PPOS[PNTIND.ML]!,
 }
 
-const evenHandpaths = {
+const flippedHandpaths = {
   2: {
     green: ['T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L'],
     orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
@@ -35,25 +35,36 @@ const evenHandpaths = {
     green: ['B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
-  10: {
-    green: ['R', 'B', 'L', 'B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B'],
-    orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
-  },
-  12: {
-    green: ['R', 'T', 'L', 'T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T'],
-    orange: ['B', 'L', 'T', 'R', 'B', 'L', 'T', 'R', 'B', 'L', 'T', 'R'],
+  16: {
+    green: ['L', 'T', 'R', 'T', 'R', 'B', 'R', 'B', 'L', 'B', 'L', 'T'],
+    orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
   14: {
     green: ['R', 'B', 'L', 'B', 'L', 'T', 'L', 'T', 'R', 'T', 'R', 'B'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
-  16: {
+  12: {
+    green: ['L', 'B', 'R', 'B', 'R', 'T', 'R', 'T', 'L', 'T', 'L', 'B'],
+    orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
+  },
+  10: {
     green: ['R', 'T', 'L', 'T', 'L', 'B', 'L', 'B', 'R', 'B', 'R', 'T'],
     orange: ['B', 'R', 'T', 'L', 'B', 'R', 'T', 'L', 'B', 'R', 'T', 'L'],
   },
 } as const satisfies Readonly<
   Record<number, { green: readonly EightStepToken[]; orange: readonly EightStepToken[] }>
 >
+
+const flippedPageBySource = {
+  1: 2,
+  3: 4,
+  5: 6,
+  7: 8,
+  9: 10,
+  11: 12,
+  13: 14,
+  15: 16,
+} as const
 
 const expectVector = (actual: readonly number[], expected: Vector3, context = 'vector') => {
   expect(actual[0], `${context} x`).toBeCloseTo(expected.x, 7)
@@ -76,7 +87,7 @@ describe('eightStepPatternDefinitions', () => {
     expect(new Set(animations.flat()).size).toBe(72 * 2 * 13)
   })
 
-  it('maps columns to the eight odd source pages', () => {
+  it('maps columns to the corrected source pages', () => {
     expect(
       eightStepPatternDefinitions.slice(0, 8).map(({ reference, page }) => [reference, page]),
     ).toEqual([
@@ -90,6 +101,22 @@ describe('eightStepPatternDefinitions', () => {
       ['8-AA', 15],
     ])
     expect(eightStepPatternDefinitions.at(-1)?.reference).toBe('8-II')
+  })
+
+  it("stores Gage's corrected second-half page order with each opposite beside its source", () => {
+    const mirrorToken = (token: EightStepToken): EightStepToken => {
+      if (token === 'L') return 'R'
+      if (token === 'R') return 'L'
+      return token
+    }
+
+    for (const sourcePage of eightStepPages) {
+      const source = eightStepHandpathsByPage[sourcePage]
+      const flipped = eightStepHandpathsByPage[flippedPageBySource[sourcePage]]
+
+      expect(flipped.green).toEqual(source.green.map(mirrorToken))
+      expect(flipped.orange).toEqual(source.orange.map(mirrorToken))
+    }
   })
 
   it('assigns the supplied capping and continual curve-family turn sequences', () => {
@@ -168,12 +195,12 @@ describe('eightStepPatternDefinitions', () => {
     }
   })
 
-  it('compiles FLIP to the eight authoritative even-page handpaths', () => {
-    for (const [columnIndex, oddPage] of eightStepPages.entries()) {
+  it('compiles FLIP to the eight authoritative paired-page handpaths', () => {
+    for (const [columnIndex, sourcePage] of eightStepPages.entries()) {
       const definition = eightStepPatternDefinitions.find(
         ({ column, row }) => column === columnIndex + 1 && row === 'AA',
       )
-      expect(definition?.page).toBe(oddPage)
+      expect(definition?.page).toBe(sourcePage)
       if (!definition) continue
 
       const animation = createDefaultEightStepAnimation({
@@ -185,16 +212,17 @@ describe('eightStepPatternDefinitions', () => {
       if (!animation) continue
 
       const compiled = rootCompile(animation)
-      const evenPage = evenHandpaths[(oddPage + 1) as keyof typeof evenHandpaths]
+      const flippedPage = flippedPageBySource[sourcePage]
+      const flippedHandpath = flippedHandpaths[flippedPage as keyof typeof flippedHandpaths]
 
-      for (const [propIndex, tokens] of [evenPage.green, evenPage.orange].entries()) {
+      for (const [propIndex, tokens] of [flippedHandpath.green, flippedHandpath.orange].entries()) {
         const frames = compiled.props[propIndex]!.anim
         expectVector(frames[0]!.pos, tokenPoints[tokens[0]!]!)
         for (let stepIndex = 0; stepIndex < 12; stepIndex++) {
           const start = tokenPoints[tokens[stepIndex]!]!
           const end = tokenPoints[tokens[(stepIndex + 1) % 12]!]!
           const frame = frames[stepIndex + 1]!
-          const context = `page ${oddPage + 1} prop ${propIndex + 1} step ${stepIndex + 1}`
+          const context = `page ${flippedPage} prop ${propIndex + 1} step ${stepIndex + 1}`
           expectVector(frame.pos, end, `${context} position`)
           expectVector(
             frame.posx,

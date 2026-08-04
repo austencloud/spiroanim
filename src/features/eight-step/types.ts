@@ -3,11 +3,15 @@ import type { PropReadable, RootDataFinal, RootReadable } from '@/types/AnimType
 export const eightStepColumns = [1, 2, 3, 4, 5, 6, 7, 8] as const
 export const eightStepRows = ['AA', 'AE', 'AI', 'EA', 'EE', 'EI', 'IA', 'IE', 'II'] as const
 export const eightStepPages = [1, 3, 5, 7, 9, 11, 13, 15] as const
+export const eightStepFlipPages = [2, 4, 6, 8, 10, 12, 14, 16] as const
+export const eightStepAllPages = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] as const
 export const eightStepShapes = ['diamond', 'box'] as const
 
 export type EightStepColumn = (typeof eightStepColumns)[number]
 export type EightStepRow = (typeof eightStepRows)[number]
-export type EightStepPage = (typeof eightStepPages)[number]
+export type EightStepPage = (typeof eightStepAllPages)[number]
+export type EightStepSourcePage = (typeof eightStepPages)[number]
+export type EightStepFlipPage = (typeof eightStepFlipPages)[number]
 export type EightStepToken = 'T' | 'R' | 'B' | 'L'
 export type EightStepCurveFamily = 'antispin' | 'extension' | 'inspin' | 'outspin'
 export type EightStepShape = (typeof eightStepShapes)[number]
@@ -46,7 +50,7 @@ export type EightStepReadableAnimation = Partial<
 
 export interface EightStepPatternDefinition {
   column: EightStepColumn
-  page: EightStepPage
+  page: EightStepSourcePage
   row: EightStepRow
   reference: EightStepCellReference
   props: readonly [PropReadable, PropReadable]
