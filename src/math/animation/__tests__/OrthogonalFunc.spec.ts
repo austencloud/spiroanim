@@ -33,4 +33,10 @@ describe('OrthogonalFunc', () => {
     expect(orthoAngle(source, source, reference)).toBe(0)
     expect(orthoAngle(source, source.clone().negate(), reference)).toBe(0)
   })
+
+  it('clamps floating-point drift before recovering an angle', () => {
+    const driftedReference = reference.clone().multiplyScalar(1 + Number.EPSILON)
+
+    expect(orthoAngle(source, reference, driftedReference)).toBe(0)
+  })
 })

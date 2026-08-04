@@ -119,6 +119,13 @@ describe('eightStepPatternDefinitions', () => {
         expect(prop.anim[0]?.scale).toBe(8)
         expect(prop.anim.every((frame) => frame.plane !== 0)).toBe(true)
         expect(
+          prop.anim.every(
+            (frame) =>
+              (frame.plane === undefined || Number.isInteger(frame.plane)) &&
+              (frame.axis === undefined || Number.isInteger(frame.axis)),
+          ),
+        ).toBe(true)
+        expect(
           prop.anim.every((frame) => frame.axis === undefined || frame.axis !== frame.plane),
         ).toBe(true)
       }

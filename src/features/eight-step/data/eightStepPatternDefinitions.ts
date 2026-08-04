@@ -126,9 +126,11 @@ const getPatternLetter = (row: EightStepRow, index: 0 | 1): EightStepPatternLett
 }
 
 const normalizeAngle = (angle: number) => {
+  const angleEpsilon = 1e-5
   let normalized = ((((angle + 180) % 360) + 360) % 360) - 180
-  if (Math.abs(normalized) < 1e-8) normalized = 0
-  if (Math.abs(normalized - Math.round(normalized)) < 1e-8) normalized = Math.round(normalized)
+  if (Math.abs(normalized) < angleEpsilon) normalized = 0
+  if (Math.abs(normalized - Math.round(normalized)) < angleEpsilon)
+    normalized = Math.round(normalized)
   return normalized
 }
 

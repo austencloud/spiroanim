@@ -46,8 +46,10 @@ export const orthoAngle = (
   // Subtract that component from norm2nd to get its projection onto the tangent plane.
   normProjected.subVectors(norm2nd, multSrc.copy(normSrc).multiplyScalar(dotProduct)).normalize()
 
-  // Compute the angle between the projected vector and the reference vector.
-  let angle = Math.acos(normRef.dot(normProjected))
+  // Repeated rotations can drift a unit-vector dot product just outside [-1, 1]. Clamp that
+  // floating-point noise so Math.acos never turns an otherwise valid axis into NaN.
+  const cosine = Math.max(-1, Math.min(1, normRef.dot(normProjected)))
+  let angle = Math.acos(cosine)
 
   // Compute the cross product to determine the sign of the angle.
   normCross.crossVectors(normRef, normProjected)

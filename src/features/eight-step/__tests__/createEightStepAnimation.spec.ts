@@ -5,6 +5,7 @@ import {
   createDefaultEightStepAnimation,
   createEightStepAnimation,
 } from '@/features/eight-step/createEightStepAnimation'
+import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { rootCompile } from '@/math/animation/AnimFunc'
@@ -188,5 +189,37 @@ describe('createEightStepAnimation', () => {
       arms: animation.arms,
     })
     expect(rootCompile(decoded).props).toEqual(rootCompile(animation).props)
+  })
+
+  it('round-trips every Eight Step cell and transform without changing playback', async () => {
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 2)
+
+    for (const definition of eightStepPatternDefinitions) {
+      for (const swapProps of [false, true]) {
+        for (const reversePlane of [false, true]) {
+          for (const shape of ['diamond', 'box'] as const) {
+            const label = `${definition.reference}, Swap ${swapProps}, Flip ${reversePlane}, ${shape}`
+            const animation = createDefaultEightStepAnimation({
+              concept: '8stp',
+              reference: definition.reference,
+              swapProps,
+              reversePlane,
+              shape,
+            })
+            expect({ label, animationDefined: animation !== undefined }).toEqual({
+              label,
+              animationDefined: true,
+            })
+            if (!animation) continue
+
+            const decoded = await codec.decodeVer(codec.encodeQS(animation, false))
+            expect({ label, props: rootCompile(decoded).props }).toEqual({
+              label,
+              props: rootCompile(animation).props,
+            })
+          }
+        }
+      }
+    }
   })
 })
