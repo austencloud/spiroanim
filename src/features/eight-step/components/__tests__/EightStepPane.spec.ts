@@ -199,6 +199,33 @@ describe('EightStepPane', () => {
     )
   })
 
+  it('toggles the additional Eight Step document links', async () => {
+    const wrapper = mount(EightStepPane)
+    const disclosure = wrapper.get('[data-role="eight-step-more"]')
+    const toggle = wrapper.get('[data-role="eight-step-more-toggle"]')
+
+    expect(toggle.text()).toBe('MORE...')
+    expect(disclosure.attributes('open')).toBeUndefined()
+
+    await toggle.trigger('click')
+    expect(disclosure.attributes('open')).toBeDefined()
+    expect(wrapper.get('[data-role="eight-step-more-content"]').text()).toContain(
+      '8-Step Concepts by Gage DeMello.',
+    )
+    expect(
+      wrapper
+        .findAll('[data-role="eight-step-more-content"] a')
+        .map((link) => [link.text(), link.attributes('href')]),
+    ).toEqual([
+      ['Handpaths.pdf', '/docs/8-step/Handpaths_swapped.pdf'],
+      ['TeachingSheets.pdf', '/docs/8-step/TeachingSheets_swapped.pdf'],
+      ['HandpathsV2.pdf', '/docs/8-step/TeachingSheetsV2_swapped.pdf'],
+    ])
+
+    await toggle.trigger('click')
+    expect(disclosure.attributes('open')).toBeUndefined()
+  })
+
   it('renders nine row previews and reuses each result across all eight columns', async () => {
     const wrapper = mount(EightStepPane)
     await settlePreviewRendering()

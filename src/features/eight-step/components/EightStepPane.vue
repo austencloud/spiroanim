@@ -125,6 +125,28 @@
       <strong class="eight-step-legend-color--selected">red when selected</strong>, may be difficult
       or impossible to perform in Wall-Plane without significant modification.
     </p>
+
+    <details class="eight-step-more" data-role="eight-step-more">
+      <summary class="eight-step-more__toggle" data-role="eight-step-more-toggle">MORE...</summary>
+      <div class="eight-step-more__content" data-role="eight-step-more-content">
+        <p>8-Step Concepts by Gage DeMello.</p>
+        <ul class="eight-step-more__links">
+          <li>
+            <a href="/docs/8-step/Handpaths_swapped.pdf">Handpaths.pdf</a>
+          </li>
+          <li>
+            <a href="/docs/8-step/TeachingSheets_swapped.pdf">TeachingSheets.pdf</a>
+          </li>
+          <li>
+            <a href="/docs/8-step/TeachingSheetsV2_swapped.pdf">HandpathsV2.pdf</a>
+            <span>
+              - Additional highlights / notes that I personally added for myself to reference from
+              printed copies.
+            </span>
+          </li>
+        </ul>
+      </div>
+    </details>
   </section>
 </template>
 
@@ -509,6 +531,80 @@ defineExpose({
 
 .eight-step-legend-color--selected {
   color: var(--eight-step-color-marked-selected);
+}
+
+.eight-step-more {
+  width: min(100%, 45rem);
+  margin: var(--space-3) auto 0;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.eight-step-more__toggle {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  color: var(--color-action-primary);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  list-style: none;
+  background: color-mix(in srgb, var(--color-action-primary) 7%, var(--color-surface));
+  transition: background var(--transition-fast);
+}
+
+.eight-step-more__toggle::-webkit-details-marker {
+  display: none;
+}
+
+.eight-step-more__toggle::after {
+  content: '+';
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.eight-step-more[open] .eight-step-more__toggle {
+  background: color-mix(in srgb, var(--color-action-primary) 13%, var(--color-surface));
+  border-block-end: 1px solid var(--color-border);
+}
+
+.eight-step-more[open] .eight-step-more__toggle::after {
+  content: '-';
+}
+
+.eight-step-more__toggle:hover {
+  background: color-mix(in srgb, var(--color-action-primary) 13%, var(--color-surface));
+}
+
+.eight-step-more__toggle:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: -3px;
+}
+
+.eight-step-more__content {
+  padding: var(--space-4);
+}
+
+.eight-step-more__content p {
+  margin: 0 0 var(--space-2);
+}
+
+.eight-step-more__links {
+  display: grid;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-6);
+  margin: 0;
+}
+
+.eight-step-more__links a {
+  color: var(--color-action-primary);
 }
 
 .eight-step-board {
