@@ -285,6 +285,9 @@ describe('EightStepPane', () => {
     expect(diamond.element.name).toBe('eight-step-shape')
     expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('DiamondBox')
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="eight-step-diamond-note"]').text()).toBe(
+      'Patterns highlighted in yellow, or red when selected, may be difficult or impossible to perform in Wall-Plane without significant modification.',
+    )
     const sliderControls = wrapper.get('.concept-slider-controls').element
     const shapeControls = wrapper.get('[data-role="eight-step-shape-controls"]').element
     const renderControls = wrapper.get('.concept-render-options').element
@@ -303,6 +306,7 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[data-role="eight-step-box-note"]').text()).toBe(
       'Box mode is experimental, and its patterns have not been validated. Difficult / Impossible highlighting for patterns performed in Wall-Plane is disabled.',
     )
+    expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(false)
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
       {
         concept: '8stp',
@@ -314,6 +318,7 @@ describe('EightStepPane', () => {
     await wrapper.get('[data-role="eight-step-reset"]').trigger('click')
     expect(diamond.element.checked).toBe(true)
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(true)
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
       { concept: '8stp', reference: '1-AI' },
     ])

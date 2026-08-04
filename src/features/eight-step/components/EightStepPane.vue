@@ -116,6 +116,15 @@
       Box mode is experimental, and its patterns have not been validated. Difficult / Impossible
       highlighting for patterns performed in Wall-Plane is disabled.
     </p>
+    <p
+      v-else
+      class="eight-step-development-note eight-step-development-note--diamond"
+      data-role="eight-step-diamond-note"
+    >
+      Patterns highlighted in <strong class="eight-step-legend-color--difficult">yellow</strong>, or
+      <strong class="eight-step-legend-color--selected">red when selected</strong>, may be difficult
+      or impossible to perform in Wall-Plane without significant modification.
+    </p>
   </section>
 </template>
 
@@ -458,6 +467,9 @@ defineExpose({
 
 <style scoped>
 .eight-step-pane {
+  --eight-step-color-marked: #8a7600;
+  --eight-step-color-marked-selected: #ff0000;
+
   width: 100%;
   min-inline-size: 0;
   min-block-size: 0;
@@ -483,6 +495,22 @@ defineExpose({
   text-align: center;
 }
 
+.eight-step-development-note--diamond {
+  padding-block: var(--space-2);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--eight-step-color-marked) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--eight-step-color-marked) 45%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+.eight-step-legend-color--difficult {
+  color: var(--eight-step-color-marked);
+}
+
+.eight-step-legend-color--selected {
+  color: var(--eight-step-color-marked-selected);
+}
+
 .eight-step-board {
   /* These category colors intentionally match VTG and remain stable across themes. */
   --eight-step-color-primary: #5968df;
@@ -491,8 +519,6 @@ defineExpose({
   --eight-step-color-rule: #111820;
   --eight-step-color-rule-text: #f6f8fb;
   --eight-step-color-line: #e9eef2;
-  --eight-step-color-marked: #8a7600;
-  --eight-step-color-marked-selected: #ff0000;
   --eight-step-color-preview: #071421;
   --eight-step-board-gap: 0.65cqi;
   --eight-step-top-header-min-height: max(2.5rem, 5.85cqi);
