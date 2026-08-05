@@ -3,6 +3,7 @@
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
+import { cartesianMovesToAngles } from '@/math/animation/MoveFunc'
 
 import type { BaseQS, VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData, ConfigItem, ConfigThird } from '@/services/query/types/SpiroAnimQSTypes'
@@ -82,11 +83,12 @@ export async function useSpiroAnimQS(
     hist = true,
   ) => {
     const query: Record<string, string> = {}
+    const encodedRoot = root
 
-    query.r = encodeVar(rootConfig, root)
+    query.r = encodeVar(rootConfig, encodedRoot)
 
-    for (const i in root.props) {
-      const prop = root.props[i]
+    for (const i in encodedRoot.props) {
+      const prop = encodedRoot.props[i]
       if (prop !== undefined) query[`p${i}`] = encodeVar(propConfig, prop)
     }
 
@@ -111,7 +113,8 @@ export async function useSpiroAnimQS(
     historyGroupIndex = -1
   }
 
-  const endHistoryGroup = () => {
+  const endHistoryGroup = (root?: RootDataFinal) => {
+    if (historyGroupActive && root) qsUpdateHistory(encodeQS(root, false))
     historyGroupActive = false
     historyGroupIndex = -1
   }
@@ -157,7 +160,8 @@ export async function useSpiroAnimQS(
       data.props.push(Object.assign({ anim: [] }, decodeVar(propConfig, val)) as PropData)
     }
 
-    return rootFinal(data)
+    const decoded = rootFinal(data)
+    return VER < 4 ? withAngularMoves(decoded) : decoded
   }
 
   /**
@@ -203,7 +207,13 @@ export async function useSpiroAnimQS(
             const bits = VDEF[MOVE_KEY][2]
             if (Array.isArray(val)) {
               ret.push(
-                encodeMove(val[0], bits) + encodeMove(val[1], bits) + encodeMove(val[2], bits),
+                VER >= 4
+                  ? BASE.packBase64(
+                      ['plane', 'arc', MOVE_KEY],
+                      { plane: val[0], arc: val[1], move: val[2] },
+                      pad,
+                    )
+                  : encodeMove(val[0], bits) + encodeMove(val[1], bits) + encodeMove(val[2], bits),
               )
             } else {
               ret.push(''.padStart(pad, BASE.basemax))
@@ -271,13 +281,18 @@ export async function useSpiroAnimQS(
 
         case 'move':
           if (sub !== ''.padStart(pad, BASE.basemax)) {
-            const ipad = pad / 3
-            const bits = VDEF[MOVE_KEY][2]
-            ret['move'] = [
-              decodeMove(sub.substring(0, ipad), bits),
-              decodeMove(sub.substring(ipad * 1, ipad * 2), bits),
-              decodeMove(sub.substring(ipad * 2, ipad * 3), bits),
-            ]
+            if (VER >= 4) {
+              const move = BASE.unpackBase64(['plane', 'arc', MOVE_KEY], sub)
+              ret['move'] = [move.plane, move.arc, move.move]
+            } else {
+              const ipad = pad / 3
+              const bits = VDEF[MOVE_KEY][2]
+              ret['move'] = [
+                decodeMove(sub.substring(0, ipad), bits),
+                decodeMove(sub.substring(ipad * 1, ipad * 2), bits),
+                decodeMove(sub.substring(ipad * 2, ipad * 3), bits),
+              ]
+            }
           }
           break
       }
@@ -316,6 +331,18 @@ export async function useSpiroAnimQS(
     decodeQS,
     decodeVer,
   }
+}
+
+function withAngularMoves(root: RootDataFinal): RootDataFinal {
+  const converted = structuredClone(root)
+  for (const prop of converted.props) {
+    const moves = prop.anim.map((frame) => frame.move ?? [0, 0, 0])
+    const angular = cartesianMovesToAngles(moves)
+    prop.anim.forEach((frame, index) => {
+      if (frame.move !== undefined) frame.move = angular[index]!
+    })
+  }
+  return converted
 }
 
 /**

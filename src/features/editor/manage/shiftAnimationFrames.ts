@@ -3,6 +3,7 @@ import { MathUtils, Vector3 } from 'three'
 import { TTYPE } from '@/domain/animation/AnimStruct'
 import { InitialOrtho, InitialPoint, orthoAngle, orthoNext } from '@/math/animation/OrthogonalFunc'
 import type { AnimData, AnimDataCompiled } from '@/types/AnimTypes'
+import { cartesianMovesToAngles } from '@/math/animation/MoveFunc'
 
 const endpointTolerance = 1e-6
 const integerSnapTolerance = 1e-9
@@ -228,6 +229,11 @@ export const shiftAnimationFrameRange = (
       axis: snapSignedAngle(axisRadians),
       move,
     }
+  })
+
+  const angularMoves = cartesianMovesToAngles(shifted.map((frame) => frame.move ?? [0, 0, 0]))
+  shifted.forEach((frame, index) => {
+    if (frame.move !== undefined) frame.move = angularMoves[index]!
   })
 
   if (

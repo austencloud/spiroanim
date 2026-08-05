@@ -7,6 +7,12 @@ import { VDEF } from '@/stores/useQSMainStore'
 
 import { orthoModify, InitialPoint } from '@/math/animation/OrthogonalFunc'
 import { closestPoint } from '@/math/animation/AnimFunc'
+import {
+  cartesianToMoveAngles,
+  clampCartesianMove,
+  createMoveDirectionState,
+  moveAnglesToCartesian,
+} from '@/math/animation/MoveFunc'
 import { MathUtils, Vector3 } from 'three'
 
 import type {
@@ -39,7 +45,12 @@ export function constraints(key: string, val?: VarTypes) {
   const min = def[0]
   const max = def[1]
   if (Array.isArray(val)) {
-    // Type check for OFFSET
+    if (key === 'move') {
+      val[0] = Math.max(-180, Math.min(val[0] ?? 0, 180))
+      val[1] = Math.max(0, Math.min(val[1] ?? 0, 360))
+      val[2] = Math.max(0, Math.min(val[2] ?? 0, 62))
+      return val
+    }
     for (let i = 0; i < val.length; i++) {
       if (val[i]! < min) val[i] = min
       else if (val[i]! > max) val[i] = max
@@ -52,17 +63,14 @@ export function constraints(key: string, val?: VarTypes) {
 }
 
 // Convert property values to strings
-function stringGet(key: string, val?: VarTypes) {
+function stringGet(key: string, val?: VarTypes, moveMode: 'xyz' | 'angles' = 'angles') {
   if (val !== undefined)
     if (Array.isArray(val)) {
       if (key == 'move') {
-        return (
-          (val[0] / 10).toFixed(1) +
-          ', ' +
-          (val[1] / 10).toFixed(1) +
-          ', ' +
-          (val[2] / 10).toFixed(1)
-        )
+        if (moveMode === 'xyz') {
+          return val.map((coordinate) => (coordinate / 10).toFixed(1)).join(', ')
+        }
+        return `${val[0]}\u00B0, ${val[1]}\u00B0, ${(val[2] / 10).toFixed(1)}`
       }
     } else if (typeof val !== 'boolean') {
       switch (key) {
@@ -100,11 +108,16 @@ export function useProperties(store: string = 'main') {
   const { PLAYING } = storeToRefs(playerStore)
 
   const propertiesStore = storeToRefs(usePropertiesStore(store))
-  const { IDENT, ANIMS, CMPDS, PROPS } = propertiesStore
+  const { IDENT, ANIMS, CMPDS, PROPS, pMOVE } = propertiesStore
 
   // Broke this out separate from animGet
   const animVals = (key: string) => {
     switch (key) {
+      case 'move':
+        return pMOVE.value === 'xyz'
+          ? CMPDS.value.map((compiled) => compiled.move)
+          : ANIMS.value.map((anim) => anim.move)
+
       case 'direct':
       case 'point':
         return ANIMS.value.map((anim, ind) => {
@@ -141,6 +154,42 @@ export function useProperties(store: string = 'main') {
     val = constraints(key, val)
 
     switch (key) {
+      case 'movexyz':
+      case 'movexyzpreserve':
+        if (!Array.isArray(val)) break
+        const cartesianMove = clampCartesianMove(val)
+        ANIMS.value.forEach((arr, ind) => {
+          const id = IDENT.value[ind]!
+          const frames = ROOT.value.props[id.prop]!.anim
+          const nextIndex =
+            key === 'movexyzpreserve'
+              ? frames.findIndex((frame, index) => index > id.index && frame.move !== undefined)
+              : -1
+          const nextFrame = nextIndex >= 0 ? frames[nextIndex] : undefined
+          const nextCartesian =
+            nextIndex >= 0 ? COMPILED.value.props[id.prop]!.anim[nextIndex]?.move : undefined
+          const state = createMoveDirectionState()
+          for (let index = 0; index < id.index; index++) {
+            moveAnglesToCartesian(frames[index]!.move ?? [0, 0, 0], state)
+          }
+          arr.move = constraints('move', cartesianToMoveAngles(cartesianMove, state)) as [
+            number,
+            number,
+            number,
+          ]
+
+          if (key === 'movexyzpreserve' && nextFrame && nextCartesian) {
+            for (let index = id.index + 1; index < nextIndex; index++) {
+              moveAnglesToCartesian(frames[index]!.move ?? [0, 0, 0], state)
+            }
+            nextFrame.move = constraints(
+              'move',
+              cartesianToMoveAngles(clampCartesianMove(nextCartesian), state),
+            ) as [number, number, number]
+          }
+        })
+        break
+
       case 'path':
       case 'point':
       case 'direct':
@@ -196,6 +245,32 @@ export function useProperties(store: string = 'main') {
     let fall = false
 
     if (ANIMS.value.length) {
+      if (key === 'move') {
+        const rawMoves = ANIMS.value.map((anim) => anim.move)
+        const allUndefined = rawMoves.every((move) => move === undefined)
+        if (allUndefined) return [undefined, true, 'Undefined', false]
+
+        const allDefined = rawMoves.every((move) => move !== undefined)
+        if (!allDefined) return [undefined, false, 'Mismatch', false]
+
+        const displayedMoves =
+          pMOVE.value === 'xyz' ? CMPDS.value.map((compiled) => compiled.move) : rawMoves
+        const displayedMove = displayedMoves[0]
+        const movesEqual = displayedMoves.every(
+          (move) =>
+            Array.isArray(displayedMove) &&
+            Array.isArray(move) &&
+            displayedMove.every((coordinate, index) => coordinate === move[index]),
+        )
+
+        return [
+          displayedMove,
+          movesEqual,
+          movesEqual ? stringGet(key, displayedMove, pMOVE.value) : 'Mismatch',
+          false,
+        ]
+      }
+
       const vals = animVals(key)
       val = vals[0]
 
@@ -206,7 +281,13 @@ export function useProperties(store: string = 'main') {
           fall = true
           equal = CMPDS.value.every((obj) => obj[key as AnimCompKeys] === val)
         } else equal = vals.every((val2) => val2 === val)
-      } else equal = vals.every((val2) => val2 === val)
+      } else {
+        equal = vals.every((val2) =>
+          Array.isArray(val) && Array.isArray(val2)
+            ? val.every((coordinate, index) => coordinate === val2[index])
+            : val2 === val,
+        )
+      }
 
       if (equal && val === undefined) {
         // Check the base of the props
@@ -216,15 +297,15 @@ export function useProperties(store: string = 'main') {
           // Check for a default value
           val = ROOT.value[key as RootKeys]
           if (val !== undefined) {
-            str = stringGet(key, val)
+            str = stringGet(key, val, pMOVE.value)
             fall = true
           }
         } else {
-          str = stringGet(key, val)
+          str = stringGet(key, val, pMOVE.value)
           fall = true
         }
       } else {
-        str = stringGet(key, val)
+        str = stringGet(key, val, pMOVE.value)
         if (key == 'point' || key == 'path' || key == 'direct') fall = true
       }
     }

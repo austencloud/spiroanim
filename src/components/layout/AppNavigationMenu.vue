@@ -222,6 +222,7 @@ const tracerLabel = computed(() => (TRACER.value ? 'Tracer: On' : 'Tracer: Off')
 const imageExportFeatures: ImageExportFeature[] = [
   'paths',
   'hands',
+  'travel',
   'arms',
   'visible',
   'nodes',

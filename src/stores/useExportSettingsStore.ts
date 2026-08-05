@@ -4,6 +4,7 @@ import { DEFAULT_EXPORT_FILE_NAME } from '@/utils/exportFileName'
 const defaultHiddenFeatures = (): Record<ImageExportFeature, boolean> => ({
   paths: false,
   hands: false,
+  travel: false,
   arms: false,
   visible: false,
   nodes: false,

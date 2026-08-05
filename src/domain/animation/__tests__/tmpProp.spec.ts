@@ -19,7 +19,7 @@ describe('tmpProp', () => {
       arc: 90,
       plane: 180,
       turns: -540,
-      move: [-2, 0, 0],
+      move: [180, 90, 2],
     })
   })
 })

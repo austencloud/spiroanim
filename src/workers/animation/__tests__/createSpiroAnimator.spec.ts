@@ -23,7 +23,7 @@ const createRoot = (arms: boolean, hands = false): RootData => ({
   props: [
     {
       anim: [
-        { beats: 1, scale: 10, move: [2, 0, 0] },
+        { beats: 1, scale: 10, move: [0, 90, 2] },
         { scale: 20, arc: 90 },
       ],
     },
@@ -102,6 +102,34 @@ describe('createSpiroAnimator Arms rendering', () => {
 
     const material = handLine.material as LineMaterial2
     expect(material.color.getHex()).toBe(COLSET[2]![2])
+  })
+
+  it('draws the animation center Travel path using the Hands color', () => {
+    const root = createRoot(false)
+    root.travel = true
+    root.props[0]!.anim[1]!.move = [0, 90, 3]
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+
+    createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    const travelLine = scene.getObjectsByProperty('isLine2', true)[0]
+    expect(travelLine).toBeInstanceOf(Line2)
+    if (!(travelLine instanceof Line2)) throw new Error('Expected a Travel Line2')
+    expect((travelLine.material as LineMaterial2).color.getHex()).toBe(COLSET[2]![2])
   })
 
   it('can hide and restore Arms for image export', () => {

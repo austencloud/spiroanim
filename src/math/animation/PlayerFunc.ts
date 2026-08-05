@@ -16,6 +16,7 @@ export const rootFinal = (root: RootData): RootDataFinal => {
     ...root,
     // V1 URLs predate Arms, so normalize their missing value to the requested root default.
     arms: root.arms ?? false,
+    travel: root.travel ?? false,
   }
 }
 
