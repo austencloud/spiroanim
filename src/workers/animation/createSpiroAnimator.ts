@@ -127,6 +127,7 @@ export const createSpiroAnimator = (vars: {
     RotX = new Vector3(), // Direction we're rotating
     Pos = new Vector3(), // Position of the Prop
     Pos2 = new Vector3(), // Second point used for linear animations
+    scaledPos2 = new Vector3(), // Scaled endpoint used for linear animations
     PosX = new Vector3(), // Direction we're animating for spherical animations
     rotationDiff = new Quaternion(),
     pointPositions = new Map(),
@@ -260,19 +261,21 @@ export const createSpiroAnimator = (vars: {
       if (PathType == TTYPE.SPHE) {
         // Spherical
 
-        modelGroup.position.copy(Pos).applyAxisAngle(PosX, perc * angleApply)
+        modelGroup.position
+          .copy(Pos)
+          .applyAxisAngle(PosX, perc * angleApply)
+          .multiplyScalar(scalePerc)
       } else if (PathType == TTYPE.LINE) {
         // Linear
 
-        modelGroup.position.set(
-          Pos.x + (Pos2.x - Pos.x) * perc,
-          Pos.y + (Pos2.y - Pos.y) * perc,
-          Pos.z + (Pos2.z - Pos.z) * perc,
-        )
+        modelGroup.position
+          .copy(Pos)
+          .multiplyScalar(scale1)
+          .lerp(scaledPos2.copy(Pos2).multiplyScalar(scale2), perc)
       }
 
-      // Apply Radius, Scale, and add Offset
-      modelGroup.position.multiplyScalar(RADIUS * scalePerc).add(offsetCalc)
+      // Apply Radius and add Offset (Scale is applied by the path-specific branch above)
+      modelGroup.position.multiplyScalar(RADIUS).add(offsetCalc)
 
       // Keep the arm connected to the moving animation center and the hand / prop origin.
       if (armPositionAttribute) {
@@ -480,7 +483,8 @@ export const createSpiroAnimator = (vars: {
         if (PathType == TTYPE.SPHE) posPoints = catmPoints(angleApply, stepPos, PosX)
         // Linear Path
         else {
-          const stepPos2 = Pos2.clone().multiplyScalar(RADIUS)
+          stepPos.multiplyScalar(scale1)
+          const stepPos2 = Pos2.clone().multiplyScalar(RADIUS * scale2)
           for (let j = 0; j < catmCount; j++)
             posPoints.push(stepPos.clone().lerp(stepPos2, j / catmCount))
         }
@@ -513,7 +517,7 @@ export const createSpiroAnimator = (vars: {
 
           // Position Transformations
           trans(perc)
-          pos.multiplyScalar(scalePerc)
+          if (PathType == TTYPE.SPHE) pos.multiplyScalar(scalePerc)
           rot.multiplyScalar(1 + depthPerc)
 
           // Add posPoints to rotPoints (creating a "helix" around the path)

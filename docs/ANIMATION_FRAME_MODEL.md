@@ -118,7 +118,7 @@ A displayed segment combines values from both endpoint frames.
 | Starting scale and depth       | `p1.scale`, `p1.depth`                              |
 | Transition type                | `p2.type`                                           |
 | Spherical position path        | Rotate `p1.pos` around `p2.posx` by `p2.arc`        |
-| Linear position path           | Interpolate `p1.pos` to `p2.pos`                    |
+| Linear position path           | Interpolate the scaled Cartesian endpoints          |
 | Rotation path                  | Rotate `p1.rot` around `p2.rotx`                    |
 | Rotation amount                | `p2.turns + p2.adjust`, plus `p2.arc` for Spherical |
 | Ending scale and depth         | `p2.scale`, `p2.depth`                              |
@@ -126,6 +126,10 @@ A displayed segment combines values from both endpoint frames.
 The same setup routine is used for playback and for constructing visible path/hand lines. A
 management operation must therefore preserve the incoming axes on the new `p2`, not just its final
 coordinates.
+
+For a Linear transition, the worker applies each frame's Scale to its endpoint before
+interpolating. Interpolating position and Scale separately and then multiplying them would produce
+a quadratic curve when both values change.
 
 ## Move offsets
 

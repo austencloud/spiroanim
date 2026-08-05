@@ -1,8 +1,8 @@
-import { Scene, type InterleavedBufferAttribute } from 'three'
+import { Group, Scene, Vector3, type InterleavedBufferAttribute } from 'three'
 import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { describe, expect, it } from 'vitest'
 
-import { COLSET } from '@/domain/animation/AnimStruct'
+import { COLSET, RADIUS, TTYPE } from '@/domain/animation/AnimStruct'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { createSpiroAnimator, type LineMaterial2 } from '@/workers/animation/createSpiroAnimator'
@@ -114,5 +114,49 @@ describe('createSpiroAnimator Arms rendering', () => {
 
     animator.setExportHidden(['arms'], false)
     expect(armLine.parent?.visible).toBe(true)
+  })
+})
+
+describe('createSpiroAnimator linear scaling', () => {
+  it('moves through the straight midpoint between scaled endpoints', () => {
+    const root = createRoot(false)
+    root.props[0]!.anim[0]!.move = [0, 0, 0]
+    root.props[0]!.anim[1]!.type = TTYPE.LINE
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const prop = compiled.props[0]!
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+    const modelGroup = scene.children.find(
+      (child): child is Group =>
+        child instanceof Group && child.children.some((item) => 'size' in item),
+    )
+    if (!modelGroup) throw new Error('Expected the animated model group')
+
+    animator.animate(0, 0, true)
+    animator.animate(500, 0, true)
+
+    const start = new Vector3()
+      .fromArray(prop.anim[0]!.pos)
+      .multiplyScalar((RADIUS * prop.anim[0]!.scale) / 10)
+    const end = new Vector3()
+      .fromArray(prop.anim[1]!.pos)
+      .multiplyScalar((RADIUS * prop.anim[1]!.scale) / 10)
+    const expectedMidpoint = start.lerp(end, 0.5)
+
+    expect(modelGroup.position.distanceTo(expectedMidpoint)).toBeCloseTo(0)
   })
 })
