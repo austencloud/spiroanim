@@ -17,14 +17,7 @@ import { videoExportFrameCount, videoExportFrameTimeMs } from '@/math/videoExpor
 
 import { WebGLRenderer, Scene, PerspectiveCamera, Raycaster, Vector2, Mesh } from 'three'
 import { Color } from 'three'
-import {
-  BufferTarget,
-  CanvasSource,
-  Mp4OutputFormat,
-  Output,
-  WebMOutputFormat,
-  type VideoCodec,
-} from 'mediabunny'
+import type { Output, VideoCodec } from 'mediabunny'
 
 import {
   Material,
@@ -404,6 +397,9 @@ register(
     let output: Output | undefined
 
     try {
+      const { BufferTarget, CanvasSource, Mp4OutputFormat, Output, WebMOutputFormat } =
+        await import('mediabunny')
+
       playing = false
       animating = false
       if (animationId) cancelAnimationFrame(animationId)

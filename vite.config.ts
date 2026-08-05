@@ -54,6 +54,25 @@ export function createViteConfig(isSsrBuild: boolean) {
       host: true,
       port: 8080,
     },
+    worker: {
+      format: 'es' as const,
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: 'three-worker',
+                test: /node_modules[\\/]three[\\/]/,
+              },
+              {
+                name: 'mediabunny-worker',
+                test: /node_modules[\\/]mediabunny[\\/]/,
+              },
+            ],
+          },
+        },
+      },
+    },
     plugins: [
       vue(),
       !isSsrBuild && vueDevTools(),
