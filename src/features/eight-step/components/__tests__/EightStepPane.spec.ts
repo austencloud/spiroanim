@@ -412,6 +412,48 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[data-cell-reference="2-AE"]').classes()).toEqual(
       expect.arrayContaining(['eight-step-cell--marked', 'eight-step-cell--selected']),
     )
+    expect(wrapper.get('[data-cell-reference="1-AE"]').classes()).not.toContain(
+      'eight-step-cell--marked',
+    )
+  })
+
+  it('aligns row headers and alternates paired top-header columns', async () => {
+    const wrapper = mount(EightStepPane)
+
+    await wrapper.get('[data-cell-reference="2-AE"]').trigger('click')
+    await wrapper.get('[data-role="eight-step-row-header"][aria-label="II"]').trigger('click')
+    expect(wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell')).toBe(
+      '2-II',
+    )
+
+    const sameHeader = wrapper.get(
+      '[data-role="eight-step-column-header"][aria-label="Same, columns 3 and 4"]',
+    )
+    await sameHeader.trigger('click')
+    expect(wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell')).toBe(
+      '3-II',
+    )
+    await sameHeader.trigger('click')
+    expect(wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell')).toBe(
+      '4-II',
+    )
+    await sameHeader.trigger('click')
+    expect(wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell')).toBe(
+      '3-II',
+    )
+  })
+
+  it('uses the left paired column and a random row when a top header starts selection', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    const wrapper = mount(EightStepPane)
+
+    await wrapper
+      .get('[data-role="eight-step-column-header"][aria-label="Quarter Aligned, columns 5 and 6"]')
+      .trigger('click')
+
+    expect(wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell')).toBe(
+      '5-EE',
+    )
   })
 
   it('swaps both prop color roles when Swap is enabled', async () => {

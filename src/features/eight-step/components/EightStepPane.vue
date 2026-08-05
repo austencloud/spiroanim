@@ -25,7 +25,7 @@
         <BaseIcon :path="mdiShuffleVariant" size="42%" />
       </button>
 
-      <div
+      <button
         v-for="group in columnGroups"
         :key="group.label"
         class="eight-step-column-header"
@@ -36,9 +36,10 @@
         :aria-label="`${group.label}, columns ${group.columns.join(' and ')}`"
         :aria-pressed="isColumnGroupHighlighted(group)"
         data-role="eight-step-column-header"
+        @click="selectColumnGroup(group)"
       >
         {{ group.label }}
-      </div>
+      </button>
 
       <BaseTooltip
         v-for="(row, rowIndex) in eightStepRows"
@@ -48,8 +49,9 @@
         :style="{ gridRow: rowIndex + 2 }"
       >
         <template #activator="{ props: activatorProps }">
-          <div
+          <button
             v-bind="activatorProps"
+            type="button"
             class="eight-step-row-header"
             :class="{
               'eight-step-header--accent': row === selectedCell?.row,
@@ -57,10 +59,11 @@
             :aria-label="row"
             :aria-pressed="row === selectedCell?.row"
             data-role="eight-step-row-header"
+            @click="selectRow(row)"
           >
             <span class="eight-step-row-header__first">{{ row[0] }}</span>
             <span class="eight-step-row-header__second">{{ row[1] }}</span>
-          </div>
+          </button>
         </template>
       </BaseTooltip>
 
@@ -78,7 +81,7 @@
             class="eight-step-cell"
             :class="{
               'eight-step-cell--highlighted': isCellHighlighted(cell),
-              'eight-step-cell--marked': shape === 'diamond' && isMarkedCell(cell),
+              'eight-step-cell--marked': isMarkedCellVisible(cell),
               'eight-step-cell--selected': cell.reference === selectedCell?.reference,
             }"
             :aria-label="`${getCellDescription(cell)}, cell ${cell.reference}`"
@@ -146,11 +149,7 @@
             </a>
           </li>
           <li>
-            <a
-              href="/docs/8-step/TeachingSheets.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href="/docs/8-step/TeachingSheets.pdf" target="_blank" rel="noopener noreferrer">
               HandpathsV2.pdf
             </a>
             <span>
@@ -345,6 +344,11 @@ const isCellHighlighted = (cell: EightStepPatternDefinition) =>
 
 const isMarkedCell = (cell: EightStepPatternDefinition) => markedCellReferences.has(cell.reference)
 
+const isMarkedCellVisible = (cell: EightStepPatternDefinition) =>
+  shape.value === 'diamond' &&
+  isMarkedCell(cell) &&
+  (!isCellHighlighted(cell) || cell.reference === selectedCell.value?.reference)
+
 const isColumnGroupHighlighted = (group: EightStepColumnGroup) =>
   selectedCell.value !== undefined &&
   group.columns.some((column) => column === selectedCell.value?.column)
@@ -383,6 +387,35 @@ const selectRandomCell = () => {
   const cell = cells[Math.floor(Math.random() * cells.length)]
   if (!cell) throw new Error('Cannot select a random Eight Step cell from an empty matrix')
   selectCell(cell)
+}
+
+const selectRandomCellFrom = (matchingCells: readonly EightStepCell[]) => {
+  const cell = matchingCells[Math.floor(Math.random() * matchingCells.length)]
+  if (!cell) throw new Error('Cannot select a random Eight Step cell from an empty line')
+  selectCell(cell)
+}
+
+const selectRow = (row: (typeof eightStepRows)[number]) => {
+  const column = selectedCell.value?.column
+  const cell =
+    column === undefined
+      ? undefined
+      : cells.find((item) => item.column === column && item.row === row)
+
+  if (cell) selectCell(cell)
+  else selectRandomCellFrom(cells.filter((item) => item.row === row))
+}
+
+const selectColumnGroup = (group: EightStepColumnGroup) => {
+  const currentColumn = selectedCell.value?.column
+  const currentIndex = currentColumn === undefined ? -1 : group.columns.indexOf(currentColumn)
+  const column = currentIndex === 0 ? group.columns[1] : group.columns[0]
+  const row = selectedCell.value?.row
+  const cell =
+    row === undefined ? undefined : cells.find((item) => item.column === column && item.row === row)
+
+  if (cell) selectCell(cell)
+  else selectRandomCellFrom(cells.filter((item) => item.column === column))
 }
 
 const resetPatternControls = async () => {

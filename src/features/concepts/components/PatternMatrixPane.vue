@@ -69,6 +69,7 @@
           :tooltip-disabled="isQtr"
           :reversed="reversePlane"
           :mirror-props="!isQtr"
+          @select="selectRow(rule.number)"
         />
       </div>
 
@@ -168,6 +169,7 @@
           :show-props="!isQtr"
           :tooltip-disabled="isQtr"
           :mirror-props="!isQtr"
+          @select="selectColumn(rule.number)"
         />
       </div>
     </div>
@@ -377,6 +379,34 @@ const selectRandomTile = () => {
   const tile = matrixTiles.value[Math.floor(Math.random() * matrixTiles.value.length)]
   if (tile === undefined) throw new Error('Cannot select a random VTG cell from an empty matrix')
   selectTile(tile)
+}
+
+const selectRandomTileFrom = (tiles: readonly VtgMatrixTile[]) => {
+  const tile = tiles[Math.floor(Math.random() * tiles.length)]
+  if (tile === undefined) throw new Error('Cannot select a random VTG cell from an empty line')
+  selectTile(tile)
+}
+
+const selectRow = (row: VtgRuleNumber) => {
+  const column = selectedCell.value?.column
+  const tile =
+    column === undefined
+      ? undefined
+      : matrixTiles.value.find((candidate) => candidate.column === column && candidate.row === row)
+
+  if (tile) selectTile(tile)
+  else selectRandomTileFrom(matrixTiles.value.filter((candidate) => candidate.row === row))
+}
+
+const selectColumn = (column: VtgRuleNumber) => {
+  const row = selectedCell.value?.row
+  const tile =
+    row === undefined
+      ? undefined
+      : matrixTiles.value.find((candidate) => candidate.column === column && candidate.row === row)
+
+  if (tile) selectTile(tile)
+  else selectRandomTileFrom(matrixTiles.value.filter((candidate) => candidate.column === column))
 }
 
 const toggleSpinDirection = (tile: VtgMatrixTile) => {

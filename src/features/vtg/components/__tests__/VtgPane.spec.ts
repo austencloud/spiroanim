@@ -283,6 +283,25 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '5-1', speedRatio: '1:3' }]])
   })
 
+  it('aligns header selections with the opposing selected header', async () => {
+    const wrapper = mount(VtgPane)
+
+    await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+    await wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 4"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-4')
+
+    await wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 2"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('2-4')
+  })
+
+  it('selects a random cell along a clicked header when no cell is selected', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    const wrapper = mount(QtrPane)
+
+    await wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 4"]').trigger('click')
+    expect(wrapper.get('[data-role="qtr-pane"]').attributes('data-selected-cell')).toBe('4-4')
+  })
+
   it('includes the selected speed ratio in each pattern request', async () => {
     const wrapper = mount(VtgPane)
 
@@ -759,14 +778,14 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-1', speedRatio: '1:3' }]])
   })
 
-  it('keeps the left column and bottom row inert for now', async () => {
+  it('aligns a second header click with the cell selected by the first header', async () => {
     const wrapper = mount(VtgPane)
     const pane = wrapper.get('[data-role="vtg-pane"]')
 
     await wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 6"]').trigger('click')
     await wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').trigger('click')
 
-    expect(pane.attributes('data-selected-cell')).toBeUndefined()
+    expect(pane.attributes('data-selected-cell')).toBe('1-6')
   })
 
   it('clusters TOG SPLIT props before its moved divider', () => {

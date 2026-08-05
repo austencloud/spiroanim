@@ -15,6 +15,7 @@
         :aria-label="`${props.labels.join(' ')} rule ${props.number}`"
         :aria-pressed="props.accent"
         data-role="vtg-rule-card"
+        @click="emit('select')"
       >
         <span class="vtg-rule-card__title">
           <span v-for="(label, index) in visibleLabels" :key="index">{{ label }}</span>
@@ -103,6 +104,10 @@ const props = withDefaults(
     mirrorProps: true,
   },
 )
+
+const emit = defineEmits<{
+  select: []
+}>()
 
 const visibleLabels = computed(() => props.displayLabels ?? props.labels)
 
