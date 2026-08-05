@@ -486,7 +486,7 @@ export const createSpiroAnimator = (vars: {
           stepPos.multiplyScalar(scale1)
           const stepPos2 = Pos2.clone().multiplyScalar(RADIUS * scale2)
           for (let j = 0; j < catmCount; j++)
-            posPoints.push(stepPos.clone().lerp(stepPos2, j / catmCount))
+            posPoints.push(stepPos.clone().lerp(stepPos2, j / (catmCount - 1)))
         }
 
         // Rotation Path
@@ -500,7 +500,8 @@ export const createSpiroAnimator = (vars: {
 
         // Update positions to include scale, depth, and adjustment
         for (let j = 0; j < posPoints.length; j++) {
-          const perc = j / posPoints.length,
+          // Include both endpoints so consecutive path segments share the same seam position.
+          const perc = j / (posPoints.length - 1),
             pos = posPoints[j]!,
             rot = rotPoints[j]!
 

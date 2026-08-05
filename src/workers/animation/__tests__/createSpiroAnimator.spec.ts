@@ -159,4 +159,47 @@ describe('createSpiroAnimator linear scaling', () => {
 
     expect(modelGroup.position.distanceTo(expectedMidpoint)).toBeCloseTo(0)
   })
+
+  it('connects consecutive head paths at their shared endpoint', () => {
+    const root = createRoot(false)
+    root.paths = true
+    root.props[0]!.anim = [
+      { beats: 1, scale: 10 },
+      { type: TTYPE.LINE, scale: 20, arc: 90 },
+      { type: TTYPE.LINE, scale: 15, arc: 90 },
+    ]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    const pathLine = scene.getObjectsByProperty('isLine2', true)[0]
+    if (!(pathLine instanceof Line2)) throw new Error('Expected a Paths Line2')
+
+    const starts = pathLine.geometry.getAttribute('instanceStart') as InterleavedBufferAttribute
+    const ends = pathLine.geometry.getAttribute('instanceEnd') as InterleavedBufferAttribute
+    const seamIndex = (starts.count - 1) / 2
+    const seamStart = new Vector3(
+      starts.getX(seamIndex),
+      starts.getY(seamIndex),
+      starts.getZ(seamIndex),
+    )
+    const seamEnd = new Vector3(ends.getX(seamIndex), ends.getY(seamIndex), ends.getZ(seamIndex))
+
+    expect(Number.isInteger(seamIndex)).toBe(true)
+    expect(seamStart.distanceTo(seamEnd)).toBeCloseTo(0)
+  })
 })
