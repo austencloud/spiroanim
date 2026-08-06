@@ -7,7 +7,7 @@ import { migrateLegacyMotion } from '@/services/query/migrateLegacyMotion'
 
 import type { BaseQS, VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData, ConfigItem, ConfigThird } from '@/services/query/types/SpiroAnimQSTypes'
-import type { AllVars, RootData, RootDataFinal, PropData } from '@/types/AnimTypes'
+import type { AllVars, RootData, RootDataFinal, PropData, MotionData } from '@/types/AnimTypes'
 import type { LocationQuery } from 'vue-router'
 
 /**
@@ -20,8 +20,13 @@ export async function useSpiroAnimQS(
   VER: number,
 ) {
   // Dynamically import version-specific config creation methods
-  const { createRootConfig, createPropConfig, createMotionConfig } =
-    await loadSpiroAnimQSVersion(VER)
+  const {
+    createRootConfig,
+    createPropConfig,
+    createMotionConfig,
+    encodeMotionFrame,
+    decodeMotionFrame,
+  } = await loadSpiroAnimQSVersion(VER)
 
   /**
    * Decodes a query string, handling version mismatches
@@ -94,7 +99,11 @@ export async function useSpiroAnimQS(
       if (prop !== undefined) {
         query[`p${i}`] = encodeVar(propConfig, prop)
         if (motionConfig && (prop.motion?.length ?? 0) > 0) {
-          query[`m${i}`] = encodeVar(motionConfig, { anim: prop.motion ?? [] })
+          query[`m${i}`] = encodeVar(motionConfig, {
+            anim: (prop.motion ?? []).map((frame) =>
+              encodeMotionFrame ? encodeMotionFrame(frame) : frame,
+            ),
+          })
         }
       }
     }
@@ -167,7 +176,10 @@ export async function useSpiroAnimQS(
       const motion = route[`m${i - 1}`] as string | undefined
       if (motionConfig && motion) {
         const decoded = decodeVar(motionConfig, motion)
-        prop.motion = Array.isArray(decoded.anim) ? (decoded.anim as PropData['motion']) : []
+        const frames: MotionData[] = Array.isArray(decoded.anim)
+          ? (decoded.anim as MotionData[])
+          : []
+        prop.motion = decodeMotionFrame ? frames.map(decodeMotionFrame) : frames
       }
       data.props.push(prop)
     }

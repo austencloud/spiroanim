@@ -1,4 +1,5 @@
 import type { MotionData, RootDataFinal } from '@/types/AnimTypes'
+import { cartesianToMotionAngles, createMotionDirectionState } from '@/math/animation/MotionFunc'
 
 const hasLegacyMove = (move: readonly number[] | undefined): move is [number, number, number] =>
   move !== undefined
@@ -36,10 +37,16 @@ export function migrateLegacyMotion(root: RootDataFinal): RootDataFinal {
       if (index > 0) retained.add(index - 1)
     }
     const indices = [...retained].sort((first, second) => first - second)
+    const directionState = createMotionDirectionState()
     const motion: MotionData[] = indices.map((frameIndex, outputIndex) => {
       const frame: MotionData = {}
       const move = frames[frameIndex]?.move
-      if (move !== undefined) frame.move = [...move]
+      if (move !== undefined) {
+        const [plane, arc, distance] = cartesianToMotionAngles(move, directionState)
+        frame.plane = plane
+        frame.arc = arc
+        frame.distance = distance
+      }
 
       const nextIndex = indices[outputIndex + 1]
       if (nextIndex !== undefined) {

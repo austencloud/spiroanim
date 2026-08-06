@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useProperties } from '@/features/editor/composables/useProperties'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { cartesianToMotionAngles, createMotionDirectionState } from '@/math/animation/MotionFunc'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 const activatePersistedPinia = () => {
@@ -72,7 +73,7 @@ describe('usePropertiesStore', () => {
       props: [
         {
           anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }],
-          motion: [{ beats: 1, move: [2, 0, 0] }],
+          motion: [{ beats: 1, plane: 0, arc: 90, distance: 2 }],
         },
       ],
     }
@@ -83,12 +84,79 @@ describe('usePropertiesStore', () => {
     await nextTick()
 
     expect(player.ETIMES).toEqual([0, 2000])
-    expect(properties.MOTIONS).toEqual([{ beats: 1, move: [2, 0, 0] }])
+    expect(properties.MOTIONS).toEqual([{ beats: 1, plane: 0, arc: 90, distance: 2 }])
 
     player.PLAYING = false
-    useProperties('editor-motion').motionSet('move', [4, 0, 0])
-    expect(runtime.ROOT.value.props[0]!.motion[0]!.move).toEqual([4, 0, 0])
+    useProperties('editor-motion').motionSet('movexyz', [4, 0, 0])
+    expect(runtime.ROOT.value.props[0]!.motion[0]).toEqual({
+      beats: 1,
+      plane: 0,
+      arc: 90,
+      distance: 4,
+    })
     expect(runtime.ROOT.value.props[0]!.anim).toEqual([{ beats: 1 }, { beats: 1 }, { beats: 1 }])
+  })
+
+  it('displays an unauthored Move as the inherited zero vector', async () => {
+    const storeId = 'editor-motion-zero'
+    const player = usePlayerStore(storeId)
+    player.raw().ROOT.value = {
+      ...player.raw().ROOT.value,
+      props: [{ anim: [{}], motion: [{}] }],
+    }
+    await nextTick()
+
+    const properties = usePropertiesStore(storeId)
+    properties.pFRAMES = 'motion'
+    await nextTick()
+
+    expect(useProperties(storeId).motionGet('move')).toEqual([
+      [0, 0, 0],
+      true,
+      '0.0, 0.0, 0.0',
+      true,
+    ])
+  })
+
+  it('preserves the next authored Cartesian movement across empty downstream frames', async () => {
+    const storeId = 'editor-motion-preserve'
+    const player = usePlayerStore(storeId)
+    const runtime = player.raw()
+    const directionState = createMotionDirectionState()
+    const first = cartesianToMotionAngles([2, 0, 0], directionState)
+    const next = cartesianToMotionAngles([0, 3, 0], directionState)
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      bpm: 60,
+      props: [
+        {
+          anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }],
+          motion: [
+            { beats: 1, plane: first[0], arc: first[1], distance: first[2] },
+            { beats: 1 },
+            { plane: next[0], arc: next[1], distance: next[2] },
+          ],
+        },
+      ],
+    }
+    await nextTick()
+
+    const properties = usePropertiesStore(storeId)
+    properties.pFRAMES = 'motion'
+    properties.pMOVENEXT = true
+    player.PLAYING = false
+    await nextTick()
+
+    const nextBefore = [...runtime.COMPILED.value.props[0]!.motion[2]!.move]
+    useProperties(storeId).motionSet('movexyzpreserve', [0, 0, -4])
+    await nextTick()
+
+    const compiled = runtime.COMPILED.value.props[0]!.motion
+    expect(compiled[0]!.move).toEqual([0, 0, -4])
+    expect(compiled[1]).toMatchObject({ distance: 0, active: false })
+    compiled[2]!.move.forEach((coordinate, index) =>
+      expect(coordinate).toBeCloseTo(nextBefore[index]!, 6),
+    )
   })
 
   it('hydrates only the documented editor preferences', () => {
@@ -100,6 +168,7 @@ describe('usePropertiesStore', () => {
         pDESKTOP: { root: [] },
         pFRAMES: 'motion',
         pSELECTED: { 4: true },
+        pMOVENEXT: true,
       }),
     )
     activatePersistedPinia()
@@ -113,5 +182,6 @@ describe('usePropertiesStore', () => {
     expect(store.pDESKTOP.settings).toEqual(['settings'])
     expect(store.pSELECTED).toEqual({ 0: true })
     expect(store.pFRAMES).toBe('animation')
+    expect(store.pMOVENEXT).toBe(true)
   })
 })

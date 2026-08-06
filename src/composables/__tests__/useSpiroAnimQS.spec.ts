@@ -21,6 +21,7 @@ const createRoot = (): RootDataFinal => ({
   anchors: false,
   nodes: true,
   paths: true,
+  travel: false,
   hands: true,
   arms: false,
   visible: true,
@@ -105,15 +106,21 @@ describe('useSpiroAnimQS', () => {
     const query = await useSpiroAnimQS(VDEF_V4, useBaseQS(VDEF_V4, { charset: CHARSET_V4 }), 4)
     const root = createRoot()
     delete root.props[0]!.anim[0]!.move
-    root.props[0]!.motion = [{ beats: 2 }, { move: [2, 0, 0] }]
+    root.props[0]!.motion = [
+      { beats: 2 },
+      { plane: 0, arc: 90, distance: 2, shape: 1, axis: -45, amount: 75 },
+    ]
 
     const encoded = query.encodeQS(root, false)
-    expect(encoded.m0).toBeDefined()
+    expect(encoded.m0).toBe('.__1.Z2_mxqVq7')
     expect(encoded.v).toBe('4')
 
     const decoded = query.decodeQS(encoded)
     expect(decoded.props[0]!.anim[0]!.move).toBeUndefined()
-    expect(decoded.props[0]!.motion).toEqual([{ beats: 2 }, { move: [2, 0, 0] }])
+    expect(decoded.props[0]!.motion).toEqual([
+      { beats: 2 },
+      { plane: 0, arc: 90, distance: 2, shape: 1, axis: -45, amount: 75 },
+    ])
     expect(query.encodeQS(decoded, false)).toEqual(encoded)
 
     root.props[0]!.motion = []
@@ -133,8 +140,9 @@ describe('useSpiroAnimQS', () => {
       v: '3',
     })
 
+    expect(migrated.travel).toBe(false)
     expect(migrated.props[0]!.anim[0]!.move).toBeUndefined()
-    expect(migrated.props[0]!.motion).toEqual([{ move: [2, 0, 0] }])
+    expect(migrated.props[0]!.motion).toEqual([{ plane: 0, arc: 90, distance: 2 }])
   })
 
   it('migrates the existing multi-prop MOVE query into optional m values', async () => {
@@ -153,14 +161,17 @@ describe('useSpiroAnimQS', () => {
     }
 
     const encoded = query.encodeQS(migrated, false)
-    expect(encoded).toEqual({
-      r: 'GGw8Eje11',
+    expect(encoded).toMatchObject({
+      r: 'GGw8Eje11Y',
       p0: 'N__.bjxuYHj_r_WQ.blExM.._____Hj.....',
-      m0: '.0.0uuI.0uuI.0uug._uug',
       p1: 'S__.bjxuYBH_r_WQ.blEpk.._WQ__Hj.....',
-      m1: '.0.0uuI.0uuI.0uug._uug',
       v: '4',
     })
+    expect(encoded.m0).toBeDefined()
+    expect(encoded.m1).toBeDefined()
+    expect(query.decodeQS(encoded).props.map((prop) => prop.motion)).toEqual(
+      migrated.props.map((prop) => prop.motion),
+    )
   })
 
   it('rejects unavailable versions instead of decoding them with the wrong codec', async () => {

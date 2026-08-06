@@ -1,4 +1,4 @@
-import type { AllVars } from '@/types/AnimTypes'
+import type { AllVars, MotionData } from '@/types/AnimTypes'
 import type { VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 
@@ -8,6 +8,8 @@ export interface SpiroAnimQSVersion {
   createRootConfig(): ConfigData<AllVars>
   createPropConfig(): ConfigData<AllVars>
   createMotionConfig?(): ConfigData<AllVars>
+  encodeMotionFrame?(frame: MotionData): MotionData
+  decodeMotionFrame?(frame: MotionData): MotionData
 }
 
 export class UnsupportedSpiroAnimQSVersionError extends RangeError {

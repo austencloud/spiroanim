@@ -6,6 +6,8 @@ import {
   PTYPE,
   TTYPE,
   TTEXT,
+  MOTION_SHAPES,
+  MOTION_SHAPE,
   COLORS,
   PROPSR,
   PTEXT,
@@ -24,6 +26,9 @@ export type PointTypes = (typeof PTYPE)[keyof typeof PTYPE] // Type of Points (u
 
 export type TypeInd = (typeof TTYPE)[keyof typeof TTYPE] // Transition Type Indices
 export type TypeStr = (typeof TTEXT)[number] // Transition Type Strings
+
+export type MotionShapeInd = (typeof MOTION_SHAPE)[keyof typeof MOTION_SHAPE]
+export type MotionShapeStr = (typeof MOTION_SHAPES)[MotionShapeInd]
 
 export type ColorInd = IndicesOf<typeof COLORS> // Color Indices
 export type ColorStr = (typeof COLORS)[number] // Color Strings
@@ -55,7 +60,12 @@ export interface AnimData {
 
 export interface MotionData {
   beats?: number
-  move?: [number, number, number]
+  arc?: number
+  plane?: number
+  distance?: number
+  shape?: MotionShapeInd
+  axis?: number
+  amount?: number
 }
 
 // Prop Data root.props[ ... ]
@@ -64,6 +74,7 @@ export interface PropData {
   prop?: PropInd
   guides?: boolean
   paths?: boolean
+  travel?: boolean
   hands?: boolean
   arms?: boolean
   visible?: boolean
@@ -82,6 +93,7 @@ export interface RootData {
   smooth: boolean
   guides: boolean
   paths: boolean
+  travel?: boolean
   hands?: boolean
   arms: boolean
   visible?: boolean
@@ -121,11 +133,12 @@ export interface PropDataFinal extends Omit<PropData, 'motion'> {
 }
 
 // Additional values for the final version
-export interface RootDataFinal extends Omit<RootData, 'props'> {
+export interface RootDataFinal extends Omit<RootData, 'props' | 'travel'> {
   speed: number
   type: TypeInd
   turns: number
   depth: number
+  travel: boolean
   props: PropDataFinal[]
 }
 
@@ -148,7 +161,17 @@ export interface AnimDataCompiled {
 
 export interface MotionDataCompiled {
   beats: number
+  arc: number
+  plane: number
+  distance: number
+  shape: MotionShapeInd
+  axis: number
+  amount: number
+  active: boolean
   move: [number, number, number]
+  direction: [number, number, number]
+  curve: [number, number, number]
+  delta: [number, number, number]
   offset: [number, number, number]
 }
 
@@ -185,6 +208,7 @@ export type AllVars =
   | keyof Omit<RootData, 'props'>
   | keyof Omit<PropData, 'anim' | 'motion'>
   | keyof AnimData
+  | keyof MotionData
 export type VarTypes = number | [number, number, number] | boolean
 
 export type ValRetType = [VarTypes | undefined, boolean, string, boolean]

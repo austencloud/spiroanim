@@ -31,6 +31,7 @@ import {
 } from '@/domain/animation/AnimStruct'
 
 import { InitialPoint, InitialOrtho } from '@/math/animation/OrthogonalFunc'
+import { motionPathOffset } from '@/math/animation/MotionFunc'
 
 import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
@@ -111,6 +112,7 @@ export const createSpiroAnimator = (vars: {
     active = data.active ?? false, // If selected in the editor
     guides = data.guides ?? false,
     paths = data.paths ?? true,
+    travel = data.travel ?? false,
     hands = data.hands ?? true,
     arms = data.arms ?? false,
     visible = data.visible ?? true,
@@ -121,6 +123,7 @@ export const createSpiroAnimator = (vars: {
     anchorsGroup: Group = new Group(),
     nodesGroup: Group = new Group(),
     pathsGroup: Group = new Group(),
+    travelGroup: Group = new Group(),
     handsGroup: Group = new Group(),
     armsGroup: Group = new Group(),
     motionGroup: Group = new Group(),
@@ -138,7 +141,7 @@ export const createSpiroAnimator = (vars: {
     posLines: Line2[] = [],
     rotLines: Line2[] = [],
     motionStart = new Vector3(),
-    motionEnd = new Vector3(),
+    motionPathDelta = new Vector3(),
     pathMotionOffset = new Vector3(),
     motionTimes = FRAMESTARTS(motion, bpm),
     animationTimes = FRAMESTARTS(anim, bpm)
@@ -320,18 +323,25 @@ export const createSpiroAnimator = (vars: {
       const current = motion[motionIndex]!
       const next = motion[motionIndex + 1]
       motionStart.fromArray(current.offset)
-      if (!next) motionEnd.copy(motionStart)
-      else motionEnd.fromArray(next.offset)
 
       const start = motionTimes[motionIndex] ?? 0
       const end = motionTimes[motionIndex + 1] ?? start
       const percentage =
         end > start ? Math.max(0, Math.min((milliseconds - start) / (end - start), 1)) : 0
-      return target
-        .copy(motionStart)
-        .lerp(motionEnd, percentage)
-        .divideScalar(10)
-        .multiplyScalar(RADIUS * multi)
+      target.copy(motionStart)
+      if (next)
+        target.add(
+          motionPathOffset(
+            next.direction,
+            next.curve,
+            next.distance,
+            next.shape,
+            next.amount,
+            percentage,
+            motionPathDelta,
+          ),
+        )
+      return target.divideScalar(10).multiplyScalar(RADIUS * multi)
     },
     applyMotion = (milliseconds: number) => {
       motionOffsetAt(milliseconds, motionGroup.position)
@@ -442,6 +452,45 @@ export const createSpiroAnimator = (vars: {
     armLine.frustumCulled = false
     armPositionAttribute = armGeometry.getAttribute('instanceStart') as InterleavedBufferAttribute
     armsGroup.add(armLine)
+  }
+
+  if (travel && motion.length > 1) {
+    const travelPoints: Vector3[] = [
+      new Vector3()
+        .fromArray(motion[0]!.offset)
+        .divideScalar(10)
+        .multiplyScalar(RADIUS * multi),
+    ]
+    const travelOffset = new Vector3()
+    const travelDelta = new Vector3()
+    const samplesPerFrame = 64
+
+    for (let frameIndex = 0; frameIndex < motion.length - 1; frameIndex++) {
+      const current = motion[frameIndex]!
+      const next = motion[frameIndex + 1]!
+      travelOffset.fromArray(current.offset)
+
+      for (let sample = 1; sample <= samplesPerFrame; sample++) {
+        motionPathOffset(
+          next.direction,
+          next.curve,
+          next.distance,
+          next.shape,
+          next.amount,
+          sample / samplesPerFrame,
+          travelDelta,
+        )
+        travelPoints.push(
+          travelOffset
+            .clone()
+            .add(travelDelta)
+            .divideScalar(10)
+            .multiplyScalar(RADIUS * multi),
+        )
+      }
+    }
+
+    travelGroup.add(createLine2(travelPoints, COLSET[color]![2], rsize * girth * multi))
   }
 
   if (click == CMODES.points) {
@@ -624,7 +673,20 @@ export const createSpiroAnimator = (vars: {
       const finalPath = finalPosition
         .clone()
         .add(finalRotation.multiplyScalar(1 + lastAnimation.depth / 10))
-      const continuationTimes = [animationEnd, ...motionTimes.filter((time) => time > animationEnd)]
+      const continuationTimes = [animationEnd]
+      const samplesPerMotionFrame = 32
+
+      for (let motionIndex = 0; motionIndex < motionTimes.length - 1; motionIndex++) {
+        const segmentStart = motionTimes[motionIndex]!
+        const segmentEnd = motionTimes[motionIndex + 1]!
+        const visibleStart = Math.max(animationEnd, segmentStart)
+        if (segmentEnd <= visibleStart) continue
+
+        for (let sample = 1; sample <= samplesPerMotionFrame; sample++)
+          continuationTimes.push(
+            visibleStart + ((segmentEnd - visibleStart) * sample) / samplesPerMotionFrame,
+          )
+      }
 
       for (const time of continuationTimes) {
         motionOffsetAt(time, pathMotionOffset)
@@ -680,10 +742,12 @@ export const createSpiroAnimator = (vars: {
   scene.add(motionGroup)
   scene.add(nodesGroup)
   scene.add(pathsGroup)
+  scene.add(travelGroup)
   scene.add(handsGroup)
 
   const exportGroups: Record<ImageExportFeature, Group> = {
     paths: pathsGroup,
+    travel: travelGroup,
     hands: handsGroup,
     arms: armsGroup,
     visible: modelGroup,

@@ -19,6 +19,7 @@ export const VDEF = {
   color: [0, COLORS.length - 1, 4], // 14
   guides: [0, 1, 2, Boolean], // 1
   paths: [0, 1, 2, Boolean], // 1
+  travel: [0, 1, 2, Boolean], // Reserved for QS v4 Motion rendering
   hands: [0, 1, 2, Boolean], // 1
   // Defined for shared property constraints, but intentionally absent from the immutable v1 layout.
   arms: [0, 1, 2, Boolean], // 1
@@ -35,6 +36,8 @@ export const VDEF = {
   plane: [-180, 180, 9], //
   axis: [-180, 180, 9], //
   move: [-30, 30, 6], // 62 - Offset is X/Y/Z values, so uses 18 bits
+  shape: [0, 2, 2], // Reserved for QS v4 Motion paths
+  amount: [0, 100, 7], // Reserved for QS v4 Motion paths
   aspectx: [0, 32, 6], //
   aspecty: [0, 32, 6], //
   distance: [4, 66, 6], //

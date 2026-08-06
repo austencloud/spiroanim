@@ -1,6 +1,7 @@
 export type ImageExportFileType = 'image/png' | 'image/jpeg' | 'image/webp'
 export type ImageExportFeature =
   | 'paths'
+  | 'travel'
   | 'hands'
   | 'arms'
   | 'visible'

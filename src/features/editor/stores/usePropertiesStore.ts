@@ -64,6 +64,7 @@ export const usePropertiesStore = (id: string) => {
       const pFRAMES = ref<FrameSet>('animation')
       const pSELECTED = ref<Record<number, boolean>>({ 0: true })
       const pRADIO = ref(-1)
+      const pMOVENEXT = ref(false)
 
       // Default expanded state "Desktop Mode"
       const pDESKTOP = ref<Record<string, string[]>>({
@@ -171,6 +172,7 @@ export const usePropertiesStore = (id: string) => {
         pFRAMES,
         pSELECTED,
         pRADIO,
+        pMOVENEXT,
 
         pINPUT: ref(''),
         pEXPANDED,
@@ -191,7 +193,7 @@ export const usePropertiesStore = (id: string) => {
     },
     {
       persist: {
-        pick: [/*'pMOBILE',*/ 'pDESKTOP', 'pBOUND', 'pMULTI'],
+        pick: [/*'pMOBILE',*/ 'pDESKTOP', 'pBOUND', 'pMULTI', 'pMOVENEXT'],
       },
     },
   )()

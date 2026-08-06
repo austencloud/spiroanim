@@ -1,9 +1,16 @@
 // src\func\AnimFunc.ts
 
 import { Vector3, MathUtils } from 'three'
-import { TTYPE, RADIUS, PPOS, PROPCP } from '@/domain/animation/AnimStruct'
+import { MOTION_SHAPE, TTYPE, RADIUS, PPOS, PROPCP } from '@/domain/animation/AnimStruct'
 
 import { orthoNext, InitialPoint, InitialOrtho } from './OrthogonalFunc'
+import {
+  DEFAULT_MOTION_AMOUNT,
+  createMotionDirectionState,
+  motionAnglesToCartesian,
+  motionCurveDirection,
+  motionPathOffset,
+} from './MotionFunc'
 
 import type {
   RootDataFinal,
@@ -12,6 +19,7 @@ import type {
   PropDataCompiled,
   AnimDataCompiled,
   MotionDataCompiled,
+  MotionShapeInd,
   PointInd,
 } from '@/types/AnimTypes'
 
@@ -62,6 +70,9 @@ const copyRootValue = (prop: PropDataFinal, root: RootDataFinal, key: (typeof PR
       break
     case 'paths':
       prop.paths = root.paths
+      break
+    case 'travel':
+      prop.travel = root.travel
       break
     case 'hands':
       prop.hands = root.hands
@@ -178,14 +189,55 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
   }
 
   let motionBeats = 1
-  const motionOffset: [number, number, number] = [0, 0, 0]
+  let motionShape: MotionShapeInd = MOTION_SHAPE.LINE
+  let motionAmount = DEFAULT_MOTION_AMOUNT
+  const motionState = createMotionDirectionState()
+  const motionOffset = new Vector3()
+  const motionDelta = new Vector3()
   for (const motion of prop.motion ?? []) {
     motionBeats = motion.beats ?? motionBeats
-    const move = motion.move ?? ([0, 0, 0] as [number, number, number])
-    motionOffset[0] += move[0]
-    motionOffset[1] += move[1]
-    motionOffset[2] += move[2]
-    motions.push({ beats: motionBeats, move, offset: [...motionOffset] })
+    motionShape = motion.shape ?? motionShape
+    motionAmount = motion.amount ?? motionAmount
+
+    const arc = motion.arc ?? 0
+    const plane = motion.plane ?? 0
+    const distance = motion.distance ?? 0
+    const axis = motion.axis ?? 0
+    const active =
+      motion.arc !== undefined || motion.plane !== undefined || motion.distance !== undefined
+
+    const move = active
+      ? motionAnglesToCartesian([plane, arc, distance], motionState)
+      : ([0, 0, 0] as [number, number, number])
+    const direction = cleanVector(motionState.direction.toArray())
+    const curve = cleanVector(motionCurveDirection(motionState, axis))
+
+    motionPathOffset(
+      direction,
+      curve,
+      distance,
+      motionShape,
+      motionAmount,
+      active ? 1 : 0,
+      motionDelta,
+    )
+    motionOffset.add(motionDelta)
+
+    motions.push({
+      beats: motionBeats,
+      arc,
+      plane,
+      distance,
+      shape: motionShape,
+      axis,
+      amount: motionAmount,
+      active,
+      move,
+      direction,
+      curve,
+      delta: motionDelta.toArray(),
+      offset: motionOffset.toArray(),
+    })
   }
 
   return {
@@ -194,6 +246,13 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     motion: motions,
   }
 }
+
+const cleanVector = (vector: [number, number, number]): [number, number, number] =>
+  vector.map((coordinate) => (Math.abs(coordinate) < 1e-12 ? 0 : coordinate)) as [
+    number,
+    number,
+    number,
+  ]
 
 // Testing a theory...
 /*

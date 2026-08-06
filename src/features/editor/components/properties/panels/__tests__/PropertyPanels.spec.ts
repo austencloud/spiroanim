@@ -48,14 +48,24 @@ describe('editor property panel organization', () => {
     ])
   })
 
-  it('keeps Beats and Move in the independent Motion panel', () => {
-    expect(propertyNames(MotionPanel, 'motion-panel-order')).toEqual(['beats', 'move'])
+  it('keeps the independent Motion controls in their intended order', () => {
+    expect(propertyNames(MotionPanel, 'motion-panel-order')).toEqual([
+      'beats',
+      'move',
+      'arc',
+      'plane',
+      'distance',
+      'shape',
+      'axis',
+      'amount',
+    ])
   })
 
   it('moves global numeric controls from Root into Settings', () => {
     expect(propertyNames(RootPanel, 'root-panel-order')).toEqual([
       'paths',
       'hands',
+      'travel',
       'arms',
       'visible',
       'nodes',

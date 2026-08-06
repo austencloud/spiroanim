@@ -176,10 +176,12 @@ on('data', (compiled) => {
   if (timeline) {
     // Never display full paths
     compiled.paths = false
+    compiled.travel = false
     compiled.hands = false
     compiled.visible = true
     for (const prop of compiled.props) {
       prop.paths = false
+      prop.travel = false
       prop.hands = false
       prop.visible = true
       // If user is clicking an item, we don't want the points blown up

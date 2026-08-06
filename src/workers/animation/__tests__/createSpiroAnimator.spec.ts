@@ -2,11 +2,25 @@ import { Group, Scene, Vector3, type InterleavedBufferAttribute } from 'three'
 import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { describe, expect, it } from 'vitest'
 
-import { COLSET, RADIUS, TTYPE } from '@/domain/animation/AnimStruct'
+import { COLSET, MOTION_SHAPE, RADIUS, TTYPE } from '@/domain/animation/AnimStruct'
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { cartesianToMotionAngles, createMotionDirectionState } from '@/math/animation/MotionFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { createSpiroAnimator, type LineMaterial2 } from '@/workers/animation/createSpiroAnimator'
-import type { RootData } from '@/types/AnimTypes'
+import type { MotionData, RootData } from '@/types/AnimTypes'
+
+type CartesianMotionFrame = Omit<MotionData, 'arc' | 'plane' | 'distance'> & {
+  move?: [number, number, number]
+}
+
+const angularMotion = (frames: CartesianMotionFrame[]): MotionData[] => {
+  const state = createMotionDirectionState()
+  return frames.map(({ move, ...frame }) => {
+    if (move === undefined) return frame
+    const [plane, arc, distance] = cartesianToMotionAngles(move, state)
+    return { ...frame, plane, arc, distance }
+  })
+}
 
 const getLineByColor = (scene: Scene, color: number): Line2 | undefined =>
   scene
@@ -58,7 +72,7 @@ const createRoot = (arms: boolean, hands = false): RootData => ({
   anchors: false,
   props: [
     {
-      motion: [{ beats: 1, move: [2, 0, 0] }, {}],
+      motion: angularMotion([{ beats: 1, move: [2, 0, 0] }, {}]),
       anim: [
         { beats: 1, scale: 10 },
         { scale: 20, arc: 90 },
@@ -205,7 +219,7 @@ describe('createSpiroAnimator linear scaling', () => {
 
   it('interpolates Motion independently from the animation frames', () => {
     const root = createRoot(false)
-    root.props[0]!.motion = [{ beats: 1, move: [0, 0, 0] }, { move: [10, 0, 0] }]
+    root.props[0]!.motion = angularMotion([{ beats: 1, move: [0, 0, 0] }, { move: [10, 0, 0] }])
 
     const scene = new Scene()
     const compiled = rootCompile(rootFinal(root))
@@ -234,6 +248,47 @@ describe('createSpiroAnimator linear scaling', () => {
     expect(motionGroup.position.toArray()).toEqual([5, 0, 0])
   })
 
+  it('draws Travel with the Hands color and closes a 100% Circle', () => {
+    const root = createRoot(false)
+    root.travel = true
+    root.props[0]!.motion = [
+      { beats: 1, distance: 0 },
+      { distance: 10, shape: MOTION_SHAPE.CIRCLE, amount: 100 },
+    ]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    const travelLine = getLineByColor(scene, COLSET[2]![2])
+    if (!travelLine) throw new Error('Expected a Travel line')
+    const points = getLinePoints(travelLine)
+
+    expect(points.at(-1)!.distanceTo(points[0]!)).toBeCloseTo(0)
+    expect(Math.max(...points.map((point) => point.distanceTo(points[0]!)))).toBeGreaterThan(0)
+
+    animator.seek(500)
+    expect(scene.children[0]!.position.length()).toBeGreaterThan(0)
+    animator.seek(1000)
+    expect(scene.children[0]!.position.length()).toBeCloseTo(0)
+
+    animator.setExportHidden(['travel'], true)
+    expect(travelLine.parent?.visible).toBe(false)
+  })
+
   it('bakes Motion into Paths and Hands without moving the completed lines', () => {
     const root = createRoot(false, true)
     root.paths = true
@@ -243,11 +298,11 @@ describe('createSpiroAnimator linear scaling', () => {
       { scale: 10, arc: 0, turns: 0 },
       { scale: 10, arc: 0, turns: 0 },
     ]
-    root.props[0]!.motion = [
+    root.props[0]!.motion = angularMotion([
       { beats: 1, move: [0, 0, 0] },
       { move: [10, 0, 0] },
       { move: [0, 0, 0] },
-    ]
+    ])
 
     const scene = new Scene()
     const compiled = rootCompile(rootFinal(root))
@@ -298,7 +353,7 @@ describe('createSpiroAnimator linear scaling', () => {
     const root = createRoot(false, true)
     root.paths = true
     root.props[0]!.anim = [{ beats: 1, scale: 10, arc: 0, turns: 0 }]
-    root.props[0]!.motion = [{ beats: 1, move: [0, 0, 0] }, { move: [10, 0, 0] }]
+    root.props[0]!.motion = angularMotion([{ beats: 1, move: [0, 0, 0] }, { move: [10, 0, 0] }])
 
     const scene = new Scene()
     const compiled = rootCompile(rootFinal(root))
@@ -334,12 +389,12 @@ describe('createSpiroAnimator linear scaling', () => {
       { beats: 4, scale: 10, arc: 0, turns: 0 },
       { scale: 10, arc: 0, turns: 0 },
     ]
-    root.props[0]!.motion = [
+    root.props[0]!.motion = angularMotion([
       { beats: 1, move: [0, 0, 0] },
       { beats: 1, move: [10, 0, 0] },
       { beats: 2, move: [0, 10, 0] },
       { move: [0, 0, 0] },
-    ]
+    ])
 
     const scene = new Scene()
     const compiled = rootCompile(rootFinal(root))
@@ -374,11 +429,11 @@ describe('createSpiroAnimator linear scaling', () => {
       { beats: 1, scale: 10, arc: 0 },
       { scale: 10, arc: 90 },
     ]
-    root.props[0]!.motion = [
+    root.props[0]!.motion = angularMotion([
       { beats: 1, move: [0, 0, 0] },
       { beats: 1, move: [10, 0, 0] },
       { move: [10, 0, 0] },
-    ]
+    ])
 
     const scene = new Scene()
     const compiled = rootCompile(rootFinal(root))

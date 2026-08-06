@@ -1,4 +1,5 @@
 <template>
+  <label class="preserve-next"> <input v-model="pMOVENEXT" type="checkbox" /> Preserve Next </label>
   <Decimal :data="offsGet(0)" :vals="data0" :setter="offsSet" />
   <Decimal :data="offsGet(1)" :vals="data1" :setter="offsSet" />
   <Decimal :data="offsGet(2)" :vals="data2" :setter="offsSet" />
@@ -7,6 +8,8 @@
 <script setup lang="ts">
 import Decimal from './DecimalForm.vue'
 import { VALUE } from '@/features/editor/composables/useProperties'
+import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { clampCartesianMotion } from '@/math/animation/MotionFunc'
 import type { DynamicVal, ValRetType, SetterFunc } from '@/types/AnimTypes'
 
 const props = defineProps<{
@@ -15,14 +18,17 @@ const props = defineProps<{
   setter: SetterFunc
 }>()
 
+const store = inject('store', ref('main'))
+const { pMOVENEXT } = storeToRefs(usePropertiesStore(store.value))
+
 const val = computed<[number, number, number]>({
   get(): [number, number, number] {
     const ret = props.data?.[VALUE]
     if (!Array.isArray(ret)) return [0, 0, 0]
-    return [ret[0] ?? 0, ret[1] ?? 0, ret[2] ?? 0]
+    return clampCartesianMotion(ret)
   },
   set(value: [number, number, number]) {
-    props.setter?.(name.value, value)
+    props.setter?.(pMOVENEXT.value ? 'movexyzpreserve' : 'movexyz', value)
   },
 })
 
@@ -38,44 +44,46 @@ const offsSet: SetterFunc = (k, val2) => {
   const key = parseInt(k)
   if (typeof val2 === 'number') {
     const sli = [...val.value] as typeof val.value
-    sli[key] = val2
-    val.value = sli // Set directly to .value to trigger setter
+    sli[key] = Math.round(val2)
+    val.value = clampCartesianMotion(sli) // Set directly to .value to trigger setter
   }
 }
 
-const name = computed(() => props.vals.name)
-const min = computed(() => props.vals.min)
-const max = computed(() => props.vals.max)
-const float = computed(() => props.vals.float)
-const mult = computed(() => (props.vals.mult ? props.vals.mult : 1))
-
-const data0 = computed<DynamicVal>(() => ({
+const data0: DynamicVal = {
   name: '0',
   neg: true,
   label: 'Horizontal',
-  max: max.value,
-  min: min.value,
-  float: float.value,
-  mult: mult.value * -1,
-}))
+  max: 10,
+  min: -10,
+  step: 1,
+  mult: -1,
+}
 
-const data1 = computed<DynamicVal>(() => ({
+const data1: DynamicVal = {
   name: '1',
   neg: true,
   label: 'Vertical',
-  max: max.value,
-  min: min.value,
-  float: float.value,
-  mult: mult.value,
-}))
+  max: 10,
+  min: -10,
+  step: 1,
+}
 
-const data2 = computed<DynamicVal>(() => ({
+const data2: DynamicVal = {
   name: '2',
   neg: true,
   label: 'Depth',
-  max: max.value,
-  min: min.value,
-  float: float.value,
-  mult: mult.value,
-}))
+  max: 10,
+  min: -10,
+  step: 1,
+}
 </script>
+
+<style scoped>
+.preserve-next {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  padding-block: var(--space-1);
+  cursor: pointer;
+}
+</style>

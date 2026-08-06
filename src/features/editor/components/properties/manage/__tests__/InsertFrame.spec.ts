@@ -60,7 +60,7 @@ describe('InsertFrame', () => {
     const player = usePlayerStore(storeId)
     const { ROOT } = player.raw()
     ROOT.value = createRoot([
-      [{ beats: 1, move: [1, 0, 0] }, { beats: 1, move: [2, 0, 0] }, { move: [3, 0, 0] }],
+      [{ beats: 1, distance: 1 }, { beats: 1, distance: 2 }, { distance: 3 }],
     ])
     player.PLAYING = false
 
@@ -80,9 +80,9 @@ describe('InsertFrame', () => {
     await wrapper.get('.action-button').trigger('click')
 
     expect(ROOT.value.props[0]!.motion).toEqual([
-      { beats: 1, move: [1, 0, 0] },
-      { beats: 1, move: [2, 0, 0] },
-      { move: [3, 0, 0] },
+      { beats: 1, distance: 1 },
+      { beats: 1, distance: 2 },
+      { distance: 3 },
       {},
     ])
   })
@@ -92,7 +92,7 @@ describe('InsertFrame', () => {
     const player = usePlayerStore(storeId)
     const { ROOT } = player.raw()
     ROOT.value = createRoot([
-      [{ beats: 1, move: [1, 0, 0] }, { beats: 1, move: [2, 0, 0] }, { move: [3, 0, 0] }],
+      [{ beats: 1, distance: 1 }, { beats: 1, distance: 2 }, { distance: 3 }],
     ])
     player.PLAYING = false
 
@@ -112,10 +112,10 @@ describe('InsertFrame', () => {
     await wrapper.get('.action-button').trigger('click')
 
     expect(ROOT.value.props[0]!.motion).toEqual([
-      { beats: 1, move: [1, 0, 0] },
+      { beats: 1, distance: 1 },
       {},
-      { beats: 1, move: [2, 0, 0] },
-      { move: [3, 0, 0] },
+      { beats: 1, distance: 2 },
+      { distance: 3 },
     ])
   })
 })

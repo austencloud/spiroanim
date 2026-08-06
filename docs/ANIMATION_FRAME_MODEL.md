@@ -139,22 +139,36 @@ prop.anim    Animation frames
 prop.motion  Motion frames
 ```
 
-Motion frames currently contain `beats` and `move`. Their frame boundaries do not need to align
-with Animation. An unused Motion track is always represented in memory as `motion: []`.
+Motion frames contain `beats`, `arc`, `plane`, `distance`, `shape`, `axis`, and `amount`. Their
+frame boundaries do not need to align with Animation. An unused Motion track is always represented
+in memory as `motion: []`. Cartesian Move is an editor conversion into Arc, Plane, and Distance;
+X/Y/Z is not stored in Motion frames.
 
 The Manage pane follows the selected frame set. Animation exposes its point and prop management
 tools. Motion exposes Insert Frame and Delete Selection; Insert Frame adds an empty frame before or
 after the current position or selected range without invoking player point selection.
 
-Motion `beats` defaults to `1` on the first frame and inherits afterward. `move` is a delta and
-defaults to `[0, 0, 0]` on every frame. Before playback, the compiler creates cumulative offsets:
+Motion `beats` defaults to `1` on the first frame and inherits afterward. Shape initially defaults
+to Linear and Amount initially defaults to 50%; both inherit. Arc, Plane, and Axis default to zero
+without inheriting. Distance also defaults to zero without inheriting, so empty and Beats-only
+frames hold position.
+
+An authored Arc, Plane, or Distance marks a directional command. Arc and Plane are relative to the
+preceding authored direction, even when Distance is zero. Before playback, the compiler converts
+that chained direction into a Cartesian tangent and evaluates the selected path to create a
+cumulative endpoint:
 
 ```text
-offset[0] = move[0]
-offset[i] = offset[i - 1] + move[i]
+offset[0] = pathEnd(frame[0])
+offset[i] = offset[i - 1] + pathEnd(frame[i])
 ```
 
-A Motion segment interpolates from `offset[i]` to `offset[i + 1]`. Animation and Motion are both
+Distance sets the Linear destination and the scale of a curved path. Linear and a zero-Amount curved shape travel
+straight. Circle maps 50% to a semicircle and 100% to a complete circle that returns to its starting
+position. Arc maps 50% to a semicircle and 100% to a 270-degree long arc. Axis rotates the bending
+direction around the Cartesian tangent.
+
+A Motion segment evaluates the next frame's path from `offset[i]`. Animation and Motion are both
 evaluated at the same absolute playback time. When either frame set ends first, it holds its final
 state while the other continues. Overall playback ends at the last frame boundary from either set.
 
@@ -168,10 +182,14 @@ direction changes remain intact even when the two frame sets do not align. When 
 Animation, the final animated pose continues contributing baked line points through the remaining
 Motion boundaries.
 
-QS versions 1 through 3 stored `move` on Animation frames. Version 4 migration removes those
-legacy fields and builds a Motion track with equivalent boundaries. Stationary spans may be
-collapsed, but the Animation frame immediately before a transition must remain as a Motion
-boundary because its outgoing `beats` value determines when movement begins.
+Travel renders the Motion center path itself using the Hands color. It is sampled from the same
+path calculation used for playback so curved Travel, playback, Paths, and Hands cannot disagree.
+
+QS versions 1 through 3 stored Cartesian `move` on Animation frames. Version 4 migration removes
+those legacy fields, converts their chained Cartesian directions into Arc, Plane, and Distance,
+and builds a Motion track with equivalent boundaries. Stationary spans may be collapsed, but the
+Animation frame immediately before a transition must remain as a Motion boundary because its
+outgoing `beats` value determines when movement begins.
 
 ## Sparse frame compaction
 

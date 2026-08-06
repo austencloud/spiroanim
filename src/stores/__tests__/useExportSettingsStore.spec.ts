@@ -53,5 +53,6 @@ describe('useExportSettingsStore', () => {
 
     expect(store.imageHiddenFeatures.paths).toBe(true)
     expect(store.imageHiddenFeatures.arms).toBe(false)
+    expect(store.imageHiddenFeatures.travel).toBe(false)
   })
 })

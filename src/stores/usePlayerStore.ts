@@ -42,6 +42,7 @@ export const usePlayerStore = (id: string) => {
             //scale: 10,
             guides: false,
             paths: true,
+            travel: false,
             hands: true,
             arms: false,
             visible: true,

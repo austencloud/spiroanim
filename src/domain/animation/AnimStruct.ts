@@ -40,6 +40,13 @@ export const TTYPE = {
   LINE: 1,
 } as const
 
+export const MOTION_SHAPES = ['Linear', 'Arc', 'Circle'] as const
+export const MOTION_SHAPE = {
+  LINE: 0,
+  ARC: 1,
+  CIRCLE: 2,
+} as const
+
 export const CMODES = {
   points: 0,
 } as const
@@ -233,6 +240,7 @@ export const PROPCP: PropCommonKeys[] = [
   'color',
   'guides',
   'paths',
+  'travel',
   'hands',
   'arms',
   'visible',

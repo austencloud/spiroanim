@@ -16,6 +16,8 @@ export const rootFinal = (root: RootData): RootDataFinal => {
     ...root,
     // V1 URLs predate Arms, so normalize their missing value to the requested root default.
     arms: root.arms ?? false,
+    // Travel was added with QS v4, so older URLs need the same explicit Root default.
+    travel: root.travel ?? false,
     props: root.props.map((prop) => ({ ...prop, motion: prop.motion ?? [] })),
   }
 }

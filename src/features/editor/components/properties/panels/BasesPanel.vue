@@ -16,6 +16,12 @@
       <br /><i>When undefined, this property inherits from <strong>ROOT</strong>.</i>
     </template>
 
+    <template #travel>
+      <strong>Travel</strong><br />
+      Toggles the center path traced by this prop's Motion track.<br />
+      <br /><i>When undefined, this property inherits from <strong>ROOT</strong>.</i>
+    </template>
+
     <template #arms>
       <strong>Arms</strong><br />
       Toggles the display of a line from the animation center to the hand for this prop.<br />
@@ -84,6 +90,7 @@ const data = ref({}),
   vals = [
     { name: 'paths', text: 'Paths', component: 'Boolean', undef: true },
     { name: 'hands', text: 'Hands', component: 'Boolean', undef: true },
+    { name: 'travel', text: 'Travel', component: 'Boolean', undef: true },
     { name: 'arms', text: 'Arms', component: 'Boolean', undef: true },
     { name: 'visible', text: 'Visible', component: 'Boolean', undef: true },
     { name: 'nodes', text: 'Nodes', component: 'Boolean', undef: true },

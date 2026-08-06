@@ -23,7 +23,14 @@ describe('PlayerFunc', () => {
     }
 
     const final = rootFinal({ ...root, props: [{ anim: [{}] }] })
-    expect(final).toMatchObject({ arms: false, speed: 1, type: 0, turns: 0, depth: 0 })
+    expect(final).toMatchObject({
+      arms: false,
+      travel: false,
+      speed: 1,
+      type: 0,
+      turns: 0,
+      depth: 0,
+    })
     expect(final.props[0]!.motion).toEqual([])
   })
 

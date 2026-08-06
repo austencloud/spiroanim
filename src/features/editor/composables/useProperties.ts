@@ -1,12 +1,27 @@
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 
-import { TTEXT, COLORS, PTEXT, INDPNT, PPOS, TTYPE } from '@/domain/animation/AnimStruct'
+import {
+  TTEXT,
+  COLORS,
+  PTEXT,
+  INDPNT,
+  PPOS,
+  TTYPE,
+  MOTION_SHAPES,
+} from '@/domain/animation/AnimStruct'
 
 import { VDEF } from '@/stores/useQSMainStore'
 
 import { orthoModify, InitialPoint } from '@/math/animation/OrthogonalFunc'
 import { closestPoint } from '@/math/animation/AnimFunc'
+import {
+  MAX_MOTION_DISTANCE,
+  cartesianToMotionAngles,
+  clampCartesianMotion,
+  createMotionDirectionState,
+  motionAnglesToCartesian,
+} from '@/math/animation/MotionFunc'
 import { MathUtils, Vector3 } from 'three'
 
 import type {
@@ -23,6 +38,7 @@ import type {
   AllVars,
   MotionKeys,
   MotionCompKeys,
+  MotionData,
 } from '@/types/AnimTypes'
 
 export const VALUE = 0
@@ -94,6 +110,43 @@ function stringGet(key: string, val?: VarTypes) {
       }
     }
   return String(val)
+}
+
+function motionStringGet(key: string, val?: VarTypes) {
+  if (val !== undefined) {
+    if (key === 'move' && Array.isArray(val))
+      return val.map((coordinate) => (coordinate / 10).toFixed(1)).join(', ')
+    if (typeof val === 'number') {
+      if (key === 'distance') return (val / 10).toFixed(1)
+      if (key === 'shape') return MOTION_SHAPES[val] ?? String(val)
+      if (key === 'amount') return `${val}%`
+      if (key === 'arc' || key === 'plane' || key === 'axis') return `${val}°`
+    }
+  }
+  return String(val)
+}
+
+function motionConstraints(key: string, val?: VarTypes): VarTypes | undefined {
+  if (val === undefined || typeof val === 'boolean' || Array.isArray(val)) return val
+
+  switch (key) {
+    case 'arc':
+    case 'plane':
+    case 'axis':
+      return Math.round(Math.max(-180, Math.min(val, 180)))
+    case 'distance':
+      return Math.round(Math.max(0, Math.min(val, MAX_MOTION_DISTANCE)))
+    case 'shape':
+      return Math.round(Math.max(0, Math.min(val, MOTION_SHAPES.length - 1)))
+    case 'amount':
+      return Math.round(Math.max(0, Math.min(val, 100)))
+    default:
+      return constraints(key, val)
+  }
+}
+
+function hasMotionDirection(frame: MotionData): boolean {
+  return frame.arc !== undefined || frame.plane !== undefined || frame.distance !== undefined
 }
 
 export function useProperties(store: string = 'main') {
@@ -236,15 +289,47 @@ export function useProperties(store: string = 'main') {
 
   const motionSet: SetterFunc = (key, val) => {
     if (PLAYING.value) return
-    val = constraints(key, val)
+
+    if (key === 'movexyz' || key === 'movexyzpreserve') {
+      if (Array.isArray(val)) setCartesianMotion(val, key === 'movexyzpreserve')
+      triggerRef(ROOT)
+      return
+    }
+
+    if (key === 'move') {
+      if (val === undefined)
+        for (const motion of MOTIONS.value) {
+          delete motion.arc
+          delete motion.plane
+          delete motion.distance
+        }
+      triggerRef(ROOT)
+      return
+    }
+
+    val = motionConstraints(key, val)
     if (val === undefined) (MOTIONS.value as AnonObject[]).every((obj) => delete obj[key] || true)
     else (MOTIONS.value as AnonObject[]).every((obj) => (obj[key] = val) || true)
     triggerRef(ROOT)
   }
 
   const motionGet: GetterFunc = (key) => {
+    if (key === 'move') {
+      const authored = MOTIONS.value.map(hasMotionDirection)
+      if (authored.every((value) => !value)) {
+        const val: [number, number, number] = [0, 0, 0]
+        return [val, true, motionStringGet(key, val), true]
+      }
+      if (!authored.every(Boolean)) return [undefined, false, 'Mismatch', false]
+
+      const values = MCOMPDS.value.map((frame) => clampCartesianMotion(frame.move))
+      const val = values[0]
+      const equal = values.every((value) => samePropertyValue(value, val))
+      return [val, equal, equal ? motionStringGet(key, val) : 'Mismatch', false]
+    }
+
     const values = MOTIONS.value.map((frame) => frame[key as MotionKeys])
-    let val = values[0]
+    let val: VarTypes | undefined = values[0]
     let equal = values.every((value) => samePropertyValue(value, val))
     let fall = false
 
@@ -254,7 +339,47 @@ export function useProperties(store: string = 'main') {
       fall = val !== undefined
     }
 
-    return [val, equal, equal ? stringGet(key, val) : 'Mismatch', fall]
+    return [val, equal, equal ? motionStringGet(key, val) : 'Mismatch', fall]
+  }
+
+  const setCartesianMotion = (value: readonly number[], preserveNext: boolean) => {
+    const cartesian = clampCartesianMotion(value)
+    const selectedByProp = new Map<number, Set<number>>()
+
+    for (const id of IDENT.value) {
+      const selected = selectedByProp.get(id.prop) ?? new Set<number>()
+      selected.add(id.index)
+      selectedByProp.set(id.prop, selected)
+    }
+
+    for (const [propIndex, selected] of selectedByProp) {
+      const frames = ROOT.value.props[propIndex]!.motion
+      const compiled = COMPILED.value.props[propIndex]!.motion
+      const lastSelected = Math.max(...selected)
+      const preserveIndex = preserveNext
+        ? frames.findIndex((frame, index) => index > lastSelected && hasMotionDirection(frame))
+        : -1
+      const preserveMove = preserveIndex >= 0 ? compiled[preserveIndex]?.move : undefined
+      const state = createMotionDirectionState()
+
+      for (let index = 0; index < frames.length; index++) {
+        const frame = frames[index]!
+        const requested = selected.has(index)
+          ? cartesian
+          : index === preserveIndex && preserveMove
+            ? clampCartesianMotion(preserveMove)
+            : undefined
+
+        if (requested) {
+          const [plane, arc, distance] = cartesianToMotionAngles(requested, state)
+          frame.plane = plane
+          frame.arc = arc
+          frame.distance = distance
+        } else if (hasMotionDirection(frame)) {
+          motionAnglesToCartesian([frame.plane ?? 0, frame.arc ?? 0, frame.distance ?? 0], state)
+        }
+      }
+    }
   }
 
   const propSet: SetterFunc = (key, val) => {

@@ -24,7 +24,7 @@ const createRoot = (): RootDataFinal =>
     props: [
       {
         anim: [{ beats: 1, arc: 0 }, { beats: 1, arc: 45 }, { arc: 90 }],
-        motion: [{ beats: 1, move: [1, 0, 0] }, { beats: 1, move: [2, 0, 0] }, { move: [3, 0, 0] }],
+        motion: [{ beats: 1, distance: 1 }, { beats: 1, distance: 2 }, { distance: 3 }],
       },
     ],
     aspectx: 1,
@@ -61,7 +61,7 @@ describe('DeleteSelection', () => {
     await wrapper.get('a').trigger('click')
     await nextTick()
 
-    expect(ROOT.value.props[0]!.motion).toEqual([{ beats: 1, move: [1, 0, 0] }])
+    expect(ROOT.value.props[0]!.motion).toEqual([{ beats: 1, distance: 1 }])
     expect(ROOT.value.props[0]!.anim).toEqual(animation)
     expect(properties.MOTIONS).toEqual([])
   })

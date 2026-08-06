@@ -132,17 +132,27 @@ a matching optional `mN` value containing its independent Motion frames:
 
 Each Motion frame contains, in order:
 
-1. One character: `beats`.
-2. Three characters: `move.x`, `move.y`, `move.z`.
+1. Three characters: `beats`, `distance`, and indexed `shape`.
+2. Three characters: signed `arc` and `plane`.
+3. Three characters: `axis` and percentage `amount`.
+
+Motion uses `Linear`, `Arc`, and `Circle` shape indices. Signed Motion Arc is normalized into the
+existing unsigned Arc query range, and zero-based Motion Distance is shifted into the existing
+camera Distance query range. These adaptations are reversed immediately at the v4 serialization
+boundary; editable Motion data remains signed and zero-based.
+
+Version 4 also stores the inheritable Travel rendering flag on Root and Prop data. Missing Root
+Travel values from older URLs normalize to `false`, and an undefined Prop value inherits that Root
+setting. Travel is not a Motion-frame property.
 
 An `mN` value is emitted when that prop has at least one Motion frame. Empty authored frames are
 retained through their dot separators so Insert Frame survives refresh and undo reconstruction. An
 `mN` value is omitted for `motion: []`, so unused Motion does not lengthen the URL. Decoding still
 initializes every finalized prop with a Motion array.
 
-When a V1-V3 URL is opened by V4, legacy Animation `move` fields are removed and converted into an
-equivalent Motion track. Consecutive stationary Animation spans are compacted when doing so, while
-retaining the outgoing boundary immediately before movement begins.
+When a V1-V3 URL is opened by V4, legacy Cartesian Animation `move` fields are removed and converted
+into chained Motion Arc, Plane, and Distance fields. Consecutive stationary Animation spans are
+compacted when doing so, while retaining the outgoing boundary immediately before movement begins.
 
 Field order, group order, group length, bit width, and the query alphabet are persisted-data
 contracts. Reordering a list without changing its types still changes every encoded URL.
@@ -188,9 +198,10 @@ normalized fractions to integers by discarding the fractional part. This is an i
 side effect, not a supported rounding policy. A value such as root `distance: 17.5` can therefore
 decode as `17` after a query-string round trip.
 
-The three `move` coordinates use direct radix encoding rather than the packed-field path. Passing
-a fraction there can produce malformed or shortened output because fractional values are not
-valid alphabet indices. Every V1 value must be converted to an integer before encoding.
+The three legacy `move` coordinates in Versions 1 through 3 use direct radix encoding rather than
+the packed-field path. Passing a fraction there can produce malformed or shortened output because
+fractional values are not valid alphabet indices. Every legacy Cartesian value must be converted
+to an integer before encoding. Version 4 Motion fields use packed integer groups.
 
 Consequently, a feature that calculates a V1-backed value should make its rounding policy
 explicit at the feature boundary:
