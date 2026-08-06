@@ -29,7 +29,7 @@ const { pSELECTED } = useProperties(store.value)
 const clickAddProp = () => {
   if (PLAYING.value) return
 
-  ROOT.value.props.push({ anim: [{}] })
+  ROOT.value.props.push({ anim: [{}], motion: [] })
 
   // Select the prop
   for (const i in pSELECTED.value) pSELECTED.value[i] = false

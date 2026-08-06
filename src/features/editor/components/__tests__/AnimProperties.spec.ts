@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import AppTooltip from '@/components/AppTooltip.vue'
 import AnimProperties from '@/features/editor/components/AnimProperties.vue'
+import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
@@ -81,6 +82,56 @@ describe('AnimProperties', () => {
     await nextTick()
 
     expect(wrapper.get('.scrollbar').classes()).not.toContain('scrollbar--main-left')
+
+    wrapper.unmount()
+  })
+
+  it('defaults to Animation and switches to the empty Motion frame set for the session', async () => {
+    const storeId = 'frame-set-switcher'
+    const { ROOT } = usePlayerStore(storeId).raw()
+    const wrapper = mount(AnimProperties, {
+      props: {
+        dim: { width: 700, height: 400, perc: 60 },
+        cols: 1,
+        store: storeId,
+      },
+      global: {
+        stubs: {
+          Animations: true,
+          Advanced: true,
+          Root: true,
+          Settings: true,
+          Base: true,
+          Manage: { template: '<div data-test="manage-pane" />' },
+          BaseIcon: true,
+        },
+      },
+    })
+
+    const frameSet = wrapper.get<HTMLSelectElement>('select[aria-label="Frame set"]')
+    expect(frameSet.element.value).toBe('animation')
+    expect(frameSet.findAll('option').map((option) => option.text())).toEqual([
+      'Animation',
+      'Motion',
+    ])
+    const selectionControls = wrapper.get('.selection-options').findAll('select, input')
+    expect(selectionControls[0]!.element).toBe(frameSet.element)
+    expect(selectionControls[1]!.attributes('type')).toBe('checkbox')
+
+    await frameSet.setValue('motion')
+    expect(usePropertiesStore(storeId).pFRAMES).toBe('motion')
+    expect(wrapper.text()).toContain('No Motion frames')
+    expect(wrapper.findAll('[data-test="manage-pane"]')).toHaveLength(0)
+
+    ROOT.value.props.push({ anim: [{}], motion: [{}] })
+    triggerRef(ROOT)
+    await nextTick()
+    expect(wrapper.findAll('.modifying-count')[1]!.text()).toBe('1')
+    expect(wrapper.findAll('[data-test="manage-pane"]')).toHaveLength(1)
+
+    usePropertiesStore(storeId).pSELECTED = { 0: false }
+    await nextTick()
+    expect(wrapper.findAll('[data-test="manage-pane"]')).toHaveLength(0)
 
     wrapper.unmount()
   })

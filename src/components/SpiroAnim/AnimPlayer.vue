@@ -88,6 +88,7 @@ const {
   UPDATE,
   PLAYING,
   TRACER,
+  ETIMES,
   ASPECT,
   CANVAS_DIM,
   imageExportRequest,
@@ -180,7 +181,11 @@ onMounted(() => {
 
   // Progress bar selection range change
   watch(UPDATE, () => {
-    if (SELECTION.value) send('range', { min: SELECTED.value[0]!, max: SELECTED.value[1]! })
+    if (SELECTION.value)
+      send('range', {
+        min: ETIMES.value[SELECTED.value[0] ?? 0] ?? 0,
+        max: ETIMES.value[SELECTED.value[1] ?? 0] ?? 0,
+      })
     send('jump', CURRENT.value)
   })
 

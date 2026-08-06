@@ -60,7 +60,7 @@
             <AppTooltip text="Modifying">
               <template #activator="{ props: tooltipProps }">
                 <span v-bind="tooltipProps"
-                  >Mod:&nbsp;<span class="modifying-count">{{ ANIMS.length }}</span></span
+                  >Mod:&nbsp;<span class="modifying-count">{{ modifyingCount }}</span></span
                 >
               </template>
             </AppTooltip>
@@ -99,6 +99,10 @@
       <div v-show="props.cols == 2" />
       <div :class="clsCell3">
         <div class="selection-options">
+          <select v-model="pFRAMES" class="frame-set" aria-label="Frame set">
+            <option value="animation">Animation</option>
+            <option value="motion">Motion</option>
+          </select>
           <AppTooltip text="Select multiple props">
             <template #activator="{ props: tooltipProps }">
               <label v-bind="tooltipProps"><input v-model="pMULTI" type="checkbox" /> Multi</label>
@@ -116,12 +120,18 @@
       </div>
       <div v-for="n in extraCols" :key="'ec' + n" class="sticky" />
       <div class="break" />
-      <div v-show="ANIMS.length"><Animations class="expansion-panel" /></div>
-      <div v-show="ANIMS.length"><Advanced /></div>
-      <div v-show="PROPS.length"><Base /></div>
-      <div><Root class="expansion-panel" /></div>
-      <div><Settings /></div>
-      <div class="expansion-panel"><Manage /></div>
+      <template v-if="pFRAMES === 'animation'">
+        <div v-show="ANIMS.length"><Animations class="expansion-panel" /></div>
+        <div v-show="ANIMS.length"><Advanced /></div>
+        <div v-show="PROPS.length"><Base /></div>
+        <div><Root class="expansion-panel" /></div>
+        <div><Settings /></div>
+      </template>
+      <template v-else>
+        <div v-if="MOTIONS.length"><Motion class="expansion-panel" /></div>
+        <div v-else class="empty-motion">No Motion frames</div>
+      </template>
+      <div v-if="PROPS.length" class="expansion-panel"><Manage /></div>
     </div>
   </div>
 </template>
@@ -132,6 +142,7 @@ import Root from './properties/panels/RootPanel.vue'
 import Settings from './properties/panels/SettingsPanel.vue'
 import Base from './properties/panels/BasesPanel.vue'
 import Manage from './properties/panels/ManagePanel.vue'
+import Motion from './properties/panels/MotionPanel.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 
@@ -176,11 +187,13 @@ const {
   END,
   ACTIVE,
   ANIMS,
+  MOTIONS,
   PROPS,
   pMULTI,
   pSELECTED,
   pRADIO,
   pBOUND,
+  pFRAMES,
   pEXPANDED,
   pDESKTOP,
   pMOBILE,
@@ -191,6 +204,10 @@ const { undoQS } = qsStore
 
 const { parents: mainPaneParents } = storeToRefs(useMainPaneStore())
 const isInsideMainLeftPane = computed(() => mainPaneParents.value.editor === 'left')
+
+watch(pFRAMES, () => {
+  SELECTION.value = false
+})
 
 const cols = computed(() => props.cols)
 
@@ -264,6 +281,10 @@ const position = computed(() => {
     end = END.value ?? 0
   return msToBeat(start, bpm) + (start != end ? '/' + msToBeat(end, bpm) : '')
 })
+
+const modifyingCount = computed(() =>
+  pFRAMES.value === 'animation' ? ANIMS.value.length : MOTIONS.value.length,
+)
 
 const clsCell2 = computed(() => {
   return props.cols >= 2 ? 'sticky' : ''
@@ -373,6 +394,20 @@ const gridStyle = computed<CSSProperties>(() => ({
   gap: var(--space-2);
   align-items: center;
   padding: var(--space-2);
+}
+
+.frame-set {
+  min-height: 1.75rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.empty-motion {
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  text-align: center;
 }
 
 .prop-option {

@@ -112,7 +112,7 @@ export const useConceptPreviewRenderer = <Reference extends string>({
           channel.send('data', rootCompile(animation))
 
           try {
-            const urls = await channel.call('reqimgs', [0])
+            const urls = await channel.call('reqimgs', [{ index: 0, time: 0 }])
             const nextUrl = urls[0]
             if (!nextUrl) continue
 

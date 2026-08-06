@@ -42,7 +42,7 @@ const store = inject('store', ref('main'))
 
 const playerStore = usePlayerStore(store.value)
 const { ROOT, CURRENT, COMPILED } = playerStore.raw()
-const { INDEX, SELECTION, SELECTED, UTIMES, trackClicks, PLAYING } = storeToRefs(playerStore)
+const { EINDEX, SELECTION, SELECTED, ETIMES, trackClicks, PLAYING } = storeToRefs(playerStore)
 
 const { PROPS, pSELECTED, pINPUT } = useProperties(store.value)
 
@@ -88,7 +88,7 @@ const click = () => {
 
       watchers.push(
         watch(
-          [SELECTION, SELECTION.value ? SELECTED : INDEX, ROOT, pSELECTED, pINPUT],
+          [SELECTION, SELECTION.value ? SELECTED : EINDEX, ROOT, pSELECTED, pINPUT],
           () => {
             cancel()
           },
@@ -225,8 +225,8 @@ onUnmounted(() => {
 watch(
   CURRENT,
   () => {
-    if (INDEX.value == UTIMES.value.length - 1) where.value = 2
-    else where.value = CURRENT.value == UTIMES.value[INDEX.value] ? 1 : 2
+    if (EINDEX.value == ETIMES.value.length - 1) where.value = 2
+    else where.value = CURRENT.value == ETIMES.value[EINDEX.value] ? 1 : 2
   },
   { immediate: true },
 )

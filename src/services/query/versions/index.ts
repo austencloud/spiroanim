@@ -7,6 +7,7 @@ export interface SpiroAnimQSVersion {
   VDEF: Record<AllVars, VDefEntry>
   createRootConfig(): ConfigData<AllVars>
   createPropConfig(): ConfigData<AllVars>
+  createMotionConfig?(): ConfigData<AllVars>
 }
 
 export class UnsupportedSpiroAnimQSVersionError extends RangeError {
@@ -31,6 +32,8 @@ export async function loadSpiroAnimQSVersion(version: number): Promise<SpiroAnim
       return import('@/services/query/versions/SpiroAnimQSv2')
     case 3:
       return import('@/services/query/versions/SpiroAnimQSv3')
+    case 4:
+      return import('@/services/query/versions/SpiroAnimQSv4')
     default:
       throw new UnsupportedSpiroAnimQSVersionError(version)
   }

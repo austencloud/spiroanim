@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { PROPTIMES, UNQTIMES, msToBeat, rootFinal } from '@/math/animation/PlayerFunc'
+import { MOTIONTIMES, PROPTIMES, UNQTIMES, msToBeat, rootFinal } from '@/math/animation/PlayerFunc'
 import type { RootData, RootDataCompiled } from '@/types/AnimTypes'
 
 describe('PlayerFunc', () => {
@@ -22,7 +22,9 @@ describe('PlayerFunc', () => {
       thick: 4,
     }
 
-    expect(rootFinal(root)).toMatchObject({ arms: false, speed: 1, type: 0, turns: 0, depth: 0 })
+    const final = rootFinal({ ...root, props: [{ anim: [{}] }] })
+    expect(final).toMatchObject({ arms: false, speed: 1, type: 0, turns: 0, depth: 0 })
+    expect(final.props[0]!.motion).toEqual([])
   })
 
   it('rounds milliseconds to the nearest beat', () => {
@@ -34,8 +36,8 @@ describe('PlayerFunc', () => {
     const root = {
       bpm: 60,
       props: [
-        { anim: [{ beats: 1 }, { beats: 2 }] },
-        { anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }] },
+        { anim: [{ beats: 1 }, { beats: 2 }], motion: [{ beats: 2 }, {}] },
+        { anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }], motion: [] },
       ],
     } as RootDataCompiled
 
@@ -43,6 +45,7 @@ describe('PlayerFunc', () => {
       [0, 1000],
       [0, 1000, 2000],
     ])
+    expect(MOTIONTIMES(root)).toEqual([[0, 2000], []])
     expect(UNQTIMES(root)).toEqual([0, 1000, 2000])
   })
 })

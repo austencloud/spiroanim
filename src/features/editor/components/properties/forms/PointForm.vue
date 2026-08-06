@@ -31,7 +31,7 @@ const { PROPS, pSELECTED } = useProperties(store.value)
 
 const playerStore = usePlayerStore(store.value)
 const { ROOT } = playerStore.raw()
-const { SELECTION, SELECTED, INDEX, PLAYING, trackClicks } = storeToRefs(playerStore)
+const { SELECTION, SELECTED, EINDEX, PLAYING, trackClicks } = storeToRefs(playerStore)
 
 const firstProp = ref()
 let watchers: WatchHandle[] = []
@@ -85,7 +85,7 @@ const click = () => {
 
       watchers.push(
         watch(
-          [SELECTION, SELECTION.value ? SELECTED : INDEX, ROOT, pSELECTED],
+          [SELECTION, SELECTION.value ? SELECTED : EINDEX, ROOT, pSELECTED],
           () => {
             cancel()
           },

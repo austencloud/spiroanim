@@ -66,7 +66,7 @@ describe('PlayerProgress', () => {
 
   it('uses frame indices in selection mode and preserves the endpoint timing rule', async () => {
     const store = usePlayerStore('progress-selection')
-    store.UTIMES = [0, 1000, 2000]
+    store.ETIMES = [0, 1000, 2000]
     store.COUNT = 2
     store.SELECTED = [0, 1]
     store.SELECTION = true
@@ -87,7 +87,7 @@ describe('PlayerProgress', () => {
 
   it('fills only the selected range and allows the handles to cross', async () => {
     const store = usePlayerStore('progress-selection-crossing')
-    store.UTIMES = [0, 1000, 2000, 3000, 4000]
+    store.ETIMES = [0, 1000, 2000, 3000, 4000]
     store.COUNT = 4
     store.SELECTED = [1, 3]
     store.SELECTION = true
@@ -111,7 +111,7 @@ describe('PlayerProgress', () => {
 
   it('keeps the stationary handle in place when the end handle crosses it', async () => {
     const store = usePlayerStore('progress-end-crossing')
-    store.UTIMES = [0, 1000, 2000, 3000, 4000]
+    store.ETIMES = [0, 1000, 2000, 3000, 4000]
     store.COUNT = 4
     store.SELECTED = [1, 3]
     store.SELECTION = true
@@ -129,7 +129,7 @@ describe('PlayerProgress', () => {
 
   it('synchronizes its handles when selection mode mutates the range in place', async () => {
     const store = usePlayerStore('progress-mode-switch')
-    store.UTIMES = [0, 1000, 2000, 3000, 4000]
+    store.ETIMES = [0, 1000, 2000, 3000, 4000]
     store.COUNT = 4
     const wrapper = mountProgress('progress-mode-switch')
 

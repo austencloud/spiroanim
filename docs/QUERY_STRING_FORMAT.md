@@ -6,8 +6,8 @@ persisted-data contract.
 
 The authoritative implementations are:
 
-- `src/services/query/versions/SpiroAnimQSv1.ts` and `SpiroAnimQSv2.ts` for versioned ranges, bit
-  widths, field order, and segment layouts.
+- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv4.ts` for versioned ranges,
+  bit widths, field order, and segment layouts.
 - `src/services/query/createBaseQueryCodec.ts` for integer normalization and bit packing.
 - `src/composables/useSpiroAnimQS.ts` for root, prop, and frame encoding and decoding.
 - `src/math/animation/PlayerFunc.ts` for post-decode root defaults.
@@ -46,7 +46,7 @@ with `N` bits has at most `2^N - 1` defined codes.
 | `arc`      |         0..360 |      9 | Frame degrees                                         |
 | `plane`    |      -180..180 |      9 | Frame degrees                                         |
 | `axis`     |      -180..180 |      9 | Frame degrees                                         |
-| `move`     |        -30..30 | 6 each | Frame; three separately encoded coordinates           |
+| `move`     |        -30..30 | 6 each | Animation frame in V1-V3; Motion frame in V4          |
 | `aspectx`  |          0..32 |      6 | Root                                                  |
 | `aspecty`  |          0..32 |      6 | Root                                                  |
 | `distance` |          4..66 |      6 | Root                                                  |
@@ -112,15 +112,44 @@ Version 2 keeps every V1 field in the same position and uses previously unused b
 - The prop's one-character group appends inherited prop `arms` after `prop`.
 - Frame groups are unchanged.
 
-Newly generated URLs use `v=2`. Version 1 URLs remain supported and decode with root `arms` set to
-`false`; an omitted prop value inherits that root default.
+Version 1 URLs remain supported and decode with root `arms` set to `false`; an omitted prop value
+inherits that root default.
+
+## Version 3 alphabet
+
+Version 3 retains the Version 2 layout but swaps the last two alphabet characters. This makes `_`
+the maximum-value padding character so repeated padding is less likely to be changed into
+typographic punctuation by sharing platforms.
+
+## Version 4 Motion layout
+
+Version 4 removes the three `move` characters from every `pN` Animation frame. Each prop can have
+a matching optional `mN` value containing its independent Motion frames:
+
+```text
+?r=<root>&p0=<first prop>&m0=<first Motion>&p1=<second prop>&m1=<second Motion>&...&v=4
+```
+
+Each Motion frame contains, in order:
+
+1. One character: `beats`.
+2. Three characters: `move.x`, `move.y`, `move.z`.
+
+An `mN` value is emitted when that prop has at least one Motion frame. Empty authored frames are
+retained through their dot separators so Insert Frame survives refresh and undo reconstruction. An
+`mN` value is omitted for `motion: []`, so unused Motion does not lengthen the URL. Decoding still
+initializes every finalized prop with a Motion array.
+
+When a V1-V3 URL is opened by V4, legacy Animation `move` fields are removed and converted into an
+equivalent Motion track. Consecutive stationary Animation spans are compacted when doing so, while
+retaining the outgoing boundary immediately before movement begins.
 
 Field order, group order, group length, bit width, and the query alphabet are persisted-data
 contracts. Reordering a list without changing its types still changes every encoded URL.
 
 ## Low-level packing
 
-The codec uses this custom URL-safe radix-64 alphabet:
+Versions 1 and 2 use this custom URL-safe radix-64 alphabet:
 
 ```text
 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-
@@ -128,6 +157,12 @@ The codec uses this custom URL-safe radix-64 alphabet:
 
 This is not standard Base64. The final character, `-`, is also the maximum radix digit used for
 all-ones padding.
+
+Versions 3 and 4 use the same characters with the final pair reversed:
+
+```text
+0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_
+```
 
 For a defined numeric value, normalization is:
 
@@ -145,7 +180,8 @@ definition transform such as `Boolean` is applied.
 
 ### Integer requirement and fractional values
 
-Version 1 has no fractional encoding. The property setter's range clamp does not enforce this.
+The query format has no fractional encoding. The property setter's range clamp does not enforce
+this.
 
 Packed scalar fields pass through JavaScript bitwise operators, which coerce nonnegative
 normalized fractions to integers by discarding the fractional part. This is an implementation
@@ -166,7 +202,7 @@ derived floating-point value
 explicit Math.round / floor / ceil chosen by domain behavior
         |
         v
-integer RootData/PropData/AnimData value
+  integer RootData/PropData/AnimData/MotionData value
         |
         v
 query encoder
@@ -192,8 +228,8 @@ safe frame compaction rules.
 ## Decoding, defaults, and malformed input
 
 `decodeVer()` reads `v`, defaulting to the current version. A supported historical version loads
-its matching module. If loading the requested version fails, the code warns and attempts to decode
-the data with the current version.
+its matching module. An unavailable version is rejected instead of being interpreted with the
+wrong layout.
 
 Current decoder tolerance includes:
 
@@ -211,6 +247,7 @@ After query decoding, `rootFinal()` currently supplies:
 - root `turns: 0`
 - root `depth: 0`
 - root `arms: false` when the decoded version does not provide it
+- `motion: []` on every prop when Motion is absent
 
 Frame defaults and inheritance are applied later by `rootCompile()`. Query decoding deliberately
 does not expand sparse frame objects.
@@ -245,7 +282,7 @@ A new version should:
 Query-format changes should cover the applicable behavior:
 
 - Minimum, maximum, undefined, boolean transforms, invalid characters, and bit capacity.
-- Known V1 root and prop strings remaining unchanged.
+- Known historical root and prop strings remaining unchanged.
 - Empty frames, middle undefined fields, trailing undefined groups, and `move`.
 - Editable data -> query -> editable data -> compiled data round trips.
 - Initial route hydration and subsequent ROOT-to-URL replacement.
@@ -254,8 +291,8 @@ Query-format changes should cover the applicable behavior:
 ## Current cautions
 
 - `VDEF` currently serves both editor constraints and persisted query schema.
-- Query V1 assumes integers, but editor setters only clamp ranges.
+- Query values assume integers, but editor setters only clamp ranges.
 - Prop-level `thick` and root `smooth` are currently outside V1 query and undo coverage.
-- Unsupported query versions fall back to the current decoder after warning.
+- Unsupported query versions are rejected.
 - Prop decoding stops at the first missing numbered prop key.
 - Equivalent compiled animation data can have different sparse raw objects and URL lengths.

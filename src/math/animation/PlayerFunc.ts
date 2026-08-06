@@ -16,6 +16,7 @@ export const rootFinal = (root: RootData): RootDataFinal => {
     ...root,
     // V1 URLs predate Arms, so normalize their missing value to the requested root default.
     arms: root.arms ?? false,
+    props: root.props.map((prop) => ({ ...prop, motion: prop.motion ?? [] })),
   }
 }
 
@@ -24,28 +25,31 @@ export const msToBeat = (ms: number, bpm: number): number => {
 }
 
 // Millisecond start/end of animations for each prop
+export const FRAMESTARTS = (frames: readonly { beats?: number }[], bpm: number): number[] => {
+  const ms = Math.round(60000 / bpm)
+  const times = Array.from({ length: frames.length }, () => 0)
+  let currentStart = 0
+
+  frames.forEach((frame, index) => {
+    times[index] = currentStart
+    currentStart += Math.floor((frame.beats ?? 1) * ms)
+  })
+
+  return times
+}
+
 export const PROPTIMES = (propData: RootDataCompiled): number[][] => {
-  const ms = Math.round(60000 / propData.bpm)
   const propTimes: number[][] = Array.from({ length: propData.props.length }, () => [])
 
-  // Iterate through props once
   propData.props.forEach((prop, i) => {
-    const times = Array.from({ length: prop.anim.length }, () => 0)
-    let currentStart = 0
-
-    // Iterate through each animation in the prop
-    prop.anim.forEach((anim, j) => {
-      const actualBeats = anim.beats ?? 1,
-        actualDuration = Math.floor(actualBeats * ms)
-      times[j] = currentStart
-      currentStart += actualDuration
-    })
-
-    propTimes[i] = times
+    propTimes[i] = FRAMESTARTS(prop.anim, propData.bpm)
   })
 
   return propTimes
 }
+
+export const MOTIONTIMES = (propData: RootDataCompiled): number[][] =>
+  propData.props.map((prop) => FRAMESTARTS(prop.motion, propData.bpm))
 
 // Unique merger of PROPTIMES
 export const UNQTIMES = (propTimes: number[][] | RootDataCompiled): number[] => {

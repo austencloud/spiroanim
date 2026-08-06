@@ -83,11 +83,6 @@ describe('shiftAnimationFrames', () => {
     }
 
     expect(result.map(({ beats }) => beats)).toEqual([3, 2, 2])
-    expect(result.map(({ move }) => move)).toEqual([
-      [3, 0, 0],
-      [3, 0, 0],
-      [2, 0, 0],
-    ])
     expect(closedFrames[0]).toEqual({
       arc: 0,
       beats: 2,
@@ -185,9 +180,6 @@ describe('shiftAnimationFrames', () => {
       adjust: original[3]!.adjust,
     })
 
-    const originalMove = original.slice(0, 4).reduce((total, frame) => total + frame.move[0], 0)
-    const resultMove = result.slice(0, 4).reduce((total, frame) => total + frame.move[0], 0)
-    expect(resultMove).toBe(originalMove)
     expect(resultFrames[0]).toEqual(frames[0])
     expect(resultFrames[4]).toEqual(frames[4])
   })

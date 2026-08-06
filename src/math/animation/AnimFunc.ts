@@ -11,6 +11,7 @@ import type {
   RootDataCompiled,
   PropDataCompiled,
   AnimDataCompiled,
+  MotionDataCompiled,
   PointInd,
 } from '@/types/AnimTypes'
 
@@ -112,6 +113,7 @@ const posx = new Vector3(),
 // Converts an individual prop to be used by the animator
 const propCompile = (prop: PropDataFinal): PropDataCompiled => {
   const anims: AnimDataCompiled[] = [],
+    motions: MotionDataCompiled[] = [],
     // Initial points to begin calculations from
     pos = InitialPoint.clone(),
     rot = InitialPoint.clone(),
@@ -143,7 +145,6 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
         plane: anim.plane ?? 0,
         axis: anim.axis ?? anim.plane ?? 0,
         type: anim.type ?? TTYPE.SPHE,
-        move: anim.move ?? ([0, 0, 0] as [number, number, number]),
       },
       // Angle on Orthogonal Plane
       radPlane = MathUtils.degToRad(vars.plane),
@@ -176,9 +177,21 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     anims.push(push)
   }
 
+  let motionBeats = 1
+  const motionOffset: [number, number, number] = [0, 0, 0]
+  for (const motion of prop.motion ?? []) {
+    motionBeats = motion.beats ?? motionBeats
+    const move = motion.move ?? ([0, 0, 0] as [number, number, number])
+    motionOffset[0] += move[0]
+    motionOffset[1] += move[1]
+    motionOffset[2] += move[2]
+    motions.push({ beats: motionBeats, move, offset: [...motionOffset] })
+  }
+
   return {
     ...prop,
     anim: anims,
+    motion: motions,
   }
 }
 

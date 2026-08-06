@@ -74,7 +74,7 @@ const props = defineProps<{
 
 const playerStore = usePlayerStore(props.store)
 const { CURRENT } = playerStore.raw()
-const { PLAYING, UPDATE, SELECTION, SELECTED, COUNT, MAX, UTIMES } = storeToRefs(playerStore)
+const { PLAYING, UPDATE, SELECTION, SELECTED, COUNT, MAX, ETIMES } = storeToRefs(playerStore)
 
 const dim = inject<Readonly<{ width: number; height: number }>>('dim')
 
@@ -143,13 +143,13 @@ watch(
 
     if (end !== oldEnd) {
       // If end index changed:
-      // - Normally set CURRENT to UTIMES[end]
+      // - Normally set CURRENT to the displayed frame set's end time
       // - But if moving forward (end > start), we adjust CURRENT to just before end
       //   so playback logic doesn't overshoot or duplicate the final frame
-      CURRENT.value = (UTIMES.value[end] ?? 0) + (end > start ? -1 : 0)
+      CURRENT.value = (ETIMES.value[end] ?? 0) + (end > start ? -1 : 0)
     } else if (start !== oldStart) {
       // If only the start changed, set CURRENT to that new start frame
-      CURRENT.value = UTIMES.value[start] ?? 0
+      CURRENT.value = ETIMES.value[start] ?? 0
     }
 
     previousSelection = [start, end]

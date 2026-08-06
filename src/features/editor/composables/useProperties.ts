@@ -21,6 +21,8 @@ import type {
   SetterFunc,
   GetterFunc,
   AllVars,
+  MotionKeys,
+  MotionCompKeys,
 } from '@/types/AnimTypes'
 
 export const VALUE = 0
@@ -100,7 +102,7 @@ export function useProperties(store: string = 'main') {
   const { PLAYING } = storeToRefs(playerStore)
 
   const propertiesStore = storeToRefs(usePropertiesStore(store))
-  const { IDENT, ANIMS, CMPDS, PROPS } = propertiesStore
+  const { IDENT, ANIMS, CMPDS, MOTIONS, MCOMPDS, PROPS } = propertiesStore
 
   // Broke this out separate from animGet
   const animVals = (key: string) => {
@@ -232,6 +234,29 @@ export function useProperties(store: string = 'main') {
     return [val, equal, str, fall]
   }
 
+  const motionSet: SetterFunc = (key, val) => {
+    if (PLAYING.value) return
+    val = constraints(key, val)
+    if (val === undefined) (MOTIONS.value as AnonObject[]).every((obj) => delete obj[key] || true)
+    else (MOTIONS.value as AnonObject[]).every((obj) => (obj[key] = val) || true)
+    triggerRef(ROOT)
+  }
+
+  const motionGet: GetterFunc = (key) => {
+    const values = MOTIONS.value.map((frame) => frame[key as MotionKeys])
+    let val = values[0]
+    let equal = values.every((value) => samePropertyValue(value, val))
+    let fall = false
+
+    if (val === undefined && MCOMPDS.value.length > 0) {
+      val = MCOMPDS.value[0]![key as MotionCompKeys]
+      equal = MCOMPDS.value.every((frame) => samePropertyValue(frame[key as MotionCompKeys], val))
+      fall = val !== undefined
+    }
+
+    return [val, equal, equal ? stringGet(key, val) : 'Mismatch', fall]
+  }
+
   const propSet: SetterFunc = (key, val) => {
     //if ( PLAYING.value )
     //  return
@@ -286,6 +311,8 @@ export function useProperties(store: string = 'main') {
     constraints,
     animSet,
     animGet,
+    motionSet,
+    motionGet,
     propSet,
     propGet,
     rootSet,
@@ -313,6 +340,11 @@ export function useProperties(store: string = 'main') {
       })
     },
   }
+}
+
+function samePropertyValue(first: VarTypes | undefined, second: VarTypes | undefined): boolean {
+  if (!Array.isArray(first) || !Array.isArray(second)) return first === second
+  return first.every((value, index) => value === second[index])
 }
 
 const pos = new Vector3(),

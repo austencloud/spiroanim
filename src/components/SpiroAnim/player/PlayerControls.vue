@@ -80,7 +80,7 @@ const props = defineProps<{
 
 const playerStore = usePlayerStore(props.store)
 const { ROOT, CURRENT } = playerStore.raw()
-const { cameraCenter, PLAYING, SELECTION, INDEX, UTIMES, UPDATE, SELECTED } =
+const { cameraCenter, PLAYING, SELECTION, EINDEX, ETIMES, UPDATE, SELECTED } =
   storeToRefs(playerStore)
 
 const speedOptions = [4, 3, 2, 1, 0.5, 0.25, 0.1] as const
@@ -97,12 +97,12 @@ const clickPlay = () => {
 }
 
 const clickMode = () => {
-  const index = INDEX.value
-  const max = UTIMES.value.length - 1
+  const index = EINDEX.value
+  const max = ETIMES.value.length - 1
   UPDATE.value = Symbol()
 
   if ((SELECTION.value = !SELECTION.value)) {
-    CURRENT.value = UTIMES.value[index] ?? 0
+    CURRENT.value = ETIMES.value[index] ?? 0
     SELECTED.value[0] = index
     SELECTED.value[1] = Math.min(index + 1, max) // index + 1 > max ? index : index + 1
   }

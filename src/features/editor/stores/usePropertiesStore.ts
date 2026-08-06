@@ -1,5 +1,13 @@
-import type { PropDataFinal, AnimData, AnimDataCompiled } from '@/types/AnimTypes'
+import type {
+  PropDataFinal,
+  AnimData,
+  AnimDataCompiled,
+  FrameSet,
+  MotionData,
+  MotionDataCompiled,
+} from '@/types/AnimTypes'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { UNQTIMES } from '@/math/animation/PlayerFunc'
 
 export interface AnimIdent {
   prop: number
@@ -30,12 +38,14 @@ export const usePropertiesStore = (id: string) => {
     () => {
       const playerStore = usePlayerStore(id)
       const { ROOT, COMPILED } = playerStore.raw()
-      const { INDEX, SELECTION, SELECTED, PTIMES, UTIMES } = storeToRefs(playerStore)
+      const { EINDEX, SELECTION, SELECTED, PTIMES, MTIMES, UTIMES, ETIMES } =
+        storeToRefs(playerStore)
 
       // Default collapsed state
       const pMOBILE = ref<Record<string, string[]>>({
         anim: ['anim'],
         advanced: ['advanced'],
+        motion: ['motion'],
       })
 
       const START = ref(0)
@@ -45,10 +55,13 @@ export const usePropertiesStore = (id: string) => {
       const IDENT = ref<AnimIdent[]>([])
       const ANIMS = ref<AnimData[]>([])
       const CMPDS = ref<AnimDataCompiled[]>([])
+      const MOTIONS = ref<MotionData[]>([])
+      const MCOMPDS = ref<MotionDataCompiled[]>([])
       const PROPS = ref<PropDataFinal[]>([])
 
       const pBOUND = ref(true)
       const pMULTI = ref(false)
+      const pFRAMES = ref<FrameSet>('animation')
       const pSELECTED = ref<Record<number, boolean>>({ 0: true })
       const pRADIO = ref(-1)
 
@@ -61,18 +74,39 @@ export const usePropertiesStore = (id: string) => {
         settings: ['settings'],
         manage: ['manage'],
         rotate: ['rotate'],
+        motion: ['motion'],
       })
       const pEXPANDED = ref<Record<string, string[]>>(pMOBILE.value)
 
       watch(
-        [COMPILED, INDEX, SELECTION, SELECTED, pBOUND, pSELECTED],
+        [COMPILED, EINDEX, SELECTION, SELECTED, pBOUND, pSELECTED, pFRAMES],
         () => {
-          const propTimes = PTIMES.value,
-            unqTimes = UTIMES.value
-          START.value = unqTimes[SELECTION.value ? SELECTED.value[0]! : INDEX.value] ?? 0
-          END.value = unqTimes[SELECTION.value ? SELECTED.value[1]! : INDEX.value] ?? 0
+          const propTimes = pFRAMES.value === 'animation' ? PTIMES.value : MTIMES.value
+          const ownTimes = UNQTIMES(propTimes)
+          const overallEnd = UTIMES.value.at(-1) ?? 0
+          const unqTimes =
+            ownTimes.length === 0
+              ? [0]
+              : overallEnd > ownTimes.at(-1)!
+                ? [...ownTimes, overallEnd]
+                : ownTimes
+          if (
+            unqTimes.length !== ETIMES.value.length ||
+            unqTimes.some((time, index) => time !== ETIMES.value[index])
+          )
+            ETIMES.value = unqTimes
+          let activeIndex = 0
+          const current = playerStore.raw().CURRENT.value
+          for (let i = 0; i < unqTimes.length; i++) {
+            if (unqTimes[i]! > current) break
+            activeIndex = i
+          }
+          START.value = unqTimes[SELECTION.value ? SELECTED.value[0]! : activeIndex] ?? 0
+          END.value = unqTimes[SELECTION.value ? SELECTED.value[1]! : activeIndex] ?? 0
           ANIMS.value = []
           CMPDS.value = []
+          MOTIONS.value = []
+          MCOMPDS.value = []
           IDENT.value = []
           PROPS.value = []
           ACTIVE.value = []
@@ -91,8 +125,13 @@ export const usePropertiesStore = (id: string) => {
               if (val >= START.value && val <= END.value) {
                 add = true
                 if (pSELECTED.value[i]) {
-                  ANIMS.value.push(ROOT.value.props[i]!.anim[j]!)
-                  CMPDS.value.push(COMPILED.value.props[i]!.anim[j]!)
+                  if (pFRAMES.value === 'animation') {
+                    ANIMS.value.push(ROOT.value.props[i]!.anim[j]!)
+                    CMPDS.value.push(COMPILED.value.props[i]!.anim[j]!)
+                  } else {
+                    MOTIONS.value.push(ROOT.value.props[i]!.motion[j]!)
+                    MCOMPDS.value.push(COMPILED.value.props[i]!.motion[j]!)
+                  }
                   IDENT.value.push({
                     prop: i,
                     index: j,
@@ -100,7 +139,7 @@ export const usePropertiesStore = (id: string) => {
                 }
               }
             }
-            if (add || INDEX.value == 0) {
+            if (add || EINDEX.value == 0) {
               ACTIVE.value.push(i)
               if (pSELECTED.value[i]) PROPS.value.push(ROOT.value.props[i]!)
             }
@@ -129,6 +168,7 @@ export const usePropertiesStore = (id: string) => {
 
         pBOUND,
         pMULTI,
+        pFRAMES,
         pSELECTED,
         pRADIO,
 
@@ -138,6 +178,8 @@ export const usePropertiesStore = (id: string) => {
         IDENT,
         ANIMS,
         CMPDS,
+        MOTIONS,
+        MCOMPDS,
         PROPS,
 
         START,

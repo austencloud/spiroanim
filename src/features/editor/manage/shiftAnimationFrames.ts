@@ -199,17 +199,6 @@ export const shiftAnimationFrameRange = (
           )
         : target.adjust
 
-    const move =
-      outputIndex === 0
-        ? ([
-            compiled[startIndex]!.move[0] + compiled[startIndex + 1]!.move[0],
-            compiled[startIndex]!.move[1] + compiled[startIndex + 1]!.move[1],
-            compiled[startIndex]!.move[2] + compiled[startIndex + 1]!.move[2],
-          ] satisfies [number, number, number])
-        : preserveOutgoing
-          ? ([0, 0, 0] satisfies [number, number, number])
-          : ([...target.move] satisfies [number, number, number])
-
     return {
       turns: snapNumber(
         MathUtils.radToDeg(rotationRadians) -
@@ -226,7 +215,6 @@ export const shiftAnimationFrameRange = (
       arc: snapNumber(MathUtils.radToDeg(arcRadians)),
       plane: snapSignedAngle(planeRadians),
       axis: snapSignedAngle(axisRadians),
-      move,
     }
   })
 

@@ -59,7 +59,7 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 const store = inject('store', ref('main'))
 const playerStore = usePlayerStore(store.value)
 const { ROOT, COMPILED } = playerStore.raw()
-const { PLAYING, SELECTION, SELECTED, UTIMES } = storeToRefs(playerStore)
+const { PLAYING, SELECTION, SELECTED, ETIMES } = storeToRefs(playerStore)
 const { pSELECTED } = useProperties(store.value)
 const { propSelection } = useManageProperties(store.value)
 const warningOpen = ref(false)
@@ -118,7 +118,7 @@ const endpointsMismatch = computed(() =>
 
 const performShift = async () => {
   const selectedTimes = SELECTION.value
-    ? ([UTIMES.value[SELECTED.value[0]!], UTIMES.value[SELECTED.value[1]!]] as const)
+    ? ([ETIMES.value[SELECTED.value[0]!], ETIMES.value[SELECTED.value[1]!]] as const)
     : undefined
   const shiftedProps = shiftTargets.value.map(({ propIndex, startIndex, endIndex }) => {
     const prop = ROOT.value.props[propIndex]!
@@ -143,8 +143,8 @@ const performShift = async () => {
 
   if (selectedTimes?.[0] !== undefined && selectedTimes[1] !== undefined) {
     await nextTick()
-    const startIndex = UTIMES.value.indexOf(selectedTimes[0])
-    const endIndex = UTIMES.value.indexOf(selectedTimes[1])
+    const startIndex = ETIMES.value.indexOf(selectedTimes[0])
+    const endIndex = ETIMES.value.indexOf(selectedTimes[1])
     if (startIndex >= 0 && endIndex >= 0) SELECTED.value = [startIndex, endIndex]
   }
 }

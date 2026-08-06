@@ -5,6 +5,7 @@ import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 import { VDEF as VDEF_V2 } from '@/services/query/versions/SpiroAnimQSv2'
 import { CHARSET as CHARSET_V3, VDEF as VDEF_V3 } from '@/services/query/versions/SpiroAnimQSv3'
+import { CHARSET as CHARSET_V4, VDEF as VDEF_V4 } from '@/services/query/versions/SpiroAnimQSv4'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const createRoot = (): RootDataFinal => ({
@@ -31,6 +32,7 @@ const createRoot = (): RootDataFinal => ({
     {
       color: 2,
       anim: [{ arc: 90, plane: 0, turns: -540, move: [2, 0, 0] }],
+      motion: [],
     },
   ],
 })
@@ -97,6 +99,68 @@ describe('useSpiroAnimQS', () => {
     })
     expect(decodedV2.arms).toBe(true)
     expect(decodedV2.props[0]!.arms).toBe(false)
+  })
+
+  it('stores Motion separately and omits unused Motion values in version 4', async () => {
+    const query = await useSpiroAnimQS(VDEF_V4, useBaseQS(VDEF_V4, { charset: CHARSET_V4 }), 4)
+    const root = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props[0]!.motion = [{ beats: 2 }, { move: [2, 0, 0] }]
+
+    const encoded = query.encodeQS(root, false)
+    expect(encoded.m0).toBeDefined()
+    expect(encoded.v).toBe('4')
+
+    const decoded = query.decodeQS(encoded)
+    expect(decoded.props[0]!.anim[0]!.move).toBeUndefined()
+    expect(decoded.props[0]!.motion).toEqual([{ beats: 2 }, { move: [2, 0, 0] }])
+    expect(query.encodeQS(decoded, false)).toEqual(encoded)
+
+    root.props[0]!.motion = []
+    expect(query.encodeQS(root, false)).not.toHaveProperty('m0')
+
+    root.props[0]!.motion = [{}, {}]
+    const encodedEmptyFrames = query.encodeQS(root, false)
+    expect(encodedEmptyFrames.m0).toBe('..')
+    expect(query.decodeQS(encodedEmptyFrames).props[0]!.motion).toEqual([{}, {}])
+  })
+
+  it('migrates version 3 MOVE values into Motion when decoded by version 4', async () => {
+    const query = await useSpiroAnimQS(VDEF_V4, useBaseQS(VDEF_V4, { charset: CHARSET_V4 }), 4)
+    const migrated = await query.decodeVer({
+      r: 'GE28Eji9g',
+      p0: 'O__f.biQmw_______wuu',
+      v: '3',
+    })
+
+    expect(migrated.props[0]!.anim[0]!.move).toBeUndefined()
+    expect(migrated.props[0]!.motion).toEqual([{ move: [2, 0, 0] }])
+  })
+
+  it('migrates the existing multi-prop MOVE query into optional m values', async () => {
+    const query = await useSpiroAnimQS(VDEF_V4, useBaseQS(VDEF_V4, { charset: CHARSET_V4 }), 4)
+    const migrated = await query.decodeVer({
+      r: 'GGw8Eje11',
+      p0: 'N__.bjxuYHj_r_WQ.blExM_______uuI.____________uuI._____Hj_____uug.____________uug....',
+      p1: 'S__.bjxuYBH_r_WQ.blEpk_______uuI.____________uuI._WQ__Hj_____uug.____________uug....',
+      v: '3',
+    })
+
+    expect(migrated.props).toHaveLength(2)
+    for (const prop of migrated.props) {
+      expect(prop.anim.every((frame) => frame.move === undefined)).toBe(true)
+      expect(prop.motion.length).toBeGreaterThan(0)
+    }
+
+    const encoded = query.encodeQS(migrated, false)
+    expect(encoded).toEqual({
+      r: 'GGw8Eje11',
+      p0: 'N__.bjxuYHj_r_WQ.blExM.._____Hj.....',
+      m0: '.0.0uuI.0uuI.0uug._uug',
+      p1: 'S__.bjxuYBH_r_WQ.blEpk.._WQ__Hj.....',
+      m1: '.0.0uuI.0uuI.0uug._uug',
+      v: '4',
+    })
   })
 
   it('rejects unavailable versions instead of decoding them with the wrong codec', async () => {

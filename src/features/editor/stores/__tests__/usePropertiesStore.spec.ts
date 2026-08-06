@@ -25,7 +25,7 @@ describe('usePropertiesStore', () => {
     runtime.ROOT.value = {
       ...runtime.ROOT.value,
       bpm: 60,
-      props: [{ anim: [{ arc: 45, beats: 1 }, { beats: 1 }] }],
+      props: [{ anim: [{ arc: 45, beats: 1 }, { beats: 1 }], motion: [] }],
     }
     await nextTick()
     return { player, properties: usePropertiesStore(id) }
@@ -63,6 +63,34 @@ describe('usePropertiesStore', () => {
     expect(editor.animGet('beats')).toEqual([2, true, '2', false])
   })
 
+  it('uses independent Motion timing and edits Motion without changing Animation', async () => {
+    const player = usePlayerStore('editor-motion')
+    const runtime = player.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      bpm: 60,
+      props: [
+        {
+          anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }],
+          motion: [{ beats: 1, move: [2, 0, 0] }],
+        },
+      ],
+    }
+    await nextTick()
+
+    const properties = usePropertiesStore('editor-motion')
+    properties.pFRAMES = 'motion'
+    await nextTick()
+
+    expect(player.ETIMES).toEqual([0, 2000])
+    expect(properties.MOTIONS).toEqual([{ beats: 1, move: [2, 0, 0] }])
+
+    player.PLAYING = false
+    useProperties('editor-motion').motionSet('move', [4, 0, 0])
+    expect(runtime.ROOT.value.props[0]!.motion[0]!.move).toEqual([4, 0, 0])
+    expect(runtime.ROOT.value.props[0]!.anim).toEqual([{ beats: 1 }, { beats: 1 }, { beats: 1 }])
+  })
+
   it('hydrates only the documented editor preferences', () => {
     localStorage.setItem(
       'sa-properties-editor-persisted',
@@ -70,6 +98,7 @@ describe('usePropertiesStore', () => {
         pBOUND: false,
         pMULTI: true,
         pDESKTOP: { root: [] },
+        pFRAMES: 'motion',
         pSELECTED: { 4: true },
       }),
     )
@@ -83,5 +112,6 @@ describe('usePropertiesStore', () => {
     expect(store.pDESKTOP.anim).toEqual(['anim'])
     expect(store.pDESKTOP.settings).toEqual(['settings'])
     expect(store.pSELECTED).toEqual({ 0: true })
+    expect(store.pFRAMES).toBe('animation')
   })
 })

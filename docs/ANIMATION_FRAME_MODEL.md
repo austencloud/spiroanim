@@ -1,8 +1,8 @@
 # Animation Frame Model
 
-This document describes how editable animation frames become compiled animation data, how the
-worker interprets that data, and how sparse frames can be compacted safely. The Shift management
-operation is documented separately in [`SHIFT.md`](./SHIFT.md).
+This document describes how editable Animation and Motion frames become compiled animation data,
+how the worker interprets that data, and how sparse frames can be compacted safely. The Shift
+management operation is documented separately in [`SHIFT.md`](./SHIFT.md).
 
 The authoritative implementations are:
 
@@ -53,11 +53,10 @@ per-frame default. These are different behaviors.
 | `arc`    |                     `0` | Inherit                    | Incoming position arc and spherical rotation contribution |
 | `plane`  |                     `0` | Always default to `0`      | Incoming position plane                                   |
 | `axis`   | Current frame's `plane` | Current frame's `plane`    | Incoming rotation axis                                    |
-| `move`   |             `[0, 0, 0]` | Always default to zero     | Per-frame offset delta                                    |
 
-`plane`, `axis`, and `move` do not inherit from the preceding frame. A repeated nonzero `plane`
-therefore cannot be deleted merely because the previous frame used the same value. `axis` can be
-deleted when it equals the current frame's `plane`.
+`plane` and `axis` do not inherit from the preceding frame. A repeated nonzero `plane` therefore
+cannot be deleted merely because the previous frame used the same value. `axis` can be deleted
+when it equals the current frame's `plane`.
 
 `rootCompile()` JSON-clones the root before filling inherited values, so compilation does not
 expand the editor's sparse source objects.
@@ -131,21 +130,48 @@ For a Linear transition, the worker applies each frame's Scale to its endpoint b
 interpolating. Interpolating position and Scale separately and then multiplying them would produce
 a quadratic curve when both values change.
 
-## Move offsets
+## Independent Motion frames
 
-`move` is a delta, not an inherited state. Before playback, the worker creates cumulative offsets:
+Each finalized prop owns two independent frame arrays:
+
+```text
+prop.anim    Animation frames
+prop.motion  Motion frames
+```
+
+Motion frames currently contain `beats` and `move`. Their frame boundaries do not need to align
+with Animation. An unused Motion track is always represented in memory as `motion: []`.
+
+The Manage pane follows the selected frame set. Animation exposes its point and prop management
+tools. Motion exposes Insert Frame and Delete Selection; Insert Frame adds an empty frame before or
+after the current position or selected range without invoking player point selection.
+
+Motion `beats` defaults to `1` on the first frame and inherits afterward. `move` is a delta and
+defaults to `[0, 0, 0]` on every frame. Before playback, the compiler creates cumulative offsets:
 
 ```text
 offset[0] = move[0]
 offset[i] = offset[i - 1] + move[i]
 ```
 
-A segment interpolates from `offset[i]` to `offset[i + 1]`.
+A Motion segment interpolates from `offset[i]` to `offset[i + 1]`. Animation and Motion are both
+evaluated at the same absolute playback time. When either frame set ends first, it holds its final
+state while the other continues. Overall playback ends at the last frame boundary from either set.
 
-When the old second frame becomes the new first frame, its original world offset is
-`move[0] + move[1]`. Shift writes that sum into the new first frame. Later shifted frames retain
-their incoming move deltas, and the moved first segment retains the old `move[1]` delta at the new
-end.
+Motion translates the live prop, arms, anchors, guides, and active point during playback. Completed
+Paths and Hands are not children of that translated group. Instead, the worker samples Motion at
+the absolute time of every generated point and bakes that world-space offset into the line. Nodes
+likewise store the sampled world-space offset for their Animation frame. This makes the completed
+visualizations show where the prop traveled without sliding the already-drawn geometry as playback
+continues. Motion boundaries inside an Animation segment are included as exact line samples so
+direction changes remain intact even when the two frame sets do not align. When Motion outlasts
+Animation, the final animated pose continues contributing baked line points through the remaining
+Motion boundaries.
+
+QS versions 1 through 3 stored `move` on Animation frames. Version 4 migration removes those
+legacy fields and builds a Motion track with equivalent boundaries. Stationary spans may be
+collapsed, but the Animation frame immediately before a transition must remain as a Motion
+boundary because its outgoing `beats` value determines when movement begins.
 
 ## Sparse frame compaction
 
@@ -156,9 +182,8 @@ compiler:
 - On the first frame, delete inherited values when they equal their first-frame default.
 - Delete `plane` only when it is zero.
 - Delete `axis` only when it equals the current frame's `plane`.
-- Delete `move` only when all three coordinates are zero.
 
-Version 1 query values are integer-based. Derived floating-point noise near an integer must be
+Query values are integer-based. Derived floating-point noise near an integer must be
 snapped before it reaches the editor or serializer.
 
 The URL-level representation of undefined fields, empty frames, separators, and stripped trailing

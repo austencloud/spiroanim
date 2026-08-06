@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import PropertyPanel from '@/features/editor/components/properties/PropertyPanel.vue'
 import AdvancedPanel from '@/features/editor/components/properties/panels/AdvancedPanel.vue'
 import AnimationsPanel from '@/features/editor/components/properties/panels/AnimationsPanel.vue'
+import MotionPanel from '@/features/editor/components/properties/panels/MotionPanel.vue'
 import RootPanel from '@/features/editor/components/properties/panels/RootPanel.vue'
 import SettingsPanel from '@/features/editor/components/properties/panels/SettingsPanel.vue'
 import type { DynamicVal } from '@/types/AnimTypes'
@@ -44,8 +45,11 @@ describe('editor property panel organization', () => {
       'direct',
       'beats',
       'type',
-      'move',
     ])
+  })
+
+  it('keeps Beats and Move in the independent Motion panel', () => {
+    expect(propertyNames(MotionPanel, 'motion-panel-order')).toEqual(['beats', 'move'])
   })
 
   it('moves global numeric controls from Root into Settings', () => {

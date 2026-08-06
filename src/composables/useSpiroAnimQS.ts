@@ -3,6 +3,7 @@
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
+import { migrateLegacyMotion } from '@/services/query/migrateLegacyMotion'
 
 import type { BaseQS, VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData, ConfigItem, ConfigThird } from '@/services/query/types/SpiroAnimQSTypes'
@@ -19,7 +20,8 @@ export async function useSpiroAnimQS(
   VER: number,
 ) {
   // Dynamically import version-specific config creation methods
-  const { createRootConfig, createPropConfig } = await loadSpiroAnimQSVersion(VER)
+  const { createRootConfig, createPropConfig, createMotionConfig } =
+    await loadSpiroAnimQSVersion(VER)
 
   /**
    * Decodes a query string, handling version mismatches
@@ -32,7 +34,8 @@ export async function useSpiroAnimQS(
       // the service-worker update flow to reload it with the matching decoder.
       const { CHARSET: charset, VDEF: VDEF2 } = await loadSpiroAnimQSVersion(v)
       const PAQS = await useSpiroAnimQS(VDEF2, useBaseQS(VDEF2, { charset }), v)
-      return PAQS.decodeQS(route)
+      const decoded = PAQS.decodeQS(route)
+      return VER >= 4 && v < 4 ? migrateLegacyMotion(decoded) : decoded
     } else {
       return decodeQS(route)
     }
@@ -55,6 +58,7 @@ export async function useSpiroAnimQS(
   // Create config from imported functions
   const rootConfig = createRootConfig()
   const propConfig = createPropConfig()
+  const motionConfig = createMotionConfig?.()
 
   const qsUpdateHistory = (args: Record<string, string>) => {
     const encoded = new URLSearchParams(args).toString()
@@ -87,7 +91,12 @@ export async function useSpiroAnimQS(
 
     for (const i in root.props) {
       const prop = root.props[i]
-      if (prop !== undefined) query[`p${i}`] = encodeVar(propConfig, prop)
+      if (prop !== undefined) {
+        query[`p${i}`] = encodeVar(propConfig, prop)
+        if (motionConfig && (prop.motion?.length ?? 0) > 0) {
+          query[`m${i}`] = encodeVar(motionConfig, { anim: prop.motion ?? [] })
+        }
+      }
     }
 
     query.v = String(VER)
@@ -154,7 +163,13 @@ export async function useSpiroAnimQS(
     let i = 0
     let val: string | undefined
     while ((val = route[`p${i++}`] as string | undefined)) {
-      data.props.push(Object.assign({ anim: [] }, decodeVar(propConfig, val)) as PropData)
+      const prop = Object.assign({ anim: [], motion: [] }, decodeVar(propConfig, val)) as PropData
+      const motion = route[`m${i - 1}`] as string | undefined
+      if (motionConfig && motion) {
+        const decoded = decodeVar(motionConfig, motion)
+        prop.motion = Array.isArray(decoded.anim) ? (decoded.anim as PropData['motion']) : []
+      }
+      data.props.push(prop)
     }
 
     return rootFinal(data)

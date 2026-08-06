@@ -43,12 +43,6 @@
       <strong>Linear:</strong> Moves in a straight line (typically) between two points.<br />
       <br /><i>When undefined, this property inherits from the previous frame.</i>
     </template>
-
-    <template #move>
-      <strong>Move</strong><br />
-      Offsets the prop's position along the path relative to its previous position.<br />
-      This allows fine adjustments without altering the underlying path or rotation.
-    </template>
   </PropertyPanel>
 </template>
 
@@ -75,7 +69,6 @@ const vals = [
     items: TTEXT,
     label: 'Transition Type',
   },
-  { name: 'move', text: 'Move', component: 'Offset', undef: true },
 ]
 
 panelWatcher(ANIMS, data, vals, animGet)

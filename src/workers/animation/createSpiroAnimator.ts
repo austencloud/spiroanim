@@ -49,6 +49,7 @@ export type LineMaterial2 = LineMaterial & { linewidth2: number }
 
 import * as props from '@/domain/animation/AnimModels'
 import { closestPoint } from '@/math/animation/AnimFunc'
+import { FRAMESTARTS } from '@/math/animation/PlayerFunc'
 
 const multi = RADIUS / ORIGRADIUS, // Multiplier for sizes
   // Used for individual calculations (not used over animating loop)
@@ -81,6 +82,7 @@ export const createSpiroAnimator = (vars: {
   readonly pobjs: Record<number, Mesh>
   setExportHidden: (features: readonly ImageExportFeature[], hidden: boolean) => void
   animate: (time: number, forward?: number, force?: boolean) => void
+  seek: (milliseconds: number) => void
   dimensions: (
     canvasWidth: number,
     canvasHeight: number,
@@ -102,6 +104,7 @@ export const createSpiroAnimator = (vars: {
     data = vars.prop, // Prop Data originating from Main Thread
     timeline = vars.timeline, // Whether this is displaying on the timeline or not
     anim = data.anim, // Animation Instructions
+    motion = data.motion, // Independent translation instructions
     prop = data.prop ?? 0, // Model displayed for the Prop
     color = data.color ?? 0, // Color of the model
     click = data.click ?? -1, // Whether or not the UI is requesting click events
@@ -120,6 +123,7 @@ export const createSpiroAnimator = (vars: {
     pathsGroup: Group = new Group(),
     handsGroup: Group = new Group(),
     armsGroup: Group = new Group(),
+    motionGroup: Group = new Group(),
     modelGroup: Group = new Group(),
     modelProp: ModelGroup = props[PROPSR[prop]](multi, color, girth),
     // Vectors used for computations over continuous cycles
@@ -133,10 +137,11 @@ export const createSpiroAnimator = (vars: {
     pointPositions = new Map(),
     posLines: Line2[] = [],
     rotLines: Line2[] = [],
-    offsets: Vector3[] = [],
-    offset = new Vector3(),
-    offsetDiff = new Vector3(),
-    offsetCalc = new Vector3()
+    motionStart = new Vector3(),
+    motionEnd = new Vector3(),
+    pathMotionOffset = new Vector3(),
+    motionTimes = FRAMESTARTS(motion, bpm),
+    animationTimes = FRAMESTARTS(anim, bpm)
 
   let apoint: Mesh,
     armPositionAttribute: InterleavedBufferAttribute | undefined,
@@ -208,20 +213,12 @@ export const createSpiroAnimator = (vars: {
       //for (let i = 0; i < posLines.length; i++)
       //  posLines[i].visible = rotLines[i].visible = i + 1 == index
 
-      // Current offset and difference between the next
-      offset.copy(offsets[index]!)
-      if (offsets[index + 1]) offsetDiff.copy(offsets[index + 1]!).sub(offset)
-      else offsetDiff.set(0, 0, 0)
-
       loop = 0
     },
     // Values for transforming positions
     trans = (perc: number) => {
       scalePerc = scale1 + scaleDiff * perc
       depthPerc = depth1 + depthDiff * perc
-
-      // Current offset
-      offsetCalc.copy(offsetDiff).multiplyScalar(perc).add(offset)
     },
     // Calculates positions / rotations in an animation
     calc = (time: number) => {
@@ -274,15 +271,15 @@ export const createSpiroAnimator = (vars: {
           .lerp(scaledPos2.copy(Pos2).multiplyScalar(scale2), perc)
       }
 
-      // Apply Radius and add Offset (Scale is applied by the path-specific branch above)
-      modelGroup.position.multiplyScalar(RADIUS).add(offsetCalc)
+      // Apply Radius (Scale is applied by the path-specific branch above)
+      modelGroup.position.multiplyScalar(RADIUS)
 
       // Keep the arm connected to the moving animation center and the hand / prop origin.
       if (armPositionAttribute) {
         const positions = armPositionAttribute.data.array
-        positions[0] = offsetCalc.x
-        positions[1] = offsetCalc.y
-        positions[2] = offsetCalc.z
+        positions[0] = 0
+        positions[1] = 0
+        positions[2] = 0
         positions[3] = modelGroup.position.x
         positions[4] = modelGroup.position.y
         positions[5] = modelGroup.position.z
@@ -292,15 +289,8 @@ export const createSpiroAnimator = (vars: {
       // Calculate the current rotation based on RotationPerform and angleApply
       crot.copy(Rot).applyAxisAngle(RotX, perc * angleApply + RotationPerform * perc)
 
-      anchorsGroup.position.copy(offsetCalc)
-      guidesGroup.position.copy(offsetCalc)
-
       // Update active point before blending
-      if (apoint && !timeline)
-        apoint.position
-          .copy(crot)
-          .multiplyScalar(RADIUS * scalePerc)
-          .add(offsetCalc)
+      if (apoint && !timeline) apoint.position.copy(crot).multiplyScalar(RADIUS * scalePerc)
 
       // Apply the blended quaternion to crot
       if (smooth)
@@ -313,6 +303,57 @@ export const createSpiroAnimator = (vars: {
       modelGroup.quaternion.setFromUnitVectors(axis2, crot)
 
       loop++
+    },
+    motionOffsetAt = (milliseconds: number, target: Vector3) => {
+      if (motion.length === 0) {
+        return target.set(0, 0, 0)
+      }
+
+      let motionIndex = motionTimes.length - 1
+      for (let i = 0; i < motionTimes.length - 1; i++) {
+        if (milliseconds < motionTimes[i + 1]!) {
+          motionIndex = i
+          break
+        }
+      }
+
+      const current = motion[motionIndex]!
+      const next = motion[motionIndex + 1]
+      motionStart.fromArray(current.offset)
+      if (!next) motionEnd.copy(motionStart)
+      else motionEnd.fromArray(next.offset)
+
+      const start = motionTimes[motionIndex] ?? 0
+      const end = motionTimes[motionIndex + 1] ?? start
+      const percentage =
+        end > start ? Math.max(0, Math.min((milliseconds - start) / (end - start), 1)) : 0
+      return target
+        .copy(motionStart)
+        .lerp(motionEnd, percentage)
+        .divideScalar(10)
+        .multiplyScalar(RADIUS * multi)
+    },
+    applyMotion = (milliseconds: number) => {
+      motionOffsetAt(milliseconds, motionGroup.position)
+    },
+    seek = (milliseconds: number) => {
+      applyMotion(milliseconds)
+      if (anim.length === 0) return
+
+      const animationMilliseconds = Math.min(milliseconds, animationTimes.at(-1) ?? 0)
+      let frameIndex = animationTimes.length - 1
+      for (let i = 0; i < animationTimes.length - 1; i++) {
+        if (animationMilliseconds < animationTimes[i + 1]!) {
+          frameIndex = i
+          break
+        }
+      }
+
+      const start = animationTimes[frameIndex] ?? 0
+      index = frameIndex
+      setup(0)
+      index = frameIndex + 1
+      calc(Math.max(0, animationMilliseconds - start) * speed)
     },
     // Primary animation routine
     animate = (time: number | undefined, forward = 0, force = false) => {
@@ -403,17 +444,6 @@ export const createSpiroAnimator = (vars: {
     armsGroup.add(armLine)
   }
 
-  // Offsets for each
-  for (let i = 0; i < anim.length; i++)
-    offsets.push(
-      (offsets[offsets.length - 1] ?? new Vector3()).clone().add(
-        new Vector3()
-          .fromArray(anim[i]!.move)
-          .divideScalar(10)
-          .multiplyScalar(RADIUS * multi),
-      ),
-    )
-
   if (click == CMODES.points) {
     psize = 'click'
     anchors = true
@@ -423,7 +453,7 @@ export const createSpiroAnimator = (vars: {
     const rot1Mat = new MeshBasicMaterial({ color: COLSET[color]![0] })
     apoint = new Mesh(rot1Geo, rot1Mat)
     apoint.scale.set(girth, girth, girth)
-    scene.add(apoint)
+    motionGroup.add(apoint)
 
     apoint.visible = false // disabled for now
   }
@@ -466,7 +496,7 @@ export const createSpiroAnimator = (vars: {
         sphere.position
           .copy(ppos)
           .multiplyScalar(RADIUS * scalePerc)
-          .add(offsetCalc)
+          .add(motionOffsetAt(animationTimes[i] ?? 0, pathMotionOffset))
 
         nodesGroup.add(sphere)
         pointPositions.set(sphere, sphere.position.clone())
@@ -477,23 +507,41 @@ export const createSpiroAnimator = (vars: {
         let posPoints: Vector3[] = [],
           rotPoints: Vector3[] = []
 
-        const stepPos = Pos.clone().multiplyScalar(RADIUS)
+        const segmentStart = animationTimes[i] ?? 0,
+          segmentEnd = animationTimes[i + 1] ?? segmentStart,
+          samplePercentages = Array.from({ length: catmCount }, (_, j) => j / (catmCount - 1))
+
+        if (segmentEnd > segmentStart) {
+          for (const time of motionTimes) {
+            if (time > segmentStart && time < segmentEnd)
+              samplePercentages.push((time - segmentStart) / (segmentEnd - segmentStart))
+          }
+          samplePercentages.sort((a, b) => a - b)
+        }
+
+        const uniqueSamplePercentages = samplePercentages.filter(
+            (percentage, sampleIndex) =>
+              sampleIndex === 0 || percentage !== samplePercentages[sampleIndex - 1],
+          ),
+          stepPos = Pos.clone().multiplyScalar(RADIUS)
 
         // Spherical Path
-        if (PathType == TTYPE.SPHE) posPoints = catmPoints(angleApply, stepPos, PosX)
+        if (PathType == TTYPE.SPHE)
+          posPoints = catmPointsAt(angleApply, stepPos, PosX, uniqueSamplePercentages)
         // Linear Path
         else {
           stepPos.multiplyScalar(scale1)
           const stepPos2 = Pos2.clone().multiplyScalar(RADIUS * scale2)
-          for (let j = 0; j < catmCount; j++)
-            posPoints.push(stepPos.clone().lerp(stepPos2, j / (catmCount - 1)))
+          for (const percentage of uniqueSamplePercentages)
+            posPoints.push(stepPos.clone().lerp(stepPos2, percentage))
         }
 
         // Rotation Path
-        rotPoints = catmPoints(
+        rotPoints = catmPointsAt(
           angleApply + RotationPerform,
           Rot.clone().multiplyScalar(modelProp.size),
           RotX,
+          uniqueSamplePercentages,
         )
 
         const cRot = new Vector3()
@@ -501,7 +549,8 @@ export const createSpiroAnimator = (vars: {
         // Update positions to include scale, depth, and adjustment
         for (let j = 0; j < posPoints.length; j++) {
           // Include both endpoints so consecutive path segments share the same seam position.
-          const perc = j / (posPoints.length - 1),
+          const perc = uniqueSamplePercentages[j]!,
+            sampleTime = segmentStart + (segmentEnd - segmentStart) * perc,
             pos = posPoints[j]!,
             rot = rotPoints[j]!
 
@@ -522,10 +571,16 @@ export const createSpiroAnimator = (vars: {
           rot.multiplyScalar(1 + depthPerc)
 
           // Add posPoints to rotPoints (creating a "helix" around the path)
-          rot.add(posPoints[j]!).add(offsetCalc)
+          rot.add(posPoints[j]!)
 
           // Apply depth to copy of rot, and add to the position
-          pos.add(cRot.multiplyScalar(depthPerc)).add(offsetCalc)
+          pos.add(cRot.multiplyScalar(depthPerc))
+
+          // Paths and Hands remain in world space. Motion is sampled at the same absolute time as
+          // each point so the completed geometry records where the animation traveled.
+          motionOffsetAt(sampleTime, pathMotionOffset)
+          rot.add(pathMotionOffset)
+          pos.add(pathMotionOffset)
         }
 
         // Collect paths into one collection if enabled
@@ -547,6 +602,34 @@ export const createSpiroAnimator = (vars: {
           posLines.push(posLine)
           scene.add(posLine)
         }
+      }
+    }
+
+    // If Motion outlasts Animation, the final animated pose continues traveling. Extend the
+    // baked world-space lines through the remaining Motion boundaries instead of moving the
+    // already-completed geometry as a group.
+    const animationEnd = animationTimes.at(-1) ?? 0
+    const motionEnd = motionTimes.at(-1) ?? 0
+    const lastAnimation = anim.at(-1)
+    if (lastAnimation && motionEnd > animationEnd && (paths || hands)) {
+      const finalPosition = new Vector3()
+        .fromArray(lastAnimation.pos)
+        .multiplyScalar((RADIUS * lastAnimation.scale) / 10)
+      const finalRotation = new Vector3()
+        .fromArray(lastAnimation.rot)
+        .multiplyScalar(modelProp.size)
+      const finalHand = finalPosition
+        .clone()
+        .add(finalRotation.clone().multiplyScalar(lastAnimation.depth / 10))
+      const finalPath = finalPosition
+        .clone()
+        .add(finalRotation.multiplyScalar(1 + lastAnimation.depth / 10))
+      const continuationTimes = [animationEnd, ...motionTimes.filter((time) => time > animationEnd)]
+
+      for (const time of continuationTimes) {
+        motionOffsetAt(time, pathMotionOffset)
+        if (paths) rotTmp.push(finalPath.clone().add(pathMotionOffset))
+        if (hands) posTmp.push(finalHand.clone().add(pathMotionOffset))
       }
     }
 
@@ -590,13 +673,14 @@ export const createSpiroAnimator = (vars: {
 
   // modelProp allows manipulations independently from the group - Ex: Z Position / Depth, etc.
   modelGroup.add(modelProp) // Group within a Group
-  scene.add(modelGroup)
-  scene.add(anchorsGroup)
+  motionGroup.add(modelGroup)
+  motionGroup.add(anchorsGroup)
+  motionGroup.add(guidesGroup)
+  motionGroup.add(armsGroup)
+  scene.add(motionGroup)
   scene.add(nodesGroup)
-  scene.add(guidesGroup)
   scene.add(pathsGroup)
   scene.add(handsGroup)
-  scene.add(armsGroup)
 
   const exportGroups: Record<ImageExportFeature, Group> = {
     paths: pathsGroup,
@@ -641,19 +725,19 @@ export const createSpiroAnimator = (vars: {
     },
 
     animate,
+    seek,
     dimensions,
   }
 }
 
 const radBase = MathUtils.degToRad(5), // Number of degrees for each base point
   catmCount = 100, // Number of interpolated points
-  // Builds a list of points for a rotation and interpolates between them to a specific count
-  catmPoints = (
+  // Builds a curve from points distributed across a rotation.
+  catmCurve = (
     radRotation: number,
     Position: Vector3,
     Direction: Vector3,
     radStep: number = radBase,
-    Total: number = catmCount,
   ) => {
     const stepCount = Math.max(1, Math.abs(Math.floor(radRotation / radStep))),
       stepRadians = radRotation / stepCount,
@@ -663,8 +747,24 @@ const radBase = MathUtils.degToRad(5), // Number of degrees for each base point
     for (let j = 0; j < stepCount; j++)
       stepList.push(stepPosition.applyAxisAngle(Direction, stepRadians).clone())
 
-    // Interpolate stepList to match Total
-    return new CatmullRomCurve3(stepList).getPoints(Total - 1)
+    return new CatmullRomCurve3(stepList)
+  },
+  // Builds a list of points for a rotation and interpolates between them to a specific count.
+  catmPoints = (
+    radRotation: number,
+    Position: Vector3,
+    Direction: Vector3,
+    radStep: number = radBase,
+    Total: number = catmCount,
+  ) => catmCurve(radRotation, Position, Direction, radStep).getPoints(Total - 1),
+  catmPointsAt = (
+    radRotation: number,
+    Position: Vector3,
+    Direction: Vector3,
+    percentages: readonly number[],
+  ) => {
+    const curve = catmCurve(radRotation, Position, Direction)
+    return percentages.map((percentage) => curve.getPoint(percentage))
   },
   // Guide points to create a circle
   guidePoints = catmPoints(

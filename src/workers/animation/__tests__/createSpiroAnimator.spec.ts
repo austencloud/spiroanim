@@ -8,6 +8,42 @@ import { rootFinal } from '@/math/animation/PlayerFunc'
 import { createSpiroAnimator, type LineMaterial2 } from '@/workers/animation/createSpiroAnimator'
 import type { RootData } from '@/types/AnimTypes'
 
+const getLineByColor = (scene: Scene, color: number): Line2 | undefined =>
+  scene
+    .getObjectsByProperty('isLine2', true)
+    .find(
+      (object): object is Line2 =>
+        object instanceof Line2 && (object.material as LineMaterial2).color.getHex() === color,
+    )
+
+const getLineEndpoints = (line: Line2) => {
+  const starts = line.geometry.getAttribute('instanceStart') as InterleavedBufferAttribute
+  const ends = line.geometry.getAttribute('instanceEnd') as InterleavedBufferAttribute
+
+  return {
+    first: new Vector3(starts.getX(0), starts.getY(0), starts.getZ(0)),
+    last: new Vector3(
+      ends.getX(ends.count - 1),
+      ends.getY(ends.count - 1),
+      ends.getZ(ends.count - 1),
+    ),
+  }
+}
+
+const getLinePoints = (line: Line2): Vector3[] => {
+  const starts = line.geometry.getAttribute('instanceStart') as InterleavedBufferAttribute
+  const ends = line.geometry.getAttribute('instanceEnd') as InterleavedBufferAttribute
+  const points = Array.from(
+    { length: starts.count },
+    (_, index) => new Vector3(starts.getX(index), starts.getY(index), starts.getZ(index)),
+  )
+
+  points.push(
+    new Vector3(ends.getX(ends.count - 1), ends.getY(ends.count - 1), ends.getZ(ends.count - 1)),
+  )
+  return points
+}
+
 const createRoot = (arms: boolean, hands = false): RootData => ({
   bpm: 60,
   prop: 0,
@@ -22,8 +58,9 @@ const createRoot = (arms: boolean, hands = false): RootData => ({
   anchors: false,
   props: [
     {
+      motion: [{ beats: 1, move: [2, 0, 0] }, {}],
       anim: [
-        { beats: 1, scale: 10, move: [2, 0, 0] },
+        { beats: 1, scale: 10 },
         { scale: 20, arc: 90 },
       ],
     },
@@ -73,8 +110,7 @@ describe('createSpiroAnimator Arms rendering', () => {
     expect(material.color.getHex()).toBe(COLSET[2]![1])
     expect(material.linewidth2).toBeCloseTo(0.22)
 
-    animator.animate(0, 0, true)
-    animator.animate(500, 0, true)
+    animator.seek(500)
 
     const start = armLine.geometry.getAttribute('instanceStart') as InterleavedBufferAttribute
     const end = armLine.geometry.getAttribute('instanceEnd') as InterleavedBufferAttribute
@@ -85,8 +121,11 @@ describe('createSpiroAnimator Arms rendering', () => {
       end.getZ(0) - startPosition[2],
     )
 
-    expect(startPosition).toEqual([1, 0, 0])
+    expect(startPosition).toEqual([0, 0, 0])
     expect(armLength).toBeCloseTo(7.5)
+
+    scene.updateMatrixWorld(true)
+    expect(armLine.localToWorld(new Vector3(...startPosition)).toArray()).toEqual([1, 0, 0])
 
     animator.dimensions(1600, 900, 30, 60)
     expect(material.resolution.toArray()).toEqual([1600, 900])
@@ -120,7 +159,7 @@ describe('createSpiroAnimator Arms rendering', () => {
 describe('createSpiroAnimator linear scaling', () => {
   it('moves through the straight midpoint between scaled endpoints', () => {
     const root = createRoot(false)
-    root.props[0]!.anim[0]!.move = [0, 0, 0]
+    root.props[0]!.motion = []
     root.props[0]!.anim[1]!.type = TTYPE.LINE
 
     const scene = new Scene()
@@ -140,14 +179,18 @@ describe('createSpiroAnimator linear scaling', () => {
       fov: 45,
       timeline: false,
     })
-    const modelGroup = scene.children.find(
-      (child): child is Group =>
-        child instanceof Group && child.children.some((item) => 'size' in item),
-    )
+    let modelGroup: Group | undefined
+    scene.traverse((child) => {
+      if (
+        modelGroup === undefined &&
+        child instanceof Group &&
+        child.children.some((item) => 'size' in item)
+      )
+        modelGroup = child
+    })
     if (!modelGroup) throw new Error('Expected the animated model group')
 
-    animator.animate(0, 0, true)
-    animator.animate(500, 0, true)
+    animator.seek(500)
 
     const start = new Vector3()
       .fromArray(prop.anim[0]!.pos)
@@ -158,6 +201,216 @@ describe('createSpiroAnimator linear scaling', () => {
     const expectedMidpoint = start.lerp(end, 0.5)
 
     expect(modelGroup.position.distanceTo(expectedMidpoint)).toBeCloseTo(0)
+  })
+
+  it('interpolates Motion independently from the animation frames', () => {
+    const root = createRoot(false)
+    root.props[0]!.motion = [{ beats: 1, move: [0, 0, 0] }, { move: [10, 0, 0] }]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    const motionGroup = scene.children[0]
+    if (!(motionGroup instanceof Group)) throw new Error('Expected the Motion group')
+
+    animator.seek(500)
+    expect(motionGroup.position.toArray()).toEqual([2.5, 0, 0])
+
+    animator.seek(1000)
+    expect(motionGroup.position.toArray()).toEqual([5, 0, 0])
+  })
+
+  it('bakes Motion into Paths and Hands without moving the completed lines', () => {
+    const root = createRoot(false, true)
+    root.paths = true
+    root.nodes = true
+    root.props[0]!.anim = [
+      { beats: 1, scale: 10, arc: 0, turns: 0 },
+      { scale: 10, arc: 0, turns: 0 },
+      { scale: 10, arc: 0, turns: 0 },
+    ]
+    root.props[0]!.motion = [
+      { beats: 1, move: [0, 0, 0] },
+      { move: [10, 0, 0] },
+      { move: [0, 0, 0] },
+    ]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    const pathLine = getLineByColor(scene, COLSET[2]![0])
+    const handLine = getLineByColor(scene, COLSET[2]![2])
+    if (!pathLine || !handLine) throw new Error('Expected Paths and Hands lines')
+
+    const pathEndpoints = getLineEndpoints(pathLine)
+    const handEndpoints = getLineEndpoints(handLine)
+    expect(pathEndpoints.last.x - pathEndpoints.first.x).toBeCloseTo(5)
+    expect(handEndpoints.last.x - handEndpoints.first.x).toBeCloseTo(5)
+    expect(pathLine.parent?.parent).toBe(scene)
+    expect(handLine.parent?.parent).toBe(scene)
+
+    const nodesGroup = scene.children.find(
+      (child): child is Group =>
+        child instanceof Group && child.children.some((item) => item.type === 'Mesh'),
+    )
+    if (!nodesGroup) throw new Error('Expected the Nodes group')
+    expect(nodesGroup.children).toHaveLength(2)
+    expect(nodesGroup.children[1]!.position.x - nodesGroup.children[0]!.position.x).toBeCloseTo(5)
+
+    animator.seek(500)
+    scene.updateMatrixWorld(true)
+
+    expect(pathLine.getWorldPosition(new Vector3()).toArray()).toEqual([0, 0, 0])
+    expect(handLine.getWorldPosition(new Vector3()).toArray()).toEqual([0, 0, 0])
+    expect(nodesGroup.getWorldPosition(new Vector3()).toArray()).toEqual([0, 0, 0])
+    expect(scene.children[0]!.position.toArray()).toEqual([2.5, 0, 0])
+  })
+
+  it('continues baked Paths and Hands when Motion outlasts Animation', () => {
+    const root = createRoot(false, true)
+    root.paths = true
+    root.props[0]!.anim = [{ beats: 1, scale: 10, arc: 0, turns: 0 }]
+    root.props[0]!.motion = [{ beats: 1, move: [0, 0, 0] }, { move: [10, 0, 0] }]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    const pathLine = getLineByColor(scene, COLSET[2]![0])
+    const handLine = getLineByColor(scene, COLSET[2]![2])
+    if (!pathLine || !handLine) throw new Error('Expected extended Paths and Hands lines')
+
+    const pathEndpoints = getLineEndpoints(pathLine)
+    const handEndpoints = getLineEndpoints(handLine)
+    expect(pathEndpoints.last.x - pathEndpoints.first.x).toBeCloseTo(5)
+    expect(handEndpoints.last.x - handEndpoints.first.x).toBeCloseTo(5)
+  })
+
+  it('includes unaligned Motion boundaries exactly in the baked path', () => {
+    const root = createRoot(false)
+    root.paths = true
+    root.props[0]!.anim = [
+      { beats: 4, scale: 10, arc: 0, turns: 0 },
+      { scale: 10, arc: 0, turns: 0 },
+    ]
+    root.props[0]!.motion = [
+      { beats: 1, move: [0, 0, 0] },
+      { beats: 1, move: [10, 0, 0] },
+      { beats: 2, move: [0, 10, 0] },
+      { move: [0, 0, 0] },
+    ]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    const pathLine = getLineByColor(scene, COLSET[2]![0])
+    if (!pathLine) throw new Error('Expected a Paths line')
+
+    const points = getLinePoints(pathLine)
+    const firstPoint = points[0]!.clone()
+    const offsets = points.map((point) => point.clone().sub(firstPoint))
+    expect(offsets.some((offset) => offset.distanceTo(new Vector3(5, 0, 0)) < 0.000001)).toBe(true)
+    expect(offsets.some((offset) => offset.distanceTo(new Vector3(5, 5, 0)) < 0.000001)).toBe(true)
+  })
+
+  it('holds the final animated pose while longer Motion continues', () => {
+    const root = createRoot(false)
+    root.props[0]!.anim = [
+      { beats: 1, scale: 10, arc: 0 },
+      { scale: 10, arc: 90 },
+    ]
+    root.props[0]!.motion = [
+      { beats: 1, move: [0, 0, 0] },
+      { beats: 1, move: [10, 0, 0] },
+      { move: [10, 0, 0] },
+    ]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    const motionGroup = scene.children[0]
+    if (!(motionGroup instanceof Group)) throw new Error('Expected the Motion group')
+    const modelGroup = motionGroup.children.find(
+      (child): child is Group =>
+        child instanceof Group && child.children.some((item) => 'size' in item),
+    )
+    if (!modelGroup) throw new Error('Expected the animated model group')
+
+    animator.seek(1000)
+    const finalAnimatedPosition = modelGroup.position.clone()
+
+    animator.seek(1500)
+    expect(modelGroup.position.distanceTo(finalAnimatedPosition)).toBeCloseTo(0)
+    expect(motionGroup.position.toArray()).toEqual([7.5, 0, 0])
   })
 
   it('connects consecutive head paths at their shared endpoint', () => {

@@ -36,6 +36,7 @@ export type PPropKeys = keyof (typeof PPROP)[PointTypes] // Keys used in PPROP
 export type qsTransform = BooleanConstructor | undefined // For typecasting certain values from query string
 
 export type GrefItem = Record<PointInd, PointInd>
+export type FrameSet = 'animation' | 'motion'
 
 // Animation Data root.props[ { anim: [ ... ] } ]
 export interface AnimData {
@@ -48,6 +49,12 @@ export interface AnimData {
   arc?: number
   plane?: number
   axis?: number
+  /** @deprecated MOVE is read only while upgrading QS v1-v3 data. */
+  move?: [number, number, number]
+}
+
+export interface MotionData {
+  beats?: number
   move?: [number, number, number]
 }
 
@@ -63,6 +70,7 @@ export interface PropData {
   nodes?: boolean
   anchors?: boolean
   anim: AnimData[]
+  motion?: MotionData[]
   thick?: number
 }
 
@@ -106,7 +114,8 @@ export interface RootReadable extends Omit<RootData, 'prop' | 'color' | 'props'>
 }
 
 // Additional values for the final version
-export interface PropDataFinal extends PropData {
+export interface PropDataFinal extends Omit<PropData, 'motion'> {
+  motion: MotionData[]
   click?: number
   active?: boolean
 }
@@ -135,11 +144,17 @@ export interface AnimDataCompiled {
   rot: [number, number, number]
   posx: [number, number, number]
   rotx: [number, number, number]
-  move: [number, number, number]
 }
 
-export interface PropDataCompiled extends Omit<PropDataFinal, 'anim'> {
+export interface MotionDataCompiled {
+  beats: number
+  move: [number, number, number]
+  offset: [number, number, number]
+}
+
+export interface PropDataCompiled extends Omit<PropDataFinal, 'anim' | 'motion'> {
   anim: AnimDataCompiled[]
+  motion: MotionDataCompiled[]
 }
 
 export interface RootDataCompiled extends Omit<RootDataFinal, 'props'> {
@@ -151,10 +166,12 @@ import { type Group } from 'three'
 export type ModelGroup = Group & { size: number }
 
 export type AnimKeys = keyof AnimData // | 'point' | 'direct' | 'path'
-export type PropKeys = keyof Omit<PropData, 'anim'>
+export type MotionKeys = keyof MotionData
+export type PropKeys = keyof Omit<PropData, 'anim' | 'motion'>
 export type RootKeys = keyof Omit<RootData, 'props'>
 
 export type AnimCompKeys = keyof AnimDataCompiled
+export type MotionCompKeys = keyof MotionDataCompiled
 
 // TODO: Update the below to use the above 3 sets of keys
 
@@ -164,7 +181,10 @@ export type AnimCommonKeys = Extract<keyof PropDataFinal, keyof AnimData>
 export type AllCommonKeys = Extract<PropCommonKeys, AnimCommonKeys>
 
 // List of variables - Min / Max / Bits / Transform defined in AnimStruct.ts
-export type AllVars = keyof Omit<RootData, 'props'> | keyof Omit<PropData, 'anim'> | keyof AnimData
+export type AllVars =
+  | keyof Omit<RootData, 'props'>
+  | keyof Omit<PropData, 'anim' | 'motion'>
+  | keyof AnimData
 export type VarTypes = number | [number, number, number] | boolean
 
 export type ValRetType = [VarTypes | undefined, boolean, string, boolean]
@@ -190,9 +210,12 @@ export type GetterFunc = (key: string) => ValRetType
 
 type Merge<M, N> = Omit<M, keyof N> & N
 
-export type AllVarTypes = Merge<Merge<Omit<RootData, 'props'>, Omit<PropData, 'anim'>>, AnimData>
-export type AllDataTypes = RootData | PropData | AnimData
-export type AllFinalTypes = RootDataFinal | PropDataFinal | AnimData
+export type AllVarTypes = Merge<
+  Merge<Omit<RootData, 'props'>, Omit<PropData, 'anim' | 'motion'>>,
+  AnimData
+>
+export type AllDataTypes = RootData | PropData | AnimData | MotionData
+export type AllFinalTypes = RootDataFinal | PropDataFinal | AnimData | MotionData
 
 //export type AllDataTypes = Merge<Merge<RootData, PropData>, AnimData>
 //export type AllFinalTypes = Merge<Merge<RootDataFinal, PropDataFinal>, AnimData>

@@ -2,12 +2,15 @@
   <div ref="eScroll" class="scrollbar" :style="scrollStyle">
     <div :style="gridStyle">
       <div
-        v-for="(time, index) in UTIMES"
+        v-for="(time, index) in ETIMES"
         ref="eCells"
         :key="`u${time}`"
         :style="thumbStyle"
         class="timeline-cell"
-        :class="{ 'timeline-cell--selected': isThumbnailSelected(index) }"
+        :class="{
+          'timeline-cell--selected': isThumbnailSelected(index),
+          'timeline-cell--placeholder': isPlaceholder(index),
+        }"
       >
         <span
           v-for="circle in circles[index]"
@@ -73,7 +76,7 @@ const props = withDefaults(
 )
 
 const { parents: mainViews } = storeToRefs(useMainPaneStore())
-const { pSELECTED } = storeToRefs(usePropertiesStore(props.store))
+const { pSELECTED, pFRAMES } = storeToRefs(usePropertiesStore(props.store))
 
 // Dimensions provided by parent component
 const dim: Readonly<typeof props.dim> = readonly(props.dim)
@@ -88,7 +91,7 @@ call('warnStr', 'Player').then(warnStr)
 
 const playerStore = usePlayerStore(props.store)
 const { ROOT, COMPILED, CURRENT, ORBIT } = playerStore.raw()
-const { INDEX, UTIMES, PLAYING, UPDATE, SELECTION, SELECTED, PTIMES, ASPECT } =
+const { ETIMES, PLAYING, UPDATE, SELECTION, SELECTED, PTIMES, MTIMES, ASPECT, MAX } =
   storeToRefs(playerStore)
 
 const eScroll = ref<HTMLElement>()
@@ -102,12 +105,28 @@ interface TimelineCircle {
 
 const circles = ref<TimelineCircle[][]>([])
 
+const frameIndex = computed(() => {
+  let active = 0
+  for (let index = 0; index < ETIMES.value.length; index++) {
+    if (ETIMES.value[index]! > CURRENT.value) break
+    active = index
+  }
+  return active
+})
+
+const ownTimes = computed(() => {
+  const times = pFRAMES.value === 'animation' ? PTIMES.value : MTIMES.value
+  return [...new Set(times.flat())].sort((first, second) => first - second)
+})
+
 const gridTemplateColumns = ref<CSSProperties['grid-template-columns']>('repeat(1, 100%)')
 const gridAutoRows = ref<CSSProperties['grid-auto-rows']>('100px')
 
 // Vars for thumbnail image requests
 let requesting = false //            Prevents concurrent image requests
 let repeat = false //                True when images have been requested during a request
+let imageGeneration = 0 //            Invalidates responses requested before timeline/data changes
+let imageRefreshQueued = false //     Coalesces simultaneous reactive invalidations
 let imgsLoaded: boolean[] = [] //    Tracks if images are up to date
 const imgsVisible: boolean[] = [] // Tracks if thumbnail is visible
 
@@ -166,7 +185,7 @@ const { value: cursorAnimated, animating: cursorAnimating } = usePingPongValue(
 const aspectRatio = computed(() => ASPECT.value[0] / ASPECT.value[1])
 
 const selectedRange = computed<readonly [number, number]>(() => {
-  if (!SELECTION.value) return [INDEX.value, INDEX.value]
+  if (!SELECTION.value) return [frameIndex.value, frameIndex.value]
 
   const start = SELECTED.value[0] ?? 0
   const end = SELECTED.value[1] ?? start
@@ -189,7 +208,7 @@ onMounted(() => {
   // Send data NOW, and when it updates
   watchImmediate(COMPILED, (data, old) => {
     send('data', toRaw(data))
-    if (old !== undefined) requestImages()
+    if (old !== undefined) invalidateImages()
   })
 
   // Observer for tracking visible thumbnails, requesting images from worker
@@ -211,7 +230,7 @@ onMounted(() => {
     eThumbs,
     (newThumbs, oldThumbs) => {
       oldThumbs?.forEach((o) => thumbObserver.unobserve(o))
-      imgsLoaded = Array.from({ length: UTIMES.value.length }, () => false)
+      imgsLoaded = Array.from({ length: ETIMES.value.length }, () => false)
       newThumbs.forEach((o) => thumbObserver.observe(o))
     },
     // NOTE: Deep is necessary here
@@ -229,7 +248,7 @@ onMounted(() => {
     const sWidth = eScroll.value?.clientWidth ?? 0
     const cCols = calcCols(dim.perc, props.landscape)
     gridPos.cols = props.cols ?? cCols
-    gridPos.rows = Math.ceil(UTIMES.value.length / gridPos.cols)
+    gridPos.rows = Math.ceil(ETIMES.value.length / gridPos.cols)
 
     // Calculate width / height of the thumbnails
     cellDim.width = Math.floor(sWidth / gridPos.cols)
@@ -244,13 +263,13 @@ onMounted(() => {
   // Moved out of resize handler to resolve a race condition
   watch(cellDim, () => {
     scrollActive()
-    requestImages()
+    invalidateImages()
   })
 
   // Calculate current row and column
   watchEffect(() => {
-    gridPos.row = Math.floor(INDEX.value / gridPos.cols)
-    gridPos.col = INDEX.value % gridPos.cols
+    gridPos.row = Math.floor(frameIndex.value / gridPos.cols)
+    gridPos.col = frameIndex.value % gridPos.cols
   })
 
   // Reposition the active layer
@@ -272,8 +291,8 @@ onMounted(() => {
   watch(
     [
       CURRENT,
-      INDEX,
-      UTIMES,
+      frameIndex,
+      ETIMES,
       cursorAnimated,
       cursorAnimating,
       () => [cellDim.width, cellDim.height],
@@ -288,7 +307,7 @@ onMounted(() => {
       const { width: cellW, height: cellH } = cellDim
       const { cols, col, row } = gridPos
       const { start, end } = cursorOffset(col, cols, cellW, cursorW)
-      const perc = framePerc(CURRENT.value, INDEX.value, UTIMES.value)
+      const perc = framePerc(CURRENT.value, frameIndex.value, ETIMES.value)
 
       // Final assignment
       cursorPos.left = col * cellW + start + (end - start) * perc
@@ -297,18 +316,18 @@ onMounted(() => {
   )
 
   // Update circles / colors data
-  watchImmediate(ROOT, (data) => {
+  watchImmediate([ROOT, pFRAMES, PTIMES, MTIMES, ETIMES], ([data]) => {
     const result: TimelineCircle[][] = []
-    if (!UTIMES.value?.length) return
+    if (!ETIMES.value?.length) return
 
     // Loop through each unique timestamp
-    for (let i = 0; i < UTIMES.value.length; i++) {
-      const time = UTIMES.value[i]!
+    for (let i = 0; i < ETIMES.value.length; i++) {
+      const time = ETIMES.value[i]!
       const row: TimelineCircle[] = []
 
-      // For each prop, check if the time exists in its PTIMES entry
-      for (let j = 0; j < PTIMES.value.length; j++) {
-        const times = PTIMES.value[j]!
+      const displayedPropTimes = pFRAMES.value === 'animation' ? PTIMES.value : MTIMES.value
+      for (let j = 0; j < displayedPropTimes.length; j++) {
+        const times = displayedPropTimes[j]!
         if (times.includes(time)) {
           const prop = data.props[j]!
           const colIndex = prop.color ?? data.color
@@ -322,16 +341,16 @@ onMounted(() => {
   })
 
   // Request images as orbit changes
-  watch(ORBIT, () => {
-    requestImages()
-  })
+  watch(ORBIT, invalidateImages)
+
+  watch([pFRAMES, ETIMES], invalidateImages, { deep: true })
 
   // Auto scroll to the active element as row
   watch([() => gridPos.row, PLAYING], scrollActive, { immediate: true })
 
-  // Truncate lengths if UTIMES shrinks
+  // Truncate lengths if the displayed frame set shrinks
   watch(
-    () => UTIMES.value.length,
+    () => ETIMES.value.length,
     (len) => {
       truncateArray(eCells.value, len)
       truncateArray(eThumbs.value, len)
@@ -363,11 +382,12 @@ function calcCols(perc: number, landscape: boolean): number {
 }
 
 // Percentage completed of the current time block
-function framePerc(ms: number, i: number, times: number[] = UTIMES.value) {
+function framePerc(ms: number, i: number, times: number[] = ETIMES.value) {
+  if (times.length === 1 && MAX.value > 0) return Math.max(0, Math.min(ms / MAX.value, 1))
   if (i >= times.length - 1) return 0
 
   const startTime = times[i] ?? 0
-  const endTime = times[i + 1] ?? startTime
+  const endTime = times[i + 1] ?? MAX.value
   const dura = endTime - startTime
 
   // Fallback: if no next frame, snap to start
@@ -419,14 +439,20 @@ function getScrollVisibleHeightPercent(el: HTMLElement, scrollContainer: HTMLEle
 // Scrolls to the active thumbnail
 async function scrollActive() {
   await nextFrame() // Fix from old version of SpiroAnim on old iPad, kept just in case
-  const active = eThumbs.value[INDEX.value]
+  const active = thumbnailAt(frameIndex.value)
   const scroll = eScroll.value
   if (scroll == undefined || active == undefined) return
-  if (!imgsVisible[INDEX.value] || getScrollVisibleHeightPercent(active, scroll) < 1) {
+  if (!imgsVisible[frameIndex.value] || getScrollVisibleHeightPercent(active, scroll) < 1) {
     const activeRect = active.getBoundingClientRect()
     const scrollRect = scroll.getBoundingClientRect()
     scroll.scrollTop += activeRect.top - scrollRect.top - scroll.clientTop
   }
+}
+
+function thumbnailAt(index: number): HTMLImageElement | undefined {
+  return (
+    eScroll.value?.querySelector<HTMLImageElement>(`.thumb[data-index="${index}"]`) ?? undefined
+  )
 }
 
 // Shorthand function to shorten an array when data changes
@@ -438,7 +464,7 @@ function truncateArray(arr: unknown[], len: number) {
 function thumbClick(index: number, event: MouseEvent | KeyboardEvent) {
   const now = performance.now()
   const editorVisible = mainViews.value.editor == 'hidden'
-  const currentIndex = INDEX.value
+  const currentIndex = frameIndex.value
   const selectionWasActive = SELECTION.value
   UPDATE.value = Symbol()
 
@@ -448,8 +474,8 @@ function thumbClick(index: number, event: MouseEvent | KeyboardEvent) {
     const end = selectionWasActive
       ? index < anchor
         ? selectedEnd
-        : Math.min(index + 1, UTIMES.value.length - 1)
-      : Math.min(Math.max(anchor, index) + 1, UTIMES.value.length - 1)
+        : Math.min(index + 1, ETIMES.value.length - 1)
+      : Math.min(Math.max(anchor, index) + 1, ETIMES.value.length - 1)
     SELECTION.value = true
     SELECTED.value[0] = Math.min(anchor, index)
     SELECTED.value[1] = Math.max(end, index)
@@ -463,11 +489,11 @@ function thumbClick(index: number, event: MouseEvent | KeyboardEvent) {
   }
 
   // Update current time to selected index
-  CURRENT.value = UTIMES.value[index]!
+  CURRENT.value = ETIMES.value[index]!
 
   if (SELECTION.value && !event.shiftKey) {
     // Select range: [index, index+1] (or clamp to last index)
-    const max = UTIMES.value.length - 1
+    const max = ETIMES.value.length - 1
     SELECTED.value[0] = index
     SELECTED.value[1] = Math.min(index + 1, max)
   } // else if (!editorVisible) {
@@ -497,38 +523,65 @@ function requestImages() {
     for (let i = 0; i < imgsVisible.length; i++) if (imgsVisible[i]) visible.push(i)
     // Request images as needed
     if (visible.length) {
+      const generation = imageGeneration
+      const requests = visible.map((index) => ({ index, time: ETIMES.value[index] ?? 0 }))
+      const requestedTimes = new Map(requests.map(({ index, time }) => [index, time]))
       requesting = true
-      call('reqimgs', visible).then((urls) => {
-        for (const strI in urls) {
-          const i = Number(strI)
-          const img = eThumbs.value[i]
-          if (!img) continue
+      call('reqimgs', requests)
+        .then((urls) => {
+          for (const strI in urls) {
+            const i = Number(strI)
+            const url = urls[i]!
+            const img = thumbnailAt(i)
+            if (
+              generation !== imageGeneration ||
+              requestedTimes.get(i) !== ETIMES.value[i] ||
+              !img
+            ) {
+              if (url.startsWith('blob:')) URL.revokeObjectURL(url)
+              continue
+            }
 
-          const prev = img.src
-          const url = urls[i]!
+            const prev = img.src
 
-          // Defer revoke until after new image has loaded
-          const revoke = () => {
-            if (prev.startsWith('blob:')) URL.revokeObjectURL(prev)
-            img.removeEventListener('load', revoke)
-            img.removeEventListener('error', revoke)
+            // Defer revoke until after new image has loaded
+            const revoke = () => {
+              if (prev.startsWith('blob:')) URL.revokeObjectURL(prev)
+              img.removeEventListener('load', revoke)
+              img.removeEventListener('error', revoke)
+            }
+
+            img.addEventListener('load', revoke)
+            img.addEventListener('error', revoke)
+
+            img.src = url
+            imgsLoaded[i] = true
           }
-
-          img.addEventListener('load', revoke)
-          img.addEventListener('error', revoke)
-
-          img.src = url
-          imgsLoaded[i] = true
-        }
-
-        requesting = false
-        if (repeat) {
-          repeat = false
-          setTimeout(requestImages, 0)
-        }
-      })
+        })
+        .catch((error: unknown) => {
+          console.warn('Timeline thumbnail request failed.', error)
+        })
+        .finally(() => {
+          requesting = false
+          if (repeat) {
+            repeat = false
+            requestImages()
+          }
+        })
     }
   }
+}
+
+function invalidateImages() {
+  imageGeneration++
+  imgsLoaded = Array.from({ length: ETIMES.value.length }, () => false)
+  if (imageRefreshQueued) return
+
+  imageRefreshQueued = true
+  void nextTick(() => {
+    imageRefreshQueued = false
+    requestImages()
+  })
 }
 
 function circleCSS(prop: number, color: number): CSSProperties {
@@ -548,6 +601,10 @@ function isThumbnailSelected(index: number): boolean {
 
 function isPropMarkerVisible(prop: number): boolean {
   return mainViews.value.editor === 'hidden' || pSELECTED.value[prop] === true
+}
+
+function isPlaceholder(index: number): boolean {
+  return !ownTimes.value.includes(ETIMES.value[index] ?? 0)
 }
 
 const scrollStyle = computed<CSSProperties>(() => ({
@@ -616,6 +673,9 @@ const cursorStyle = computed<CSSProperties>(() => ({
 }
 .timeline-cell--selected .circle--prop-visible {
   visibility: visible;
+}
+.timeline-cell--placeholder .thumb {
+  opacity: 0.55;
 }
 .thumbStart {
   position: absolute;

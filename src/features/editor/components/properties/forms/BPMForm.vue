@@ -18,16 +18,16 @@ const store = inject('store', ref('main'))
 
 const playerStore = usePlayerStore(store.value)
 const { CURRENT } = playerStore.raw()
-const { INDEX, UTIMES } = storeToRefs(playerStore)
+const { EINDEX, ETIMES } = storeToRefs(playerStore)
 
 let ind: number, perc: number
 
 // Track the percentage of current and unqTimes[index]
 watch(
-  [CURRENT, INDEX],
+  [CURRENT, EINDEX],
   () => {
-    ind = INDEX.value
-    perc = CURRENT.value / UTIMES.value[ind]!
+    ind = EINDEX.value
+    perc = CURRENT.value / ETIMES.value[ind]!
   },
   { immediate: true },
 )
@@ -37,7 +37,7 @@ watch(
 watch(
   () => props.data[VALUE],
   () => {
-    CURRENT.value = Math.round(UTIMES.value[ind]! * perc)
+    CURRENT.value = Math.round(ETIMES.value[ind]! * perc)
   },
 )
 //}

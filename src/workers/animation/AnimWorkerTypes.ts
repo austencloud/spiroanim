@@ -127,7 +127,7 @@ export interface AnimBridgeMap {
 
   // For Timeline, returns images as camera (or data) transforms
   reqimgs: {
-    arg: number[]
+    arg: { index: number; time: number }[]
     ret: Record<number, string>
   }
 

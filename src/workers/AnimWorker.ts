@@ -12,7 +12,7 @@
 import { createSpiroAnimator } from '@/workers/animation/createSpiroAnimator'
 
 import { CMODES } from '@/domain/animation/AnimStruct'
-import { PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
+import { MOTIONTIMES, PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
 import { videoExportFrameCount, videoExportFrameTimeMs } from '@/math/videoExportTiming'
 
 import { WebGLRenderer, Scene, PerspectiveCamera, Raycaster, Vector2, Mesh } from 'three'
@@ -50,12 +50,14 @@ let scene: Scene
 let animators: ReturnType<typeof createSpiroAnimator>[] = []
 let timeline = false
 
-let completedCount = 0
 let playing = false
 let animating = false
 let propTimes: number[][]
+let motionTimes: number[][]
 let unqTimes: number[]
 let speed = 1
+let currentMs = 0
+let playbackStartedAt = 0
 let girth = 1
 let animationId: number
 let selection = false
@@ -111,14 +113,20 @@ on('transform', ({ pos, rot }) => {
 // Receive animation command
 on('animate', ({ val, play }) => {
   animating = val === undefined ? true : val
-  if (play) playing = play
+  if (play) {
+    playbackStartedAt = performance.now()
+    playing = true
+  }
   if (animating) animate()
   else cancelAnimationFrame(animationId)
 })
 
 // Jump play and stop commands
 on('jump', (ms) => jump(ms))
-on('play', () => (playing = true))
+on('play', () => {
+  playbackStartedAt = performance.now()
+  playing = true
+})
 on('stop', () => (playing = false))
 
 // Doesn't clear the animations, leaving trails
@@ -180,28 +188,10 @@ on('data', (compiled) => {
     }
   }
 
-  // Allow tracks to have different lengths
-  const completed = () => {
-    completedCount++
-    if (completedCount == animators.length) {
-      completedCount = 0
-
-      // Start each animator at the beginning
-      const now = performance.now()
-      if (playing)
-        for (let i = 0; i < animators.length; i++) {
-          const animator = animators[i]!
-          animator.index = 0
-          animator.AnimStart = now
-          animator.playing = true
-          animator.animate(now)
-        }
-    }
-  }
-
-  // Millisecond intervals of each Prop and how they align
+  // Millisecond intervals of each prop track and how they align.
   propTimes = PROPTIMES(compiled)
-  unqTimes = UNQTIMES(propTimes)
+  motionTimes = MOTIONTIMES(compiled)
+  unqTimes = UNQTIMES([...propTimes, ...motionTimes])
 
   speed = compiled.speed ? 1 / compiled.speed : 1
 
@@ -212,7 +202,7 @@ on('data', (compiled) => {
       createSpiroAnimator({
         scene,
         speed,
-        completed,
+        completed: () => undefined,
         girth,
         bpm: compiled.bpm,
         prop: compiled.props[i]!,
@@ -224,6 +214,10 @@ on('data', (compiled) => {
         timeline: timeline,
       }),
     )
+
+  currentMs = Math.min(currentMs, unqTimes.at(-1) ?? 0)
+  playbackStartedAt = performance.now()
+  for (const animator of animators) animator.seek(currentMs)
 
   // Restart animate()
   if (animating) {
@@ -273,13 +267,12 @@ register('reqimgs', async (vals) => {
   if (unqTimes?.length === 0) return urls
 
   if (canvas instanceof OffscreenCanvas)
-    for (const i of vals) {
-      const time = unqTimes[i]!
+    for (const { index, time } of vals) {
       jump(time)
       renderer.render(scene, camera)
 
       const blob = await canvas.convertToBlob({ type: 'image/png' })
-      urls[i] = URL.createObjectURL(blob)
+      urls[index] = URL.createObjectURL(blob)
     }
 
   return urls
@@ -543,16 +536,13 @@ function animate(time: number | undefined = undefined, render: boolean | undefin
 
   // Parse current Millisecond
   if (playing && animators.length) {
-    const animator = animators[0]!
-    const index = animator.index
-    let skip = false,
-      MS = Math.floor((time - animator.AnimStart) / speed)
-    if (index > 0) MS += propTimes[0]![index - 1]!
+    let skip = false
+    const MS = Math.floor(currentMs + (time - playbackStartedAt) / speed)
 
     // Check for selections and if we need to jump
     if (selection) {
-      if (MS < unqTimes[min]! || MS >= unqTimes[max]!) {
-        jump(unqTimes[min]!)
+      if (MS < min || MS >= max) {
+        jump(min)
         skip = true
       }
     }
@@ -569,7 +559,9 @@ function animate(time: number | undefined = undefined, render: boolean | undefin
       send('pos', MS)
       //lastPosSent = time
       //}
-      for (let i = 0; i < animators.length; i++) animators[i]!.animate(time)
+      currentMs = MS
+      playbackStartedAt = time
+      for (const animator of animators) animator.seek(MS)
     }
   }
 
@@ -584,47 +576,9 @@ function animate(time: number | undefined = undefined, render: boolean | undefin
 
 // Moves to a specific millisecond of the animations
 function jump(ms: number) {
-  const start = performance.now()
-  completedCount = 0
-
-  for (let i = 0; i < propTimes.length; i++) {
-    const times = propTimes[i]!,
-      animator = animators[i]!,
-      last = propTimes[i]!.length - 1
-
-    if (!times.length) continue
-
-    let start2, index
-    for (let j = 0; j < times.length; j++) {
-      if (times[j]! == ms) {
-        index = j
-        start2 = times[index]
-        break
-      } else if (times[j]! > ms) {
-        index = j - 1
-        start2 = times[index]
-        break
-      }
-    }
-
-    let diff = ms - (start2 ?? 0)
-
-    // Support for an incomplete prop (finishing before another)
-    if (index === undefined) index = last
-    if (index == last) {
-      diff = 0
-      completedCount++
-    }
-
-    if (index == -1) index = 0
-
-    animator.playing = true
-    animator.index = index
-    animator.playing = ms < times[times.length - 1]!
-    animator.animate((animator.AnimStart = start - Math.floor(diff * speed) + minChg), 0, true)
-
-    if (diff > 0) animator.animate(start, 0, true)
-  }
+  currentMs = ms
+  playbackStartedAt = performance.now() + minChg
+  for (const animator of animators) animator.seek(ms)
 }
 
 // Function to dispose of a material and its associated textures

@@ -10,7 +10,7 @@ import type {
 import { RADIUS, ORIGRADIUS } from '@/domain/animation/AnimStruct'
 
 import { rootCompile } from '@/math/animation/AnimFunc'
-import { rootFinal, PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
+import { rootFinal, MOTIONTIMES, PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
 
 import { debounce } from '@/utils/UtilFunc'
 
@@ -63,7 +63,15 @@ export const usePlayerStore = (id: string) => {
       const v = {
         raw: () => r,
 
-        INDEX: ref(0), //         current Unique Time index
+        INDEX: ref(0), //         current combined Unique Time index
+        EINDEX: computed(() => {
+          let active = 0
+          for (let index = 0; index < v.ETIMES.value.length; index++) {
+            if (v.ETIMES.value[index]! > r.CURRENT.value) break
+            active = index
+          }
+          return active
+        }), //                    current displayed frame-set index
 
         MAX: ref(0), //           max milliseconds
         SELECTION: ref(false), // Whether progress bar works as a selection, or position
@@ -75,7 +83,9 @@ export const usePlayerStore = (id: string) => {
         TRACER: ref(false), //    Turns tracer mode on/off
 
         PTIMES: ref<number[][]>([[]]), // Individual times for each prop
-        UTIMES: ref<number[]>([]), //     Unique times derived from PTIMES
+        MTIMES: ref<number[][]>([[]]), // Individual Motion times for each prop
+        UTIMES: ref<number[]>([]), //     Unique times derived from every track
+        ETIMES: ref<number[]>([]), //     Times displayed by the active editor frame set
 
         PROJECTION: ref({
           fov: 45,
@@ -105,10 +115,11 @@ export const usePlayerStore = (id: string) => {
         r.COMPILED.value = rootCompile(r.ROOT.value)
 
         v.PTIMES.value = PROPTIMES(r.COMPILED.value)
-        v.UTIMES.value = UNQTIMES(v.PTIMES.value)
+        v.MTIMES.value = MOTIONTIMES(r.COMPILED.value)
+        v.UTIMES.value = UNQTIMES([...v.PTIMES.value, ...v.MTIMES.value])
+        if (v.ETIMES.value.length === 0) v.ETIMES.value = [...v.UTIMES.value]
 
         v.MAX.value = v.UTIMES.value.length > 0 ? v.UTIMES.value[v.UTIMES.value.length - 1]! : 0
-        v.COUNT.value = v.UTIMES.value.length - 1
         if (v.MAX.value < 0)
           // In case only one pattern is set
           v.MAX.value = 0
@@ -122,6 +133,17 @@ export const usePlayerStore = (id: string) => {
           v.ASPECT.value[0] = r.ROOT.value.aspectx
           v.ASPECT.value[1] = r.ROOT.value.aspecty
         }
+      })
+
+      watchImmediate(v.ETIMES, (times) => {
+        v.COUNT.value = Math.max(times.length - 1, 0)
+        const maxIndex = v.COUNT.value
+        const selected: [number, number] = [
+          Math.min(v.SELECTED.value[0] ?? 0, maxIndex),
+          Math.min(v.SELECTED.value[1] ?? 0, maxIndex),
+        ]
+        if (selected[0] !== v.SELECTED.value[0] || selected[1] !== v.SELECTED.value[1])
+          v.SELECTED.value = selected
       })
 
       // Changing the configured viewing distance recenters the camera using the new distance.

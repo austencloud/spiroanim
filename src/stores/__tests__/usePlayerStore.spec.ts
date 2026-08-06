@@ -28,7 +28,7 @@ describe('usePlayerStore', () => {
     runtime.ROOT.value = {
       ...runtime.ROOT.value,
       bpm: 60,
-      props: [{ anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }] }],
+      props: [{ anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }], motion: [] }],
     }
     await nextTick()
 
@@ -40,6 +40,27 @@ describe('usePlayerStore', () => {
     runtime.CURRENT.value = 1500
     await nextTick()
     expect(store.INDEX).toBe(1)
+  })
+
+  it('extends playback to the longer Motion track', async () => {
+    const store = usePlayerStore('test-motion-timing')
+    const runtime = store.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      bpm: 60,
+      props: [
+        {
+          anim: [{ beats: 1 }, { beats: 1 }],
+          motion: [{ beats: 1 }, { beats: 1 }, { beats: 1 }, { beats: 1 }],
+        },
+      ],
+    }
+    await nextTick()
+
+    expect(store.PTIMES).toEqual([[0, 1000]])
+    expect(store.MTIMES).toEqual([[0, 1000, 2000, 3000]])
+    expect(store.UTIMES).toEqual([0, 1000, 2000, 3000])
+    expect(store.MAX).toBe(3000)
   })
 
   it('recenters the shared orbit when distance changes without a mounted player', async () => {
