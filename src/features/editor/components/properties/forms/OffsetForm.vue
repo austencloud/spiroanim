@@ -66,9 +66,8 @@ const data0 = computed<DynamicVal>(() => ({
   name: '0',
   neg: true,
   label: pMOVE.value === 'xyz' ? 'Horizontal' : 'Plane',
-  max: pMOVE.value === 'xyz' ? 10 : 180,
-  min: pMOVE.value === 'xyz' ? -10 : -180,
-  step: pMOVE.value === 'xyz' ? 1 : 45,
+  max: pMOVE.value === 'xyz' ? 10 : 45,
+  min: pMOVE.value === 'xyz' ? -10 : -45,
   float: float.value,
   mult: pMOVE.value === 'xyz' ? mult.value * -1 : mult.value,
 }))
@@ -77,9 +76,8 @@ const data1 = computed<DynamicVal>(() => ({
   name: '1',
   neg: pMOVE.value === 'xyz',
   label: pMOVE.value === 'xyz' ? 'Vertical' : 'Arc',
-  max: pMOVE.value === 'xyz' ? 10 : 180,
-  min: pMOVE.value === 'xyz' ? -10 : -180,
-  step: pMOVE.value === 'xyz' ? 1 : 45,
+  max: pMOVE.value === 'xyz' ? 10 : 45,
+  min: pMOVE.value === 'xyz' ? -10 : -45,
   float: float.value,
   mult: mult.value,
 }))
