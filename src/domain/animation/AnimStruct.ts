@@ -235,7 +235,6 @@ export const PROPCP: PropCommonKeys[] = [
   'paths',
   'hands',
   'arms',
-  'travel',
   'visible',
   'anchors',
   'nodes',

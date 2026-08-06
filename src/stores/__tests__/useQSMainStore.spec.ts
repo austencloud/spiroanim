@@ -9,7 +9,7 @@ describe('useQSMainStore', () => {
   it('exposes the current query definition and versioned codec API', () => {
     const store = useQSMainStore()
 
-    expect(VDEF.move).toEqual([0, 62, 6])
+    expect(VDEF.move).toEqual([-30, 30, 6])
     expect(store.encodeQS).toBeTypeOf('function')
     expect(store.decodeQS).toBeTypeOf('function')
     expect(store.decodeVer).toBeTypeOf('function')

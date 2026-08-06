@@ -109,7 +109,6 @@ export const createSpiroAnimator = (vars: {
     guides = data.guides ?? false,
     paths = data.paths ?? true,
     hands = data.hands ?? true,
-    travel = data.travel ?? false,
     arms = data.arms ?? false,
     visible = data.visible ?? true,
     nodes = data.nodes ?? true,
@@ -120,7 +119,6 @@ export const createSpiroAnimator = (vars: {
     nodesGroup: Group = new Group(),
     pathsGroup: Group = new Group(),
     handsGroup: Group = new Group(),
-    travelGroup: Group = new Group(),
     armsGroup: Group = new Group(),
     modelGroup: Group = new Group(),
     modelProp: ModelGroup = props[PROPSR[prop]](multi, color, girth),
@@ -416,10 +414,6 @@ export const createSpiroAnimator = (vars: {
       ),
     )
 
-  if (travel && offsets.length > 1) {
-    travelGroup.add(createLine2(offsets, COLSET[color]![2], rsize * girth * multi))
-  }
-
   if (click == CMODES.points) {
     psize = 'click'
     anchors = true
@@ -602,13 +596,11 @@ export const createSpiroAnimator = (vars: {
   scene.add(guidesGroup)
   scene.add(pathsGroup)
   scene.add(handsGroup)
-  scene.add(travelGroup)
   scene.add(armsGroup)
 
   const exportGroups: Record<ImageExportFeature, Group> = {
     paths: pathsGroup,
     hands: handsGroup,
-    travel: travelGroup,
     arms: armsGroup,
     visible: modelGroup,
     nodes: nodesGroup,

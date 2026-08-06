@@ -22,7 +22,6 @@ export const VDEF = {
   hands: [0, 1, 2, Boolean], // 1
   // Defined for shared property constraints, but intentionally absent from the immutable v1 layout.
   arms: [0, 1, 2, Boolean], // 1
-  travel: [0, 1, 2, Boolean], // Defined for shared constraints; serialized beginning in v5.
   visible: [0, 1, 2, Boolean], // 1
   nodes: [0, 1, 2, Boolean], // 1
   anchors: [0, 1, 2, Boolean], // 1

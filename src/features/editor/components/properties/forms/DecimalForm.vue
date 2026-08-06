@@ -17,6 +17,7 @@
         @pointercancel="end"
         @keydown="start"
         @keyup="end"
+        @blur="end"
         @input="updateInput"
       />
     </div>
@@ -107,7 +108,7 @@ const updateInput = (event: Event) => {
 }
 
 const end = (/*final: number*/) => {
-  endHistoryGroup(ROOT.value)
+  endHistoryGroup()
   minFreeze.value = maxFreeze.value = multFreeze.value = null
 
   from.value = false

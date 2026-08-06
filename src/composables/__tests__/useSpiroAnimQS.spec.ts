@@ -5,9 +5,7 @@ import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 import { VDEF as VDEF_V2 } from '@/services/query/versions/SpiroAnimQSv2'
 import { CHARSET as CHARSET_V3, VDEF as VDEF_V3 } from '@/services/query/versions/SpiroAnimQSv3'
-import { CHARSET as CHARSET_V4, VDEF as VDEF_V4 } from '@/services/query/versions/SpiroAnimQSv4'
 import type { RootDataFinal } from '@/types/AnimTypes'
-import { rootCompile } from '@/math/animation/AnimFunc'
 
 const createRoot = (): RootDataFinal => ({
   speed: 1,
@@ -51,62 +49,7 @@ describe('useSpiroAnimQS', () => {
     })
     const decoded = query.decodeQS(encoded)
     expect(decoded.arms).toBe(false)
-    expect(decoded.props[0]!.anim[0]!.move).toEqual([0, 90, 2])
-  })
-
-  it('round-trips angle-based Move values in version 4', async () => {
-    const query = await useSpiroAnimQS(VDEF_V4, useBaseQS(VDEF_V4, { charset: CHARSET_V4 }), 4)
-    const root = createRoot()
-    root.props[0]!.anim[0]!.move = [-45, 135, 52]
-    root.travel = true
-    root.props[0]!.travel = false
-
-    const encoded = query.encodeQS(root, false)
-    const decoded = query.decodeQS(encoded)
-
-    expect(encoded.v).toBe('4')
-    expect(decoded.props[0]!.anim[0]!.move).toEqual([-45, 135, 52])
-    expect(decoded.travel).toBe(true)
-    expect(decoded.props[0]!.travel).toBe(false)
-  })
-
-  it('preserves legacy Cartesian MOVE directions while migrating chained frames', async () => {
-    const legacy = await useSpiroAnimQS(VDEF_V3, useBaseQS(VDEF_V3, { charset: CHARSET_V3 }), 3)
-    const route = Object.fromEntries(
-      new URLSearchParams(
-        'r=GGw8Eje11&p0=N__.bjxuYHj_r_WQ.blExM_______uuI.____________uuI._____Hj_____uug.____________uug....&p1=S__.bjxuYBH_r_WQ.blEpk_______uuI.____________uuI._WQ__Hj_____uug.____________uug....&v=3',
-      ),
-    )
-
-    const migrated = legacy.decodeQS(route)
-    const compiled = rootCompile(migrated)
-    const expectedMoves = [
-      [0, 0, 0],
-      [0, 0, 14],
-      [0, 0, 14],
-      [0, 0, -14],
-      [0, 0, -14],
-      [0, 0, 0],
-      [0, 0, 0],
-      [0, 0, 0],
-      [0, 0, 0],
-    ]
-    expect(compiled.props[0]!.anim.map((frame) => frame.move)).toEqual(expectedMoves)
-
-    const current = await useSpiroAnimQS(VDEF_V4, useBaseQS(VDEF_V4, { charset: CHARSET_V4 }), 4)
-    const currentRoute = current.encodeQS(migrated, false)
-    const currentCompiled = rootCompile(current.decodeQS(currentRoute))
-    const literalCompiled = rootCompile(
-      current.decodeQS(
-        Object.fromEntries(
-          new URLSearchParams(
-            'r=GGw8Eje11&p0=N__.bjxuYHj_r_WQ.blExM_______ebke.____________e02Q._____Hj_____emyQ.____________e02Q....&p1=S__.bjxuYBH_r_WQ.blEpk_______ebke.____________e02Q._WQ__Hj_____emyQ.____________e02Q....&v=4',
-          ),
-        ),
-      ),
-    )
-    expect(currentCompiled.props[0]!.anim.map((frame) => frame.move)).toEqual(expectedMoves)
-    expect(literalCompiled.props[0]!.anim.map((frame) => frame.move)).toEqual(expectedMoves)
+    expect(query.encodeQS(decoded, false)).toEqual(encoded)
   })
 
   it('round-trips inherited Arms values in version 2', async () => {
@@ -187,22 +130,6 @@ describe('useSpiroAnimQS', () => {
     separateUpdate.props[0]!.anim[0]!.arc = 130
     query.encodeQS(separateUpdate)
     expect(query.qsHistory.value).toHaveLength(3)
-  })
-
-  it('commits the final interaction value when its reactive encoder has not flushed yet', async () => {
-    const query = await useSpiroAnimQS(VDEF_V4, useBaseQS(VDEF_V4, { charset: CHARSET_V4 }), 4)
-    const original = createRoot()
-    const changed = structuredClone(original)
-    changed.props[0]!.anim[0]!.move = [45, 90, 14]
-
-    query.beginHistoryGroup(original)
-    query.endHistoryGroup(changed)
-
-    expect(query.qsHistory.value).toEqual([
-      new URLSearchParams(query.encodeQS(original, false)).toString(),
-      new URLSearchParams(query.encodeQS(changed, false)).toString(),
-    ])
-    expect(query.undoQS()?.props[0]!.anim[0]!.move).toEqual(original.props[0]!.anim[0]!.move)
   })
 
   it('undoes, redoes, and clears redo history after a new edit', async () => {

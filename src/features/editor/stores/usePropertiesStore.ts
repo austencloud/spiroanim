@@ -51,8 +51,6 @@ export const usePropertiesStore = (id: string) => {
       const pMULTI = ref(false)
       const pSELECTED = ref<Record<number, boolean>>({ 0: true })
       const pRADIO = ref(-1)
-      const pMOVE = ref<'xyz' | 'angles'>('xyz')
-      const pMOVENEXT = ref(false)
 
       // Default expanded state "Desktop Mode"
       const pDESKTOP = ref<Record<string, string[]>>({
@@ -133,8 +131,6 @@ export const usePropertiesStore = (id: string) => {
         pMULTI,
         pSELECTED,
         pRADIO,
-        pMOVE,
-        pMOVENEXT,
 
         pINPUT: ref(''),
         pEXPANDED,
@@ -153,7 +149,7 @@ export const usePropertiesStore = (id: string) => {
     },
     {
       persist: {
-        pick: [/*'pMOBILE',*/ 'pDESKTOP', 'pBOUND', 'pMULTI', 'pMOVE', 'pMOVENEXT'],
+        pick: [/*'pMOBILE',*/ 'pDESKTOP', 'pBOUND', 'pMULTI'],
       },
     },
   )()

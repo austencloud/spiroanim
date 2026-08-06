@@ -59,7 +59,6 @@ export interface PropData {
   paths?: boolean
   hands?: boolean
   arms?: boolean
-  travel?: boolean
   visible?: boolean
   nodes?: boolean
   anchors?: boolean
@@ -77,7 +76,6 @@ export interface RootData {
   paths: boolean
   hands?: boolean
   arms: boolean
-  travel?: boolean
   visible?: boolean
   nodes: boolean
   anchors: boolean

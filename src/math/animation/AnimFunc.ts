@@ -4,7 +4,6 @@ import { Vector3, MathUtils } from 'three'
 import { TTYPE, RADIUS, PPOS, PROPCP } from '@/domain/animation/AnimStruct'
 
 import { orthoNext, InitialPoint, InitialOrtho } from './OrthogonalFunc'
-import { createMoveDirectionState, moveAnglesToCartesian } from './MoveFunc'
 
 import type {
   RootDataFinal,
@@ -69,9 +68,6 @@ const copyRootValue = (prop: PropDataFinal, root: RootDataFinal, key: (typeof PR
     case 'arms':
       prop.arms = root.arms
       break
-    case 'travel':
-      prop.travel = root.travel
-      break
     case 'visible':
       prop.visible = root.visible
       break
@@ -121,7 +117,6 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     rot = InitialPoint.clone(),
     plane = InitialOrtho.clone(),
     axis = InitialOrtho.clone()
-  const moveState = createMoveDirectionState()
 
   for (let ai = 1; ai < prop.anim.length; ai++) {
     const anim = prop.anim[ai]!,
@@ -167,7 +162,6 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     // Compiled prop, ready to be sent to the Worker
     const push: AnimDataCompiled = {
       ...vars,
-      move: moveAnglesToCartesian(vars.move, moveState),
 
       // Position, Rotation, and Rotation to blend from
       pos: pos.toArray(),

@@ -97,7 +97,7 @@ const beginEditing = () => {
 }
 
 const endEditing = () => {
-  endHistoryGroup(ROOT.value)
+  endHistoryGroup()
 }
 </script>
 

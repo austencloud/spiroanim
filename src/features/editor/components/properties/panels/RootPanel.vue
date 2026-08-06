@@ -16,12 +16,6 @@
       <br /><i>This is a global setting that applies as the default for all props.</i>
     </template>
 
-    <template #travel>
-      <strong>Travel</strong><br />
-      Toggles the display of the path traced by each prop's moving animation center.<br />
-      <br /><i>This is a global setting that applies as the default for all props.</i>
-    </template>
-
     <template #arms>
       <strong>Arms</strong><br />
       Toggles the display of lines from the animation center to each hand.<br />
@@ -95,7 +89,6 @@ const data = ref({})
 const vals = [
   { name: 'paths', text: 'Paths', component: 'Boolean' },
   { name: 'hands', text: 'Hands', component: 'Boolean' },
-  { name: 'travel', text: 'Travel', component: 'Boolean' },
   { name: 'arms', text: 'Arms', component: 'Boolean' },
   { name: 'visible', text: 'Visible', component: 'Boolean' },
   { name: 'nodes', text: 'Nodes', component: 'Boolean' },

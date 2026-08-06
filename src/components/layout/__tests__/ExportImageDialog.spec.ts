@@ -53,7 +53,6 @@ describe('ExportImageDialog', () => {
     const features = {
       paths: true,
       hands: false,
-      travel: false,
       arms: true,
       visible: true,
       nodes: false,

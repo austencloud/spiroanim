@@ -37,9 +37,9 @@ const expectVectorClose = (actual: readonly number[], expected: readonly number[
 }
 
 const closedFrames: AnimData[] = [
-  { arc: 0, beats: 2, scale: 8, depth: 1, move: [0, 90, 1] },
-  { arc: 90, beats: 3, scale: 9, depth: 2, move: [0, 0, 2] },
-  { arc: 90, plane: 180, beats: 4, scale: 10, depth: 3, move: [0, 0, 3] },
+  { arc: 0, beats: 2, scale: 8, depth: 1, move: [1, 0, 0] },
+  { arc: 90, beats: 3, scale: 9, depth: 2, move: [2, 0, 0] },
+  { arc: 90, plane: 180, beats: 4, scale: 10, depth: 3, move: [3, 0, 0] },
 ]
 
 describe('shiftAnimationFrames', () => {
@@ -93,7 +93,7 @@ describe('shiftAnimationFrames', () => {
       beats: 2,
       scale: 8,
       depth: 1,
-      move: [0, 90, 1],
+      move: [1, 0, 0],
     })
   })
 

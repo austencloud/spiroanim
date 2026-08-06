@@ -47,8 +47,7 @@
     <template #move>
       <strong>Move</strong><br />
       Offsets the prop's position along the path relative to its previous position.<br />
-      Plane and Arc set its direction from the preceding Move direction, and Distance sets its
-      length. X/Y/Z editing is available as an equivalent view.
+      This allows fine adjustments without altering the underlying path or rotation.
     </template>
   </PropertyPanel>
 </template>
@@ -59,7 +58,7 @@ import { useProperties } from '@/features/editor/composables/useProperties'
 import { INDPNT, TTEXT } from '@/domain/animation/AnimStruct'
 
 const store = inject('store', ref('main'))
-const { animGet, animSet, ANIMS, pMOVE, panelWatcher } = useProperties(store.value)
+const { animGet, animSet, ANIMS, panelWatcher } = useProperties(store.value)
 
 const data = ref({})
 
@@ -79,10 +78,5 @@ const vals = [
   { name: 'move', text: 'Move', component: 'Offset', undef: true },
 ]
 
-panelWatcher(
-  computed(() => [ANIMS.value, pMOVE.value]),
-  data,
-  vals,
-  animGet,
-)
+panelWatcher(ANIMS, data, vals, animGet)
 </script>
