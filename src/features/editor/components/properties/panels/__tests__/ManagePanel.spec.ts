@@ -55,7 +55,14 @@ describe('ManagePanel', () => {
       },
     })
 
-    const expected = ['Insert Points', 'Delete Selection', 'Shift', 'Add Prop', 'Delete Props']
+    const expected = [
+      'Insert Points',
+      'Delete Selection',
+      'Shift',
+      'Add Prop',
+      'Delete Props',
+      'Compress',
+    ]
     const links = wrapper.findAll('a')
     expect(links.map((link) => link.text())).toEqual(expected)
     expect(wrapper.get('.manage-note').text()).toBe(
@@ -74,7 +81,7 @@ describe('ManagePanel', () => {
     properties.pFRAMES = 'motion'
     await nextTick()
 
-    const motionExpected = ['Insert Frame', 'Delete Selection']
+    const motionExpected = ['Insert Frame', 'Delete Selection', 'Compress']
     const motionLinks = wrapper.findAll('a')
     expect(motionLinks.map((link) => link.text())).toEqual(motionExpected)
 
@@ -90,7 +97,7 @@ describe('ManagePanel', () => {
     ROOT.value.props[0]!.motion.splice(0)
     triggerRef(ROOT)
     await nextTick()
-    expect(wrapper.findAll('a').map((link) => link.text())).toEqual(['Insert Frame'])
+    expect(wrapper.findAll('a').map((link) => link.text())).toEqual(['Insert Frame', 'Compress'])
 
     wrapper.unmount()
   })

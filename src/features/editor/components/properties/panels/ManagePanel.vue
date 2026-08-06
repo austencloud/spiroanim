@@ -11,6 +11,7 @@
       <InsertFrame />
       <DeleteSelection v-if="MOTIONS.length" />
     </template>
+    <CompressAnimation v-if="PROPS.length" />
     <p class="manage-note">Manage tools are limited and still in development.</p>
   </PropertyPanel>
 </template>
@@ -23,6 +24,7 @@ import DeleteSelection from '../manage/DeleteSelection.vue'
 import ShiftFrames from '../manage/ShiftFrames.vue'
 import AddProp from '../manage/AddProp.vue'
 import DeleteProps from '../manage/DeleteProps.vue'
+import CompressAnimation from '../manage/CompressAnimation.vue'
 
 import { useProperties } from '@/features/editor/composables/useProperties'
 
