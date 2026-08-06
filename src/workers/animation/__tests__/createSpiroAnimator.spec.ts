@@ -107,9 +107,10 @@ describe('createSpiroAnimator Arms rendering', () => {
   it('draws the animation center Travel path using the Hands color', () => {
     const root = createRoot(false)
     root.travel = true
-    root.props[0]!.anim[1]!.move = [0, 90, 3]
+    root.props[0]!.anim[1]!.move = [0, 90, 3, 0, 50]
     const scene = new Scene()
     const compiled = rootCompile(rootFinal(root))
+    compiled.props[0]!.active = true
 
     createSpiroAnimator({
       scene,
@@ -127,9 +128,27 @@ describe('createSpiroAnimator Arms rendering', () => {
     })
 
     const travelLine = scene.getObjectsByProperty('isLine2', true)[0]
+    expect(scene.getObjectsByProperty('isLine2', true)).toHaveLength(1)
     expect(travelLine).toBeInstanceOf(Line2)
     if (!(travelLine instanceof Line2)) throw new Error('Expected a Travel Line2')
     expect((travelLine.material as LineMaterial2).color.getHex()).toBe(COLSET[2]![2])
+
+    const starts = travelLine.geometry.getAttribute('instanceStart') as InterleavedBufferAttribute,
+      ends = travelLine.geometry.getAttribute('instanceEnd') as InterleavedBufferAttribute,
+      first = new Vector3(starts.getX(0), starts.getY(0), starts.getZ(0)),
+      lastIndex = ends.count - 1,
+      last = new Vector3(ends.getX(lastIndex), ends.getY(lastIndex), ends.getZ(lastIndex)),
+      middleIndex = Math.floor(starts.count / 2),
+      middle = new Vector3(
+        starts.getX(middleIndex),
+        starts.getY(middleIndex),
+        starts.getZ(middleIndex),
+      )
+
+    expect(starts.count).toBeGreaterThan(2)
+    const chord = last.clone().sub(first)
+    const sagittaRatio = middle.clone().sub(first).cross(chord).length() / chord.lengthSq()
+    expect(sagittaRatio).toBeCloseTo((Math.SQRT2 - 1) / 2, 5)
   })
 
   it('can hide and restore Arms for image export', () => {

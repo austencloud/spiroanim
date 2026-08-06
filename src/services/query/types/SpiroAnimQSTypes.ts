@@ -1,6 +1,9 @@
 // src/services/query/types/SpiroAnimQSTypes.ts
 
-export type ConfigRoot<AllVars extends string> = ['bits', number, AllVars[]] | ['move', number]
+export type ConfigRoot<AllVars extends string> =
+  | ['bits', number, AllVars[]]
+  | ['move', number]
+  | ['curve', number]
 
 export type ConfigItem<AllVars extends string> =
   | ConfigRoot<AllVars>

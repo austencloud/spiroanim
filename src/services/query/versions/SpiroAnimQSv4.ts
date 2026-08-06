@@ -33,7 +33,7 @@ export function createPropConfig(): ConfigData<AllVars> {
     ['bits', 2, ['prop', 'arms', 'travel']],
     [
       'anim',
-      16,
+      19,
       [
         ['bits', 3, ['plane', 'arc']],
         ['bits', 2, ['turns']],
@@ -43,6 +43,7 @@ export function createPropConfig(): ConfigData<AllVars> {
         ['bits', 1, ['depth']],
         ['bits', 2, ['adjust']],
         ['move', 4],
+        ['curve', 3],
       ],
     ],
   ]

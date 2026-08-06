@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import { Vector3 } from 'three'
 
 import {
   angularMovesToCartesian,
   cartesianMovesToAngles,
   clampCartesianMove,
+  createMoveDirectionState,
+  moveAnglesToCartesian,
+  moveCurveOffset,
 } from '@/math/animation/MoveFunc'
 
 describe('Move angle conversion', () => {
@@ -44,5 +48,20 @@ describe('Move angle conversion', () => {
     expect(clamped.every(Number.isInteger)).toBe(true)
     expect(Math.hypot(...clamped)).toBeLessThanOrEqual(62)
     expect(clamped).toEqual([35, 35, 35])
+  })
+
+  it('creates a signed midpoint curve perpendicular to the Move direction', () => {
+    const state = createMoveDirectionState()
+    const move = [0, 90, 10, 0, 50] as const
+    const direction = new Vector3().fromArray(moveAnglesToCartesian(move, state))
+    const curve = new Vector3().fromArray(moveCurveOffset(move, state))
+
+    expect(curve.length()).toBeCloseTo(5)
+    expect(curve.dot(direction)).toBeCloseTo(0)
+
+    const oppositeState = createMoveDirectionState()
+    moveAnglesToCartesian(move, oppositeState)
+    const opposite = new Vector3().fromArray(moveCurveOffset([0, 90, 10, 0, -50], oppositeState))
+    expect(opposite.toArray()).toEqual(curve.clone().negate().toArray())
   })
 })

@@ -36,6 +36,7 @@ export type PPropKeys = keyof (typeof PPROP)[PointTypes] // Keys used in PPROP
 export type qsTransform = BooleanConstructor | undefined // For typecasting certain values from query string
 
 export type GrefItem = Record<PointInd, PointInd>
+export type MoveValue = [plane: number, arc: number, distance: number, ...curve: number[]]
 
 // Animation Data root.props[ { anim: [ ... ] } ]
 export interface AnimData {
@@ -48,7 +49,7 @@ export interface AnimData {
   arc?: number
   plane?: number
   axis?: number
-  move?: [number, number, number]
+  move?: MoveValue
 }
 
 // Prop Data root.props[ ... ]
@@ -138,6 +139,9 @@ export interface AnimDataCompiled {
   posx: [number, number, number]
   rotx: [number, number, number]
   move: [number, number, number]
+  curve: [number, number, number]
+  curveAxis: number
+  bend: number
 }
 
 export interface PropDataCompiled extends Omit<PropDataFinal, 'anim'> {
@@ -167,7 +171,7 @@ export type AllCommonKeys = Extract<PropCommonKeys, AnimCommonKeys>
 
 // List of variables - Min / Max / Bits / Transform defined in AnimStruct.ts
 export type AllVars = keyof Omit<RootData, 'props'> | keyof Omit<PropData, 'anim'> | keyof AnimData
-export type VarTypes = number | [number, number, number] | boolean
+export type VarTypes = number | MoveValue | boolean
 
 export type ValRetType = [VarTypes | undefined, boolean, string, boolean]
 export type DynamicVal = {

@@ -2,7 +2,7 @@ import { MathUtils, Vector3 } from 'three'
 
 import { InitialOrtho, InitialPoint, orthoAngle, orthoNext } from '@/math/animation/OrthogonalFunc'
 
-export type MoveAngles = [plane: number, arc: number, distance: number]
+export type MoveAngles = [plane: number, arc: number, distance: number, ...curve: number[]]
 export type MoveCartesian = [x: number, y: number, z: number]
 export const MAX_MOVE_DISTANCE = 62
 
@@ -54,6 +54,23 @@ export const moveAnglesToCartesian = (
     .multiplyScalar(distance)
     .toArray()
     .map((coordinate) => (Math.abs(coordinate) < 1e-12 ? 0 : coordinate)) as MoveCartesian
+}
+
+export const moveCurveOffset = (
+  move: readonly number[],
+  state: MoveDirectionState,
+): MoveCartesian => {
+  const distance = move[2] ?? 0
+  const bend = move[4] ?? 0
+  if (distance === 0 || bend === 0) return [0, 0, 0]
+
+  const axis = MathUtils.degToRad(move[3] ?? 0)
+  const perpendicular = state.reference
+    .clone()
+    .applyAxisAngle(state.direction, axis)
+    .multiplyScalar((distance * bend) / 100)
+
+  return perpendicular.toArray()
 }
 
 export const cartesianToMoveAngles = (
