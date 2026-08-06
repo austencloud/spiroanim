@@ -138,10 +138,6 @@ export const createSpiroAnimator = (vars: {
     offsets: Vector3[] = [],
     offset = new Vector3(),
     offsetDiff = new Vector3(),
-    offsetCurve = new Vector3(),
-    offsetCircleCenter = new Vector3(),
-    offsetCircleRadial = new Vector3(),
-    offsetCircleNormal = new Vector3(),
     offsetCalc = new Vector3()
 
   let apoint: Mesh,
@@ -165,7 +161,6 @@ export const createSpiroAnimator = (vars: {
     scalePerc = 0,
     depthDiff = 0,
     depthPerc = 0,
-    offsetSweep = 0,
     pathsIndex = -1
 
   modelProp.visible = visible
@@ -219,20 +214,6 @@ export const createSpiroAnimator = (vars: {
       offset.copy(offsets[index]!)
       if (offsets[index + 1]) offsetDiff.copy(offsets[index + 1]!).sub(offset)
       else offsetDiff.set(0, 0, 0)
-      offsetCurve
-        .fromArray(p2.curve)
-        .divideScalar(10)
-        .multiplyScalar(RADIUS * multi)
-      offsetSweep = MathUtils.degToRad((p2.bend * 180) / 100)
-      if (offsetSweep > 0 && offsetDiff.lengthSq() > 0 && offsetCurve.lengthSq() > 0) {
-        offsetCurve.normalize()
-        offsetCircleCenter
-          .copy(offset)
-          .addScaledVector(offsetDiff, 0.5)
-          .addScaledVector(offsetCurve, -offsetDiff.length() / (2 * Math.tan(offsetSweep / 2)))
-        offsetCircleRadial.copy(offset).sub(offsetCircleCenter)
-        offsetCircleNormal.copy(offsetDiff).normalize().cross(offsetCurve).normalize()
-      } else offsetCircleNormal.set(0, 0, 0)
 
       loop = 0
     },
@@ -242,12 +223,7 @@ export const createSpiroAnimator = (vars: {
       depthPerc = depth1 + depthDiff * perc
 
       // Current offset
-      if (offsetSweep > 0 && offsetCircleNormal.lengthSq() > 0) {
-        offsetCalc
-          .copy(offsetCircleRadial)
-          .applyAxisAngle(offsetCircleNormal, -offsetSweep * perc)
-          .add(offsetCircleCenter)
-      } else offsetCalc.copy(offsetDiff).multiplyScalar(perc).add(offset)
+      offsetCalc.copy(offsetDiff).multiplyScalar(perc).add(offset)
     },
     // Calculates positions / rotations in an animation
     calc = (time: number) => {
@@ -441,47 +417,7 @@ export const createSpiroAnimator = (vars: {
     )
 
   if (travel && offsets.length > 1) {
-    const travelPoints: Vector3[] = [],
-      travelCurve = new Vector3(),
-      travelPoint = new Vector3(),
-      travelCenter = new Vector3(),
-      travelRadial = new Vector3(),
-      travelNormal = new Vector3(),
-      travelDiff = new Vector3(),
-      samplesPerFrame = 16
-
-    for (let frameIndex = 0; frameIndex < offsets.length - 1; frameIndex++) {
-      const start = offsets[frameIndex]!,
-        end = offsets[frameIndex + 1]!
-      travelCurve
-        .fromArray(anim[frameIndex + 1]!.curve)
-        .divideScalar(10)
-        .multiplyScalar(RADIUS * multi)
-      const sweep = MathUtils.degToRad((anim[frameIndex + 1]!.bend * 180) / 100)
-      travelDiff.copy(end).sub(start)
-      if (sweep > 0 && travelDiff.lengthSq() > 0 && travelCurve.lengthSq() > 0) {
-        travelCurve.normalize()
-        travelCenter
-          .copy(start)
-          .addScaledVector(travelDiff, 0.5)
-          .addScaledVector(travelCurve, -travelDiff.length() / (2 * Math.tan(sweep / 2)))
-        travelRadial.copy(start).sub(travelCenter)
-        travelNormal.copy(travelDiff).normalize().cross(travelCurve).normalize()
-      } else travelNormal.set(0, 0, 0)
-
-      for (let sample = frameIndex === 0 ? 0 : 1; sample <= samplesPerFrame; sample++) {
-        const percentage = sample / samplesPerFrame
-        if (travelNormal.lengthSq() > 0)
-          travelPoint
-            .copy(travelRadial)
-            .applyAxisAngle(travelNormal, -sweep * percentage)
-            .add(travelCenter)
-        else travelPoint.lerpVectors(start, end, percentage)
-        travelPoints.push(travelPoint.clone())
-      }
-    }
-
-    travelGroup.add(createLine2(travelPoints, COLSET[color]![2], rsize * girth * multi))
+    travelGroup.add(createLine2(offsets, COLSET[color]![2], rsize * girth * multi))
   }
 
   if (click == CMODES.points) {
@@ -601,7 +537,7 @@ export const createSpiroAnimator = (vars: {
         // Collect paths into one collection if enabled
         //if (paths && !(active && !timeline)) rotTmp.push(...rotPoints) // Only the one when selected
         if (paths) rotTmp.push(...rotPoints)
-        else if (active && !travel) {
+        else if (active) {
           // Otherwise create individual lines for each frame
           const rotLine = createLine2(rotPoints, COLSET[color]![0], rsize * girth * multi)
           rotLines.push(rotLine)
@@ -611,7 +547,7 @@ export const createSpiroAnimator = (vars: {
         // Collect hands into one collection if enabled
         //if (hands && !(active && !timeline)) posTmp.push(...posPoints) // Only the one when selected
         if (hands) posTmp.push(...posPoints)
-        else if (active && !travel) {
+        else if (active) {
           // Otherwise create individual lines for each frame
           const posLine = createLine2(posPoints, COLSET[color]![2], rsize * girth * multi)
           posLines.push(posLine)

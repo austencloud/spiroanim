@@ -48,10 +48,7 @@
       <strong>Move</strong><br />
       Offsets the prop's position along the path relative to its previous position.<br />
       Plane and Arc set its direction from the preceding Move direction, and Distance sets its
-      length. X/Y/Z editing is available as an equivalent view.<br />
-      Curve Axis sets the direction of the bend around the Move direction. Bend sets the circular
-      sweep as a percentage; zero is a straight Move, 50% is a quarter-circle, and 100% is a
-      semicircle.
+      length. X/Y/Z editing is available as an equivalent view.
     </template>
   </PropertyPanel>
 </template>

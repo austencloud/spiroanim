@@ -233,11 +233,7 @@ export const shiftAnimationFrameRange = (
 
   const angularMoves = cartesianMovesToAngles(shifted.map((frame) => frame.move ?? [0, 0, 0]))
   shifted.forEach((frame, index) => {
-    if (frame.move !== undefined) {
-      const target = compiled[targetIndices[index]!]!
-      const angularMove = angularMoves[index]!
-      frame.move = [angularMove[0], angularMove[1], angularMove[2], target.curveAxis, target.bend]
-    }
+    if (frame.move !== undefined) frame.move = angularMoves[index]!
   })
 
   if (

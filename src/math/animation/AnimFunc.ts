@@ -4,7 +4,7 @@ import { Vector3, MathUtils } from 'three'
 import { TTYPE, RADIUS, PPOS, PROPCP } from '@/domain/animation/AnimStruct'
 
 import { orthoNext, InitialPoint, InitialOrtho } from './OrthogonalFunc'
-import { createMoveDirectionState, moveAnglesToCartesian, moveCurveOffset } from './MoveFunc'
+import { createMoveDirectionState, moveAnglesToCartesian } from './MoveFunc'
 
 import type {
   RootDataFinal,
@@ -138,7 +138,6 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
   for (let ai = 0; ai < prop.anim.length; ai++) {
     const anim = prop.anim[ai]!
 
-    const move = anim.move ?? ([0, 0, 0] as [number, number, number])
     const vars = {
         turns: anim.turns ?? 0,
         scale: anim.scale ?? 10,
@@ -149,7 +148,7 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
         plane: anim.plane ?? 0,
         axis: anim.axis ?? anim.plane ?? 0,
         type: anim.type ?? TTYPE.SPHE,
-        move,
+        move: anim.move ?? ([0, 0, 0] as [number, number, number]),
       },
       // Angle on Orthogonal Plane
       radPlane = MathUtils.degToRad(vars.plane),
@@ -169,9 +168,6 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     const push: AnimDataCompiled = {
       ...vars,
       move: moveAnglesToCartesian(vars.move, moveState),
-      curve: moveCurveOffset(move, moveState),
-      curveAxis: move[3] ?? 0,
-      bend: move[4] ?? 0,
 
       // Position, Rotation, and Rotation to blend from
       pos: pos.toArray(),

@@ -27,7 +27,6 @@ import type {
   SetterFunc,
   GetterFunc,
   AllVars,
-  AnimData,
 } from '@/types/AnimTypes'
 
 export const VALUE = 0
@@ -48,10 +47,8 @@ export function constraints(key: string, val?: VarTypes) {
   if (Array.isArray(val)) {
     if (key === 'move') {
       val[0] = Math.max(-180, Math.min(val[0] ?? 0, 180))
-      val[1] = Math.max(-180, Math.min(val[1] ?? 0, 180))
+      val[1] = Math.max(0, Math.min(val[1] ?? 0, 360))
       val[2] = Math.max(0, Math.min(val[2] ?? 0, 62))
-      val[3] = Math.max(-180, Math.min(val[3] ?? 0, 180))
-      val[4] = Math.max(0, Math.min(val[4] ?? 0, 100))
       return val
     }
     for (let i = 0; i < val.length; i++) {
@@ -73,8 +70,7 @@ function stringGet(key: string, val?: VarTypes, moveMode: 'xyz' | 'angles' = 'an
         if (moveMode === 'xyz') {
           return val.map((coordinate) => (coordinate / 10).toFixed(1)).join(', ')
         }
-        const endpoint = `${val[0]}\u00B0, ${val[1]}\u00B0, ${(val[2] / 10).toFixed(1)}`
-        return (val[4] ?? 0) === 0 ? endpoint : `${endpoint}, ${val[3] ?? 0}\u00B0, ${val[4]}%`
+        return `${val[0]}\u00B0, ${val[1]}\u00B0, ${(val[2] / 10).toFixed(1)}`
       }
     } else if (typeof val !== 'boolean') {
       switch (key) {
@@ -176,31 +172,20 @@ export function useProperties(store: string = 'main') {
           for (let index = 0; index < id.index; index++) {
             moveAnglesToCartesian(frames[index]!.move ?? [0, 0, 0], state)
           }
-          const curveAxis = arr.move?.[3] ?? 0
-          const bend = arr.move?.[4] ?? 0
-          const angularMove = cartesianToMoveAngles(cartesianMove, state)
-          arr.move = constraints('move', [
-            angularMove[0],
-            angularMove[1],
-            angularMove[2],
-            curveAxis,
-            bend,
-          ]) as NonNullable<AnimData['move']>
+          arr.move = constraints('move', cartesianToMoveAngles(cartesianMove, state)) as [
+            number,
+            number,
+            number,
+          ]
 
           if (key === 'movexyzpreserve' && nextFrame && nextCartesian) {
             for (let index = id.index + 1; index < nextIndex; index++) {
               moveAnglesToCartesian(frames[index]!.move ?? [0, 0, 0], state)
             }
-            const nextAxis = nextFrame.move?.[3] ?? 0
-            const nextBend = nextFrame.move?.[4] ?? 0
-            const nextAngularMove = cartesianToMoveAngles(clampCartesianMove(nextCartesian), state)
-            nextFrame.move = constraints('move', [
-              nextAngularMove[0],
-              nextAngularMove[1],
-              nextAngularMove[2],
-              nextAxis,
-              nextBend,
-            ]) as NonNullable<AnimData['move']>
+            nextFrame.move = constraints(
+              'move',
+              cartesianToMoveAngles(clampCartesianMove(nextCartesian), state),
+            ) as [number, number, number]
           }
         })
         break

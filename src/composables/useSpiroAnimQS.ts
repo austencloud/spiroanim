@@ -210,11 +210,7 @@ export async function useSpiroAnimQS(
                 VER >= 4
                   ? BASE.packBase64(
                       ['plane', 'arc', MOVE_KEY],
-                      {
-                        plane: val[0],
-                        arc: (((val[1] ?? 0) % 360) + 360) % 360,
-                        move: val[2],
-                      },
+                      { plane: val[0], arc: val[1], move: val[2] },
                       pad,
                     )
                   : encodeMove(val[0], bits) + encodeMove(val[1], bits) + encodeMove(val[2], bits),
@@ -222,17 +218,6 @@ export async function useSpiroAnimQS(
             } else {
               ret.push(''.padStart(pad, BASE.basemax))
             }
-          }
-          break
-
-        case 'curve':
-          if ('move' in vals && Array.isArray(vals.move) && (vals.move[4] ?? 0) !== 0) {
-            const axis = Math.max(-180, Math.min(vals.move[3] ?? 0, 180)) + 180
-            const bend = Math.max(-100, Math.min(vals.move[4] ?? 0, 100)) + 100
-            const packed = axis | (bend << 9) | (1 << 17)
-            ret.push(BASE.encodeBase64(packed).padStart(pad, BASE.charset[0] ?? '0'))
-          } else {
-            ret.push(''.padStart(pad, BASE.basemax))
           }
           break
       }
@@ -298,8 +283,7 @@ export async function useSpiroAnimQS(
           if (sub !== ''.padStart(pad, BASE.basemax)) {
             if (VER >= 4) {
               const move = BASE.unpackBase64(['plane', 'arc', MOVE_KEY], sub)
-              const moveArc = typeof move.arc === 'number' ? move.arc : 0
-              ret['move'] = [move.plane, moveArc > 180 ? moveArc - 360 : moveArc, move.move]
+              ret['move'] = [move.plane, move.arc, move.move]
             } else {
               const ipad = pad / 3
               const bits = VDEF[MOVE_KEY][2]
@@ -309,14 +293,6 @@ export async function useSpiroAnimQS(
                 decodeMove(sub.substring(ipad * 2, ipad * 3), bits),
               ]
             }
-          }
-          break
-
-        case 'curve':
-          if (sub !== ''.padStart(pad, BASE.basemax) && Array.isArray(ret['move'])) {
-            const packed = BASE.decodeBase64(sub)
-            ret['move'][3] = Math.max(-180, Math.min((packed & 0x1ff) - 180, 180))
-            ret['move'][4] = Math.max(-100, Math.min(((packed >> 9) & 0xff) - 100, 100))
           }
           break
       }

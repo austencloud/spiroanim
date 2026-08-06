@@ -57,7 +57,7 @@ describe('useSpiroAnimQS', () => {
   it('round-trips angle-based Move values in version 4', async () => {
     const query = await useSpiroAnimQS(VDEF_V4, useBaseQS(VDEF_V4, { charset: CHARSET_V4 }), 4)
     const root = createRoot()
-    root.props[0]!.anim[0]!.move = [-45, -135, 52, 90, 50]
+    root.props[0]!.anim[0]!.move = [-45, 135, 52]
     root.travel = true
     root.props[0]!.travel = false
 
@@ -65,7 +65,7 @@ describe('useSpiroAnimQS', () => {
     const decoded = query.decodeQS(encoded)
 
     expect(encoded.v).toBe('4')
-    expect(decoded.props[0]!.anim[0]!.move).toEqual([-45, -135, 52, 90, 50])
+    expect(decoded.props[0]!.anim[0]!.move).toEqual([-45, 135, 52])
     expect(decoded.travel).toBe(true)
     expect(decoded.props[0]!.travel).toBe(false)
   })
