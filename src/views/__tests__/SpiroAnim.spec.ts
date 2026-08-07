@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createQtrAnimation } from '@/features/qtr/createQtrAnimation'
 import { createEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
@@ -65,6 +66,9 @@ describe('SpiroAnim view', () => {
     })
     if (!initialAnimation) throw new Error('Expected a supported VTG animation')
     playerRoot.value = initialAnimation
+    const propertiesStore = usePropertiesStore('main')
+    propertiesStore.pFRAMES = 'motion'
+    await nextTick()
     const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
 
     const wrapper = mount(SpiroAnim, {
@@ -93,6 +97,27 @@ describe('SpiroAnim view', () => {
     expect((rightPane.element as HTMLElement).style.overflowY).toBe('hidden')
     expect(wrapper.text()).not.toContain('Editor')
     expect(wrapper.findAll('button[aria-label="Swap Views"]')).toHaveLength(2)
+    const showAllTimelineProps = wrapper.get('button[aria-label="Show Full Timeline"]')
+    const swapViews = wrapper.findAll('button[aria-label="Swap Views"]')[1]!
+    expect(showAllTimelineProps.element.closest('[data-role="right-pane"]')).toBe(rightPane.element)
+    expect(swapViews.element.closest('[data-role="right-pane"]')).toBe(rightPane.element)
+    await showAllTimelineProps.trigger('click')
+    expect(propertiesStore.pFRAMES).toBe('motion')
+    expect(propertiesStore.showFullTimeline).toBe(true)
+    expect(wrapper.find('button[aria-label="Show Full Timeline"]').exists()).toBe(false)
+
+    const paneStore = useMainPaneStore()
+    paneStore.setViewInPane('editor', 'right')
+    await flushPromises()
+    expect(propertiesStore.showFullTimeline).toBe(false)
+    expect(propertiesStore.pFRAMES).toBe('motion')
+    expect(wrapper.find('button[aria-label="Show Full Timeline"]').exists()).toBe(false)
+
+    propertiesStore.pFRAMES = 'motion'
+    await flushPromises()
+    paneStore.setViewInPane('timeline', 'right')
+    await flushPromises()
+    expect(wrapper.find('button[aria-label="Show Full Timeline"]').exists()).toBe(true)
     const menuButton = wrapper.get('button[aria-label="Open SpiroAnim menu"]')
     expect(menuButton.attributes('aria-haspopup')).toBe('menu')
     expect(menuButton.attributes('aria-expanded')).toBe('false')

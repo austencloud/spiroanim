@@ -76,7 +76,7 @@ const props = withDefaults(
 )
 
 const { parents: mainViews } = storeToRefs(useMainPaneStore())
-const { pSELECTED, pFRAMES } = storeToRefs(usePropertiesStore(props.store))
+const { pSELECTED, pFRAMES, showFullTimeline } = storeToRefs(usePropertiesStore(props.store))
 
 // Dimensions provided by parent component
 const dim: Readonly<typeof props.dim> = readonly(props.dim)
@@ -115,8 +115,11 @@ const frameIndex = computed(() => {
 })
 
 const ownTimes = computed(() => {
-  const times = pFRAMES.value === 'animation' ? PTIMES.value : MTIMES.value
-  return [...new Set(times.flat())].sort((first, second) => first - second)
+  const frameTimes = pFRAMES.value === 'animation' ? PTIMES.value : MTIMES.value
+  const displayedTimes = showFullTimeline.value
+    ? PTIMES.value
+    : frameTimes.filter((_, index) => pSELECTED.value[index])
+  return [...new Set(displayedTimes.flat())].sort((first, second) => first - second)
 })
 
 const gridTemplateColumns = ref<CSSProperties['grid-template-columns']>('repeat(1, 100%)')
@@ -325,7 +328,11 @@ onMounted(() => {
       const time = ETIMES.value[i]!
       const row: TimelineCircle[] = []
 
-      const displayedPropTimes = pFRAMES.value === 'animation' ? PTIMES.value : MTIMES.value
+      const displayedPropTimes = showFullTimeline.value
+        ? PTIMES.value
+        : pFRAMES.value === 'animation'
+          ? PTIMES.value
+          : MTIMES.value
       for (let j = 0; j < displayedPropTimes.length; j++) {
         const times = displayedPropTimes[j]!
         if (times.includes(time)) {
@@ -600,7 +607,7 @@ function isThumbnailSelected(index: number): boolean {
 }
 
 function isPropMarkerVisible(prop: number): boolean {
-  return mainViews.value.editor === 'hidden' || pSELECTED.value[prop] === true
+  return showFullTimeline.value || pSELECTED.value[prop] === true
 }
 
 function isPlaceholder(index: number): boolean {

@@ -433,4 +433,39 @@ describe('AnimTimeline', () => {
     wrapper.unmount()
     await flushPromises()
   })
+
+  it('can switch from selected prop times to every prop time', async () => {
+    const storeId = 'timeline-show-all-props'
+    const store = usePlayerStore(storeId)
+    store.raw().ROOT.value = {
+      ...store.raw().ROOT.value,
+      bpm: 60,
+      props: [
+        { color: 0, anim: [{ beats: 1 }, {}], motion: [] },
+        { color: 1, anim: [{ beats: 0.5 }, { beats: 1.5 }, {}], motion: [] },
+      ],
+    }
+    const properties = usePropertiesStore(storeId)
+    properties.pSELECTED = { 0: true, 1: false }
+    await nextTick()
+
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: storeId,
+        dim: { width: 600, height: 400, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.findAll('.timeline-cell')).toHaveLength(3)
+
+    properties.showFullTimeline = true
+    await flushPromises()
+
+    expect(wrapper.findAll('.timeline-cell')).toHaveLength(4)
+    expect(properties.showFullTimeline).toBe(true)
+
+    wrapper.unmount()
+    await flushPromises()
+  })
 })

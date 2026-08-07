@@ -97,6 +97,46 @@ describe('usePropertiesStore', () => {
     expect(runtime.ROOT.value.props[0]!.anim).toEqual([{ beats: 1 }, { beats: 1 }, { beats: 1 }])
   })
 
+  it('derives displayed Motion times from selected props and can show every prop', async () => {
+    const storeId = 'editor-selected-motion-times'
+    const player = usePlayerStore(storeId)
+    player.raw().ROOT.value = {
+      ...player.raw().ROOT.value,
+      bpm: 60,
+      props: [
+        {
+          anim: [{ beats: 1 }, { beats: 1 }, { beats: 2 }, {}],
+          motion: [{ beats: 1 }, {}],
+        },
+        {
+          anim: [{ beats: 0.5 }, { beats: 3.5 }, {}],
+          motion: [{ beats: 2 }, {}],
+        },
+      ],
+    }
+    await nextTick()
+
+    const properties = usePropertiesStore(storeId)
+    properties.pFRAMES = 'motion'
+    properties.pMULTI = true
+    properties.pSELECTED = { 0: true, 1: false }
+    await nextTick()
+
+    expect(player.ETIMES).toEqual([0, 1000, 4000])
+
+    properties.pSELECTED[0] = false
+    properties.pSELECTED[1] = true
+    await nextTick()
+
+    expect(player.ETIMES).toEqual([0, 2000, 4000])
+
+    properties.showFullTimeline = true
+    await nextTick()
+
+    expect(player.ETIMES).toEqual([0, 500, 1000, 2000, 4000])
+    expect(properties.pFRAMES).toBe('motion')
+  })
+
   it('displays an unauthored Move as the inherited zero vector', async () => {
     const storeId = 'editor-motion-zero'
     const player = usePlayerStore(storeId)

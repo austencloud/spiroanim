@@ -65,6 +65,7 @@ export const usePropertiesStore = (id: string) => {
       const pSELECTED = ref<Record<number, boolean>>({ 0: true })
       const pRADIO = ref(-1)
       const pMOVENEXT = ref(false)
+      const showFullTimeline = ref(false)
 
       // Default expanded state "Desktop Mode"
       const pDESKTOP = ref<Record<string, string[]>>({
@@ -80,10 +81,13 @@ export const usePropertiesStore = (id: string) => {
       const pEXPANDED = ref<Record<string, string[]>>(pMOBILE.value)
 
       watch(
-        [COMPILED, EINDEX, SELECTION, SELECTED, pBOUND, pSELECTED, pFRAMES],
+        [COMPILED, EINDEX, SELECTION, SELECTED, pBOUND, pSELECTED, pFRAMES, showFullTimeline],
         () => {
           const propTimes = pFRAMES.value === 'animation' ? PTIMES.value : MTIMES.value
-          const ownTimes = UNQTIMES(propTimes)
+          const timelinePropTimes = showFullTimeline.value
+            ? PTIMES.value
+            : propTimes.filter((_, index) => pSELECTED.value[index])
+          const ownTimes = UNQTIMES(timelinePropTimes)
           const overallEnd = UTIMES.value.at(-1) ?? 0
           const unqTimes =
             ownTimes.length === 0
@@ -151,7 +155,7 @@ export const usePropertiesStore = (id: string) => {
               break
             }
         },
-        { immediate: true /*, deep: true*/ },
+        { immediate: true, deep: true },
       )
 
       watchImmediate([pRADIO, pMULTI], () => {
@@ -173,6 +177,7 @@ export const usePropertiesStore = (id: string) => {
         pSELECTED,
         pRADIO,
         pMOVENEXT,
+        showFullTimeline,
 
         pINPUT: ref(''),
         pEXPANDED,
