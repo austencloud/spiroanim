@@ -1,7 +1,8 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { DEFAULT_TOOLTIP_DELAY } from '@/components/ui/tooltip'
 import PropertyPanel from '@/features/editor/components/properties/PropertyPanel.vue'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import type { SetterFunc, ValRetType } from '@/types/AnimTypes'
@@ -10,6 +11,12 @@ describe('PropertyPanel', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    document.body.innerHTML = ''
   })
 
   it('tracks expansion and renders the selected property form', async () => {
@@ -69,5 +76,45 @@ describe('PropertyPanel', () => {
     expect(values[1]?.classes()).toContain('val-fall')
     expect(values[2]?.classes()).toContain('val-mism')
     expect(values[3]?.classes()).toContain('val-undef')
+  })
+
+  it('opens and closes property help with repeated mobile taps', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(hover: none), (pointer: coarse)',
+        media: query,
+      })),
+    )
+    const wrapper = mount(PropertyPanel, {
+      props: {
+        panel: 'mobile-tooltips',
+        title: 'Mobile tooltips',
+        data: { paths: [true, true, 'true', false] },
+        vals: [{ name: 'paths', text: 'Paths' }],
+        store: 'property-panel-mobile-tooltips',
+      },
+      slots: {
+        paths: '<span>Controls whether paths are visible.</span>',
+      },
+    })
+    const label = wrapper.get('.property-label-tooltip > .col1')
+    const tapLabel = () =>
+      label.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+
+    tapLabel()
+    vi.advanceTimersByTime(DEFAULT_TOOLTIP_DELAY)
+    await nextTick()
+
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain(
+      'Controls whether paths are visible.',
+    )
+
+    tapLabel()
+    await nextTick()
+
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
+    wrapper.unmount()
   })
 })

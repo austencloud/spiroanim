@@ -4,12 +4,12 @@
     <div class="panel">
       <div v-if="props.data !== undefined" class="container colb">
         <template v-for="(v, i) in props.vals" :key="'ct' + i">
-          <AppTooltip class="property-label-tooltip">
+          <BaseTooltip class="property-label-tooltip">
             <template #activator="{ props: tooltipProps }">
               <div v-bind="tooltipProps" class="col1">{{ v.text }}:</div>
             </template>
             <template #html><slot :name="v.name" /></template>
-          </AppTooltip>
+          </BaseTooltip>
           <div class="col2 val-container">
             <button
               class="propval"
@@ -45,8 +45,8 @@
   </details>
 </template>
 <script setup lang="ts">
-import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import { useProperties, STRING, VALUE, FALL } from '@/features/editor/composables/useProperties'
 import type { DynamicVal, ValRetType, SetterFunc } from '@/types/AnimTypes'
 
