@@ -40,7 +40,7 @@ import Controls from './player/PlayerControls.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
 
 import { useViewportStore } from '@/stores/useViewportStore'
-import { usePlayerStore /*, DEFAULT_POSITION*/ } from '@/stores/usePlayerStore'
+import { usePlayerStore } from '@/stores/usePlayerStore'
 
 import { CMODES } from '@/domain/animation/AnimStruct'
 import type { PointInd } from '@/types/AnimTypes'
@@ -55,6 +55,8 @@ import { videoExportFrameCount } from '@/math/videoExportTiming'
 import { getPointerClientPosition } from '@/utils/pointerEvent'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
+import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { Color } from 'three'
 
 const props = withDefaults(
   defineProps<{
@@ -79,6 +81,7 @@ const { send, call, on, /*register,*/ warnStr } = msgChnl
 call('warnStr', 'Player').then(warnStr)
 
 const { isVisible } = storeToRefs(useViewportStore())
+const { pFRAMES } = storeToRefs(usePropertiesStore(props.store))
 
 const playerStore = usePlayerStore(props.store)
 const { COMPILED, CURRENT, FPS } = playerStore.raw()
@@ -141,6 +144,19 @@ watchEffect(() => {
 onMounted(() => {
   // Shared orbit logic
   useAnimWorkerCamera(msgChnl, canvasDim, props.store, eCanvas)
+
+  const colorScheme = matchMedia('(prefers-color-scheme: dark)')
+  const updateCameraGuides = () => {
+    const cssColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-camera-path')
+      .trim()
+    send('cameraGuides', {
+      visible: pFRAMES.value === 'camera',
+      color: new Color(cssColor || 'white').getHex(),
+    })
+  }
+  watchImmediate(pFRAMES, updateCameraGuides)
+  useEventListener(colorScheme, 'change', updateCameraGuides)
 
   // Receive the current millisecond while playing animations
   on('pos', (val) => {

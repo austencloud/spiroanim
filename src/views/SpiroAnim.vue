@@ -182,7 +182,10 @@ const applyConceptPattern = (selection: ConceptPatternSelection) => {
     : isQtrPatternSelection(selection)
       ? createQtrAnimation(ROOT.value, selection)
       : createVtgAnimation(ROOT.value, selection)
-  if (animation) ROOT.value = animation
+  if (animation) {
+    ROOT.value = animation
+    playerStore.cameraReset = Symbol()
+  }
 }
 
 const parentDim = computed(() => ({ width: viewWidth.value, height: viewHeight.value }))

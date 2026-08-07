@@ -6,8 +6,8 @@
       </template>
       <template #html>
         <strong>Insert Frame</strong><br />
-        Inserts an empty Motion frame into the selected props before or after the current timeline
-        position or selected range.
+        Inserts an empty {{ frameName }} frame before or after the current timeline position or
+        selected range.
       </template>
     </AppTooltip>
     <div v-show="pINPUT === inputName">
@@ -29,9 +29,10 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 const store = inject('store', ref('main'))
 const playerStore = usePlayerStore(store.value)
 const { ROOT, CURRENT } = playerStore.raw()
-const { EINDEX, ETIMES, PLAYING } = storeToRefs(playerStore)
-const { pINPUT } = useProperties(store.value)
-const { propSelection } = useManageProperties(store.value)
+const { EINDEX, ETIMES, CTIMES, PLAYING } = storeToRefs(playerStore)
+const { pINPUT, pFRAMES } = useProperties(store.value)
+const { propSelection, cameraSelection } = useManageProperties(store.value)
+const frameName = computed(() => (pFRAMES.value === 'camera' ? 'Camera' : 'Motion'))
 
 const inputName = 'manage.insfrm'
 const where = ref(1)
@@ -44,6 +45,22 @@ const insert = () => {
   if (PLAYING.value) return
 
   let inserted = false
+  if (pFRAMES.value === 'camera') {
+    cameraSelection((start, end) => {
+      const frames = ROOT.value.camera
+      const nextIndex = CTIMES.value.findIndex((time) => time > CURRENT.value)
+      const emptyRangeIndex = nextIndex === -1 ? frames.length : nextIndex
+      const insertionIndex = start === -1 ? emptyRangeIndex : where.value === 1 ? start : end + 1
+      frames.splice(insertionIndex, 0, {
+        orbit: {},
+        center: {},
+      })
+      inserted = true
+    })
+    if (inserted) triggerRef(ROOT)
+    return
+  }
+
   propSelection((propIndex, start, end) => {
     const motion = ROOT.value.props[propIndex]!.motion
 

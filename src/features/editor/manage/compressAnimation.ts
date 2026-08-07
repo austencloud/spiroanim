@@ -2,6 +2,7 @@ import { MOTION_SHAPE, PROPCP, TTYPE } from '@/domain/animation/AnimStruct'
 import { DEFAULT_MOTION_AMOUNT } from '@/math/animation/MotionFunc'
 import type {
   AnimData,
+  CameraData,
   MotionData,
   MotionShapeInd,
   PropDataFinal,
@@ -124,6 +125,11 @@ const compressProp = (root: RootDataFinal, prop: PropDataFinal): number => {
   return removed + compressAnimationFrames(prop.anim) + compressMotionFrames(prop.motion)
 }
 
+const compressCameraFrames = (frames: CameraData[]): number =>
+  compressMotionFrames(frames.map((frame) => frame.orbit ?? {})) +
+  compressMotionFrames(frames.map((frame) => frame.center ?? {}))
+
 /** Removes authored values that do not affect the animation's current result. */
 export const compressAnimation = (root: RootDataFinal): number =>
+  compressCameraFrames(root.camera) +
   root.props.reduce((removed, prop) => removed + compressProp(root, prop), 0)

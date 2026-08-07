@@ -118,4 +118,29 @@ describe('InsertFrame', () => {
       { distance: 3 },
     ])
   })
+
+  it('inserts one Camera frame without consulting prop selection', async () => {
+    const storeId = 'insert-camera-frame'
+    const player = usePlayerStore(storeId)
+    const { ROOT } = player.raw()
+    ROOT.value = createRoot([[]])
+    player.PLAYING = false
+
+    const properties = usePropertiesStore(storeId)
+    properties.pFRAMES = 'camera'
+    properties.pSELECTED = { 0: false }
+    await nextTick()
+
+    const wrapper = mount(InsertFrame, {
+      global: { provide: { store: ref(storeId) } },
+    })
+    await wrapper.get('a').trigger('click')
+    await wrapper.get<HTMLInputElement>('input[value="2"]').setValue(true)
+    await wrapper.get('.action-button').trigger('click')
+
+    expect(ROOT.value.camera).toEqual([
+      expect.objectContaining({ orbit: expect.any(Object), center: {} }),
+      { orbit: {}, center: {} },
+    ])
+  })
 })

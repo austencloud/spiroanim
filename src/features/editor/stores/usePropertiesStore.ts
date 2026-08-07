@@ -5,6 +5,8 @@ import type {
   FrameSet,
   MotionData,
   MotionDataCompiled,
+  CameraData,
+  CameraDataCompiled,
 } from '@/types/AnimTypes'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { UNQTIMES } from '@/math/animation/PlayerFunc'
@@ -38,7 +40,7 @@ export const usePropertiesStore = (id: string) => {
     () => {
       const playerStore = usePlayerStore(id)
       const { ROOT, COMPILED } = playerStore.raw()
-      const { EINDEX, SELECTION, SELECTED, PTIMES, MTIMES, UTIMES, ETIMES } =
+      const { EINDEX, SELECTION, SELECTED, PTIMES, MTIMES, CTIMES, UTIMES, ETIMES } =
         storeToRefs(playerStore)
 
       // Default collapsed state
@@ -46,6 +48,8 @@ export const usePropertiesStore = (id: string) => {
         anim: ['anim'],
         advanced: ['advanced'],
         motion: ['motion'],
+        center: ['center'],
+        orbit: ['orbit'],
       })
 
       const START = ref(0)
@@ -57,6 +61,9 @@ export const usePropertiesStore = (id: string) => {
       const CMPDS = ref<AnimDataCompiled[]>([])
       const MOTIONS = ref<MotionData[]>([])
       const MCOMPDS = ref<MotionDataCompiled[]>([])
+      const CAMERAS = ref<CameraData[]>([])
+      const CCOMPDS = ref<CameraDataCompiled[]>([])
+      const CAMERA_IDENT = ref<number[]>([])
       const PROPS = ref<PropDataFinal[]>([])
 
       const pBOUND = ref(true)
@@ -77,16 +84,25 @@ export const usePropertiesStore = (id: string) => {
         manage: ['manage'],
         rotate: ['rotate'],
         motion: ['motion'],
+        center: ['center'],
+        orbit: ['orbit'],
       })
       const pEXPANDED = ref<Record<string, string[]>>(pMOBILE.value)
 
       watch(
         [COMPILED, EINDEX, SELECTION, SELECTED, pBOUND, pSELECTED, pFRAMES, showFullTimeline],
         () => {
-          const propTimes = pFRAMES.value === 'animation' ? PTIMES.value : MTIMES.value
+          const propTimes =
+            pFRAMES.value === 'animation'
+              ? PTIMES.value
+              : pFRAMES.value === 'motion'
+                ? MTIMES.value
+                : [CTIMES.value]
           const timelinePropTimes = showFullTimeline.value
             ? PTIMES.value
-            : propTimes.filter((_, index) => pSELECTED.value[index])
+            : pFRAMES.value === 'camera'
+              ? propTimes
+              : propTimes.filter((_, index) => pSELECTED.value[index])
           const ownTimes = UNQTIMES(timelinePropTimes)
           const overallEnd = UTIMES.value.at(-1) ?? 0
           const unqTimes =
@@ -112,10 +128,24 @@ export const usePropertiesStore = (id: string) => {
           CMPDS.value = []
           MOTIONS.value = []
           MCOMPDS.value = []
+          CAMERAS.value = []
+          CCOMPDS.value = []
+          CAMERA_IDENT.value = []
           IDENT.value = []
           PROPS.value = []
           ACTIVE.value = []
-          for (let i = 0; i < propTimes.length; i++) {
+          if (pFRAMES.value === 'camera') {
+            const times = CTIMES.value
+            for (let index = 0; index < times.length; index++) {
+              const time = times[index]!
+              if (time < START.value || time > END.value) continue
+              CAMERAS.value.push(ROOT.value.camera[index]!)
+              CCOMPDS.value.push(COMPILED.value.camera[index]!)
+              CAMERA_IDENT.value.push(index)
+            }
+          }
+
+          for (let i = 0; pFRAMES.value !== 'camera' && i < propTimes.length; i++) {
             const pt = propTimes[i]!
             let add = false
             if (
@@ -187,6 +217,9 @@ export const usePropertiesStore = (id: string) => {
         CMPDS,
         MOTIONS,
         MCOMPDS,
+        CAMERAS,
+        CCOMPDS,
+        CAMERA_IDENT,
         PROPS,
 
         START,

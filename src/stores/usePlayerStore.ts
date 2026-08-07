@@ -1,22 +1,23 @@
 // src\stores\SpiroAnim\usePlayerStore.ts
 
-import type { RootDataFinal, PointInd, RootDataCompiled } from '@/types/AnimTypes'
+import type { CameraPose, RootDataFinal, PointInd, RootDataCompiled } from '@/types/AnimTypes'
 import type { ImageExportRequest } from '@/types/ImageExportTypes'
 import type {
   VideoExportProgress,
   VideoExportRequest,
   VideoExportStatus,
 } from '@/types/VideoExportTypes'
-import { RADIUS, ORIGRADIUS } from '@/domain/animation/AnimStruct'
 
 import { rootCompile } from '@/math/animation/AnimFunc'
-import { rootFinal, MOTIONTIMES, PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
+import {
+  CAMERATIMES,
+  rootFinal,
+  MOTIONTIMES,
+  PROPTIMES,
+  UNQTIMES,
+} from '@/math/animation/PlayerFunc'
 
 import { debounce } from '@/utils/UtilFunc'
-
-const multi = RADIUS / ORIGRADIUS
-
-export const DEFAULT_POSITION = [0, 0, -22 * multi] as const
 
 export const usePlayerStore = (id: string) => {
   return defineStore(
@@ -26,11 +27,6 @@ export const usePlayerStore = (id: string) => {
       const r = {
         CURRENT: ref(0), //       current milliseconds
         FPS: ref(0), //           FPS reported from Worker
-
-        ORBIT: ref({
-          position: [...DEFAULT_POSITION],
-          target: [0, 0, 0],
-        }),
 
         // Animation data is stored here
         ROOT: shallowRef<RootDataFinal>(
@@ -85,6 +81,7 @@ export const usePlayerStore = (id: string) => {
 
         PTIMES: ref<number[][]>([[]]), // Individual times for each prop
         MTIMES: ref<number[][]>([[]]), // Individual Motion times for each prop
+        CTIMES: ref<number[]>([0]), // Camera frame times
         UTIMES: ref<number[]>([]), //     Unique times derived from every track
         ETIMES: ref<number[]>([]), //     Times displayed by the active editor frame set
 
@@ -100,7 +97,9 @@ export const usePlayerStore = (id: string) => {
         ASPECT: ref<[number, number]>([0, 0]),
         CANVAS_DIM: ref({ width: 0, height: 0 }),
 
-        cameraCenter: ref(Symbol()), // When camera center is requested
+        freeCamera: ref(false), // Persisted manual camera ownership mode
+        freeCameraPose: shallowRef<CameraPose>(), // Current session-only manual pose
+        cameraReset: ref(Symbol()), // Requests the initial authored pose without changing the mode
         imageExportRequest: shallowRef<ImageExportRequest>(),
         videoExportRequest: shallowRef<VideoExportRequest>(),
         videoExportCancel: ref(Symbol()),
@@ -113,12 +112,18 @@ export const usePlayerStore = (id: string) => {
 
       // Recalculate Prop / Unique Times
       watchImmediate(r.ROOT, () => {
+        const previousTimes = v.UTIMES.value
+        const displayedOverallTimes =
+          v.ETIMES.value.length === previousTimes.length &&
+          v.ETIMES.value.every((time, index) => time === previousTimes[index])
         r.COMPILED.value = rootCompile(r.ROOT.value)
 
         v.PTIMES.value = PROPTIMES(r.COMPILED.value)
         v.MTIMES.value = MOTIONTIMES(r.COMPILED.value)
-        v.UTIMES.value = UNQTIMES([...v.PTIMES.value, ...v.MTIMES.value])
-        if (v.ETIMES.value.length === 0) v.ETIMES.value = [...v.UTIMES.value]
+        v.CTIMES.value = CAMERATIMES(r.COMPILED.value)
+        v.UTIMES.value = UNQTIMES([...v.PTIMES.value, ...v.MTIMES.value, v.CTIMES.value])
+        if (v.ETIMES.value.length === 0 || displayedOverallTimes)
+          v.ETIMES.value = [...v.UTIMES.value]
 
         v.MAX.value = v.UTIMES.value.length > 0 ? v.UTIMES.value[v.UTIMES.value.length - 1]! : 0
         if (v.MAX.value < 0)
@@ -147,20 +152,6 @@ export const usePlayerStore = (id: string) => {
           v.SELECTED.value = selected
       })
 
-      // Changing the configured viewing distance recenters the camera using the new distance.
-      watch(
-        () => r.ROOT.value.distance,
-        () => (v.cameraCenter.value = Symbol()),
-      )
-
-      // Center Animation Event (triggers from the Center button,) triggers transform
-      watch(v.cameraCenter, () => {
-        r.ORBIT.value = {
-          position: [0, 0, r.ROOT.value.distance * -1 * multi],
-          target: [0, 0, 0],
-        }
-      })
-
       // Update INDEX when position in player changes
       watchImmediate(r.CURRENT, (current) => {
         const times = v.UTIMES.value
@@ -180,9 +171,9 @@ export const usePlayerStore = (id: string) => {
 
       // Manually save, as persist module appears to be saving anytime any value is modified
       watch(
-        [v.PLAYING, v.TRACER /*, r.ORBIT*/],
-        debounce(([PLAYING, TRACER /*, ORBIT*/]: [boolean, boolean /*, typeof r.ORBIT.value*/]) => {
-          localStorage.setItem(`sa-player-${id}`, JSON.stringify({ PLAYING, TRACER /*, ORBIT*/ }))
+        [v.PLAYING, v.TRACER, v.freeCamera],
+        debounce(([PLAYING, TRACER, freeCamera]: [boolean, boolean, boolean]) => {
+          localStorage.setItem(`sa-player-${id}`, JSON.stringify({ PLAYING, TRACER, freeCamera }))
         }, 100),
       )
 
@@ -193,11 +184,11 @@ export const usePlayerStore = (id: string) => {
           const parsed = JSON.parse(saved) as {
             PLAYING?: boolean
             TRACER?: boolean
-            ORBIT?: typeof r.ORBIT.value
+            freeCamera?: boolean
           }
           v.PLAYING.value = parsed.PLAYING ?? v.PLAYING.value
           v.TRACER.value = parsed.TRACER ?? v.TRACER.value
-          r.ORBIT.value = parsed.ORBIT ?? r.ORBIT.value
+          v.freeCamera.value = parsed.freeCamera ?? v.freeCamera.value
         } catch (e) {
           console.warn('Failed to parse saved player settings:', e)
         }
@@ -207,7 +198,7 @@ export const usePlayerStore = (id: string) => {
     }, //,
     //{
     //  persist: {
-    //    pick: ['PLAYING', 'TRACER', 'ORBIT'],
+    //    pick: ['PLAYING', 'TRACER', 'freeCamera'],
     //  },
     //}
   )()

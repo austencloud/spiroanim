@@ -8,6 +8,7 @@ import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlaye
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
+import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 
 const addPropDefaults = (pattern: EightStepReadableAnimation): EightStepReadableAnimation => ({
   ...pattern,
@@ -52,6 +53,7 @@ export const createEightStepAnimation = (
 
   return {
     ...rootFinal(decoded),
+    camera: [createDefaultCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
     speed: pattern.speed ?? current.speed,
     type: pattern.type ?? current.type,
     turns: pattern.turns ?? current.turns,

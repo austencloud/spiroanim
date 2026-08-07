@@ -1,16 +1,10 @@
 // src\func\AnimFunc.ts
 
 import { Vector3, MathUtils } from 'three'
-import { MOTION_SHAPE, TTYPE, RADIUS, PPOS, PROPCP } from '@/domain/animation/AnimStruct'
+import { TTYPE, RADIUS, PPOS, PROPCP } from '@/domain/animation/AnimStruct'
 
 import { orthoNext, InitialPoint, InitialOrtho } from './OrthogonalFunc'
-import {
-  DEFAULT_MOTION_AMOUNT,
-  createMotionDirectionState,
-  motionAnglesToCartesian,
-  motionCurveDirection,
-  motionPathOffset,
-} from './MotionFunc'
+import { compileMotionTrack, createDefaultCameraFrame } from './MotionFunc'
 
 import type {
   RootDataFinal,
@@ -19,7 +13,6 @@ import type {
   PropDataCompiled,
   AnimDataCompiled,
   MotionDataCompiled,
-  MotionShapeInd,
   PointInd,
 } from '@/types/AnimTypes'
 
@@ -113,9 +106,29 @@ export const rootCompile = (orig: RootDataFinal): RootDataCompiled => {
 
   return {
     ...root,
+    camera: compileCameraTrack(root.camera),
     props,
   }
 }
+
+const compileCameraTrack = (frames: RootDataFinal['camera']): RootDataCompiled['camera'] => {
+  const defaultOrbit = createDefaultCameraFrame().orbit!
+  const orbit = compileMotionTrack(
+    frames.map((frame, index) =>
+      index === 0 && frame.orbit?.distance === undefined
+        ? { ...defaultOrbit, ...frame.orbit }
+        : (frame.orbit ?? {}),
+    ),
+  )
+  const center = compileMotionTrack(frames.map((frame) => frame.center ?? {}))
+
+  return frames.map((_frame, index) => ({
+    orbit: orbit[index]!,
+    center: withoutBeats(center[index]!),
+  }))
+}
+
+const withoutBeats = ({ beats: _beats, ...frame }: MotionDataCompiled) => frame
 
 const posx = new Vector3(),
   rotx = new Vector3(),
@@ -188,57 +201,7 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     anims.push(push)
   }
 
-  let motionBeats = 1
-  let motionShape: MotionShapeInd = MOTION_SHAPE.LINE
-  let motionAmount = DEFAULT_MOTION_AMOUNT
-  const motionState = createMotionDirectionState()
-  const motionOffset = new Vector3()
-  const motionDelta = new Vector3()
-  for (const motion of prop.motion ?? []) {
-    motionBeats = motion.beats ?? motionBeats
-    motionShape = motion.shape ?? motionShape
-    motionAmount = motion.amount ?? motionAmount
-
-    const arc = motion.arc ?? 0
-    const plane = motion.plane ?? 0
-    const distance = motion.distance ?? 0
-    const axis = motion.axis ?? 0
-    const active =
-      motion.arc !== undefined || motion.plane !== undefined || motion.distance !== undefined
-
-    const move = active
-      ? motionAnglesToCartesian([plane, arc, distance], motionState)
-      : ([0, 0, 0] as [number, number, number])
-    const direction = cleanVector(motionState.direction.toArray())
-    const curve = cleanVector(motionCurveDirection(motionState, axis))
-
-    motionPathOffset(
-      direction,
-      curve,
-      distance,
-      motionShape,
-      motionAmount,
-      active ? 1 : 0,
-      motionDelta,
-    )
-    motionOffset.add(motionDelta)
-
-    motions.push({
-      beats: motionBeats,
-      arc,
-      plane,
-      distance,
-      shape: motionShape,
-      axis,
-      amount: motionAmount,
-      active,
-      move,
-      direction,
-      curve,
-      delta: motionDelta.toArray(),
-      offset: motionOffset.toArray(),
-    })
-  }
+  motions.push(...compileMotionTrack(prop.motion ?? []))
 
   return {
     ...prop,
@@ -246,13 +209,6 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     motion: motions,
   }
 }
-
-const cleanVector = (vector: [number, number, number]): [number, number, number] =>
-  vector.map((coordinate) => (Math.abs(coordinate) < 1e-12 ? 0 : coordinate)) as [
-    number,
-    number,
-    number,
-  ]
 
 // Testing a theory...
 /*

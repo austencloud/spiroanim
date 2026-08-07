@@ -74,6 +74,36 @@ describe('compressAnimation', () => {
     expect(after.props[0]!.motion[0]).toMatchObject({ shape: MOTION_SHAPE.LINE, distance: 2 })
   })
 
+  it('compresses Camera Orbit and Center with the shared Motion rules', () => {
+    const root = createRoot()
+    Object.assign(root.camera[0]!.orbit!, {
+      beats: 1,
+      shape: MOTION_SHAPE.LINE,
+      axis: 90,
+      amount: 75,
+    })
+    Object.assign(root.camera[0]!.center!, {
+      plane: 0,
+      distance: 0,
+      axis: 90,
+      amount: 75,
+    })
+    const before = rootCompile(root).camera
+
+    compressAnimation(root)
+
+    expect(root.camera[0]!.orbit).not.toMatchObject({
+      beats: expect.anything(),
+      shape: expect.anything(),
+      axis: expect.anything(),
+      amount: expect.anything(),
+    })
+    expect(root.camera[0]!.center).toEqual({})
+    const after = rootCompile(root).camera
+    expect(after[0]!.orbit.offset).toEqual(before[0]!.orbit.offset)
+    expect(after[0]!.center.offset).toEqual(before[0]!.center.offset)
+  })
+
   it('is idempotent', () => {
     const root = createRoot()
     compressAnimation(root)

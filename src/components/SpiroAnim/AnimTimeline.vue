@@ -55,9 +55,9 @@ import { throttleTrailing, nextFrame, toColor } from '@/utils/UtilFunc'
 import { COLSET } from '@/domain/animation/AnimStruct'
 import { msToBeat } from '@/math/animation/PlayerFunc'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useViewportStore } from '@/stores/useViewportStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
-import { useAnimWorkerCamera } from '@/composables/useAnimWorkerCamera'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 
@@ -90,9 +90,21 @@ const { send, call, /*on, register,*/ warnStr } = msgChnl
 call('warnStr', 'Player').then(warnStr)
 
 const playerStore = usePlayerStore(props.store)
-const { ROOT, COMPILED, CURRENT, ORBIT } = playerStore.raw()
-const { ETIMES, PLAYING, UPDATE, SELECTION, SELECTED, PTIMES, MTIMES, ASPECT, MAX } =
-  storeToRefs(playerStore)
+const { ROOT, COMPILED, CURRENT } = playerStore.raw()
+const {
+  ETIMES,
+  PLAYING,
+  UPDATE,
+  SELECTION,
+  SELECTED,
+  PTIMES,
+  MTIMES,
+  CTIMES,
+  ASPECT,
+  PROJECTION,
+  MAX,
+} = storeToRefs(playerStore)
+const { pixelRatio } = storeToRefs(useViewportStore())
 
 const eScroll = ref<HTMLElement>()
 const eCells = ref<HTMLElement[]>([])
@@ -115,10 +127,18 @@ const frameIndex = computed(() => {
 })
 
 const ownTimes = computed(() => {
-  const frameTimes = pFRAMES.value === 'animation' ? PTIMES.value : MTIMES.value
-  const displayedTimes = showFullTimeline.value
-    ? PTIMES.value
-    : frameTimes.filter((_, index) => pSELECTED.value[index])
+  const frameTimes =
+    pFRAMES.value === 'animation'
+      ? PTIMES.value
+      : pFRAMES.value === 'motion'
+        ? MTIMES.value
+        : [CTIMES.value]
+  const displayedTimes =
+    pFRAMES.value === 'camera'
+      ? frameTimes
+      : showFullTimeline.value
+        ? PTIMES.value
+        : frameTimes.filter((_, index) => pSELECTED.value[index])
   return [...new Set(displayedTimes.flat())].sort((first, second) => first - second)
 })
 
@@ -196,8 +216,15 @@ const selectedRange = computed<readonly [number, number]>(() => {
 })
 
 onMounted(() => {
-  // Shared orbit logic
-  useAnimWorkerCamera(msgChnl, cellDim, props.store)
+  watchImmediate([cellDim, pixelRatio], () => {
+    send('resize', { width: cellDim.width, height: cellDim.height, ratio: pixelRatio.value })
+  })
+  watchImmediate([PROJECTION, cellDim], () => {
+    send('projection', {
+      ...toRaw(PROJECTION.value),
+      aspect: cellDim.width / cellDim.height,
+    })
+  })
 
   // Initialize worker, which creates the offscreenCanvas
   call('initialize', { girth, timeline: true })
@@ -319,7 +346,7 @@ onMounted(() => {
   )
 
   // Update circles / colors data
-  watchImmediate([ROOT, pFRAMES, showFullTimeline, PTIMES, MTIMES, ETIMES], ([data]) => {
+  watchImmediate([ROOT, pFRAMES, showFullTimeline, PTIMES, MTIMES, CTIMES, ETIMES], ([data]) => {
     const result: TimelineCircle[][] = []
     if (!ETIMES.value?.length) return
 
@@ -328,11 +355,14 @@ onMounted(() => {
       const time = ETIMES.value[i]!
       const row: TimelineCircle[] = []
 
-      const displayedPropTimes = showFullTimeline.value
-        ? PTIMES.value
-        : pFRAMES.value === 'animation'
-          ? PTIMES.value
-          : MTIMES.value
+      const displayedPropTimes =
+        pFRAMES.value === 'camera'
+          ? []
+          : showFullTimeline.value
+            ? PTIMES.value
+            : pFRAMES.value === 'animation'
+              ? PTIMES.value
+              : MTIMES.value
       for (let j = 0; j < displayedPropTimes.length; j++) {
         const times = displayedPropTimes[j]!
         if (times.includes(time)) {
@@ -346,9 +376,6 @@ onMounted(() => {
     }
     circles.value = result
   })
-
-  // Request images as orbit changes
-  watch(ORBIT, invalidateImages)
 
   watch([pFRAMES, ETIMES], invalidateImages, { deep: true })
 

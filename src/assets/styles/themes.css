@@ -47,6 +47,7 @@
   --color-aspect-near: var(--palette-yellow-900);
   --color-aspect-approximate: var(--palette-orange-900);
   --color-aspect-unmatched: var(--palette-red-800);
+  --color-camera-path: var(--palette-neutral-900);
 }
 
 [data-theme='dark'] {

@@ -167,8 +167,10 @@ describe('SpiroAnim view', () => {
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(false)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').setValue(60)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(0.8)
+    const resetBeforePattern = player.cameraReset
     await wrapper.get('[data-cell-reference="6-1"]').trigger('click')
 
+    expect(player.cameraReset).not.toBe(resetBeforePattern)
     expect(playerRoot.value).toMatchObject({
       aspectx: vtgPlayerSettings.aspectx,
       aspecty: vtgPlayerSettings.aspecty,

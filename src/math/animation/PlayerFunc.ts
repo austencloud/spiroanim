@@ -1,24 +1,35 @@
 // src/math/animation/PlayerFunc.ts
 
 import { TTYPE } from '@/domain/animation/AnimStruct'
+import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 
 import type { RootData, RootDataFinal, RootDataCompiled } from '@/types/AnimTypes'
 
 // TODO: This should probably be moved somewhere else, or the definitions
 // Default / Inheritence values that user doesn't set
 export const rootFinal = (root: RootData): RootDataFinal => {
+  const { camera: authoredCamera, distance: legacyDistance, props, ...settings } = root
+
   return {
     speed: 1,
     type: TTYPE.SPHE,
     //flip: false,
     turns: 0,
     depth: 0,
-    ...root,
+    ...settings,
     // V1 URLs predate Arms, so normalize their missing value to the requested root default.
     arms: root.arms ?? false,
     // Travel was added with QS v4, so older URLs need the same explicit Root default.
     travel: root.travel ?? false,
-    props: root.props.map((prop) => ({ ...prop, motion: prop.motion ?? [] })),
+    camera:
+      authoredCamera && authoredCamera.length > 0
+        ? authoredCamera.map((frame) => ({
+            ...frame,
+            orbit: { ...frame.orbit },
+            center: { ...frame.center },
+          }))
+        : [createDefaultCameraFrame(legacyDistance)],
+    props: props.map((prop) => ({ ...prop, motion: prop.motion ?? [] })),
   }
 }
 
@@ -52,6 +63,12 @@ export const PROPTIMES = (propData: RootDataCompiled): number[][] => {
 
 export const MOTIONTIMES = (propData: RootDataCompiled): number[][] =>
   propData.props.map((prop) => FRAMESTARTS(prop.motion, propData.bpm))
+
+export const CAMERATIMES = (data: RootDataCompiled): number[] =>
+  FRAMESTARTS(
+    data.camera.map((frame) => frame.orbit),
+    data.bpm,
+  )
 
 // Unique merger of PROPTIMES
 export const UNQTIMES = (propTimes: number[][] | RootDataCompiled): number[] => {

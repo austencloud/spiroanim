@@ -6,13 +6,22 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import {
   cartesianToMotionAngles,
   clampCartesianMotion,
+  compileMotionTrack,
   createMotionDirectionState,
+  fitMotionPathEndpoint,
   motionAnglesToCartesian,
   motionPathOffset,
+  sampleCompiledOrbit,
 } from '@/math/animation/MotionFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 
 describe('Motion angle conversion', () => {
+  it('inherits Beats through consecutive empty frames', () => {
+    expect(compileMotionTrack([{ beats: 3 }, {}, {}]).map((frame) => frame.beats)).toEqual([
+      3, 3, 3,
+    ])
+  })
+
   it('converts Cartesian movements into equivalent chained angles', () => {
     const cartesian = [
       [2, 0, 0],
@@ -48,6 +57,19 @@ describe('Motion paths', () => {
     expect(
       motionPathOffset(direction, curve, 10, MOTION_SHAPE.CIRCLE, 0, 1, new Vector3()).toArray(),
     ).toEqual([10, 0, 0])
+  })
+
+  it('samples Linear Orbit around Center instead of through its Cartesian chord', () => {
+    const frames = compileMotionTrack([{ distance: 10 }, { distance: 10 }])
+    frames[0]!.offset = [0, 0, -10]
+    frames[1]!.offset = [10, 0, 0]
+    const orbitMidpoint = sampleCompiledOrbit(frames, [0, 1000], 500, new Vector3())
+    const cartesianMidpoint = new Vector3(0, 0, -10).lerp(new Vector3(10, 0, 0), 0.5)
+
+    expect(orbitMidpoint.length()).toBeCloseTo(10)
+    expect(cartesianMidpoint.length()).toBeCloseTo(Math.sqrt(50))
+    expect(orbitMidpoint.x).toBeCloseTo(Math.sqrt(50))
+    expect(orbitMidpoint.z).toBeCloseTo(-Math.sqrt(50))
   })
 
   it('keeps a 50% Circle anchored to Linear and closes it at 100%', () => {
@@ -103,6 +125,25 @@ describe('Motion paths', () => {
     expect(semicircleMidpoint.z).toBeCloseTo(0)
     expect(circleMidpoint.distanceTo(linearEndpoint)).toBeCloseTo(0)
     expect(circleEndpoint.length()).toBeCloseTo(0)
+  })
+
+  it('fits the closest constrained endpoint for a Circle beyond its semicircle', () => {
+    const state = createMotionDirectionState()
+    const angles = fitMotionPathEndpoint([8, 3, -4], state, MOTION_SHAPE.CIRCLE, 75, 20)
+    const [frame] = compileMotionTrack([
+      { plane: angles[0], arc: angles[1], distance: angles[2], shape: 2, amount: 75, axis: 20 },
+    ])
+
+    expect(new Vector3().fromArray(frame!.offset).distanceTo(new Vector3(8, 3, -4))).toBeLessThan(1)
+    expect(
+      fitMotionPathEndpoint(
+        [8, 3, -4],
+        createMotionDirectionState(),
+        MOTION_SHAPE.CIRCLE,
+        100,
+        0,
+      )[2],
+    ).toBe(0)
   })
 
   it('keeps a 100% long Arc anchored to the Linear endpoint', () => {

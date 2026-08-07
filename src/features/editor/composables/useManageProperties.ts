@@ -4,7 +4,9 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 // Shared routines for features/editor/components/properties/manage
 
 export function useManageProperties(store: string) {
-  const { SELECTION, SELECTED, EINDEX, PTIMES, MTIMES, ETIMES } = storeToRefs(usePlayerStore(store))
+  const { SELECTION, SELECTED, EINDEX, PTIMES, MTIMES, CTIMES, ETIMES } = storeToRefs(
+    usePlayerStore(store),
+  )
   const { pSELECTED, pFRAMES } = useProperties(store)
 
   const propSelection = (cb: (prop: number, start: number, end: number) => void) => {
@@ -41,5 +43,22 @@ export function useManageProperties(store: string) {
     }
   }
 
-  return { propSelection }
+  const cameraSelection = (cb: (start: number, end: number) => void) => {
+    const startTime = ETIMES.value[SELECTION.value ? SELECTED.value[0]! : EINDEX.value] ?? 0
+    const endTime = ETIMES.value[SELECTION.value ? SELECTED.value[1]! : EINDEX.value] ?? 0
+    let start = -1
+    let end = -1
+
+    for (let index = 0; index < CTIMES.value.length; index++) {
+      const time = CTIMES.value[index]!
+      if (time >= startTime && time <= endTime) {
+        if (start === -1) start = index
+        end = index
+      }
+    }
+
+    cb(start, end)
+  }
+
+  return { propSelection, cameraSelection }
 }

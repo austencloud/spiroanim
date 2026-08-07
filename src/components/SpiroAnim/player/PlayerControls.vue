@@ -33,14 +33,16 @@
     </template>
   </Progress>
 
-  <AppTooltip class="btnCenter" text="Center Camera">
+  <AppTooltip class="btnCenter" text="Free Camera">
     <template #activator="{ props: tooltipProps }">
       <button
         v-bind="tooltipProps"
         class="icon-button"
+        :class="{ 'icon-button--primary': freeCamera }"
         type="button"
-        aria-label="Center camera"
-        @click="cameraCenter = Symbol()"
+        :aria-pressed="freeCamera"
+        aria-label="Free camera"
+        @click="freeCamera = !freeCamera"
       >
         <BaseIcon :path="mdiImageFilterCenterFocusWeak" size="30" />
       </button>
@@ -80,7 +82,7 @@ const props = defineProps<{
 
 const playerStore = usePlayerStore(props.store)
 const { ROOT, CURRENT } = playerStore.raw()
-const { cameraCenter, PLAYING, SELECTION, EINDEX, ETIMES, UPDATE, SELECTED } =
+const { freeCamera, PLAYING, SELECTION, EINDEX, ETIMES, UPDATE, SELECTED } =
   storeToRefs(playerStore)
 
 const speedOptions = [4, 3, 2, 1, 0.5, 0.25, 0.1] as const

@@ -6,9 +6,11 @@ import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 import { VDEF as VDEF_V2 } from '@/services/query/versions/SpiroAnimQSv2'
 import { CHARSET as CHARSET_V3, VDEF as VDEF_V3 } from '@/services/query/versions/SpiroAnimQSv3'
 import { CHARSET as CHARSET_V4, VDEF as VDEF_V4 } from '@/services/query/versions/SpiroAnimQSv4'
+import { CHARSET as CHARSET_V5, VDEF as VDEF_V5 } from '@/services/query/versions/SpiroAnimQSv5'
+import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
-const createRoot = (): RootDataFinal => ({
+const createRoot = (): RootDataFinal & { distance: number } => ({
   speed: 1,
   type: 0,
   turns: 0,
@@ -28,6 +30,7 @@ const createRoot = (): RootDataFinal => ({
   aspectx: 16,
   aspecty: 9,
   distance: 22,
+  camera: [createDefaultCameraFrame(22)],
   thick: 4,
   props: [
     {
@@ -143,6 +146,50 @@ describe('useSpiroAnimQS', () => {
     expect(migrated.travel).toBe(false)
     expect(migrated.props[0]!.anim[0]!.move).toBeUndefined()
     expect(migrated.props[0]!.motion).toEqual([{ plane: 0, arc: 90, distance: 2 }])
+  })
+
+  it('stores Camera under c and migrates legacy Distance in version 5', async () => {
+    const query = await useSpiroAnimQS(VDEF_V5, useBaseQS(VDEF_V5, { charset: CHARSET_V5 }), 5)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    root.camera = [
+      createDefaultCameraFrame(22),
+      {
+        orbit: { beats: 2, shape: 2, amount: 100, distance: 22 },
+        center: { arc: 90, distance: 4 },
+      },
+    ]
+
+    const encoded = query.encodeQS(root, false)
+    expect(encoded.c).toBeDefined()
+    expect(encoded.r).toBeDefined()
+    expect(encoded.v).toBe('5')
+
+    const decoded = query.decodeQS(encoded)
+    expect(decoded.camera).toEqual(root.camera)
+    expect(query.encodeQS(decoded, false)).toEqual(encoded)
+
+    const migrated = await query.decodeVer({ r: 'GE28Eji9g', v: '4' })
+    expect(migrated.camera).toHaveLength(1)
+    expect(migrated.camera[0]).toEqual(createDefaultCameraFrame(22))
+  })
+
+  it('uses dots only between Camera frames', async () => {
+    const query = await useSpiroAnimQS(VDEF_V5, useBaseQS(VDEF_V5, { charset: CHARSET_V5 }), 5)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    root.camera = [{ orbit: {}, center: {} }]
+
+    const encoded = query.encodeQS(root, false)
+    expect(encoded.c).toBe('~')
+    expect(query.decodeQS(encoded).camera).toEqual(root.camera)
+
+    root.camera.push({ orbit: {}, center: {} })
+    const twoFrames = query.encodeQS(root, false)
+    expect(twoFrames.c).toBe('.~.')
+    expect(query.decodeQS(twoFrames).camera).toEqual(root.camera)
+
+    const example = query.decodeQS({ ...encoded, c: '__7._m_sNR~.' })
+    expect(example.camera).toHaveLength(2)
+    expect(query.encodeQS(example, false).c).toBe('__7._m_sNR~.')
   })
 
   it('migrates the existing multi-prop MOVE query into optional m values', async () => {

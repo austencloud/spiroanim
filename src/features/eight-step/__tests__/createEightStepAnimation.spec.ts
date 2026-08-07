@@ -71,7 +71,6 @@ describe('createEightStepAnimation', () => {
     expect(transformed).toBeDefined()
     expect(transformed).toMatchObject({
       bpm: 84,
-      distance: 23,
       thick: 11,
       paths: false,
       hands: true,
@@ -79,6 +78,7 @@ describe('createEightStepAnimation', () => {
     })
     expect(transformed?.props.map(({ color }) => color)).toEqual([1, 6])
     expect(transformed?.props.every(({ anim }) => anim[0]?.scale === 12)).toBe(true)
+    expect(rootCompile(transformed!).camera[0]!.orbit.offset).toEqual([0, 0, -23])
     expect(transformed?.props[0]?.anim).not.toEqual(base?.props[1]?.anim)
   })
 
@@ -182,7 +182,6 @@ describe('createEightStepAnimation', () => {
     expect(new URLSearchParams(query).toString().length).toBeLessThan(180)
     expect(decoded).toMatchObject({
       bpm: animation.bpm,
-      distance: animation.distance,
       thick: animation.thick,
       paths: animation.paths,
       hands: animation.hands,

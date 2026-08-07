@@ -19,7 +19,9 @@ import {
   MAX_MOTION_DISTANCE,
   cartesianToMotionAngles,
   clampCartesianMotion,
+  createDefaultCameraFrame,
   createMotionDirectionState,
+  fitMotionPathEndpoint,
   motionAnglesToCartesian,
 } from '@/math/animation/MotionFunc'
 import { MathUtils, Vector3 } from 'three'
@@ -39,6 +41,9 @@ import type {
   MotionKeys,
   MotionCompKeys,
   MotionData,
+  MotionPathKeys,
+  MotionPathCompKeys,
+  CameraPose,
 } from '@/types/AnimTypes'
 
 export const VALUE = 0
@@ -155,7 +160,8 @@ export function useProperties(store: string = 'main') {
   const { PLAYING } = storeToRefs(playerStore)
 
   const propertiesStore = storeToRefs(usePropertiesStore(store))
-  const { IDENT, ANIMS, CMPDS, MOTIONS, MCOMPDS, PROPS } = propertiesStore
+  const { IDENT, ANIMS, CMPDS, MOTIONS, MCOMPDS, CAMERAS, CCOMPDS, CAMERA_IDENT, PROPS } =
+    propertiesStore
 
   // Broke this out separate from animGet
   const animVals = (key: string) => {
@@ -382,6 +388,175 @@ export function useProperties(store: string = 'main') {
     }
   }
 
+  const cameraPathSet = (path: 'center' | 'orbit', key: string, val?: VarTypes) => {
+    if (PLAYING.value) return
+
+    if (key === 'beats') {
+      val = motionConstraints(key, val)
+      for (const frame of CAMERAS.value) {
+        const orbit = (frame.orbit ??= {})
+        if (val === undefined) delete orbit.beats
+        else orbit.beats = val as number
+      }
+      triggerRef(ROOT)
+      return
+    }
+
+    if (key === 'movexyz' || key === 'movexyzpreserve') {
+      if (Array.isArray(val)) setCartesianCameraPath(path, val, key === 'movexyzpreserve')
+      triggerRef(ROOT)
+      return
+    }
+
+    const paths = CAMERAS.value.map((frame) => (frame[path] ??= {}))
+    if (key === 'move') {
+      if (val === undefined)
+        for (const frame of paths) {
+          delete frame.arc
+          delete frame.plane
+          delete frame.distance
+        }
+      triggerRef(ROOT)
+      return
+    }
+
+    val = motionConstraints(key, val)
+    if (val === undefined) (paths as AnonObject[]).every((frame) => delete frame[key] || true)
+    else (paths as AnonObject[]).every((frame) => (frame[key] = val) || true)
+    triggerRef(ROOT)
+  }
+
+  const cameraPathGet = (path: 'center' | 'orbit', key: string): ValRetType => {
+    if (key === 'beats') {
+      const authored = CAMERAS.value.map((frame) => frame.orbit?.beats)
+      let val = authored[0]
+      let equal = authored.every((value) => value === val)
+      let fall = false
+      if (val === undefined && CCOMPDS.value.length > 0) {
+        val = CCOMPDS.value[0]!.orbit.beats
+        equal = CCOMPDS.value.every((frame) => frame.orbit.beats === val)
+        fall = true
+      }
+      return [val, equal, equal ? String(val) : 'Mismatch', fall]
+    }
+
+    const paths = CAMERAS.value.map((frame) => frame[path] ?? {})
+    const compiled = CCOMPDS.value.map((frame) => frame[path])
+    if (key === 'move') {
+      const authored = paths.map(hasMotionDirection)
+      if (authored.every((value) => !value)) {
+        const val: [number, number, number] =
+          path === 'orbit' && compiled[0] ? clampCartesianMotion(compiled[0].move) : [0, 0, 0]
+        return [val, true, cameraPathStringGet(key, val), true]
+      }
+      if (!authored.every(Boolean)) return [undefined, false, 'Mismatch', false]
+
+      const values = compiled.map((frame) => clampCartesianMotion(frame.move))
+      const val = values[0]
+      const equal = values.every((value) => samePropertyValue(value, val))
+      return [val, equal, equal ? cameraPathStringGet(key, val) : 'Mismatch', false]
+    }
+
+    const values = paths.map((frame) => frame[key as MotionPathKeys])
+    let val: VarTypes | undefined = values[0]
+    let equal = values.every((value) => samePropertyValue(value, val))
+    let fall = false
+
+    if (val === undefined && compiled.length > 0) {
+      val = compiled[0]![key as MotionPathCompKeys]
+      equal = compiled.every((frame) => samePropertyValue(frame[key as MotionPathCompKeys], val))
+      fall = val !== undefined
+    }
+
+    return [val, equal, equal ? cameraPathStringGet(key, val) : 'Mismatch', fall]
+  }
+
+  const setCartesianCameraPath = (
+    path: 'center' | 'orbit',
+    value: readonly number[],
+    preserveNext: boolean,
+  ) => {
+    const cartesian = clampCartesianMotion(value)
+    const selected = new Set(CAMERA_IDENT.value)
+    const frames = ROOT.value.camera
+    const compiled = COMPILED.value.camera
+    const lastSelected = Math.max(...selected)
+    const preserveIndex = preserveNext
+      ? frames.findIndex(
+          (frame, index) => index > lastSelected && hasMotionDirection(frame[path] ?? {}),
+        )
+      : -1
+    const preserveMove = preserveIndex >= 0 ? compiled[preserveIndex]?.[path].move : undefined
+    const state = createMotionDirectionState()
+
+    for (let index = 0; index < frames.length; index++) {
+      const frame = (frames[index]![path] ??= {})
+      const requested = selected.has(index)
+        ? cartesian
+        : index === preserveIndex && preserveMove
+          ? clampCartesianMotion(preserveMove)
+          : undefined
+
+      if (requested) {
+        const [plane, arc, distance] = cartesianToMotionAngles(requested, state)
+        frame.plane = plane
+        frame.arc = arc
+        frame.distance = distance
+      } else if (hasMotionDirection(frame)) {
+        motionAnglesToCartesian([frame.plane ?? 0, frame.arc ?? 0, frame.distance ?? 0], state)
+      }
+    }
+  }
+
+  const matchCameraFrameToPose = (index: number, pose: CameraPose) => {
+    if (PLAYING.value || index < 0 || index >= ROOT.value.camera.length) return
+
+    const position = new Vector3().fromArray(pose.position)
+    const target = new Vector3().fromArray(pose.target)
+    const requestedOffsets = {
+      center: target,
+      orbit: position.sub(target),
+    }
+
+    for (const path of ['center', 'orbit'] as const) {
+      const state = createMotionDirectionState()
+      const compiled = COMPILED.value.camera.map((frame) => frame[path])
+      for (let previous = 0; previous < index; previous++) {
+        const frame = compiled[previous]!
+        motionAnglesToCartesian([frame.plane, frame.arc, frame.distance], state)
+      }
+
+      const previousOffset = index > 0 ? compiled[index - 1]!.offset : [0, 0, 0]
+      const endpoint = requestedOffsets[path].clone().sub(new Vector3().fromArray(previousOffset))
+      const current = compiled[index]!
+      const [plane, arc, distance] = fitMotionPathEndpoint(
+        endpoint.toArray(),
+        state,
+        current.shape,
+        current.amount,
+        current.axis,
+      )
+      const authored = (ROOT.value.camera[index]![path] ??= {})
+      const defaultOrbit = createDefaultCameraFrame().orbit!
+      const usesFirstOrbitDefault =
+        path === 'orbit' &&
+        index === 0 &&
+        plane === defaultOrbit.plane &&
+        arc === defaultOrbit.arc &&
+        distance === defaultOrbit.distance
+
+      if (usesFirstOrbitDefault || plane === 0) delete authored.plane
+      else authored.plane = plane
+      if (usesFirstOrbitDefault || arc === 0) delete authored.arc
+      else authored.arc = arc
+      if (usesFirstOrbitDefault || (distance === 0 && !(path === 'orbit' && index === 0)))
+        delete authored.distance
+      else authored.distance = distance
+    }
+
+    triggerRef(ROOT)
+  }
+
   const propSet: SetterFunc = (key, val) => {
     //if ( PLAYING.value )
     //  return
@@ -438,6 +613,9 @@ export function useProperties(store: string = 'main') {
     animGet,
     motionSet,
     motionGet,
+    cameraPathSet,
+    cameraPathGet,
+    matchCameraFrameToPose,
     propSet,
     propGet,
     rootSet,
@@ -465,6 +643,12 @@ export function useProperties(store: string = 'main') {
       })
     },
   }
+}
+
+function cameraPathStringGet(key: string, val?: VarTypes): string {
+  if (key === 'move' && Array.isArray(val)) return val.join(', ')
+  if (key === 'distance' && typeof val === 'number') return String(val)
+  return motionStringGet(key, val)
 }
 
 function samePropertyValue(first: VarTypes | undefined, second: VarTypes | undefined): boolean {

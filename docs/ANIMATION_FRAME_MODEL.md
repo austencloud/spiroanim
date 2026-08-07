@@ -146,7 +146,9 @@ X/Y/Z is not stored in Motion frames.
 
 The Manage pane follows the selected frame set. Animation exposes its point and prop management
 tools. Motion exposes Insert Frame and Delete Selection; Insert Frame adds an empty frame before or
-after the current position or selected range without invoking player point selection.
+after the current position or selected range without invoking player point selection. Compress
+applies the declared default, inheritance, and applicability rules to props, Motion, Camera Orbit,
+and Camera Center. Fields without a declared compression rule are preserved.
 
 Motion `beats` defaults to `1` on the first frame and inherits afterward. Shape initially defaults
 to Linear and Amount initially defaults to 50%; both inherit. Arc, Plane, and Axis default to zero
@@ -185,11 +187,55 @@ Motion boundaries.
 Travel renders the Motion center path itself using the Hands color. It is sampled from the same
 path calculation used for playback so curved Travel, playback, Paths, and Hands cannot disagree.
 
+## Root-owned Camera frames
+
+Camera is a third independent frame set owned by the root rather than by a prop. Every finalized
+animation has at least one Camera frame. Orbit is the primary path and owns `beats`; Center uses
+the same frame boundaries without storing a second duration:
+
+```text
+camera[i].orbit   Motion-style path and Camera frame duration
+camera[i].center  Motion-style world-space look-at path without Beats
+```
+
+Center and Orbit use the same Arc, Plane, Distance, Shape, Axis, Amount, Cartesian conversion, and
+inheritance rules as Motion. They are compiled with the shared Motion path compiler and evaluated
+at the same absolute Camera timeline time. The rendered camera position is `center + orbit`, and
+the camera always looks at Center. Center's Linear shape uses ordinary Cartesian interpolation.
+Orbit's Linear shape instead interpolates direction around Center and interpolates radius directly,
+so equal endpoint radii remain constant rather than zooming through the chord between them. Orbit
+Arc and Circle retain the Cartesian curved-path behavior and can intentionally vary that radius.
+
+The animation worker owns and evaluates the authored Camera during playback and seeks. Main-thread
+OrbitControls request the current worker pose when a pointer gesture begins. A normal gesture
+temporarily supplies manual position and target values, then releases ownership and snaps back to
+the authored pose at the current time. The persisted Free Camera toggle retains that manual
+ownership until disabled. Editor changes rebuild authored Camera data without changing the active
+manual position or target. Its manual pose is not persisted: replacing the active animation resets
+the camera to the new Camera track's initial authored pose while leaving Free Camera enabled.
+
+Selecting Camera in the editor shows its single root timeline regardless of prop selection. Orbit
+appears before Center and owns the Beats control. Both paths are rendered in the main player only
+while Camera is selected. Timeline thumbnails
+and image/video exports suppress those guides. Camera supports Insert Frame and Delete Selection,
+but deletion cannot remove its final frame. While Free Camera is enabled, Manage also exposes
+Match Free Camera. It rewrites the active Camera frame's Center and Orbit to the closest pose
+available under the integer angle, Distance, Shape, Axis, and Amount constraints. A 100% Circle
+cannot match a nonzero endpoint because its path closes at its starting point.
+
+The default Camera has Center at the origin and Orbit at `[0, 0, -22]`, matching the former global
+Distance view. Concept builders replace it with one centered Camera frame at their derived viewing
+distance. Clearing the first Orbit's movement also falls back to this valid default separation so
+the camera never collapses onto Center merely because its sparse values are undefined.
+
 QS versions 1 through 3 stored Cartesian `move` on Animation frames. Version 4 migration removes
 those legacy fields, converts their chained Cartesian directions into Arc, Plane, and Distance,
 and builds a Motion track with equivalent boundaries. Stationary spans may be collapsed, but the
 Animation frame immediately before a transition must remain as a Motion boundary because its
 outgoing `beats` value determines when movement begins.
+
+QS versions 1 through 4 stored a global root Distance. Version 5 migrates that value into the first
+Camera Orbit and removes Distance from finalized root settings.
 
 ## Sparse frame compaction
 

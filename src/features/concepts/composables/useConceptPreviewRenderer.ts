@@ -1,5 +1,3 @@
-import { PerspectiveCamera } from 'three'
-
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
@@ -90,24 +88,16 @@ export const useConceptPreviewRenderer = <Reference extends string>({
 
           const width = Math.max(1, Math.round(previewDimensions.width))
           const height = Math.max(1, Math.round(previewDimensions.height))
-          const camera = new PerspectiveCamera(45, width / height, 0.1, 1000)
-          camera.position.set(0, 0, -animation.distance)
-          camera.lookAt(0, 0, 0)
-
           channel.send('resize', {
             width,
             height,
             ratio: typeof window === 'undefined' ? 1 : window.devicePixelRatio,
           })
           channel.send('projection', {
-            fov: camera.fov,
-            aspect: camera.aspect,
-            near: camera.near,
-            far: camera.far,
-          })
-          channel.send('transform', {
-            pos: camera.position.toArray(),
-            rot: [camera.rotation.x, camera.rotation.y, camera.rotation.z],
+            fov: 45,
+            aspect: width / height,
+            near: 0.1,
+            far: 1000,
           })
           channel.send('data', rootCompile(animation))
 

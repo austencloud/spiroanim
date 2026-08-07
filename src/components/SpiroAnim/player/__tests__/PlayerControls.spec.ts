@@ -34,7 +34,7 @@ describe('PlayerControls', () => {
     wrapper.unmount()
   })
 
-  it('keeps only Center Camera in the former right-side action stack', () => {
+  it('exposes the persisted Free Camera toggle in the right-side action stack', async () => {
     const wrapper = mount(PlayerControls, {
       props: { store: 'right-side-actions' },
       global: {
@@ -54,9 +54,14 @@ describe('PlayerControls', () => {
     const tooltipText = wrapper
       .findAllComponents(AppTooltip)
       .map((tooltip) => tooltip.props('text'))
-    expect(tooltipText).toContain('Center Camera')
+    expect(tooltipText).toContain('Free Camera')
     expect(tooltipText).not.toContain('Tracer Mode')
     expect(tooltipText).not.toContain('Export Image')
+
+    const button = wrapper.get('button[aria-label="Free camera"]')
+    expect(button.attributes('aria-pressed')).toBe('false')
+    await button.trigger('click')
+    expect(button.attributes('aria-pressed')).toBe('true')
 
     wrapper.unmount()
   })

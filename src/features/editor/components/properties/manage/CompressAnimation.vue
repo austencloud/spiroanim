@@ -6,8 +6,8 @@
       </template>
       <template #html>
         <strong>Compress</strong><br />
-        Removes redundant inherited and default values from every prop and frame.<br />
-        Also removes values that do not apply, such as Axis and Amount on Linear Motion.
+        Removes redundant inherited and default values from Camera, every prop, and every frame.<br />
+        Also removes values that do not apply, such as Axis and Amount on Linear Motion paths.
       </template>
     </AppTooltip>
   </div>

@@ -5,6 +5,7 @@ import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/t
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
+import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 
 const vtgFrameCount = 5
 
@@ -63,6 +64,7 @@ export const createVtgAnimation = (
 
   const animation = {
     ...rootFinal(decoded),
+    camera: [createDefaultCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
     speed: pattern.speed ?? current.speed,
     type: pattern.type ?? current.type,
     turns: pattern.turns ?? current.turns,

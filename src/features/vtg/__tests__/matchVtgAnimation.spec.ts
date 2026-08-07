@@ -85,7 +85,7 @@ describe('VTG animation matching', () => {
     animation.anchors = true
     animation.aspectx = 16
     animation.aspecty = 9
-    animation.distance = 999
+    animation.camera = [{ center: { distance: 3 }, orbit: { distance: 40 } }]
     animation.thick = 12
 
     for (const prop of animation.props) {
@@ -126,7 +126,7 @@ describe('VTG animation matching', () => {
       speedRatio: '1:1',
       scale: 0.8,
     })
-    animation.distance = Math.trunc(animation.distance)
+    animation.camera[0]!.orbit!.distance = Math.trunc(animation.camera[0]!.orbit!.distance ?? 0)
     animation.props[0]!.anim[0]!.plane = -180
     animation.props[1]!.anim[0]!.plane = -180
 

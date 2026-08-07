@@ -113,8 +113,7 @@ describe('useSpiroAnimKeyboard', () => {
   it('navigates frames with the left and right arrow keys', () => {
     const playerStore = usePlayerStore('main')
     const { CURRENT } = playerStore.raw()
-    playerStore.UTIMES = [0, 10, 20]
-    playerStore.INDEX = 1
+    playerStore.ETIMES = [0, 10, 20]
     CURRENT.value = 15
     vi.spyOn(useViewportStore(), 'isTouchDevice').mockReturnValue(false)
     stop = useSpiroAnimKeyboard()

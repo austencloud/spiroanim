@@ -103,6 +103,8 @@ describe('AnimProperties', () => {
           Settings: true,
           Base: true,
           Manage: { template: '<div data-test="manage-pane" />' },
+          Orbit: { template: '<div data-test="orbit-pane" />' },
+          Center: { template: '<div data-test="center-pane" />' },
           BaseIcon: true,
         },
       },
@@ -113,6 +115,7 @@ describe('AnimProperties', () => {
     expect(frameSet.findAll('option').map((option) => option.text())).toEqual([
       'Animation',
       'Motion',
+      'Camera',
     ])
     const selectionControls = wrapper.get('.selection-options').findAll('select, input')
     expect(selectionControls[0]!.element).toBe(frameSet.element)
@@ -132,6 +135,22 @@ describe('AnimProperties', () => {
     usePropertiesStore(storeId).pSELECTED = { 0: false }
     await nextTick()
     expect(wrapper.findAll('[data-test="manage-pane"]')).toHaveLength(0)
+
+    await frameSet.setValue('camera')
+    expect(usePropertiesStore(storeId).pFRAMES).toBe('camera')
+    expect(wrapper.get('.prop-cell').isVisible()).toBe(true)
+    expect(wrapper.get('.prop-options').isVisible()).toBe(false)
+    expect(wrapper.findAll('.modifying-count')[1]!.text()).toBe('1')
+    expect(wrapper.findAll('[data-test="manage-pane"]')).toHaveLength(1)
+    expect(
+      wrapper
+        .findAll('[data-test="orbit-pane"], [data-test="center-pane"]')
+        .map((pane) => pane.attributes('data-test')),
+    ).toEqual(['orbit-pane', 'center-pane'])
+
+    usePropertiesStore(storeId).CAMERAS = []
+    await nextTick()
+    expect(wrapper.text()).toContain('No Camera frames')
 
     wrapper.unmount()
   })

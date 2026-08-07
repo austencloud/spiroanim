@@ -35,7 +35,7 @@ ROOT (sparse editable RootDataFinal)
         |
         +-- player-store watcher --> rootCompile() --> worker-ready data
         |
-        +-- route watcher --> encodeQS() --> ?r=...&p0=...&v=2
+        +-- route watcher --> encodeQS() --> ?r=...&p0=...&c=...&v=5
 ```
 
 Loading a shared URL follows the reverse path:
@@ -73,8 +73,9 @@ independent layers, each with a different responsibility.
 | Query codec       | Query service                      | Fit serialized values into the versioned integer schema    | Preservation of unsupported fractions            |
 
 When a value is wrong, identify the layer that produced it before changing a similarly named
-control elsewhere. For example, the editor's `Distance` property control is separate from the VTG
-`Scale` control that derives a root `distance` value.
+control elsewhere. For example, Motion and Camera Orbit each expose a `Distance` path property,
+while the VTG `Scale` control derives the viewing distance used to create the Concept's first
+Camera frame.
 
 ## Authoritative implementations
 
@@ -82,7 +83,7 @@ control elsewhere. For example, the editor's `Distance` property control is sepa
 - `src/features/editor/composables/useProperties.ts` - property reads, writes, display values,
   and editor-side range constraints.
 - `src/features/editor/stores/usePropertiesStore.ts` - active prop/frame selection.
-- `src/services/query/versions/SpiroAnimQSv1.ts` and `SpiroAnimQSv2.ts` - versioned ranges, bit
+- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv5.ts` - versioned ranges, bit
   widths, field order, and segment layouts.
 - `src/services/query/createBaseQueryCodec.ts` - integer normalization and bit packing.
 - `src/composables/useSpiroAnimQS.ts` - root/prop/frame encoding, decoding, and query history.

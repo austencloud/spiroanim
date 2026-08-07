@@ -41,7 +41,7 @@ export type PPropKeys = keyof (typeof PPROP)[PointTypes] // Keys used in PPROP
 export type qsTransform = BooleanConstructor | undefined // For typecasting certain values from query string
 
 export type GrefItem = Record<PointInd, PointInd>
-export type FrameSet = 'animation' | 'motion'
+export type FrameSet = 'animation' | 'motion' | 'camera'
 
 // Animation Data root.props[ { anim: [ ... ] } ]
 export interface AnimData {
@@ -66,6 +66,19 @@ export interface MotionData {
   shape?: MotionShapeInd
   axis?: number
   amount?: number
+}
+
+export type MotionPathData = Omit<MotionData, 'beats'>
+
+/** One camera timeline frame. Orbit owns the frame duration. */
+export interface CameraData {
+  orbit?: MotionData
+  center?: MotionPathData
+}
+
+export interface CameraPose {
+  position: [number, number, number]
+  target: [number, number, number]
 }
 
 // Prop Data root.props[ ... ]
@@ -102,7 +115,10 @@ export interface RootData {
   props: PropData[]
   aspectx: number
   aspecty: number
-  distance: number
+  /** Camera was introduced in QS v5 and is normalized to at least one frame at runtime. */
+  camera?: CameraData[]
+  /** @deprecated Read only while upgrading QS v1-v4 data. */
+  distance?: number
   thick: number
 }
 
@@ -133,12 +149,13 @@ export interface PropDataFinal extends Omit<PropData, 'motion'> {
 }
 
 // Additional values for the final version
-export interface RootDataFinal extends Omit<RootData, 'props' | 'travel'> {
+export interface RootDataFinal extends Omit<RootData, 'props' | 'travel' | 'camera' | 'distance'> {
   speed: number
   type: TypeInd
   turns: number
   depth: number
   travel: boolean
+  camera: CameraData[]
   props: PropDataFinal[]
 }
 
@@ -175,12 +192,20 @@ export interface MotionDataCompiled {
   offset: [number, number, number]
 }
 
+export type MotionPathDataCompiled = Omit<MotionDataCompiled, 'beats'>
+
+export interface CameraDataCompiled {
+  orbit: MotionDataCompiled
+  center: MotionPathDataCompiled
+}
+
 export interface PropDataCompiled extends Omit<PropDataFinal, 'anim' | 'motion'> {
   anim: AnimDataCompiled[]
   motion: MotionDataCompiled[]
 }
 
-export interface RootDataCompiled extends Omit<RootDataFinal, 'props'> {
+export interface RootDataCompiled extends Omit<RootDataFinal, 'props' | 'camera'> {
+  camera: CameraDataCompiled[]
   props: PropDataCompiled[]
 }
 
@@ -190,11 +215,14 @@ export type ModelGroup = Group & { size: number }
 
 export type AnimKeys = keyof AnimData // | 'point' | 'direct' | 'path'
 export type MotionKeys = keyof MotionData
+export type MotionPathKeys = keyof MotionPathData
+export type CameraKeys = keyof CameraData
 export type PropKeys = keyof Omit<PropData, 'anim' | 'motion'>
-export type RootKeys = keyof Omit<RootData, 'props'>
+export type RootKeys = keyof Omit<RootDataFinal, 'props' | 'camera'>
 
 export type AnimCompKeys = keyof AnimDataCompiled
 export type MotionCompKeys = keyof MotionDataCompiled
+export type MotionPathCompKeys = keyof MotionPathDataCompiled
 
 // TODO: Update the below to use the above 3 sets of keys
 
@@ -205,7 +233,7 @@ export type AllCommonKeys = Extract<PropCommonKeys, AnimCommonKeys>
 
 // List of variables - Min / Max / Bits / Transform defined in AnimStruct.ts
 export type AllVars =
-  | keyof Omit<RootData, 'props'>
+  | keyof Omit<RootData, 'props' | 'camera'>
   | keyof Omit<PropData, 'anim' | 'motion'>
   | keyof AnimData
   | keyof MotionData
@@ -238,8 +266,8 @@ export type AllVarTypes = Merge<
   Merge<Omit<RootData, 'props'>, Omit<PropData, 'anim' | 'motion'>>,
   AnimData
 >
-export type AllDataTypes = RootData | PropData | AnimData | MotionData
-export type AllFinalTypes = RootDataFinal | PropDataFinal | AnimData | MotionData
+export type AllDataTypes = RootData | PropData | AnimData | MotionData | CameraData
+export type AllFinalTypes = RootDataFinal | PropDataFinal | AnimData | MotionData | CameraData
 
 //export type AllDataTypes = Merge<Merge<RootData, PropData>, AnimData>
 //export type AllFinalTypes = Merge<Merge<RootDataFinal, PropDataFinal>, AnimData>

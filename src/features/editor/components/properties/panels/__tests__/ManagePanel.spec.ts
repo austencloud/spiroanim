@@ -99,6 +99,37 @@ describe('ManagePanel', () => {
     await nextTick()
     expect(wrapper.findAll('a').map((link) => link.text())).toEqual(['Insert Frame', 'Compress'])
 
+    properties.pFRAMES = 'camera'
+    await nextTick()
+    expect(wrapper.findAll('a').map((link) => link.text())).toEqual(['Insert Frame', 'Compress'])
+
+    player.freeCamera = true
+    await nextTick()
+    expect(wrapper.findAll('a').map((link) => link.text())).toEqual([
+      'Insert Frame',
+      'Compress',
+      'Match Free Camera',
+    ])
+    player.freeCameraPose = { position: [3, 0, -10], target: [3, 0, 0] }
+    await nextTick()
+    await wrapper
+      .findAll('a')
+      .find((link) => link.text() === 'Match Free Camera')!
+      .trigger('click')
+    await nextTick()
+    expect(ROOT.value.camera[0]!.center?.distance).toBe(3)
+    expect(ROOT.value.camera[0]!.orbit?.distance).toBe(10)
+
+    ROOT.value.camera.push({ center: {}, orbit: {} })
+    triggerRef(ROOT)
+    await nextTick()
+    expect(wrapper.findAll('a').map((link) => link.text())).toEqual([
+      'Insert Frame',
+      'Delete Selection',
+      'Compress',
+      'Match Free Camera',
+    ])
+
     wrapper.unmount()
   })
 })

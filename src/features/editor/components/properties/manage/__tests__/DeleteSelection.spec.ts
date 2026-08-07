@@ -91,4 +91,31 @@ describe('DeleteSelection', () => {
     expect(ROOT.value.props[0]!.motion).toEqual(motion)
     expect(properties.ANIMS).toEqual([ROOT.value.props[0]!.anim[1]])
   })
+
+  it('deletes Camera frames but refuses to remove the final frame', async () => {
+    const storeId = 'delete-camera-selection'
+    const player = usePlayerStore(storeId)
+    const { ROOT } = player.raw()
+    ROOT.value = createRoot()
+    ROOT.value.camera.push({ orbit: { beats: 1 }, center: { distance: 1 } })
+    player.PLAYING = false
+
+    const properties = usePropertiesStore(storeId)
+    properties.pFRAMES = 'camera'
+    await nextTick()
+    player.SELECTION = true
+    player.SELECTED = [1, 1]
+    await nextTick()
+
+    const wrapper = mount(DeleteSelection, {
+      global: { provide: { store: ref(storeId) } },
+    })
+    await wrapper.get('a').trigger('click')
+    expect(ROOT.value.camera).toHaveLength(1)
+
+    player.SELECTED = [0, 0]
+    await nextTick()
+    await wrapper.get('a').trigger('click')
+    expect(ROOT.value.camera).toHaveLength(1)
+  })
 })

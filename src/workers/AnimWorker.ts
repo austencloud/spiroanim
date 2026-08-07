@@ -10,9 +10,10 @@
 // TODO: Paths don't currently reflect the ADJUST property on first frame (disable it? Or resolve?) -- MAYBE FIXED?
 
 import { createSpiroAnimator } from '@/workers/animation/createSpiroAnimator'
+import { createCameraAnimator } from '@/workers/animation/createCameraAnimator'
 
 import { CMODES } from '@/domain/animation/AnimStruct'
-import { MOTIONTIMES, PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
+import { CAMERATIMES, MOTIONTIMES, PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
 import { videoExportFrameCount, videoExportFrameTimeMs } from '@/math/videoExportTiming'
 
 import { WebGLRenderer, Scene, PerspectiveCamera, Raycaster, Vector2, Mesh } from 'three'
@@ -48,13 +49,16 @@ let renderer: WebGLRenderer
 let canvas: OffscreenCanvas
 let scene: Scene
 let animators: ReturnType<typeof createSpiroAnimator>[] = []
+let cameraAnimator: ReturnType<typeof createCameraAnimator> | undefined
 let timeline = false
+let cameraGuides = { visible: false, color: 0xffffff }
 
 let playing = false
 let animating = false
-let propTimes: number[][]
-let motionTimes: number[][]
-let unqTimes: number[]
+let propTimes: number[][] = []
+let motionTimes: number[][] = []
+let cameraTimes: number[] = []
+let unqTimes: number[] = []
 let speed = 1
 let currentMs = 0
 let playbackStartedAt = 0
@@ -100,14 +104,41 @@ on('projection', (vals) => {
   Object.assign(camera, vals)
   //console.log('projection:', vals)
   camera.updateProjectionMatrix()
+  animatorDim()
 })
 
 // Receive camera transformation
-on('transform', ({ pos, rot }) => {
-  camera.position.fromArray(pos)
-  camera.rotation.fromArray(rot)
+on('transform', (pose) => {
+  cameraAnimator?.transform(pose)
   if (renderer && !renderer.autoClear) debouncedClear()
   animatorDim()
+})
+
+register(
+  'cameraAcquire',
+  () =>
+    cameraAnimator?.acquire() ?? {
+      position: camera.position.toArray(),
+      target: [0, 0, 0] as [number, number, number],
+    },
+)
+register('cameraReset', () => {
+  cameraAnimator?.release(0)
+  animatorDim()
+  return (
+    cameraAnimator?.acquire() ?? {
+      position: camera.position.toArray(),
+      target: [0, 0, 0] as [number, number, number],
+    }
+  )
+})
+on('cameraRelease', () => {
+  cameraAnimator?.release(currentMs)
+  animatorDim()
+})
+on('cameraGuides', (settings) => {
+  cameraGuides = settings
+  cameraAnimator?.setGuides(settings.visible, settings.color)
 })
 
 // Receive animation command
@@ -167,9 +198,22 @@ register('initialize', ({ offscreen, girth: g, timeline: tl /*RADIUS,*/ }) => {
 
 // Setup scene and SpiroAnimators when "compiled" data is received
 on('data', (compiled) => {
+  const manualWasActive = cameraAnimator?.manual ?? false
+  const manualPose = manualWasActive ? cameraAnimator?.acquire() : undefined
   if (scene) disposeScene(scene)
   scene = new Scene()
   animators = []
+
+  cameraAnimator = createCameraAnimator({
+    camera,
+    scene,
+    frames: compiled.camera,
+    bpm: compiled.bpm,
+    width: dim.width,
+    height: dim.height,
+    timeline,
+  })
+  cameraAnimator.setGuides(cameraGuides.visible, cameraGuides.color)
 
   // Timeline specific rendering
   const anyActive = compiled.props.some((prop) => prop.active)
@@ -193,12 +237,13 @@ on('data', (compiled) => {
   // Millisecond intervals of each prop track and how they align.
   propTimes = PROPTIMES(compiled)
   motionTimes = MOTIONTIMES(compiled)
-  unqTimes = UNQTIMES([...propTimes, ...motionTimes])
+  cameraTimes = CAMERATIMES(compiled)
+  unqTimes = UNQTIMES([...propTimes, ...motionTimes, cameraTimes])
 
   speed = compiled.speed ? 1 / compiled.speed : 1
 
   // Build data for each prop
-  const distance = camera.position.length()
+  const distance = Math.max(camera.position.distanceTo(cameraAnimator.target), 0.000001)
   for (let i = 0; i < compiled.props.length; i++)
     animators.push(
       createSpiroAnimator({
@@ -219,6 +264,11 @@ on('data', (compiled) => {
 
   currentMs = Math.min(currentMs, unqTimes.at(-1) ?? 0)
   playbackStartedAt = performance.now()
+  if (manualPose) cameraAnimator.transform(manualPose)
+  else {
+    cameraAnimator.seek(currentMs)
+    if (manualWasActive) cameraAnimator.acquire()
+  }
   for (const animator of animators) animator.seek(currentMs)
 
   // Restart animate()
@@ -300,6 +350,7 @@ register(
     if (videoExportActive) throw new Error('Another export is already in progress.')
 
     videoExportActive = true
+    cameraAnimator?.setExporting(true)
     deferredResize = undefined
     deferredProjection = undefined
     const previous = {
@@ -345,6 +396,7 @@ register(
       playing = previous.playing
       animating = previous.animating
       videoExportActive = false
+      cameraAnimator?.setExporting(false)
       deferredResize = undefined
       deferredProjection = undefined
       if (animating) animate(undefined, false)
@@ -373,6 +425,7 @@ register(
     if (videoExportActive) throw new Error('A video export is already in progress.')
 
     videoExportActive = true
+    cameraAnimator?.setExporting(true)
     cancelVideoExport = false
     deferredResize = undefined
     deferredProjection = undefined
@@ -470,6 +523,7 @@ register(
       playing = previous.playing
       animating = previous.animating
       videoExportActive = false
+      cameraAnimator?.setExporting(false)
       cancelVideoExport = false
       deferredResize = undefined
       deferredProjection = undefined
@@ -497,6 +551,7 @@ function resize({ width, height, ratio }: typeof dim) {
     //console.log('Renderer.setSize:', width, height)
   }
   animatorDim()
+  cameraAnimator?.dimensions(dim.width, dim.height)
 }
 
 function videoCodec(codec: string): VideoCodec {
@@ -516,7 +571,10 @@ const debouncedClear = debounce(() => {
 
 // This block was repeated several times in the old code
 function animatorDim() {
-  const distance = camera.position.length()
+  const distance = Math.max(
+    camera.position.distanceTo(cameraAnimator?.target ?? camera.position),
+    0.000001,
+  )
   for (let i = 0; i < animators.length; i++)
     animators[i]!.dimensions(dim.width, dim.height, distance, camera.fov)
 }
@@ -537,7 +595,7 @@ function animate(time: number | undefined = undefined, render: boolean | undefin
   }
 
   // Parse current Millisecond
-  if (playing && animators.length) {
+  if (playing && unqTimes.length) {
     let skip = false
     const MS = Math.floor(currentMs + (time - playbackStartedAt) / speed)
 
@@ -563,6 +621,8 @@ function animate(time: number | undefined = undefined, render: boolean | undefin
       //}
       currentMs = MS
       playbackStartedAt = time
+      cameraAnimator?.seek(MS)
+      animatorDim()
       for (const animator of animators) animator.seek(MS)
     }
   }
@@ -580,6 +640,8 @@ function animate(time: number | undefined = undefined, render: boolean | undefin
 function jump(ms: number) {
   currentMs = ms
   playbackStartedAt = performance.now() + minChg
+  cameraAnimator?.seek(ms)
+  animatorDim()
   for (const animator of animators) animator.seek(ms)
 }
 

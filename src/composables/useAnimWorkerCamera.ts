@@ -1,91 +1,139 @@
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { PerspectiveCamera } from 'three'
-import { debounce } from '@/utils/UtilFunc'
+import { PerspectiveCamera, Vector3 } from 'three'
 
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useViewportStore } from '@/stores/useViewportStore'
-
 import type { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 
-// Shared logic for syncing camera data with the AnimWorker.
-//
-// A PerspectiveCamera is created and updated based on projection data from the store.
-// OrbitControls are always initialized (even without a canvas) to handle calculations like
-// rotation and target direction, but user interaction is only enabled if a canvas is provided.
-//
-// If a canvas is present, user-driven camera movement updates ORBIT in the store.
-// If no canvas is provided (e.g., in the timeline), the setup is passive: it reacts to
-// changes made by an interactive player instance and uses OrbitControls for internal math.
-
+/** Main-thread DOM controls that temporarily override the worker-owned authored Camera. */
 export function useAnimWorkerCamera(
   msgChnl: ReturnType<typeof createMessageChannel<AnimBridgeMap>>,
   dim: { width: number; height: number },
   store = 'main',
-  eCanvas: Ref<HTMLElement | null | undefined> = ref(),
+  eCanvas: Ref<HTMLElement | null | undefined>,
 ) {
   const { pixelRatio } = storeToRefs(useViewportStore())
-
   const playerStore = usePlayerStore(store)
-  const { ORBIT } = playerStore.raw()
-  const { PROJECTION } = storeToRefs(playerStore)
-  const { send } = msgChnl
+  const { COMPILED } = playerStore.raw()
+  const { PROJECTION, freeCamera, freeCameraPose, cameraReset } = storeToRefs(playerStore)
+  const { send, call } = msgChnl
 
-  // Initialize Perspective Camera
   const camera = new PerspectiveCamera(
-    // Initial values
     PROJECTION.value.fov,
-    1, // Aspect gets set by dim.width / dim.height
+    1,
     PROJECTION.value.near,
     PROJECTION.value.far,
   )
-
-  // Update dimensions, pixelRatio, and camera aspect when they change
-  watchImmediate([dim, pixelRatio], () => {
-    send('resize', {
-      width: dim.width,
-      height: dim.height,
-      ratio: pixelRatio.value,
-    })
-  })
-
-  // Sync store with camera settings, and worker
-  watchImmediate(
-    [PROJECTION, dim], // Aspect is based off dimensions, so we react to dimensions as well
-    () => {
-      const raw = { ...toRaw(PROJECTION.value), aspect: dim.width / dim.height }
-      Object.assign(camera, raw) //      copy to perspective camera
-      camera.updateProjectionMatrix() // update
-      send('projection', raw) //         send to worker
-    },
-  )
-
-  // Handle Camera Transformation
   const controls = new OrbitControls(camera, eCanvas.value)
-  useEventListener(controls, 'change', () => {
-    const r = camera.rotation
-    send('transform', {
-      pos: camera.position.toArray(),
-      rot: [r.x, r.y, r.z],
-    })
-    // Only update ORBIT if a canvas is set!
-    if (eCanvas.value) updateTarget()
+  let interacting = false
+  let acquired = false
+  let acquisition = 0
+  let freeCameraInitialized = false
+  const controlOffset = new Vector3(0, 0, -1)
+
+  watchImmediate([dim, pixelRatio], () => {
+    send('resize', { width: dim.width, height: dim.height, ratio: pixelRatio.value })
   })
 
-  // Debounce to prevent massive writes to store which persists
-  const updateTarget = debounce(() => {
-    ORBIT.value = {
+  watchImmediate([PROJECTION, dim], () => {
+    const projection = { ...toRaw(PROJECTION.value), aspect: dim.width / dim.height }
+    Object.assign(camera, projection)
+    camera.updateProjectionMatrix()
+    send('projection', projection)
+  })
+
+  const acquirePose = () => call('cameraAcquire', undefined)
+
+  const applyControlPose = (pose: Awaited<ReturnType<typeof acquirePose>>) => {
+    freeCameraPose.value = pose
+    camera.position.fromArray(pose.position)
+    controls.target.fromArray(pose.target)
+
+    const radius = camera.position.distanceTo(controls.target)
+    if (radius > 0) controlOffset.copy(camera.position).sub(controls.target).normalize()
+    // OrbitControls multiplies its radius for zoom and pan, so an exact zero can never move.
+    // Keep the authored worker pose unchanged and give only the local controls a near-plane basis.
+    else camera.position.copy(controls.target).addScaledVector(controlOffset, camera.near)
+
+    controls.update()
+  }
+
+  const acquire = async (afterWorkerSync = false) => {
+    const request = ++acquisition
+    acquired = false
+    if (afterWorkerSync) {
+      await nextTick()
+      if (request !== acquisition || !freeCamera.value) return
+    }
+    const pose = await acquirePose()
+    if (request !== acquisition) return
+    applyControlPose(pose)
+    acquired = true
+  }
+
+  const resetToInitialPose = async () => {
+    const request = ++acquisition
+    acquired = false
+    await nextTick()
+    if (request !== acquisition || !freeCamera.value) return
+    const pose = await call('cameraReset', undefined)
+    if (request !== acquisition) return
+    applyControlPose(pose)
+    acquired = true
+  }
+
+  const release = () => {
+    acquisition++
+    acquired = false
+    send('cameraRelease', undefined)
+  }
+
+  useEventListener(controls, 'start', () => {
+    interacting = true
+    if (!acquired) void acquire()
+  })
+
+  useEventListener(controls, 'change', () => {
+    if (!acquired) return
+    const pose = {
       position: camera.position.toArray(),
       target: controls.target.toArray(),
     }
-    //ORBIT.value.position = camera.position.toArray()
-    //ORBIT.value.target = controls.target.toArray()
-  }, 0) //100) // This caused thumbnails to not update!
-
-  // Moved to Store so that it would maintain after destruction
-  watchImmediate(ORBIT, ({ position, target }) => {
-    camera.position.fromArray(position)
-    controls.target.fromArray(target)
-    controls.update() // Trigger transform change
+    freeCameraPose.value = pose
+    send('transform', pose)
   })
+
+  useEventListener(controls, 'end', () => {
+    interacting = false
+    if (!freeCamera.value) release()
+  })
+
+  watchImmediate(freeCamera, (enabled) => {
+    const restoringPersistedMode = !freeCameraInitialized
+    freeCameraInitialized = true
+    if (enabled) {
+      if (!acquired) {
+        if (restoringPersistedMode) void resetToInitialPose()
+        else void acquire(true)
+      }
+    } else if (acquired && !interacting) release()
+  })
+
+  watch(
+    () => JSON.stringify([COMPILED.value.bpm, COMPILED.value.camera]),
+    () => {
+      if (!freeCamera.value) return
+      acquisition++
+      acquired = false
+      freeCameraPose.value = undefined
+      void acquire(true)
+    },
+  )
+
+  watch(cameraReset, () => {
+    if (freeCamera.value) void resetToInitialPose()
+  })
+
+  onUnmounted(() => controls.dispose())
 }

@@ -6,7 +6,7 @@ persisted-data contract.
 
 The authoritative implementations are:
 
-- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv4.ts` for versioned ranges,
+- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv5.ts` for versioned ranges,
   bit widths, field order, and segment layouts.
 - `src/services/query/createBaseQueryCodec.ts` for integer normalization and bit packing.
 - `src/composables/useSpiroAnimQS.ts` for root, prop, and frame encoding and decoding.
@@ -49,7 +49,7 @@ with `N` bits has at most `2^N - 1` defined codes.
 | `move`     |        -30..30 | 6 each | Animation frame in V1-V3; Motion frame in V4          |
 | `aspectx`  |          0..32 |      6 | Root                                                  |
 | `aspecty`  |          0..32 |      6 | Root                                                  |
-| `distance` |          4..66 |      6 | Root                                                  |
+| `distance` |          4..66 |      6 | Root in V1-V4; Motion and Camera path field           |
 | `thick`    |          1..15 |      4 | Root only in V1; prop-level `thick` is not serialized |
 
 The declared range must fit while retaining the undefined code. Development builds call
@@ -157,6 +157,26 @@ compacted when doing so, while retaining the outgoing boundary immediately befor
 Field order, group order, group length, bit width, and the query alphabet are persisted-data
 contracts. Reordering a list without changing its types still changes every encoded URL.
 
+## Version 5 Camera layout
+
+Version 5 removes global root `distance` from the root's second packed group and adds the root-owned
+Camera value `c`:
+
+```text
+?r=<root>&p0=<first prop>&m0=<first Motion>&...&c=<Orbit>~<Center>&v=5
+```
+
+Orbit and Center are two synchronized Motion-encoded frame streams separated by `~`, with Orbit
+first. Each uses the Version 4 Motion frame groups and normalization rules. Only Orbit stores the
+Camera frame's `beats`; any Beats decoded from Center are discarded. A single empty frame on either
+side needs no payload, so the fully empty Camera track is encoded as `c=~`. A period separates
+Camera frames rather than prefixing the frame stream; two empty frames are therefore `c=.~.`.
+
+`rootFinal()` guarantees at least one Camera frame. When decoding V1-V4, the legacy root Distance
+creates a centered first frame with Center `[0, 0, 0]` and Orbit `[0, 0, -distance]`. Finalized
+runtime root data no longer retains global Distance. Historical codecs derive Distance from the
+first Camera Orbit when an older URL must be re-encoded, preserving published URL round trips.
+
 ## Low-level packing
 
 Versions 1 and 2 use this custom URL-safe radix-64 alphabet:
@@ -168,7 +188,7 @@ Versions 1 and 2 use this custom URL-safe radix-64 alphabet:
 This is not standard Base64. The final character, `-`, is also the maximum radix digit used for
 all-ones padding.
 
-Versions 3 and 4 use the same characters with the final pair reversed:
+Versions 3 through 5 use the same characters with the final pair reversed:
 
 ```text
 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_

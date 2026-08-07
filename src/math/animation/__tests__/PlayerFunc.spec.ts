@@ -32,6 +32,7 @@ describe('PlayerFunc', () => {
       depth: 0,
     })
     expect(final.props[0]!.motion).toEqual([])
+    expect(final).not.toHaveProperty('distance')
   })
 
   it('rounds milliseconds to the nearest beat', () => {

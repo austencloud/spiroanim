@@ -31,7 +31,7 @@ import {
 } from '@/domain/animation/AnimStruct'
 
 import { InitialPoint, InitialOrtho } from '@/math/animation/OrthogonalFunc'
-import { motionPathOffset } from '@/math/animation/MotionFunc'
+import { motionPathOffset, sampleCompiledMotion } from '@/math/animation/MotionFunc'
 
 import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
@@ -140,8 +140,6 @@ export const createSpiroAnimator = (vars: {
     pointPositions = new Map(),
     posLines: Line2[] = [],
     rotLines: Line2[] = [],
-    motionStart = new Vector3(),
-    motionPathDelta = new Vector3(),
     pathMotionOffset = new Vector3(),
     motionTimes = FRAMESTARTS(motion, bpm),
     animationTimes = FRAMESTARTS(anim, bpm)
@@ -308,40 +306,7 @@ export const createSpiroAnimator = (vars: {
       loop++
     },
     motionOffsetAt = (milliseconds: number, target: Vector3) => {
-      if (motion.length === 0) {
-        return target.set(0, 0, 0)
-      }
-
-      let motionIndex = motionTimes.length - 1
-      for (let i = 0; i < motionTimes.length - 1; i++) {
-        if (milliseconds < motionTimes[i + 1]!) {
-          motionIndex = i
-          break
-        }
-      }
-
-      const current = motion[motionIndex]!
-      const next = motion[motionIndex + 1]
-      motionStart.fromArray(current.offset)
-
-      const start = motionTimes[motionIndex] ?? 0
-      const end = motionTimes[motionIndex + 1] ?? start
-      const percentage =
-        end > start ? Math.max(0, Math.min((milliseconds - start) / (end - start), 1)) : 0
-      target.copy(motionStart)
-      if (next)
-        target.add(
-          motionPathOffset(
-            next.direction,
-            next.curve,
-            next.distance,
-            next.shape,
-            next.amount,
-            percentage,
-            motionPathDelta,
-          ),
-        )
-      return target.divideScalar(10).multiplyScalar(RADIUS * multi)
+      return sampleCompiledMotion(motion, motionTimes, milliseconds, target, (RADIUS * multi) / 10)
     },
     applyMotion = (milliseconds: number) => {
       motionOffsetAt(milliseconds, motionGroup.position)

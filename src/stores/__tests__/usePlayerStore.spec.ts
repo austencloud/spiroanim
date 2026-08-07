@@ -2,7 +2,6 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { usePlayerStore } from '@/stores/usePlayerStore'
-import { ORIGRADIUS, RADIUS } from '@/domain/animation/AnimStruct'
 
 describe('usePlayerStore', () => {
   beforeEach(() => {
@@ -19,7 +18,11 @@ describe('usePlayerStore', () => {
     expect(store.TRACER).toBe(false)
     expect(store.ASPECT).toEqual([16, 9])
     expect(store.CANVAS_DIM).toEqual({ width: 0, height: 0 })
-    expect(store.raw().COMPILED.value).toMatchObject({ bpm: 120, props: [] })
+    expect(store.raw().COMPILED.value).toMatchObject({
+      bpm: 120,
+      camera: [{ center: { offset: [0, 0, 0] }, orbit: { offset: [0, 0, -22] } }],
+      props: [],
+    })
   })
 
   it('updates timing, selection bounds, and the active index when root data changes', async () => {
@@ -63,32 +66,33 @@ describe('usePlayerStore', () => {
     expect(store.MAX).toBe(3000)
   })
 
-  it('recenters the shared orbit when distance changes without a mounted player', async () => {
-    const store = usePlayerStore('test-camera-centering')
+  it('extends playback to the longer Camera track', async () => {
+    const store = usePlayerStore('test-camera-timing')
     const runtime = store.raw()
-    const initialRequest = store.cameraCenter
-    const initialOrbit = runtime.ORBIT.value
-
-    runtime.ROOT.value = { ...runtime.ROOT.value, thick: 8 }
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      bpm: 60,
+      camera: [
+        { orbit: { beats: 1 }, center: {} },
+        { orbit: { beats: 1 }, center: {} },
+        { orbit: {}, center: {} },
+      ],
+      props: [{ anim: [{ beats: 1 }, {}], motion: [] }],
+    }
     await nextTick()
-    expect(store.cameraCenter).toBe(initialRequest)
-    expect(runtime.ORBIT.value).toBe(initialOrbit)
 
-    runtime.ROOT.value = { ...runtime.ROOT.value, distance: 30 }
-    await nextTick()
-    expect(store.cameraCenter).not.toBe(initialRequest)
-    expect(runtime.ORBIT.value).toEqual({
-      position: [0, 0, (-30 * RADIUS) / ORIGRADIUS],
-      target: [0, 0, 0],
-    })
+    expect(store.CTIMES).toEqual([0, 1000, 2000])
+    expect(store.UTIMES).toEqual([0, 1000, 2000])
+    expect(store.MAX).toBe(2000)
   })
 
-  it('loads the original settings key including legacy ORBIT data', () => {
+  it('loads the original settings key without restoring legacy ORBIT data', () => {
     localStorage.setItem(
       'sa-player-test-load',
       JSON.stringify({
         PLAYING: false,
         TRACER: true,
+        freeCamera: true,
         ORBIT: { position: [1, 2, 3], target: [4, 5, 6] },
       }),
     )
@@ -97,15 +101,16 @@ describe('usePlayerStore', () => {
 
     expect(store.PLAYING).toBe(false)
     expect(store.TRACER).toBe(true)
-    expect(store.raw().ORBIT.value).toEqual({ position: [1, 2, 3], target: [4, 5, 6] })
+    expect(store.freeCamera).toBe(true)
   })
 
-  it('manually saves only PLAYING and TRACER after the debounce', async () => {
+  it('manually saves PLAYING, TRACER, and Free Camera after the debounce', async () => {
     vi.useFakeTimers()
     const store = usePlayerStore('test-save')
 
     store.PLAYING = false
     store.TRACER = true
+    store.freeCamera = true
     await nextTick()
 
     expect(localStorage.getItem('sa-player-test-save')).toBeNull()
@@ -113,6 +118,7 @@ describe('usePlayerStore', () => {
     expect(JSON.parse(localStorage.getItem('sa-player-test-save')!)).toEqual({
       PLAYING: false,
       TRACER: true,
+      freeCamera: true,
     })
   })
 })

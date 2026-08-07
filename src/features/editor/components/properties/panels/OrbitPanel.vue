@@ -1,5 +1,5 @@
 <template>
-  <MotionPathPanel />
+  <MotionPathPanel title="Orbit" path="orbit" />
 </template>
 
 <script setup lang="ts">

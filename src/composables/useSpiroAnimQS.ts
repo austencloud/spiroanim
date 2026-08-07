@@ -24,6 +24,7 @@ export async function useSpiroAnimQS(
     createRootConfig,
     createPropConfig,
     createMotionConfig,
+    createCameraConfig,
     encodeMotionFrame,
     decodeMotionFrame,
   } = await loadSpiroAnimQSVersion(VER)
@@ -64,6 +65,7 @@ export async function useSpiroAnimQS(
   const rootConfig = createRootConfig()
   const propConfig = createPropConfig()
   const motionConfig = createMotionConfig?.()
+  const cameraConfig = createCameraConfig?.()
 
   const qsUpdateHistory = (args: Record<string, string>) => {
     const encoded = new URLSearchParams(args).toString()
@@ -91,8 +93,9 @@ export async function useSpiroAnimQS(
     hist = true,
   ) => {
     const query: Record<string, string> = {}
+    const rootForEncoding = VER < 5 ? { ...root, distance: root.camera[0]?.orbit?.distance } : root
 
-    query.r = encodeVar(rootConfig, root)
+    query.r = encodeVar(rootConfig, rootForEncoding)
 
     for (const i in root.props) {
       const prop = root.props[i]
@@ -106,6 +109,19 @@ export async function useSpiroAnimQS(
           })
         }
       }
+    }
+
+    if (cameraConfig) {
+      const orbit = root.camera.map((frame) => frame.orbit ?? {})
+      const center = root.camera.map((frame) => frame.center ?? {})
+      query.c = [orbit, center]
+        .map((frames) =>
+          encodeVar(cameraConfig, {
+            anim: frames.map((frame) => (encodeMotionFrame ? encodeMotionFrame(frame) : frame)),
+          }),
+        )
+        .map((encoded) => (encoded.startsWith('.') ? encoded.slice(1) : encoded))
+        .join('~')
     }
 
     query.v = String(VER)
@@ -182,6 +198,26 @@ export async function useSpiroAnimQS(
         prop.motion = decodeMotionFrame ? frames.map(decodeMotionFrame) : frames
       }
       data.props.push(prop)
+    }
+
+    const encodedCamera = route.c as string | undefined
+    if (cameraConfig && encodedCamera) {
+      const [encodedOrbit = '', encodedCenter = ''] = encodedCamera.split('~')
+      const decodeCameraPath = (encoded: string): MotionData[] => {
+        const decoded = decodeVar(cameraConfig, `.${encoded}`)
+        const frames = Array.isArray(decoded.anim) ? (decoded.anim as MotionData[]) : []
+        return decodeMotionFrame ? frames.map(decodeMotionFrame) : frames
+      }
+      const orbit = decodeCameraPath(encodedOrbit)
+      const center = decodeCameraPath(encodedCenter)
+      data.camera = Array.from({ length: Math.max(center.length, orbit.length) }, (_, index) => {
+        const orbitPath = orbit[index] ?? {}
+        const { beats: _centerBeats, ...centerPath } = center[index] ?? {}
+        return {
+          orbit: orbitPath,
+          center: centerPath,
+        }
+      })
     }
 
     return rootFinal(data)

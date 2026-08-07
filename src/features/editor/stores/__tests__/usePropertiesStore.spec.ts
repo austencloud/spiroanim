@@ -137,6 +137,33 @@ describe('usePropertiesStore', () => {
     expect(properties.pFRAMES).toBe('motion')
   })
 
+  it('shows the full animation timeline when Camera is selected', async () => {
+    const storeId = 'editor-camera-full-timeline'
+    const player = usePlayerStore(storeId)
+    player.raw().ROOT.value = {
+      ...player.raw().ROOT.value,
+      bpm: 60,
+      camera: [
+        { orbit: { ...player.raw().ROOT.value.camera[0]!.orbit, beats: 1 }, center: {} },
+        { orbit: {}, center: {} },
+      ],
+      props: [{ anim: [{ beats: 0.5 }, { beats: 1.5 }, {}], motion: [] }],
+    }
+    await nextTick()
+
+    const properties = usePropertiesStore(storeId)
+    properties.pFRAMES = 'camera'
+    await nextTick()
+
+    expect(player.ETIMES).toEqual([0, 1000, 2000])
+
+    properties.showFullTimeline = true
+    await nextTick()
+
+    expect(player.ETIMES).toEqual([0, 500, 2000])
+    expect(properties.pFRAMES).toBe('camera')
+  })
+
   it('displays an unauthored Move as the inherited zero vector', async () => {
     const storeId = 'editor-motion-zero'
     const player = usePlayerStore(storeId)
@@ -197,6 +224,67 @@ describe('usePropertiesStore', () => {
     compiled[2]!.move.forEach((coordinate, index) =>
       expect(coordinate).toBeCloseTo(nextBefore[index]!, 6),
     )
+  })
+
+  it('edits the root Camera independently of props through shared Motion controls', async () => {
+    const storeId = 'editor-camera'
+    const player = usePlayerStore(storeId)
+    const runtime = player.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      bpm: 60,
+      camera: [
+        { orbit: { ...runtime.ROOT.value.camera[0]!.orbit, beats: 1 }, center: {} },
+        { orbit: {}, center: {} },
+      ],
+      props: [{ anim: [{ beats: 2 }, {}], motion: [] }],
+    }
+    await nextTick()
+
+    const properties = usePropertiesStore(storeId)
+    properties.pFRAMES = 'camera'
+    properties.pSELECTED = { 0: false }
+    player.PLAYING = false
+    await nextTick()
+
+    expect(player.ETIMES).toEqual([0, 1000, 2000])
+    expect(properties.CAMERA_IDENT).toEqual([0])
+    expect(properties.CAMERAS).toHaveLength(1)
+
+    const editor = useProperties(storeId)
+    editor.cameraPathSet('orbit', 'beats', 3)
+    editor.cameraPathSet('center', 'movexyz', [4, 0, 0])
+    editor.cameraPathSet('orbit', 'movexyz', [0, 0, -30])
+    await nextTick()
+
+    expect(runtime.ROOT.value.camera[0]!.orbit?.beats).toBe(3)
+    expect(runtime.COMPILED.value.camera[0]!.orbit.beats).toBe(3)
+    expect(runtime.COMPILED.value.camera[0]!.center.move).toEqual([4, 0, 0])
+    expect(runtime.COMPILED.value.camera[0]!.orbit.move).toEqual([0, 0, -30])
+    expect(runtime.ROOT.value.props[0]!.anim).toEqual([{ beats: 2 }, {}])
+
+    editor.cameraPathSet('orbit', 'move', undefined)
+    await nextTick()
+
+    expect(runtime.ROOT.value.camera[0]!.orbit).toEqual({ beats: 3 })
+    expect(runtime.COMPILED.value.camera[0]!.orbit.offset).toEqual([0, 0, -22])
+    expect(editor.cameraPathGet('orbit', 'move')).toEqual([[0, 0, -22], true, '0, 0, -22', true])
+
+    editor.matchCameraFrameToPose(0, { position: [4, 2, -10], target: [4, 2, 0] })
+    await nextTick()
+
+    expect(
+      Math.hypot(
+        runtime.COMPILED.value.camera[0]!.center.offset[0] - 4,
+        runtime.COMPILED.value.camera[0]!.center.offset[1] - 2,
+        runtime.COMPILED.value.camera[0]!.center.offset[2],
+      ),
+    ).toBeLessThan(1)
+    expect(runtime.COMPILED.value.camera[0]!.orbit.offset).toEqual([0, 0, -10])
+
+    editor.matchCameraFrameToPose(0, { position: [0, 0, -22], target: [0, 0, 0] })
+    await nextTick()
+    expect(runtime.ROOT.value.camera[0]).toEqual({ orbit: { beats: 3 }, center: {} })
   })
 
   it('hydrates only the documented editor preferences', () => {

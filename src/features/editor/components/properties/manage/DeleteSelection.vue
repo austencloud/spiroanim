@@ -26,13 +26,27 @@ const { ROOT } = playerStore.raw()
 const { PLAYING } = storeToRefs(playerStore)
 const { pFRAMES } = useProperties(store.value)
 
-const { propSelection } = useManageProperties(store.value)
-const frameName = computed(() => (pFRAMES.value === 'animation' ? 'Animation' : 'Motion'))
+const { propSelection, cameraSelection } = useManageProperties(store.value)
+const frameName = computed(() =>
+  pFRAMES.value === 'animation' ? 'Animation' : pFRAMES.value === 'motion' ? 'Motion' : 'Camera',
+)
 
 const clickDeleteSel = () => {
   if (PLAYING.value) return
 
   let deleted = false
+  if (pFRAMES.value === 'camera') {
+    cameraSelection((start, end) => {
+      if (start === -1 || end === -1) return
+      const count = end - start + 1
+      if (ROOT.value.camera.length - count < 1) return
+      ROOT.value.camera.splice(start, count)
+      deleted = true
+    })
+    if (deleted) triggerRef(ROOT)
+    return
+  }
+
   propSelection((ind, start, end) => {
     const prop = ROOT.value.props[ind]!
     const frames = pFRAMES.value === 'animation' ? prop.anim : prop.motion

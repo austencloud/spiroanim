@@ -1,6 +1,6 @@
 // src\workers\AnimWorker\AnimWorkerTypes.ts
 
-import type { RootDataCompiled } from '@/types/AnimTypes'
+import type { CameraPose, RootDataCompiled } from '@/types/AnimTypes'
 import type { ImageExportSettings } from '@/types/ImageExportTypes'
 import type { VideoExportProgress, VideoExportSettings } from '@/types/VideoExportTypes'
 
@@ -39,11 +39,29 @@ export interface AnimBridgeMap {
     }
   }
 
-  // Sets camera transform (position + rotation)
+  // Sets the manual camera pose (position + look-at target)
   transform: {
+    arg: CameraPose
+  }
+
+  cameraAcquire: {
+    arg: void
+    ret: CameraPose
+  }
+
+  cameraReset: {
+    arg: void
+    ret: CameraPose
+  }
+
+  cameraRelease: {
+    arg: void
+  }
+
+  cameraGuides: {
     arg: {
-      pos: [number, number, number]
-      rot: [number, number, number]
+      visible: boolean
+      color: number
     }
   }
 

@@ -67,8 +67,8 @@
           </div>
         </div>
       </div>
-      <div :class="clsCell2">
-        <div class="prop-options">
+      <div class="prop-cell" :class="clsCell2">
+        <div v-show="pFRAMES !== 'camera'" class="prop-options">
           <template v-if="pMULTI">
             <AppTooltip v-for="prop in ACTIVE" :key="'pc' + prop" :text="'Prop #' + (prop + 1)">
               <template #activator="{ props: tooltipProps }">
@@ -102,14 +102,15 @@
           <select v-model="pFRAMES" class="frame-set" aria-label="Frame set">
             <option value="animation">Animation</option>
             <option value="motion">Motion</option>
+            <option value="camera">Camera</option>
           </select>
-          <AppTooltip text="Select multiple props">
+          <AppTooltip v-if="pFRAMES !== 'camera'" text="Select multiple props">
             <template #activator="{ props: tooltipProps }">
               <label v-bind="tooltipProps"><input v-model="pMULTI" type="checkbox" /> Multi</label>
             </template>
           </AppTooltip>
           <AppTooltip
-            v-if="SELECTION"
+            v-if="SELECTION && pFRAMES !== 'camera'"
             text="Only include props with points at both selection bounds"
           >
             <template #activator="{ props: tooltipProps }">
@@ -127,11 +128,16 @@
         <div><Root class="expansion-panel" /></div>
         <div><Settings /></div>
       </template>
-      <template v-else>
+      <template v-else-if="pFRAMES === 'motion'">
         <div v-if="MOTIONS.length"><Motion class="expansion-panel" /></div>
-        <div v-else class="empty-motion">No Motion frames</div>
+        <div v-else class="empty-frames">No Motion frames</div>
       </template>
-      <div v-if="PROPS.length" class="expansion-panel"><Manage /></div>
+      <template v-else>
+        <div v-if="CAMERAS.length"><Orbit class="expansion-panel" /></div>
+        <div v-if="CAMERAS.length"><Center class="expansion-panel" /></div>
+        <div v-if="!CAMERAS.length" class="empty-frames">No Camera frames</div>
+      </template>
+      <div v-if="PROPS.length || pFRAMES === 'camera'" class="expansion-panel"><Manage /></div>
     </div>
   </div>
 </template>
@@ -143,6 +149,8 @@ import Settings from './properties/panels/SettingsPanel.vue'
 import Base from './properties/panels/BasesPanel.vue'
 import Manage from './properties/panels/ManagePanel.vue'
 import Motion from './properties/panels/MotionPanel.vue'
+import Center from './properties/panels/CenterPanel.vue'
+import Orbit from './properties/panels/OrbitPanel.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 
@@ -188,6 +196,7 @@ const {
   ACTIVE,
   ANIMS,
   MOTIONS,
+  CAMERAS,
   PROPS,
   pMULTI,
   pSELECTED,
@@ -283,7 +292,11 @@ const position = computed(() => {
 })
 
 const modifyingCount = computed(() =>
-  pFRAMES.value === 'animation' ? ANIMS.value.length : MOTIONS.value.length,
+  pFRAMES.value === 'animation'
+    ? ANIMS.value.length
+    : pFRAMES.value === 'motion'
+      ? MOTIONS.value.length
+      : CAMERAS.value.length,
 )
 
 const clsCell2 = computed(() => {
@@ -404,7 +417,7 @@ const gridStyle = computed<CSSProperties>(() => ({
   border-radius: var(--radius-sm);
 }
 
-.empty-motion {
+.empty-frames {
   padding: var(--space-4);
   color: var(--color-text-muted);
   text-align: center;

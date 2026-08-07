@@ -1,14 +1,21 @@
-import { MathUtils, Vector3 } from 'three'
+import { MathUtils, Quaternion, Vector3 } from 'three'
 
 import { MOTION_SHAPE } from '@/domain/animation/AnimStruct'
 import { InitialOrtho, InitialPoint, orthoAngle, orthoNext } from '@/math/animation/OrthogonalFunc'
-import type { MotionShapeInd } from '@/types/AnimTypes'
+import type {
+  CameraData,
+  MotionData,
+  MotionDataCompiled,
+  MotionPathDataCompiled,
+  MotionShapeInd,
+} from '@/types/AnimTypes'
 
 export type MotionAngles = [plane: number, arc: number, distance: number]
 export type MotionCartesian = [x: number, y: number, z: number]
 
 export const MAX_MOTION_DISTANCE = 62
 export const DEFAULT_MOTION_AMOUNT = 50
+export const DEFAULT_CAMERA_DISTANCE = 22
 
 export interface MotionDirectionState {
   direction: Vector3
@@ -151,7 +158,224 @@ export const motionPathOffset = (
     .addScaledVector(pathNormal, (1 - Math.cos(radians)) * radius)
 }
 
+/** Fits the integer Motion fields whose completed path lands closest to an endpoint. */
+export const fitMotionPathEndpoint = (
+  endpoint: readonly number[],
+  state: MotionDirectionState,
+  shape: MotionShapeInd,
+  amount: number,
+  axis: number,
+): MotionAngles => {
+  const requested = new Vector3(endpoint[0] ?? 0, endpoint[1] ?? 0, endpoint[2] ?? 0)
+  const sweep = motionSweep(shape, amount)
+  if (shape !== MOTION_SHAPE.CIRCLE || sweep <= Math.PI) {
+    return cartesianToMotionAngles(clampCartesianMotion(endpoint), state)
+  }
+
+  // A completed Circle has no nonzero endpoint. Keep the requested direction for subsequent
+  // frames, while accepting that Distance cannot move this frame away from its starting point.
+  if (Math.abs(sweep - Math.PI * 2) < 1e-12) {
+    const [plane, arc] = cartesianToMotionAngles(clampCartesianMotion(endpoint), state)
+    return [plane, arc, 0]
+  }
+
+  const initialDirection = state.direction.clone()
+  const initialReference = state.reference.clone()
+  const candidateState = createMotionDirectionState()
+  const candidateOffset = new Vector3()
+  const candidateEndpoint = new Vector3()
+  let best: MotionAngles = [0, 0, 0]
+  let bestError = Number.POSITIVE_INFINITY
+
+  for (let plane = -180; plane <= 180; plane++) {
+    for (let arc = 0; arc <= 180; arc++) {
+      candidateState.direction.copy(initialDirection)
+      candidateState.reference.copy(initialReference)
+      const direction = motionAnglesToCartesian([plane, arc, 1], candidateState)
+      const curve = motionCurveDirection(candidateState, axis)
+      motionPathOffset(direction, curve, 1, shape, amount, 1, candidateOffset)
+      const denominator = candidateOffset.lengthSq()
+      if (denominator < 1e-12) continue
+
+      const distance = Math.max(
+        0,
+        Math.min(MAX_MOTION_DISTANCE, Math.round(requested.dot(candidateOffset) / denominator)),
+      )
+      candidateEndpoint.copy(candidateOffset).multiplyScalar(distance)
+      const error = candidateEndpoint.distanceToSquared(requested)
+      if (error < bestError) {
+        best = [plane, arc, distance]
+        bestError = error
+      }
+    }
+  }
+
+  motionAnglesToCartesian(best, state)
+  return best
+}
+
+export const compileMotionTrack = (frames: readonly MotionData[]): MotionDataCompiled[] => {
+  let beats = 1
+  let shape: MotionShapeInd = MOTION_SHAPE.LINE
+  let amount = DEFAULT_MOTION_AMOUNT
+  const state = createMotionDirectionState()
+  const offset = new Vector3()
+  const delta = new Vector3()
+
+  return frames.map((frame) => {
+    beats = frame.beats ?? beats
+    shape = frame.shape ?? shape
+    amount = frame.amount ?? amount
+
+    const arc = frame.arc ?? 0
+    const plane = frame.plane ?? 0
+    const distance = frame.distance ?? 0
+    const axis = frame.axis ?? 0
+    const active =
+      frame.arc !== undefined || frame.plane !== undefined || frame.distance !== undefined
+    const move = active
+      ? motionAnglesToCartesian([plane, arc, distance], state)
+      : ([0, 0, 0] as MotionCartesian)
+    const direction = cleanMotionVector(state.direction.toArray())
+    const curve = cleanMotionVector(motionCurveDirection(state, axis))
+
+    motionPathOffset(direction, curve, distance, shape, amount, active ? 1 : 0, delta)
+    offset.add(delta)
+
+    return {
+      beats,
+      arc,
+      plane,
+      distance,
+      shape,
+      axis,
+      amount,
+      active,
+      move,
+      direction,
+      curve,
+      delta: delta.toArray(),
+      offset: offset.toArray(),
+    }
+  })
+}
+
+export const sampleCompiledMotion = (
+  motion: readonly MotionPathDataCompiled[],
+  times: readonly number[],
+  milliseconds: number,
+  target: Vector3,
+  scale = 1,
+): Vector3 => {
+  if (motion.length === 0) return target.set(0, 0, 0)
+
+  let index = motion.length - 1
+  for (let i = 0; i < times.length - 1; i++) {
+    if (milliseconds < times[i + 1]!) {
+      index = i
+      break
+    }
+  }
+
+  const current = motion[index]!
+  const next = motion[index + 1]
+  target.fromArray(current.offset)
+
+  const start = times[index] ?? 0
+  const end = times[index + 1] ?? start
+  const percentage =
+    end > start ? Math.max(0, Math.min((milliseconds - start) / (end - start), 1)) : 0
+  if (next) {
+    motionPathOffset(
+      next.direction,
+      next.curve,
+      next.distance,
+      next.shape,
+      next.amount,
+      percentage,
+      sampleDelta,
+    )
+    target.add(sampleDelta)
+  }
+
+  return target.multiplyScalar(scale)
+}
+
+/** Samples Orbit's Linear shape along the sphere around Center instead of across its chord. */
+export const sampleCompiledOrbit = (
+  motion: readonly MotionPathDataCompiled[],
+  times: readonly number[],
+  milliseconds: number,
+  target: Vector3,
+): Vector3 => {
+  if (motion.length === 0) return target.set(0, 0, 0)
+
+  let index = motion.length - 1
+  for (let i = 0; i < times.length - 1; i++) {
+    if (milliseconds < times[i + 1]!) {
+      index = i
+      break
+    }
+  }
+
+  const current = motion[index]!
+  const next = motion[index + 1]
+  target.fromArray(current.offset)
+  if (!next) return target
+
+  const start = times[index] ?? 0
+  const end = times[index + 1] ?? start
+  const percentage =
+    end > start ? Math.max(0, Math.min((milliseconds - start) / (end - start), 1)) : 0
+  if (next.shape !== MOTION_SHAPE.LINE) {
+    motionPathOffset(
+      next.direction,
+      next.curve,
+      next.distance,
+      next.shape,
+      next.amount,
+      percentage,
+      sampleDelta,
+    )
+    return target.add(sampleDelta)
+  }
+
+  orbitStart.fromArray(current.offset)
+  orbitEnd.fromArray(next.offset)
+  const startRadius = orbitStart.length()
+  const endRadius = orbitEnd.length()
+  if (startRadius < 1e-12 || endRadius < 1e-12) {
+    return target.lerpVectors(orbitStart, orbitEnd, percentage)
+  }
+
+  orbitStart.multiplyScalar(1 / startRadius)
+  orbitEnd.multiplyScalar(1 / endRadius)
+  orbitRotation.setFromUnitVectors(orbitStart, orbitEnd)
+  orbitInterpolation.identity().slerp(orbitRotation, percentage)
+  return target
+    .copy(orbitStart)
+    .applyQuaternion(orbitInterpolation)
+    .multiplyScalar(MathUtils.lerp(startRadius, endRadius, percentage))
+}
+
+export const createDefaultCameraFrame = (distance = DEFAULT_CAMERA_DISTANCE): CameraData => {
+  const state = createMotionDirectionState()
+  const [plane, arc, orbitDistance] = cartesianToMotionAngles([0, 0, -distance], state)
+  return {
+    orbit: { plane, arc, distance: orbitDistance },
+    center: {},
+  }
+}
+
+const cleanMotionVector = (vector: [number, number, number]): MotionCartesian =>
+  vector.map((coordinate) => (Math.abs(coordinate) < 1e-12 ? 0 : coordinate)) as MotionCartesian
+
 const pathTangent = new Vector3()
 const pathCurve = new Vector3()
 const pathInitial = new Vector3()
 const pathNormal = new Vector3()
+const sampleDelta = new Vector3()
+const orbitStart = new Vector3()
+const orbitEnd = new Vector3()
+const orbitRotation = new Quaternion()
+const orbitInterpolation = new Quaternion()

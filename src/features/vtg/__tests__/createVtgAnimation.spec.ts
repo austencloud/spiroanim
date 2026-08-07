@@ -155,10 +155,10 @@ describe('createVtgAnimation', () => {
       paths: vtgPlayerSettings.paths,
       hands: vtgPlayerSettings.hands,
       arms: false,
-      distance: vtgPlayerSettings.distance,
       visible: false,
       thick: 15,
     })
+    expect(preview.camera[0]!.orbit?.distance).toBe(vtgPlayerSettings.distance)
     expect(preview.props.every((prop) => prop.anim.length === 5)).toBe(true)
     expect(
       preview.props.every(

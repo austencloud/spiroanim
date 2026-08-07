@@ -3,6 +3,7 @@ import {
   clampVtgBpm,
   getVtgDistanceForScale,
   toVtgInternalScale,
+  vtgScaleControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import { reverseAngle } from '@/math/animation/AngleFunc'
 import type {
@@ -50,9 +51,7 @@ export const buildVtgPattern = (
   return {
     ...pattern,
     ...(selection.bpm !== undefined ? { bpm: clampVtgBpm(selection.bpm) } : undefined),
-    ...(selection.scale !== undefined
-      ? { distance: getVtgDistanceForScale(selection.scale) }
-      : undefined),
+    distance: getVtgDistanceForScale(selection.scale ?? vtgScaleControl.default),
     props: selection.swapProps ? [...transformedProps].reverse() : transformedProps,
   }
 }

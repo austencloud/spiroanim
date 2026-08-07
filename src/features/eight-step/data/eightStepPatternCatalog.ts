@@ -11,6 +11,7 @@ import {
   getVtgDistanceForScale,
   toVtgInternalScale,
   vtgPlayerSettings,
+  vtgScaleControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 
 export const buildEightStepPattern = (
@@ -48,9 +49,7 @@ export const buildEightStepPattern = (
   return {
     ...vtgPlayerSettings,
     ...(selection.bpm !== undefined ? { bpm: clampVtgBpm(selection.bpm) } : undefined),
-    ...(selection.scale !== undefined
-      ? { distance: getVtgDistanceForScale(selection.scale) }
-      : undefined),
+    distance: getVtgDistanceForScale(selection.scale ?? vtgScaleControl.default),
     props: selection.swapProps ? transformedProps.reverse() : transformedProps,
   }
 }

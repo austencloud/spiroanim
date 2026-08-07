@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import PropertyPanel from '@/features/editor/components/properties/PropertyPanel.vue'
 import AdvancedPanel from '@/features/editor/components/properties/panels/AdvancedPanel.vue'
 import AnimationsPanel from '@/features/editor/components/properties/panels/AnimationsPanel.vue'
-import MotionPanel from '@/features/editor/components/properties/panels/MotionPanel.vue'
+import MotionPathPanel from '@/features/editor/components/properties/panels/MotionPathPanel.vue'
 import RootPanel from '@/features/editor/components/properties/panels/RootPanel.vue'
 import SettingsPanel from '@/features/editor/components/properties/panels/SettingsPanel.vue'
 import type { DynamicVal } from '@/types/AnimTypes'
@@ -16,8 +16,9 @@ describe('editor property panel organization', () => {
     setActivePinia(createPinia())
   })
 
-  const propertyNames = (component: typeof AnimationsPanel, store: string) => {
+  const propertyNames = (component: Component, store: string, props?: Record<string, unknown>) => {
     const wrapper = shallowMount(component, {
+      props,
       global: { provide: { store: ref(store) } },
     })
     const vals = wrapper.getComponent(PropertyPanel).props('vals') as DynamicVal[]
@@ -49,7 +50,7 @@ describe('editor property panel organization', () => {
   })
 
   it('keeps the independent Motion controls in their intended order', () => {
-    expect(propertyNames(MotionPanel, 'motion-panel-order')).toEqual([
+    expect(propertyNames(MotionPathPanel, 'motion-panel-order')).toEqual([
       'beats',
       'move',
       'arc',
@@ -59,6 +60,16 @@ describe('editor property panel organization', () => {
       'axis',
       'amount',
     ])
+  })
+
+  it('puts Camera Beats in Orbit and omits it from Center', () => {
+    expect(propertyNames(MotionPathPanel, 'orbit-panel-order', { path: 'orbit' })[0]).toBe('beats')
+    expect(
+      propertyNames(MotionPathPanel, 'center-panel-order', {
+        path: 'center',
+        showBeats: false,
+      }),
+    ).not.toContain('beats')
   })
 
   it('moves global numeric controls from Root into Settings', () => {
@@ -78,7 +89,6 @@ describe('editor property panel organization', () => {
       'bpm',
       'aspectx',
       'aspecty',
-      'distance',
       'thick',
     ])
   })
@@ -90,7 +100,7 @@ describe('editor property panel organization', () => {
     const slots = wrapper.getComponent(PropertyPanel).vm.$slots
 
     expect(Object.keys(slots)).toEqual(
-      expect.arrayContaining(['bpm', 'aspectx', 'aspecty', 'distance', 'thick']),
+      expect.arrayContaining(['bpm', 'aspectx', 'aspecty', 'thick']),
     )
     wrapper.unmount()
   })
