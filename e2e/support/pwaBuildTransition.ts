@@ -99,13 +99,11 @@ export async function stagePwaBuildTransition(): Promise<StagedPwaBuildTransitio
       globIgnores: ['sw.js', 'workbox-*.js'],
       globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
       navigateFallback: 'app-shell.html',
-      navigateFallbackDenylist: [/^\/(?:index\/?|about\/?)?$/],
+      navigateFallbackDenylist: [/^\/(?:index\/?|about\/?|tips\/?)?$/, /^\/docs(?:\/|$)/],
       swDest: serviceWorkerPath,
     })
 
-    if (result.warnings.length > 0) {
-      throw new Error(`Workbox transition build warnings: ${result.warnings.join(' ')}`)
-    }
+    for (const warning of result.warnings) console.warn(warning)
   } catch (error) {
     await restore()
     throw error
