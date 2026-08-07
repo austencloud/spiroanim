@@ -17,8 +17,8 @@ describe('PwaUpdatePrompt', () => {
     store.reportUnsupportedVersion(4)
     await nextTick()
 
-    expect(wrapper.get('.pwa-update').text()).toContain('unsupported format v4')
-    expect(wrapper.get('.pwa-update').text()).toContain('data has not been loaded or changed')
+    expect(wrapper.get('.pwa-update').text()).toContain('Format v4 needs a newer SpiroAnim.')
+    expect(wrapper.get('.pwa-update').classes()).toContain('pwa-update--unsupported')
     expect(wrapper.get('.primary-action').text()).toBe('Reload and Check Again')
 
     await wrapper.get('.pwa-update-actions button:last-child').trigger('click')

@@ -22,6 +22,8 @@ cache rules, and Cloudflare Pages configuration are documented in [`HOSTING.md`]
   control and account for the More and Open as Web App steps shown by current iPadOS versions.
 - Service-worker updates require user confirmation. Do not switch to automatic reload without
   accounting for active editor work.
+- When an update is found, the update prompt shows an indeterminate activity indicator while the
+  replacement service worker downloads and installs. The update action appears when it is ready.
 - While the application is open, it checks for an updated service worker hourly, when the browser
   comes back online, and when the page becomes visible. Checks are throttled and remain
   opportunistic so an update failure never interrupts editing.

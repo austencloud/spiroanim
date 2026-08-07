@@ -10,6 +10,7 @@ const SERVICE_WORKER_URL = '/sw.js'
 export function usePwaUpdate() {
   const offlineReady = ref(false)
   const needRefresh = ref(false)
+  const updateInstalling = ref(false)
   let reloadStarted = false
   let workbox: Workbox | undefined
   let stopControllerChangeReload: () => void = () => undefined
@@ -23,7 +24,16 @@ export function usePwaUpdate() {
   }
 
   function showUpdatePrompt() {
+    updateInstalling.value = false
     needRefresh.value = true
+  }
+
+  function handleInstalling(event: WorkboxLifecycleEvent) {
+    if (event.isUpdate || event.isExternal) updateInstalling.value = true
+  }
+
+  function handleRedundant() {
+    updateInstalling.value = false
   }
 
   function handleInstalled(event: WorkboxLifecycleEvent) {
@@ -48,8 +58,10 @@ export function usePwaUpdate() {
     )
 
     workbox = new Workbox(SERVICE_WORKER_URL)
+    workbox.addEventListener('installing', handleInstalling)
     workbox.addEventListener('installed', handleInstalled)
     workbox.addEventListener('waiting', showUpdatePrompt)
+    workbox.addEventListener('redundant', handleRedundant)
 
     try {
       const registration = await workbox.register({ immediate: true })
@@ -69,8 +81,10 @@ export function usePwaUpdate() {
   onBeforeUnmount(() => {
     stopControllerChangeReload()
     stopScheduledUpdates()
+    workbox?.removeEventListener('installing', handleInstalling)
     workbox?.removeEventListener('installed', handleInstalled)
     workbox?.removeEventListener('waiting', showUpdatePrompt)
+    workbox?.removeEventListener('redundant', handleRedundant)
   })
 
   function applyUpdate() {
@@ -87,5 +101,6 @@ export function usePwaUpdate() {
     dismiss,
     needRefresh: readonly(needRefresh),
     offlineReady: readonly(offlineReady),
+    updateInstalling: readonly(updateInstalling),
   }
 }

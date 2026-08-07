@@ -37,6 +37,8 @@
   --color-workspace-separator: var(--palette-violet-500);
   --color-action-primary: var(--palette-blue-600);
   --color-on-action-primary: var(--palette-neutral-0);
+  --color-status-success: var(--palette-green-700);
+  --color-status-warning: var(--palette-orange-700);
   --color-property-value-defined: var(--palette-blue-800);
   --color-property-value-inherited: var(--palette-green-900);
   --color-property-value-mismatch: var(--palette-orange-900);
