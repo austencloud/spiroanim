@@ -113,8 +113,20 @@
         </RouterLink>
         <PwaInstallControl variant="menu" @prompted="closeMenu" />
       </section>
+      <div class="menu-footer" role="presentation">
+        <button
+          class="menu-link menu-action reset-menu-item"
+          type="button"
+          role="menuitem"
+          @click="openResetDialog"
+        >
+          <BaseIcon :path="mdiRestoreAlert" :size="22" />
+          <span>Reset App</span>
+        </button>
+      </div>
     </div>
     <ShareDialog ref="shareDialog" />
+    <PwaResetDialog ref="resetDialog" />
     <ExportImageDialog ref="exportImageDialog" @export="startImageExport" />
     <ExportVideoDialog ref="exportVideoDialog" @export="startVideoExport" />
     <ExportVideoProgressDialog
@@ -139,6 +151,7 @@ import {
   mdiLightbulbOnOutline,
   mdiMovieOpenOutline,
   mdiPanoramaVariant,
+  mdiRestoreAlert,
   mdiShareVariantOutline,
 } from '@mdi/js'
 import { onClickOutside, useFullscreen } from '@vueuse/core'
@@ -151,6 +164,7 @@ import ExportImageDialog from '@/components/layout/ExportImageDialog.vue'
 import ExportVideoDialog from '@/components/layout/ExportVideoDialog.vue'
 import ExportVideoProgressDialog from '@/components/layout/ExportVideoProgressDialog.vue'
 import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
+import PwaResetDialog from '@/components/layout/PwaResetDialog.vue'
 import ShareDialog from '@/components/layout/ShareDialog.vue'
 import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 import { hasVideoExportApi, probeVideoExportCodecs } from '@/services/videoExportSupport'
@@ -179,6 +193,7 @@ const rootElement = ref<HTMLElement>()
 const triggerElement = ref<HTMLButtonElement>()
 const menuElement = ref<HTMLElement>()
 const shareDialog = ref<InstanceType<typeof ShareDialog>>()
+const resetDialog = ref<InstanceType<typeof PwaResetDialog>>()
 const exportImageDialog = ref<InstanceType<typeof ExportImageDialog>>()
 const exportVideoDialog = ref<InstanceType<typeof ExportVideoDialog>>()
 const exportVideoProgressDialog = ref<InstanceType<typeof ExportVideoProgressDialog>>()
@@ -273,6 +288,11 @@ function startImageExport(settings: ImageExportSettings) {
 function openShareDialog() {
   closeMenu()
   void shareDialog.value?.open()
+}
+
+function openResetDialog() {
+  closeMenu()
+  resetDialog.value?.open()
 }
 
 function openExportVideoDialog() {
@@ -456,6 +476,12 @@ onMounted(async () => {
   text-transform: uppercase;
 }
 
+.menu-footer {
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--color-border);
+}
+
 .menu-link {
   display: grid;
   grid-template-columns: 1.5rem 1fr;
@@ -499,6 +525,16 @@ onMounted(async () => {
 .menu-link:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: -2px;
+}
+
+.reset-menu-item {
+  color: var(--color-status-warning);
+}
+
+.reset-menu-item:hover,
+.reset-menu-item:focus-visible {
+  color: var(--color-status-warning);
+  background: color-mix(in srgb, var(--color-status-warning) 10%, transparent);
 }
 
 @media (max-width: 32rem) {

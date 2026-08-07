@@ -6,3 +6,9 @@
 
 /manifest-dev.webmanifest
   Cache-Control: no-cache, must-revalidate
+
+/reset
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/reset/*
+  Cache-Control: no-cache, no-store, must-revalidate

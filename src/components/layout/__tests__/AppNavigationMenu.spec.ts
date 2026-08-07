@@ -111,6 +111,7 @@ describe('AppNavigationMenu', () => {
       'Tracer: Off',
       'Home',
       'About',
+      'Reset App',
     ])
     expect(wrapper.findAll('.menu-group h2').map((heading) => heading.text())).toEqual([
       'SpiroAnim',
@@ -170,6 +171,9 @@ describe('AppNavigationMenu', () => {
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('About')
+
+    await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement?.textContent).toContain('Reset App')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'Escape' })
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
@@ -338,6 +342,29 @@ describe('AppNavigationMenu', () => {
     wrapper.unmount()
   })
 
+  it('places reset last and requires confirmation before opening the recovery URL', async () => {
+    const { wrapper } = await mountMenu()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    const menuItems = wrapper.findAll('[role="menuitem"]')
+
+    expect(menuItems.at(-1)?.text()).toBe('Reset App')
+
+    await wrapper.get('.reset-menu-item').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+    expect(wrapper.get('.pwa-reset-dialog').attributes()).toHaveProperty('open')
+    expect(wrapper.get('.reset-warning').text()).toContain('Are you sure?')
+    expect(wrapper.get('.reset-warning').text()).toContain('saved editor preferences')
+    expect(wrapper.get('.reset-action').attributes('href')).toBe('/reset')
+
+    await wrapper.get('.reset-actions button').trigger('click')
+    expect(wrapper.get('.pwa-reset-dialog').attributes()).not.toHaveProperty('open')
+
+    wrapper.unmount()
+  })
+
   it('offers clipboard copying only when the Clipboard API is available', async () => {
     const writeText = vi.fn<(text: string) => Promise<void>>(async () => undefined)
     Object.defineProperty(navigator, 'clipboard', {
@@ -404,6 +431,7 @@ describe('AppNavigationMenu', () => {
       'Tracer: Off',
       'Home',
       'About',
+      'Reset App',
     ])
 
     wrapper.unmount()

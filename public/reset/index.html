@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>Reset SpiroAnim</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background: Canvas;
+        color: CanvasText;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 1.5rem;
+      }
+
+      main {
+        width: min(100%, 32rem);
+        padding: clamp(1.5rem, 6vw, 3rem);
+        border: 1px solid color-mix(in srgb, CanvasText 24%, transparent);
+        border-radius: 1rem;
+        box-shadow: 0 1.5rem 4rem color-mix(in srgb, CanvasText 14%, transparent);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-block-end: 2rem;
+        font-weight: 750;
+      }
+
+      .brand img {
+        width: 2.5rem;
+        height: 2.5rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 8vw, 3rem);
+        line-height: 1;
+      }
+
+      p {
+        margin-block: 1rem 0;
+        line-height: 1.6;
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        min-height: 3rem;
+        margin-block-start: 1.5rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid color-mix(in srgb, CanvasText 30%, transparent);
+        border-radius: 0.65rem;
+      }
+
+      .spinner {
+        flex: 0 0 auto;
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 3px solid color-mix(in srgb, CanvasText 22%, transparent);
+        border-top-color: CanvasText;
+        border-radius: 50%;
+        animation: spin 800ms linear infinite;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-block-start: 1.5rem;
+      }
+
+      button {
+        min-height: 2.75rem;
+        padding-inline: 1rem;
+        color: ButtonText;
+        font: inherit;
+        font-weight: 700;
+        background: ButtonFace;
+        border: 1px solid ButtonBorder;
+        border-radius: 0.55rem;
+        cursor: pointer;
+      }
+
+      button:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 3px;
+      }
+
+      [hidden] {
+        display: none;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .spinner {
+          animation-duration: 1600ms;
+          animation-timing-function: steps(4, end);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main aria-labelledby="reset-title">
+      <div class="brand">
+        <img src="/images/app-icons/pwa-source.svg" alt="" aria-hidden="true" />
+        <span>SpiroAnim</span>
+      </div>
+
+      <h1 id="reset-title">Resetting SpiroAnim</h1>
+      <p id="description">
+        Removing offline files, update workers, saved editor preferences, and all other locally
+        stored SpiroAnim data for this address.
+      </p>
+
+      <div class="status" role="status" aria-live="polite">
+        <span id="spinner" class="spinner" aria-hidden="true"></span>
+        <span id="status-message">Reset in progress...</span>
+      </div>
+
+      <div class="actions">
+        <button id="open-button" type="button" hidden>Open a fresh copy</button>
+        <button id="retry-button" type="button" hidden>Try again</button>
+      </div>
+    </main>
+
+    <script>
+      const title = document.querySelector('#reset-title')
+      const description = document.querySelector('#description')
+      const spinner = document.querySelector('#spinner')
+      const statusMessage = document.querySelector('#status-message')
+      const openButton = document.querySelector('#open-button')
+      const retryButton = document.querySelector('#retry-button')
+
+      async function removeServiceWorkers() {
+        if (!('serviceWorker' in navigator)) return
+
+        const registrations = await navigator.serviceWorker.getRegistrations()
+        const removed = await Promise.all(
+          registrations.map((registration) => registration.unregister()),
+        )
+
+        if (removed.some((result) => !result)) {
+          throw new Error('A service worker could not be removed.')
+        }
+      }
+
+      async function removeOfflineCaches() {
+        if (!('caches' in window)) return
+
+        const cacheNames = await caches.keys()
+        const removed = await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)))
+
+        if (removed.some((result) => !result)) {
+          throw new Error('An offline cache could not be removed.')
+        }
+      }
+
+      async function removeIndexedDatabases() {
+        if (!('indexedDB' in window) || typeof indexedDB.databases !== 'function') return
+
+        const databases = await indexedDB.databases()
+        const databaseNames = databases
+          .map((database) => database.name)
+          .filter((name) => typeof name === 'string')
+
+        await Promise.all(
+          databaseNames.map(
+            (databaseName) =>
+              new Promise((resolve, reject) => {
+                const request = indexedDB.deleteDatabase(databaseName)
+                request.onsuccess = () => resolve()
+                request.onerror = () => reject(request.error)
+                request.onblocked = () =>
+                  reject(new Error('An IndexedDB database is open in another tab.'))
+              }),
+          ),
+        )
+      }
+
+      async function removeOriginPrivateFiles() {
+        if (typeof navigator.storage?.getDirectory !== 'function') return
+
+        const root = await navigator.storage.getDirectory()
+        for await (const entryName of root.keys()) {
+          await root.removeEntry(entryName, { recursive: true })
+        }
+      }
+
+      function removeCookies() {
+        const cookieNames = document.cookie
+          .split(';')
+          .map((cookie) => cookie.split('=', 1)[0]?.trim())
+          .filter(Boolean)
+
+        for (const cookieName of cookieNames) {
+          document.cookie = `${cookieName}=; Max-Age=0; Path=/; SameSite=Lax`
+          document.cookie = `${cookieName}=; Max-Age=0; Path=/; Domain=${location.hostname}; SameSite=Lax`
+        }
+      }
+
+      function removeWebStorage() {
+        localStorage.clear()
+        sessionStorage.clear()
+      }
+
+      async function resetPwaData() {
+        spinner.hidden = false
+        openButton.hidden = true
+        retryButton.hidden = true
+        statusMessage.textContent = 'Reset in progress...'
+
+        try {
+          const workerResults = await Promise.allSettled([removeServiceWorkers()])
+          const dataResults = await Promise.allSettled([
+            removeOfflineCaches(),
+            removeIndexedDatabases(),
+            removeOriginPrivateFiles(),
+            Promise.resolve().then(removeCookies),
+            Promise.resolve().then(removeWebStorage),
+          ])
+
+          if ([...workerResults, ...dataResults].some((result) => result.status === 'rejected')) {
+            throw new Error('One or more storage areas could not be cleared.')
+          }
+
+          title.textContent = 'Reset complete'
+          description.textContent =
+            'All locally stored SpiroAnim data was removed for ' +
+            location.hostname +
+            '. Close any other SpiroAnim tabs, then open a fresh copy.'
+          spinner.hidden = true
+          statusMessage.textContent = 'SpiroAnim is ready to reload.'
+          openButton.hidden = false
+        } catch (error) {
+          console.error('SpiroAnim PWA reset failed.', error)
+          title.textContent = 'Reset incomplete'
+          description.textContent =
+            'The browser could not remove all locally stored data. Close other SpiroAnim tabs and try again.'
+          spinner.hidden = true
+          statusMessage.textContent = 'Some SpiroAnim data could not be removed.'
+          retryButton.hidden = false
+        }
+      }
+
+      openButton.addEventListener('click', () => {
+        const destination = new URL('/', location.origin)
+        destination.searchParams.set('pwa-reset', Date.now().toString())
+        location.replace(destination)
+      })
+      retryButton.addEventListener('click', resetPwaData)
+
+      void resetPwaData()
+    </script>
+  </body>
+</html>

@@ -45,6 +45,11 @@ cache rules, and Cloudflare Pages configuration are documented in [`HOSTING.md`]
   exit fullscreen, which conflicts with SpiroAnim's draggable editor controls.
 - The service worker uses the client-only `app-shell.html` as its offline navigation fallback,
   including route aliases and URLs containing animation query data.
+- `/reset` is a standalone, network-only recovery page. It unregisters every service worker and
+  clears Cache Storage, web storage, IndexedDB, origin-private files, and accessible cookies for the
+  current origin. This includes persisted editor preferences and other Pinia store data. The route
+  is excluded from service-worker navigation fallback and precaching so a client that has reached
+  this release retains a recovery path during future update failures.
 - The final service worker is generated after prerendering, so Workbox revisions the actual emitted
   HTML and cannot reuse documents that reference outdated hashed assets.
 - The preload recovery hook cannot run when the initial entry script itself is unavailable because

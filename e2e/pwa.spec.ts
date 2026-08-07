@@ -95,6 +95,65 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
   expect(notFound).toContain('<div id="app"></div>')
 })
 
+test('serves the PWA reset page outside the application shell', async ({ request }) => {
+  const response = await request.get('/reset')
+  const html = await response.text()
+
+  expect(response.ok()).toBe(true)
+  expect(html).toContain('<h1 id="reset-title">Resetting SpiroAnim</h1>')
+  expect(html).toContain('navigator.serviceWorker.getRegistrations()')
+  expect(html).not.toContain('<div id="app"></div>')
+})
+
+test('removes service workers and all locally stored app data for the current origin', async ({
+  page,
+}) => {
+  await page.goto('/app')
+  await page.evaluate(async () => navigator.serviceWorker.ready)
+  await expect
+    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .toBe(true)
+
+  await page.evaluate(async () => {
+    const cache = await caches.open('spiroanim-reset-test')
+    await cache.put('/reset-test-entry', new globalThis.Response('cached'))
+    localStorage.setItem('spiroanim-reset-test', 'persisted')
+    sessionStorage.setItem('spiroanim-reset-test', 'session')
+
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('spiroanim-reset-test')
+      request.onsuccess = () => {
+        request.result.close()
+        resolve()
+      }
+      request.onerror = () => reject(request.error)
+    })
+  })
+
+  const response = requireResponse(await page.goto('/reset'))
+  expect(response.fromServiceWorker()).toBe(false)
+  await expect(page.getByRole('heading', { name: 'Reset complete' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open a fresh copy' })).toBeVisible()
+
+  await expect
+    .poll(() =>
+      page.evaluate(async () => ({
+        caches: await caches.keys(),
+        databases: (await indexedDB.databases()).map((database) => database.name),
+        localStorage: localStorage.length,
+        registrations: (await navigator.serviceWorker.getRegistrations()).length,
+        sessionStorage: sessionStorage.length,
+      })),
+    )
+    .toEqual({
+      caches: [],
+      databases: [],
+      localStorage: 0,
+      registrations: 0,
+      sessionStorage: 0,
+    })
+})
+
 test('relaunches a routed application screen after the network goes offline', async ({
   context,
   page,
