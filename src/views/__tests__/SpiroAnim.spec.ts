@@ -118,6 +118,16 @@ describe('SpiroAnim view', () => {
     paneStore.setViewInPane('timeline', 'right')
     await flushPromises()
     expect(wrapper.find('button[aria-label="Show Full Timeline"]').exists()).toBe(true)
+
+    propertiesStore.pFRAMES = 'animation'
+    propertiesStore.pSELECTED = { 0: true, 1: false }
+    const player = usePlayerStore('main')
+    const fullTimes = [...new Set(player.PTIMES.flat())].sort((first, second) => first - second)
+    const overallEnd = player.UTIMES.at(-1) ?? 0
+    player.ETIMES = overallEnd > (fullTimes.at(-1) ?? 0) ? [...fullTimes, overallEnd] : fullTimes
+    await flushPromises()
+
+    expect(wrapper.find('button[aria-label="Show Full Timeline"]').exists()).toBe(true)
     const menuButton = wrapper.get('button[aria-label="Open SpiroAnim menu"]')
     expect(menuButton.attributes('aria-haspopup')).toBe('menu')
     expect(menuButton.attributes('aria-expanded')).toBe('false')

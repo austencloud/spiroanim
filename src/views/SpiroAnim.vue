@@ -112,7 +112,7 @@ const paneStore = useMainPaneStore()
 const playerStore = usePlayerStore('main')
 const { ROOT } = playerStore.raw()
 const { ETIMES, PTIMES, UTIMES } = storeToRefs(playerStore)
-const { showFullTimeline } = storeToRefs(usePropertiesStore('main'))
+const { pSELECTED, showFullTimeline } = storeToRefs(usePropertiesStore('main'))
 const { registerComponentEl } = paneStore
 
 const {
@@ -142,9 +142,15 @@ const isShowingFullTimeline = computed(
     ETIMES.value.every((time, index) => time === fullAnimationTimes.value[index]),
 )
 
+const hasHiddenTimelineProps = computed(() =>
+  ROOT.value.props.some((_, index) => pSELECTED.value[index] !== true),
+)
+
 const canShowAllTimelineProps = computed(
   () =>
-    parents.value.editor === 'hidden' && !showFullTimeline.value && !isShowingFullTimeline.value,
+    parents.value.editor === 'hidden' &&
+    !showFullTimeline.value &&
+    (!isShowingFullTimeline.value || hasHiddenTimelineProps.value),
 )
 
 function showAllTimelineFrames() {

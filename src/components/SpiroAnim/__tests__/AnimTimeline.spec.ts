@@ -458,11 +458,17 @@ describe('AnimTimeline', () => {
     await flushPromises()
 
     expect(wrapper.findAll('.timeline-cell')).toHaveLength(3)
+    expect(
+      wrapper.findAll('.circle').some((circle) => !circle.classes('circle--prop-visible')),
+    ).toBe(true)
 
     properties.showFullTimeline = true
     await flushPromises()
 
     expect(wrapper.findAll('.timeline-cell')).toHaveLength(4)
+    expect(
+      wrapper.findAll('.circle').every((circle) => circle.classes('circle--prop-visible')),
+    ).toBe(true)
     expect(properties.showFullTimeline).toBe(true)
 
     wrapper.unmount()

@@ -319,7 +319,7 @@ onMounted(() => {
   )
 
   // Update circles / colors data
-  watchImmediate([ROOT, pFRAMES, PTIMES, MTIMES, ETIMES], ([data]) => {
+  watchImmediate([ROOT, pFRAMES, showFullTimeline, PTIMES, MTIMES, ETIMES], ([data]) => {
     const result: TimelineCircle[][] = []
     if (!ETIMES.value?.length) return
 
