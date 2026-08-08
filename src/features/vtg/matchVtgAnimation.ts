@@ -5,7 +5,7 @@ import type {
   VtgPatternSelection,
   VtgRuleNumber,
 } from '@/features/vtg/types'
-import { vtgSpeedRatios } from '@/features/vtg/types'
+import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { AnimDataCompiled, RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
@@ -35,11 +35,31 @@ const frameSignature = (frame: AnimDataCompiled) => [
 const rootSignature = (animation: RootDataCompiled) =>
   JSON.stringify(animation.props.map((prop) => prop.anim.map(frameSignature)))
 
+const timingTolerance = 0.000_001
+
+const vectorsAreParallel = (first: readonly number[], second: readonly number[]) => {
+  if (first.length !== 3 || second.length !== 3) return false
+  const dot = first[0]! * second[0]! + first[1]! * second[1]! + first[2]! * second[2]!
+  return Math.abs(Math.abs(dot) - 1) <= timingTolerance
+}
+
+const hasVtgTiming = (animation: RootDataCompiled) => {
+  const first = animation.props[0]?.anim[1]
+  const second = animation.props[1]?.anim[1]
+  return (
+    first !== undefined &&
+    second !== undefined &&
+    vectorsAreParallel(first.pos, second.pos) &&
+    vectorsAreParallel(first.rot, second.rot)
+  )
+}
+
 const createSignature = (animation: RootDataFinal): string | undefined => {
   if (animation.props.length !== 2) return undefined
 
   try {
-    return rootSignature(rootCompile(animation))
+    const compiled = rootCompile(animation)
+    return hasVtgTiming(compiled) ? rootSignature(compiled) : undefined
   } catch {
     return undefined
   }
@@ -65,36 +85,44 @@ const buildCandidateCache = () => {
           for (const shape of patternShapes) {
             for (const swapProps of booleanOptions) {
               for (const reversePlane of booleanOptions) {
-                const selection: VtgPatternSelection = {
-                  reference,
-                  speedRatio,
-                  isAnti,
-                  swapProps,
-                  reversePlane,
-                  ...(shape === 'box' ? { shape } : undefined),
+                for (const beat of vtgBeats) {
+                  const selection: VtgPatternSelection = {
+                    reference,
+                    speedRatio,
+                    isAnti,
+                    swapProps,
+                    reversePlane,
+                    ...(shape === 'box' ? { shape } : undefined),
+                    ...(beat === 1 ? undefined : { beat }),
+                  }
+                  const animation = createDefaultVtgAnimation(selection)
+                  if (!animation) continue
+
+                  const signature = createSignature(animation)
+                  if (!signature) continue
+
+                  const matches = candidates.get(signature) ?? []
+                  matches.push({
+                    reference,
+                    speedRatio,
+                    isAnti,
+                    swapProps,
+                    reversePlane,
+                    ...(shape === 'box' ? { shape } : undefined),
+                    ...(beat === 1 ? undefined : { beat }),
+                  })
+                  candidates.set(signature, matches)
                 }
-                const animation = createDefaultVtgAnimation(selection)
-                if (!animation) continue
-
-                const signature = createSignature(animation)
-                if (!signature) continue
-
-                const matches = candidates.get(signature) ?? []
-                matches.push({
-                  reference,
-                  speedRatio,
-                  isAnti,
-                  swapProps,
-                  reversePlane,
-                  ...(shape === 'box' ? { shape } : undefined),
-                })
-                candidates.set(signature, matches)
               }
             }
           }
         }
       }
     }
+  }
+
+  for (const matches of candidates.values()) {
+    matches.sort((first, second) => (first.beat ?? 1) - (second.beat ?? 1))
   }
 
   candidateCache = candidates

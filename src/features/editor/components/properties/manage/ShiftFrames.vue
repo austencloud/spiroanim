@@ -52,7 +52,7 @@ import { useProperties } from '@/features/editor/composables/useProperties'
 import {
   animationRangeEndpointsAlign,
   shiftAnimationFrameRange,
-} from '@/features/editor/manage/shiftAnimationFrames'
+} from '@/math/animation/shiftAnimationFrames'
 import { useManageProperties } from '@/features/editor/composables/useManageProperties'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 

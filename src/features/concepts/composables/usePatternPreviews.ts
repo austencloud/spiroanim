@@ -5,7 +5,12 @@ import {
 import { createQtrPreviewAnimation } from '@/features/qtr/createQtrAnimation'
 import type { QtrMode, QtrPatternSelection } from '@/features/qtr/types'
 import { createVtgPreviewAnimation } from '@/features/vtg/createVtgAnimation'
-import type { VtgCellReference, VtgPatternSelection, VtgSpeedRatio } from '@/features/vtg/types'
+import type {
+  VtgBeat,
+  VtgCellReference,
+  VtgPatternSelection,
+  VtgSpeedRatio,
+} from '@/features/vtg/types'
 import type { PatternShape } from '@/types/PatternTypes'
 
 interface UseVtgPreviewsOptions {
@@ -17,6 +22,7 @@ interface UseVtgPreviewsOptions {
   shape: Ref<PatternShape>
   scale: Ref<number>
   quarters: Ref<QtrMode | false>
+  beat: Ref<VtgBeat>
 }
 
 export const patternPreviewReferences = [
@@ -45,6 +51,7 @@ export const usePatternPreviews = ({
   shape,
   scale,
   quarters,
+  beat,
 }: UseVtgPreviewsOptions) => {
   const buildSelection = (
     reference: VtgCellReference,
@@ -59,7 +66,8 @@ export const usePatternPreviews = ({
     if (swapProps.value) selection.swapProps = true
     if (reversePlane.value) selection.reversePlane = true
     if (shape.value === 'box') selection.shape = shape.value
-    return quarters.value ? { ...selection, quarters: quarters.value } : selection
+    if (beat.value !== 1) selection.beat = beat.value
+    return quarters.value ? { ...selection, quarters: quarters.value, beat: beat.value } : selection
   }
 
   const renderer = useConceptPreviewRenderer({
@@ -76,7 +84,10 @@ export const usePatternPreviews = ({
   })
 
   // BPM changes animation timing only, so it intentionally does not invalidate still previews.
-  watch([speedRatio, swapProps, reversePlane, shape, scale, quarters], renderer.requestPreviews)
+  watch(
+    [speedRatio, swapProps, reversePlane, shape, scale, quarters, beat],
+    renderer.requestPreviews,
+  )
   watch(isAnti, renderer.requestPartialPreviews)
 
   return {

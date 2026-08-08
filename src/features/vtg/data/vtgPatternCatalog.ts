@@ -6,28 +6,47 @@ import {
   vtgScaleControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import { reverseAngle } from '@/math/animation/AngleFunc'
+import { deriveBoxInitialPlacement } from '@/math/animation/SpatialRelationshipFunc'
 import type {
   VtgCellReference,
   VtgPatternDefinition,
   VtgPatternSelection,
   VtgReadableAnimation,
 } from '@/features/vtg/types'
+import type { PatternShape } from '@/types/PatternTypes'
 
 const catalog: Readonly<Partial<Record<VtgCellReference, Readonly<VtgPatternDefinition>>>> = {
   ...vtgRowPatterns,
 }
 
-/** These source patterns have an intentional fixed shape and ignore Diamond/Box transforms. */
-export const vtgFixedShapeCells: ReadonlySet<VtgCellReference> = new Set([
+export const vtgDiamondCellReferences = [
   '1-1',
   '1-2',
   '2-1',
   '2-2',
+] as const satisfies readonly VtgCellReference[]
+
+export const vtgBoxCellReferences = [
   '3-3',
   '3-4',
   '4-3',
   '4-4',
-])
+] as const satisfies readonly VtgCellReference[]
+
+/** These source patterns have an intrinsic shape and ignore Diamond/Box transforms. */
+export const vtgFixedShapeByCell: Readonly<Partial<Record<VtgCellReference, PatternShape>>> = {
+  '1-1': 'diamond',
+  '1-2': 'diamond',
+  '2-1': 'diamond',
+  '2-2': 'diamond',
+  '3-3': 'box',
+  '3-4': 'box',
+  '4-3': 'box',
+  '4-4': 'box',
+}
+
+export const getVtgFixedShape = (reference: VtgCellReference): PatternShape | undefined =>
+  vtgFixedShapeByCell[reference]
 
 export const buildVtgPattern = (
   selection: VtgPatternSelection,
@@ -36,7 +55,8 @@ export const buildVtgPattern = (
   const pattern = buildPattern?.(selection.isAnti === true)
   if (pattern === undefined) return undefined
 
-  const applyBoxShape = selection.shape === 'box' && !vtgFixedShapeCells.has(selection.reference)
+  const applyBoxShape =
+    selection.shape === 'box' && getVtgFixedShape(selection.reference) === undefined
 
   const transformedProps =
     selection.reversePlane || selection.scale !== undefined || applyBoxShape
@@ -48,7 +68,10 @@ export const buildVtgPattern = (
           const effectivePlane = selection.reversePlane
             ? reverseAngle(baseFrame.plane ?? 0)
             : (baseFrame.plane ?? 0)
-          const boxArcDelta = Math.abs(effectivePlane) === 180 ? -45 : 45
+          const boxPlacement = deriveBoxInitialPlacement({
+            arc: initialArc,
+            plane: effectivePlane,
+          })
           const firstContinuationArc = prop.anim[1]?.arc ?? initialArc
 
           return {
@@ -58,9 +81,7 @@ export const buildVtgPattern = (
               ...(frameIndex === 0 && selection.reversePlane
                 ? { plane: effectivePlane }
                 : undefined),
-              ...(frameIndex === 0 && applyBoxShape
-                ? { arc: (initialArc + boxArcDelta + 360) % 360 }
-                : undefined),
+              ...(frameIndex === 0 && applyBoxShape ? boxPlacement : undefined),
               ...(frameIndex === 1 && applyBoxShape ? { arc: firstContinuationArc } : undefined),
               ...(frameIndex === 0 && selection.scale !== undefined
                 ? { scale: toVtgInternalScale(selection.scale) }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { findVtgPatternMatch, findVtgPatternMatches } from '@/features/vtg/matchVtgAnimation'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
@@ -61,6 +62,33 @@ describe('VTG animation matching', () => {
     } as const satisfies VtgPatternSelection
 
     expect(findVtgPatternMatch(createAnimation(selection))).toEqual(selection)
+  })
+
+  it('recovers the selected starting beat', () => {
+    const selection = {
+      reference: '5-6',
+      speedRatio: '1:5',
+      isAnti: true,
+      swapProps: true,
+      reversePlane: true,
+      beat: 4,
+      bpm: 87,
+      scale: 0.6,
+    } as const satisfies VtgPatternSelection
+
+    expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual(selection)
+  })
+
+  it('does not classify a Quarter relationship as a shifted VTG pattern', () => {
+    const animation = createDefaultQtrAnimation({
+      reference: '6-2',
+      speedRatio: '1:3',
+      quarters: 1,
+      beat: 1,
+    })
+    if (!animation) throw new Error('Expected a QTR animation')
+
+    expect(findVtgPatternMatches(animation)).toEqual([])
   })
 
   it('recovers Box mode for a shape-transformable cell', () => {

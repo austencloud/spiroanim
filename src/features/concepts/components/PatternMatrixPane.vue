@@ -25,30 +25,6 @@
         </div>
       </fieldset>
 
-      <fieldset v-if="isQtr" class="vtg-radio-options vtg-quarter-options">
-        <legend class="vtg-pane__visually-hidden">Quarters</legend>
-        <label>
-          <input
-            v-model="quarterMode"
-            type="radio"
-            name="vtg-quarters"
-            :value="1"
-            data-role="vtg-quarters"
-          />
-          <span>Qtr #1</span>
-        </label>
-        <label>
-          <input
-            v-model="quarterMode"
-            type="radio"
-            name="vtg-quarters"
-            :value="2"
-            data-role="vtg-quarters-2"
-          />
-          <span>Qtr #2</span>
-        </label>
-      </fieldset>
-
       <PatternTransformControls @reset="resetPatternControls" />
     </div>
 
@@ -93,6 +69,7 @@
           orientation="horizontal"
           :accent="rule.number === selectedCell?.row"
           :show-divider="!isQtr"
+          :show-props="!isQtr"
           :prop-colors="isQtr ? vtgHeaderPropColors : undefined"
           :tooltip-disabled="isQtr"
           :reversed="reversePlane"
@@ -118,7 +95,7 @@
                   'vtg-tile--highlighted': isTileHighlighted(tile),
                   'vtg-tile--selected': tile.reference === selectedCellReference,
                 }"
-                :aria-label="`${tile.label}, cell ${tile.reference}`"
+                :aria-label="getTileAriaLabel(tile)"
                 :aria-pressed="tile.reference === selectedCellReference"
                 :data-board-column="tile.boardColumn"
                 :data-board-row="tile.boardRow"
@@ -180,6 +157,8 @@
       </template>
     </ConceptAnimationControls>
 
+    <slot name="after-pattern-controls" />
+
     <p v-if="isQtr" class="qtr-development-note" data-role="qtr-development-note">
       Quarter Spacing is experimental and still under development. It may change drastically or be
       condensed in future releases.
@@ -203,7 +182,7 @@ import { qtrBottomRuleLabels, qtrSideRuleLabels } from '@/features/qtr/data/qtrL
 import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
 import { findQtrPatternMatch, matchesQtrSelection } from '@/features/qtr/matchQtrAnimation'
 import { createQtrSideDiagram } from '@/features/qtr/math/createQtrHeaderDiagram'
-import type { QtrMode, QtrPatternSelection } from '@/features/qtr/types'
+import type { QtrBeat, QtrMode, QtrPatternSelection } from '@/features/qtr/types'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import {
   patternPreviewReferences,
@@ -221,6 +200,7 @@ import { findVtgPatternMatch, matchesVtgSelection } from '@/features/vtg/matchVt
 import { vtgPropBounds } from '@/features/qtr/math/createQtrHeaderDiagram'
 import type {
   VtgCellAddress,
+  VtgBeat,
   VtgCellReference,
   VtgPatternLabel,
   VtgPropPlacement,
@@ -254,16 +234,21 @@ type VtgMatrixAddress = Omit<VtgMatrixTile, 'label' | 'description'>
 const props = withDefaults(
   defineProps<{
     concept: ConceptKey
+    qtrBeat?: QtrBeat
+    vtgBeat?: VtgBeat
     animation?: RootDataFinal
     animationReady?: boolean
   }>(),
   {
+    qtrBeat: 1,
+    vtgBeat: 1,
     animationReady: true,
   },
 )
 
 const emit = defineEmits<{
   patternSelect: [selection: ConceptPatternSelection]
+  beatSelect: [beat: VtgBeat]
 }>()
 
 const isQtr = computed(() => props.concept === 'qtr')
@@ -275,6 +260,7 @@ const isAnti = ref(false)
 const shape = ref<PatternShape>('diamond')
 const quarterMode = ref<QtrMode>(1)
 const activeQuarterMode = computed<QtrMode | false>(() => (isQtr.value ? quarterMode.value : false))
+const activeBeat = computed<VtgBeat>(() => (isQtr.value ? props.qtrBeat : props.vtgBeat))
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
   const colorSet = COLSET[COLORS.indexOf(color)]
   if (!colorSet) throw new Error(`Missing VTG prop color set for ${color}`)
@@ -323,9 +309,14 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       ...(swapProps.value ? { swapProps: true } : undefined),
       ...(reversePlane.value ? { reversePlane: true } : undefined),
       ...(shape.value === 'box' ? { shape: shape.value } : undefined),
+      ...(!isQtr.value && props.vtgBeat !== 1 ? { beat: props.vtgBeat } : undefined),
     }
     const animation = isQtr.value
-      ? createDefaultQtrAnimation({ ...baseSelection, quarters: quarterMode.value })
+      ? createDefaultQtrAnimation({
+          ...baseSelection,
+          quarters: quarterMode.value,
+          beat: props.qtrBeat,
+        })
       : createDefaultVtgAnimation(baseSelection)
     if (!animation) throw new Error(`Missing pattern animation for ${address.reference}`)
 
@@ -346,6 +337,8 @@ const isTileHighlighted = (tile: VtgMatrixTile) =>
   selectedCell.value !== undefined &&
   (tile.column === selectedCell.value.column || tile.row === selectedCell.value.row)
 
+const getTileAriaLabel = (tile: VtgMatrixTile) => `${tile.label}, cell ${tile.reference}`
+
 const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(reference)
 const isBottomSpinToggleCell = (reference: VtgCellReference) =>
   reference === '5-6' || reference === '6-6'
@@ -359,6 +352,7 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (swapProps.value) baseSelection.swapProps = true
   if (reversePlane.value) baseSelection.reversePlane = true
   if (shape.value === 'box') baseSelection.shape = shape.value
+  if (!isQtr.value && props.vtgBeat !== 1) baseSelection.beat = props.vtgBeat
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) baseSelection.scale = scale.value
   if (thick.value !== vtgThickControl.default) baseSelection.thick = thick.value
@@ -366,7 +360,7 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (hands.value !== vtgPlayerSettings.hands) baseSelection.hands = hands.value
   if (arms.value !== vtgPlayerSettings.arms) baseSelection.arms = arms.value
   const selection: ConceptPatternSelection = isQtr.value
-    ? { ...baseSelection, quarters: quarterMode.value }
+    ? { ...baseSelection, quarters: quarterMode.value, beat: props.qtrBeat }
     : baseSelection
   lastEmittedSelection = selection
   emit('patternSelect', selection)
@@ -430,6 +424,7 @@ const resetPatternControls = async () => {
   isAnti.value = false
   shape.value = 'diamond'
   quarterMode.value = 1
+  emit('beatSelect', 1)
   await nextTick()
   suppressPatternEmit = false
   if (tile !== undefined) emitPatternSelection(tile)
@@ -448,6 +443,7 @@ watch(
     hands,
     arms,
     activeQuarterMode,
+    activeBeat,
   ],
   () => {
     if (suppressPatternEmit) return
@@ -489,19 +485,23 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     swapProps.value = match.swapProps
     reversePlane.value = match.reversePlane
     shape.value = match.shape ?? 'diamond'
+    // VTG Shift and QTR beat selection have different meanings, so a
+    // cross-concept conversion starts from that concept's default beat.
+    emit('beatSelect', ownMatch ? (match.beat ?? 1) : 1)
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
     paths.value = animation.paths
     hands.value = animation.hands ?? vtgPlayerSettings.hands
     arms.value = animation.arms
-    if (qtrMatch) quarterMode.value = qtrMatch.quarters
+    quarterMode.value = 1
     if (shouldApplyCurrentConcept) tileToApply = tile
   } else {
     selectedCell.value = undefined
     isAnti.value = false
     shape.value = 'diamond'
     quarterMode.value = 1
+    emit('beatSelect', 1)
   }
 
   void nextTick(() => {
@@ -725,6 +725,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   shape,
   scale,
   quarters: activeQuarterMode,
+  beat: activeBeat,
 })
 
 let blankObserver: ResizeObserver | undefined

@@ -68,27 +68,46 @@ a pattern match.
 
 VTG and Quarter Spacing expose the shared Diamond/Box radio controls beside Paths, Hands, and Arms.
 Diamond is the default and preserves the source definition, so it is omitted from compact pattern
-selections. Box rotates each prop's first-frame `arc` by 45 degrees: plane 0 uses `+45`, while plane
-180 uses `-45` so both planes rotate in the same spatial direction. The original first continuation
-arc is made explicit so sparse-frame inheritance cannot carry the Box adjustment into later frames.
+selections. Box is derived from each prop's initial VTG geometry. The builder calculates an
+orthogonal position from the initial position and transported path axis, orients that relationship
+against the initial VTG plane, and normalizes the sum of those vectors to obtain their spherical
+midpoint. That target is converted back to first-frame `arc` and `plane`; no angle offset is stored in
+the conversion. The original first continuation arc is made explicit so sparse-frame inheritance
+cannot carry the Box placement into later frames.
+
+VTG and Quarter Spacing each expose their own 1-4 beat selector directly below Diamond/Box. VTG
+uses the same closed-loop reconstruction as the editor's Shift command: Beat 1 preserves the
+authored cycle, while Beats 2, 3, and 4 apply Shift one, two, or three times. Quarter Spacing uses
+the selected number to read VTG `anim[0]`, `anim[1]`, `anim[2]`, or `anim[3]` when deriving its
+starting relationship; it does not apply VTG's cycle shift first.
 
 Flip selects the effective plane before the Box direction is calculated, Swap exchanges the
-complete transformed tracks afterward, and Quarter Spacing applies its Qtr arc offsets after the
-shared VTG shape transform. Previews and compiled-geometry matching include the selected shape.
+complete transformed tracks afterward, and Quarter Spacing derives its starting positions after
+the shared VTG shape transform. Previews and compiled-geometry matching include the selected shape.
 
-Cells `1-1`, `1-2`, `2-1`, `2-2`, `3-3`, `3-4`, `4-3`, and `4-4` have an intentional fixed shape in
-their source patterns. Diamond and Box therefore produce identical animation data for those cells
-in both VTG and Quarter Spacing.
+The source patterns have two explicitly notated fixed-shape groups:
+
+- Diamond: `1-1`, `1-2`, `2-1`, and `2-2`.
+- Box: `3-3`, `3-4`, `4-3`, and `4-4`.
+
+The authoritative mapping is `vtgFixedShapeByCell` in `vtgPatternCatalog.ts`. Diamond and Box UI
+selections produce identical animation data for these cells in both VTG and Quarter Spacing because
+their shape is already intrinsic to the source pattern.
 
 ## Quarter Spacing transforms
 
-Quarter Spacing provides two mutually exclusive transforms and always has one selected. `Qtr #1`
-adds 90 degrees to the original first animation track's first-frame arc. `Qtr #2` rotates the
-complete Qtr #1 pattern another 90 degrees using first-frame arc adjustments. Plane 0 receives +90
-degrees and plane 180 receives -90 degrees so both planes rotate in the same spatial direction
-without changing their paths. Arc adjustments wrap within 0-359 degrees. Qtr #1 is the default;
-selecting an active radio again cannot clear it, and Reset returns to Qtr #1. With Swap, the
-adjustments move with their original tracks.
+Quarter Spacing compiles the selected VTG beat to obtain each prop's authoritative position and
+transported path axis. One prop remains anchored at its selected VTG position. The other uses the
+cross product of its transported path axis and position as its orthogonal Quarter target. Swap
+carries that derived relationship with the original source track. The resulting positions are
+converted back to first-frame `arc` and `plane` values. No angle offset is part of this conversion;
+continuation frames and `turns` are unchanged.
+
+QTR preserves the selected shape when choosing its VTG source: QTR Diamond builds from VTG Diamond,
+while QTR Box builds from VTG Box. The beat-selected starting-position calculation runs after that
+source shape is applied. Each fixed cell keeps its own VTG source reference, so Diamond cells
+`1-1`, `1-2`, `2-1`, and `2-2` retain their intrinsic Diamond definitions, while Box cells `3-3`,
+`3-4`, `4-3`, and `4-4` retain their intrinsic Box definitions.
 
 Quarter Spacing previews and matching apply the Qtr transform around the shared VTG pattern builder
 and matcher so selected cells and shared options can be recovered when switching panels or loading
@@ -136,15 +155,24 @@ top, right, bottom, or left. The sign of `pos dot rot` selects out or in. Placem
 bounds demonstrated by left rule 2 for left/right and top rule 2 for top/bottom. Swap and Flip
 participate in this calculation; controls that do not change first-frame geometry do not.
 
-The top-header prop diagrams are not displayed in Quarter Spacing.
+The top-header and left-header prop diagrams are currently not displayed in Quarter Spacing. The
+left-header calculation remains in place so it can be restored if the revised model requires it.
 
 Flip mirrors each left header from left to right. Its title block, divider, and regular prop
 placements move together, including which end of a prop is rendered as the head. Flipped
 left-header titles are right-aligned against the right edge. Header numbers remain in their normal
-bottom-right position. Top headers keep their normal layout when Flip is enabled. Quarter
-Spacing header props are not mirrored a second time because their positions already come from
-compiled frames that include the Flip transform; the surrounding title layout still mirrors
-normally.
+bottom-right position. Top headers keep their normal layout when Flip is enabled. The retained Qtr
+header calculation already includes the Flip transform and must not be mirrored a second time if
+the prop diagrams are restored later.
+
+## Quarter Spacing cell availability
+
+Quarter Spacing currently keeps all 36 matrix cells active. Direct selection, header selection,
+random selection, and animation hydration retain the exact selected cell without redirecting to an
+adjacent reference.
+
+The stored VTG reference contract is column-first (`column-row`), although visual cell descriptions
+may use row and column language. For example, visual row 2, column 1 maps to stored reference `1-2`.
 
 ## Regression coverage
 
@@ -153,8 +181,9 @@ Changes in this area should cover the applicable behavior:
 - BPM, Scale, Thick, and derived Distance boundaries.
 - One undo step per continuous slider gesture.
 - Player-only Paths, Hands, and Arms settings remaining separate from thumbnails.
-- Pattern building, matching, Swap, Flip, Diamond/Box, fixed-shape cells, speed ratios, and both Qtr
-  modes.
+- Pattern building, matching, Swap, Flip, Diamond/Box, fixed-shape cells, speed ratios, and QTR
+  beat-selected starting positions.
+- Exact Qtr cell selection for direct, header, random, and hydrated selection.
 - Relationship classifications derived from compiled geometry, including the `6-3` `QO/QS`
   reference.
 - Header labels, tooltip availability, dividers, colors, and prop placement.

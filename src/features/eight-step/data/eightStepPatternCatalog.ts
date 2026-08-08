@@ -13,6 +13,7 @@ import {
   vtgPlayerSettings,
   vtgScaleControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
+import { deriveBoxInitialPlacement } from '@/math/animation/SpatialRelationshipFunc'
 
 export const buildEightStepPattern = (
   selection: EightStepPatternSelection,
@@ -26,16 +27,14 @@ export const buildEightStepPattern = (
   const transformedProps = sourceProps.map((prop) => {
     const initialArc = prop.anim[0]?.arc ?? 0
     const initialPlane = prop.anim[0]?.plane ?? 0
-    const boxArcDelta = Math.abs(initialPlane) === 180 ? -45 : 45
+    const boxPlacement = deriveBoxInitialPlacement({ arc: initialArc, plane: initialPlane })
     const firstContinuationArc = prop.anim[1]?.arc ?? initialArc
 
     return {
       ...prop,
       anim: prop.anim.map((frame, frameIndex) => ({
         ...frame,
-        ...(selection.shape === 'box' && frameIndex === 0
-          ? { arc: (initialArc + boxArcDelta + 360) % 360 }
-          : undefined),
+        ...(selection.shape === 'box' && frameIndex === 0 ? boxPlacement : undefined),
         ...(selection.shape === 'box' && frameIndex === 1
           ? { arc: firstContinuationArc }
           : undefined),

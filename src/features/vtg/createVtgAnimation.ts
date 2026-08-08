@@ -6,6 +6,7 @@ import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
+import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 
 const vtgFrameCount = 5
 
@@ -71,7 +72,7 @@ export const createVtgAnimation = (
     depth: pattern.depth ?? current.depth,
   }
 
-  return animation
+  return shiftVtgStartingBeat(animation, selection.beat ?? 1)
 }
 
 /**

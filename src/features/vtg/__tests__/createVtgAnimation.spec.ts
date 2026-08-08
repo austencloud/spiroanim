@@ -1,3 +1,4 @@
+import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -6,10 +7,19 @@ import {
 } from '@/features/vtg/createVtgAnimation'
 import { buildVtgPattern as buildSelectedVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
-import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
+import {
+  getVtgFixedShape,
+  vtgBoxCellReferences,
+  vtgDiamondCellReferences,
+} from '@/features/vtg/data/vtgPatternCatalog'
+import { vtgBeats } from '@/features/vtg/types'
 import type { VtgCellReference, VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
+import {
+  deriveBoxInitialPlacement,
+  getInitialPositionGeometry,
+} from '@/math/animation/SpatialRelationshipFunc'
 import type { RootData, RootDataFinal } from '@/types/AnimTypes'
 
 const transposeSelection = <Selection extends VtgPatternSelection>(
@@ -49,7 +59,47 @@ const createCurrentAnimation = () =>
   } satisfies RootData)
 
 describe('createVtgAnimation', () => {
-  it('rotates only the initial prop arcs by 45 degrees in Box mode', () => {
+  it.each(vtgBeats)('uses SHIFT to start the closed VTG cycle on beat %s', (beat) => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      swapProps: true,
+      reversePlane: true,
+      shape: 'box',
+    } as const satisfies VtgPatternSelection
+    const originalAnimation = createVtgAnimationForSelection(createCurrentAnimation(), selection)
+    const shiftedAnimation = createVtgAnimationForSelection(createCurrentAnimation(), {
+      ...selection,
+      beat,
+    })
+    if (!originalAnimation || !shiftedAnimation) throw new Error('Expected both VTG animations')
+
+    const original = rootCompile(originalAnimation)
+    const shifted = rootCompile(shiftedAnimation)
+
+    for (const [propIndex, shiftedProp] of shifted.props.entries()) {
+      const originalFrames = original.props[propIndex]!.anim
+      const cycleLength = originalFrames.length - 1
+
+      for (const [frameIndex, shiftedFrame] of shiftedProp.anim.entries()) {
+        const originalIndex = (beat - 1 + (frameIndex % cycleLength)) % cycleLength
+        const expectedFrame = originalFrames[originalIndex]!
+
+        expect(
+          new Vector3()
+            .fromArray(shiftedFrame.pos)
+            .distanceTo(new Vector3().fromArray(expectedFrame.pos)),
+        ).toBeCloseTo(0, 9)
+        expect(
+          new Vector3()
+            .fromArray(shiftedFrame.rot)
+            .distanceTo(new Vector3().fromArray(expectedFrame.rot)),
+        ).toBeCloseTo(0, 9)
+      }
+    }
+  })
+
+  it('derives Box starts from each VTG initial-position relationship', () => {
     for (const reversePlane of [false, true]) {
       const baseSelection = {
         reference: '5-1',
@@ -66,13 +116,17 @@ describe('createVtgAnimation', () => {
       const diamondCompiled = rootCompile(diamond)
       const boxCompiled = rootCompile(box)
 
-      expect(boxCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
-        diamondCompiled.props.map((prop) => {
-          const firstFrame = prop.anim[0]!
-          const delta = Math.abs(firstFrame.plane) === 180 ? -45 : 45
-          return (firstFrame.arc + delta + 360) % 360
-        }),
-      )
+      for (const [propIndex, prop] of boxCompiled.props.entries()) {
+        const diamondStart = diamondCompiled.props[propIndex]!.anim[0]!
+        const expectedPosition = getInitialPositionGeometry(
+          deriveBoxInitialPlacement({ arc: diamondStart.arc, plane: diamondStart.plane }),
+        ).position
+
+        expect(expectedPosition.distanceTo(new Vector3().fromArray(prop.anim[0]!.pos))).toBeCloseTo(
+          0,
+          10,
+        )
+      }
       expect(boxCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
         diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
       )
@@ -80,18 +134,17 @@ describe('createVtgAnimation', () => {
   })
 
   it('keeps the eight fixed-shape cells unchanged in Box mode', () => {
-    expect([...vtgFixedShapeCells]).toEqual([
-      '1-1',
-      '1-2',
-      '2-1',
-      '2-2',
-      '3-3',
-      '3-4',
-      '4-3',
-      '4-4',
-    ])
+    expect(vtgDiamondCellReferences).toEqual(['1-1', '1-2', '2-1', '2-2'])
+    expect(vtgBoxCellReferences).toEqual(['3-3', '3-4', '4-3', '4-4'])
 
-    for (const reference of vtgFixedShapeCells) {
+    for (const reference of vtgDiamondCellReferences) {
+      expect(getVtgFixedShape(reference)).toBe('diamond')
+    }
+    for (const reference of vtgBoxCellReferences) {
+      expect(getVtgFixedShape(reference)).toBe('box')
+    }
+
+    for (const reference of [...vtgDiamondCellReferences, ...vtgBoxCellReferences]) {
       const selection = { reference, speedRatio: '1:3' } as const satisfies VtgPatternSelection
       const diamond = createVtgAnimationForSelection(createCurrentAnimation(), selection)
       const box = createVtgAnimationForSelection(createCurrentAnimation(), {
@@ -99,7 +152,7 @@ describe('createVtgAnimation', () => {
         shape: 'box',
       })
 
-      expect(box, reference).toEqual(diamond)
+      expect(box).toEqual(diamond)
     }
   })
 

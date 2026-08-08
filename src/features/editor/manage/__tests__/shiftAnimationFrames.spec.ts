@@ -5,7 +5,7 @@ import {
   animationRangeEndpointsAlign,
   shiftAnimationFrameRange,
   shiftAnimationFrames,
-} from '@/features/editor/manage/shiftAnimationFrames'
+} from '@/math/animation/shiftAnimationFrames'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import type { AnimData, RootData } from '@/types/AnimTypes'

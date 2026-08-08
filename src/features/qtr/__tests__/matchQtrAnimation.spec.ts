@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
-import { findQtrPatternMatch, findQtrPatternMatches } from '@/features/qtr/matchQtrAnimation'
+import { findQtrPatternMatches } from '@/features/qtr/matchQtrAnimation'
+import { qtrBeats } from '@/features/qtr/types'
 import type { QtrPatternSelection } from '@/features/qtr/types'
-import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 
@@ -22,9 +22,10 @@ describe('Qtr animation matching', () => {
       reference: '3-4',
       speedRatio: '1:5',
       quarters: 1,
+      beat: 2,
     } as const satisfies QtrPatternSelection
 
-    expect(findQtrPatternMatch(createQtrAnimation(selection))).toEqual({
+    expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
       ...selection,
       isAnti: false,
       swapProps: false,
@@ -34,14 +35,15 @@ describe('Qtr animation matching', () => {
     })
   })
 
-  it('recognizes both Qtr modes with and without Swap', () => {
-    for (const quarters of [1, 2] as const) {
+  it('recognizes all selected beats with and without Swap', () => {
+    for (const beat of qtrBeats) {
       for (const swapProps of booleanOptions) {
         const selection = {
           reference: '2-1',
           speedRatio: '1:3',
           swapProps,
-          quarters,
+          quarters: 1,
+          beat,
         } as const satisfies QtrPatternSelection
 
         expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
@@ -62,7 +64,8 @@ describe('Qtr animation matching', () => {
       isAnti: true,
       swapProps: true,
       reversePlane: true,
-      quarters: 2,
+      quarters: 1,
+      beat: 3,
       bpm: 101,
       scale: 1.2,
     } as const satisfies QtrPatternSelection
@@ -70,14 +73,15 @@ describe('Qtr animation matching', () => {
     const query = codec.encodeQS(createQtrAnimation(selection), false)
     const decoded = await codec.decodeVer(query)
 
-    expect(findQtrPatternMatch(decoded)).toEqual(selection)
+    expect(findQtrPatternMatches(decoded)).toContainEqual(selection)
   })
 
-  it('recovers Box mode after the Qtr arc transform', () => {
+  it('recovers Box mode after the QTR geometry rebuild', () => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:3',
-      quarters: 2,
+      quarters: 1,
+      beat: 4,
       shape: 'box',
     } as const satisfies QtrPatternSelection
 
@@ -89,19 +93,5 @@ describe('Qtr animation matching', () => {
       bpm: 60,
       scale: 0.8,
     })
-  })
-
-  it('keeps the fixed-shape cells unchanged when Qtr uses Box mode', () => {
-    for (const reference of vtgFixedShapeCells) {
-      const selection = {
-        reference,
-        speedRatio: '1:3',
-        quarters: 2,
-      } as const satisfies QtrPatternSelection
-
-      expect(createQtrAnimation({ ...selection, shape: 'box' }), reference).toEqual(
-        createQtrAnimation(selection),
-      )
-    }
   })
 })

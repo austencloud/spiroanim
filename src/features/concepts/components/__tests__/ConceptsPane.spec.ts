@@ -53,7 +53,9 @@ describe('ConceptsPane', () => {
     expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(true)
-    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="qtr-selection-1"]').element.checked).toBe(
+      true,
+    )
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('84')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').element.value).toBe('1.2')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').element.value).toBe('11')
@@ -75,6 +77,7 @@ describe('ConceptsPane', () => {
         hands: true,
         arms: false,
         quarters: 1,
+        beat: 1,
       },
     ])
 
@@ -85,7 +88,7 @@ describe('ConceptsPane', () => {
     expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(true)
-    expect(wrapper.find('[data-role="vtg-quarters"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="qtr-radio-field"]').exists()).toBe(false)
 
     await selector.setValue('8stp')
 

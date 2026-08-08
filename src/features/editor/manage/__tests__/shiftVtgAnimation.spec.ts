@@ -5,7 +5,7 @@ import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import {
   animationEndpointsAlign,
   shiftAnimationFrames,
-} from '@/features/editor/manage/shiftAnimationFrames'
+} from '@/math/animation/shiftAnimationFrames'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
