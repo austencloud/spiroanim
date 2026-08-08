@@ -6,6 +6,7 @@ import { createQtrPreviewAnimation } from '@/features/qtr/createQtrAnimation'
 import type { QtrMode, QtrPatternSelection } from '@/features/qtr/types'
 import { createVtgPreviewAnimation } from '@/features/vtg/createVtgAnimation'
 import type { VtgCellReference, VtgPatternSelection, VtgSpeedRatio } from '@/features/vtg/types'
+import type { PatternShape } from '@/types/PatternTypes'
 
 interface UseVtgPreviewsOptions {
   dimensions: readonly ConceptPreviewDimensions[]
@@ -13,6 +14,7 @@ interface UseVtgPreviewsOptions {
   isAnti: Ref<boolean>
   swapProps: Ref<boolean>
   reversePlane: Ref<boolean>
+  shape: Ref<PatternShape>
   scale: Ref<number>
   quarters: Ref<QtrMode | false>
 }
@@ -40,6 +42,7 @@ export const usePatternPreviews = ({
   isAnti,
   swapProps,
   reversePlane,
+  shape,
   scale,
   quarters,
 }: UseVtgPreviewsOptions) => {
@@ -55,6 +58,7 @@ export const usePatternPreviews = ({
     if (spinToggleCells.has(reference)) selection.isAnti = isAnti.value
     if (swapProps.value) selection.swapProps = true
     if (reversePlane.value) selection.reversePlane = true
+    if (shape.value === 'box') selection.shape = shape.value
     return quarters.value ? { ...selection, quarters: quarters.value } : selection
   }
 
@@ -72,7 +76,7 @@ export const usePatternPreviews = ({
   })
 
   // BPM changes animation timing only, so it intentionally does not invalidate still previews.
-  watch([speedRatio, swapProps, reversePlane, scale, quarters], renderer.requestPreviews)
+  watch([speedRatio, swapProps, reversePlane, shape, scale, quarters], renderer.requestPreviews)
   watch(isAnti, renderer.requestPartialPreviews)
 
   return {

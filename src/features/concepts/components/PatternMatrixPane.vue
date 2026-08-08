@@ -53,6 +53,34 @@
     </div>
 
     <div class="vtg-board">
+      <button
+        type="button"
+        class="vtg-shuffle"
+        aria-label="Shuffle VTG rules"
+        @click="selectRandomTile"
+      >
+        <BaseIcon :path="mdiShuffleVariant" size="42%" />
+      </button>
+
+      <div class="vtg-footer" data-role="vtg-footer">
+        <VtgRuleCard
+          v-for="rule in bottomRules"
+          :key="`bottom-${rule.number}`"
+          :labels="rule.labels"
+          :display-labels="isQtr ? qtrBottomRuleLabels[rule.number] : undefined"
+          :number="rule.number"
+          :diagram="rule.diagram"
+          :description="rule.description"
+          orientation="vertical"
+          :accent="rule.number === selectedCell?.column"
+          :show-divider="!isQtr"
+          :show-props="!isQtr"
+          :tooltip-disabled="isQtr"
+          :mirror-props="!isQtr"
+          @select="selectColumn(rule.number)"
+        />
+      </div>
+
       <div class="vtg-sidebar" data-role="vtg-sidebar">
         <VtgRuleCard
           v-for="rule in displayedSideRules"
@@ -144,37 +172,13 @@
           </div>
         </div>
       </div>
-
-      <button
-        type="button"
-        class="vtg-shuffle"
-        aria-label="Shuffle VTG rules"
-        @click="selectRandomTile"
-      >
-        <BaseIcon :path="mdiShuffleVariant" size="42%" />
-      </button>
-
-      <div class="vtg-footer" data-role="vtg-footer">
-        <VtgRuleCard
-          v-for="rule in bottomRules"
-          :key="`bottom-${rule.number}`"
-          :labels="rule.labels"
-          :display-labels="isQtr ? qtrBottomRuleLabels[rule.number] : undefined"
-          :number="rule.number"
-          :diagram="rule.diagram"
-          :description="rule.description"
-          orientation="vertical"
-          :accent="rule.number === selectedCell?.column"
-          :show-divider="!isQtr"
-          :show-props="!isQtr"
-          :tooltip-disabled="isQtr"
-          :mirror-props="!isQtr"
-          @select="selectColumn(rule.number)"
-        />
-      </div>
     </div>
 
-    <ConceptAnimationControls :animation="animation" />
+    <ConceptAnimationControls :animation="animation">
+      <template #after-controls>
+        <PatternShapeControls v-model:shape="shape" />
+      </template>
+    </ConceptAnimationControls>
 
     <p v-if="isQtr" class="qtr-development-note" data-role="qtr-development-note">
       Quarter Spacing is experimental and still under development. It may change drastically or be
@@ -190,6 +194,7 @@ import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
+import PatternShapeControls from '@/features/concepts/components/PatternShapeControls.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
@@ -226,6 +231,7 @@ import type {
 } from '@/features/vtg/types'
 import { vtgSpeedRatios } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import type { PatternShape } from '@/types/PatternTypes'
 import { toColor } from '@/utils/UtilFunc'
 
 interface BlankDimensions {
@@ -266,6 +272,7 @@ const conceptsStore = useConceptsStore()
 const { speedRatio, swapProps, reversePlane, bpm, scale, thick, paths, hands, arms } =
   storeToRefs(conceptsStore)
 const isAnti = ref(false)
+const shape = ref<PatternShape>('diamond')
 const quarterMode = ref<QtrMode>(1)
 const activeQuarterMode = computed<QtrMode | false>(() => (isQtr.value ? quarterMode.value : false))
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
@@ -315,6 +322,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       ...(spinToggleCells.has(address.reference) ? { isAnti: isAnti.value } : undefined),
       ...(swapProps.value ? { swapProps: true } : undefined),
       ...(reversePlane.value ? { reversePlane: true } : undefined),
+      ...(shape.value === 'box' ? { shape: shape.value } : undefined),
     }
     const animation = isQtr.value
       ? createDefaultQtrAnimation({ ...baseSelection, quarters: quarterMode.value })
@@ -350,6 +358,7 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (isSpinToggleCell(tile.reference)) baseSelection.isAnti = isAnti.value
   if (swapProps.value) baseSelection.swapProps = true
   if (reversePlane.value) baseSelection.reversePlane = true
+  if (shape.value === 'box') baseSelection.shape = shape.value
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) baseSelection.scale = scale.value
   if (thick.value !== vtgThickControl.default) baseSelection.thick = thick.value
@@ -419,6 +428,7 @@ const resetPatternControls = async () => {
   suppressPatternEmit = true
   conceptsStore.resetPatternControls()
   isAnti.value = false
+  shape.value = 'diamond'
   quarterMode.value = 1
   await nextTick()
   suppressPatternEmit = false
@@ -426,7 +436,19 @@ const resetPatternControls = async () => {
 }
 
 watch(
-  [speedRatio, swapProps, reversePlane, bpm, scale, thick, paths, hands, arms, activeQuarterMode],
+  [
+    speedRatio,
+    swapProps,
+    reversePlane,
+    shape,
+    bpm,
+    scale,
+    thick,
+    paths,
+    hands,
+    arms,
+    activeQuarterMode,
+  ],
   () => {
     if (suppressPatternEmit) return
 
@@ -466,6 +488,7 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     isAnti.value = match.isAnti
     swapProps.value = match.swapProps
     reversePlane.value = match.reversePlane
+    shape.value = match.shape ?? 'diamond'
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
@@ -477,6 +500,7 @@ const hydratePatternControls = (animation: RootDataFinal) => {
   } else {
     selectedCell.value = undefined
     isAnti.value = false
+    shape.value = 'diamond'
     quarterMode.value = 1
   }
 
@@ -494,6 +518,7 @@ const selectInitialRandomPattern = () => {
   selectedCell.value = undefined
   conceptsStore.resetPatternControls()
   isAnti.value = false
+  shape.value = 'diamond'
   quarterMode.value = 1
   selectRandomTile()
 
@@ -697,6 +722,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   isAnti,
   swapProps,
   reversePlane,
+  shape,
   scale,
   quarters: activeQuarterMode,
 })
@@ -748,6 +774,7 @@ defineExpose({
   isAnti,
   swapProps,
   reversePlane,
+  shape,
   bpm,
   scale,
   thick,
@@ -865,7 +892,7 @@ defineExpose({
 
 .vtg-sidebar {
   display: grid;
-  grid-row: 1 / span 6;
+  grid-row: 2 / span 6;
   grid-column: 1;
   grid-template-rows: repeat(6, minmax(0, 1fr));
   gap: var(--vtg-board-gap);
@@ -873,7 +900,7 @@ defineExpose({
 
 .vtg-matrix {
   position: relative;
-  grid-row: 1 / span 6;
+  grid-row: 2 / span 6;
   grid-column: 2 / span 6;
 }
 
@@ -1028,7 +1055,7 @@ defineExpose({
 .vtg-shuffle {
   appearance: none;
   display: grid;
-  grid-row: 7;
+  grid-row: 1;
   grid-column: 1;
   padding: 0;
   color: var(--vtg-color-ink);
@@ -1042,7 +1069,7 @@ defineExpose({
 
 .vtg-footer {
   display: grid;
-  grid-row: 7;
+  grid-row: 1;
   grid-column: 2 / span 6;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--vtg-board-gap);

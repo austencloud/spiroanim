@@ -111,7 +111,7 @@
 
     <ConceptAnimationControls :animation="animation" role-prefix="eight-step">
       <template #after-controls>
-        <EightStepShapeControls v-model:shape="shape" />
+        <PatternShapeControls v-model:shape="shape" role-prefix="eight-step" />
       </template>
     </ConceptAnimationControls>
 
@@ -180,7 +180,7 @@ import {
   eightStepPreviewReferences,
   useEightStepPreviews,
 } from '@/features/eight-step/composables/useEightStepPreviews'
-import EightStepShapeControls from '@/features/eight-step/components/EightStepShapeControls.vue'
+import PatternShapeControls from '@/features/concepts/components/PatternShapeControls.vue'
 import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
 import {
   findEightStepPatternMatch,

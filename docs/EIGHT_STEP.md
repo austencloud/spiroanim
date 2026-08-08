@@ -215,8 +215,8 @@ Eight Step reuses the shared Concepts controls and store used by VTG and Quarter
 Changing concepts does not reset these shared settings. A setting remains available even when the
 currently displayed animation does not correspond to an active cell in the newly opened concept.
 Swap and Flip are persisted with the selected concept; the remaining player settings are shared for
-the current application session. Diamond/Box is owned by Eight Step because it has no VTG/Quarter
-Spacing equivalent.
+the current application session. Diamond/Box uses the shared Concepts control, while each concept
+keeps its local shape choice and applies the transform through its own pattern builder.
 
 Once a cell is active, changing any applicable control rebuilds that selection. Reset restores the
 shared pattern and player defaults and restores Diamond, while retaining the selected cell. On the

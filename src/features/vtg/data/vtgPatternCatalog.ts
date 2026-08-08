@@ -17,6 +17,18 @@ const catalog: Readonly<Partial<Record<VtgCellReference, Readonly<VtgPatternDefi
   ...vtgRowPatterns,
 }
 
+/** These source patterns have an intentional fixed shape and ignore Diamond/Box transforms. */
+export const vtgFixedShapeCells: ReadonlySet<VtgCellReference> = new Set([
+  '1-1',
+  '1-2',
+  '2-1',
+  '2-2',
+  '3-3',
+  '3-4',
+  '4-3',
+  '4-4',
+])
+
 export const buildVtgPattern = (
   selection: VtgPatternSelection,
 ): VtgReadableAnimation | undefined => {
@@ -24,26 +36,36 @@ export const buildVtgPattern = (
   const pattern = buildPattern?.(selection.isAnti === true)
   if (pattern === undefined) return undefined
 
+  const applyBoxShape = selection.shape === 'box' && !vtgFixedShapeCells.has(selection.reference)
+
   const transformedProps =
-    selection.reversePlane || selection.scale !== undefined
+    selection.reversePlane || selection.scale !== undefined || applyBoxShape
       ? pattern.props.map((prop) => {
-          const [baseFrame, ...continuationFrames] = prop.anim
+          const baseFrame = prop.anim[0]
           if (baseFrame === undefined) return prop
+
+          const initialArc = baseFrame.arc ?? 0
+          const effectivePlane = selection.reversePlane
+            ? reverseAngle(baseFrame.plane ?? 0)
+            : (baseFrame.plane ?? 0)
+          const boxArcDelta = Math.abs(effectivePlane) === 180 ? -45 : 45
+          const firstContinuationArc = prop.anim[1]?.arc ?? initialArc
 
           return {
             ...prop,
-            anim: [
-              {
-                ...baseFrame,
-                ...(selection.reversePlane
-                  ? { plane: reverseAngle(baseFrame.plane ?? 0) }
-                  : undefined),
-                ...(selection.scale !== undefined
-                  ? { scale: toVtgInternalScale(selection.scale) }
-                  : undefined),
-              },
-              ...continuationFrames,
-            ],
+            anim: prop.anim.map((frame, frameIndex) => ({
+              ...frame,
+              ...(frameIndex === 0 && selection.reversePlane
+                ? { plane: effectivePlane }
+                : undefined),
+              ...(frameIndex === 0 && applyBoxShape
+                ? { arc: (initialArc + boxArcDelta + 360) % 360 }
+                : undefined),
+              ...(frameIndex === 1 && applyBoxShape ? { arc: firstContinuationArc } : undefined),
+              ...(frameIndex === 0 && selection.scale !== undefined
+                ? { scale: toVtgInternalScale(selection.scale) }
+                : undefined),
+            })),
           }
         })
       : pattern.props

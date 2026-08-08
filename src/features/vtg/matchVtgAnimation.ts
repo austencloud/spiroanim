@@ -8,6 +8,7 @@ import type {
 import { vtgSpeedRatios } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { AnimDataCompiled, RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
+import { patternShapes } from '@/types/PatternTypes'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
 const booleanOptions = [false, true] as const
@@ -61,30 +62,34 @@ const buildCandidateCache = () => {
 
       for (const speedRatio of vtgSpeedRatios) {
         for (const isAnti of antiOptions) {
-          for (const swapProps of booleanOptions) {
-            for (const reversePlane of booleanOptions) {
-              const selection: VtgPatternSelection = {
-                reference,
-                speedRatio,
-                isAnti,
-                swapProps,
-                reversePlane,
+          for (const shape of patternShapes) {
+            for (const swapProps of booleanOptions) {
+              for (const reversePlane of booleanOptions) {
+                const selection: VtgPatternSelection = {
+                  reference,
+                  speedRatio,
+                  isAnti,
+                  swapProps,
+                  reversePlane,
+                  ...(shape === 'box' ? { shape } : undefined),
+                }
+                const animation = createDefaultVtgAnimation(selection)
+                if (!animation) continue
+
+                const signature = createSignature(animation)
+                if (!signature) continue
+
+                const matches = candidates.get(signature) ?? []
+                matches.push({
+                  reference,
+                  speedRatio,
+                  isAnti,
+                  swapProps,
+                  reversePlane,
+                  ...(shape === 'box' ? { shape } : undefined),
+                })
+                candidates.set(signature, matches)
               }
-              const animation = createDefaultVtgAnimation(selection)
-              if (!animation) continue
-
-              const signature = createSignature(animation)
-              if (!signature) continue
-
-              const matches = candidates.get(signature) ?? []
-              matches.push({
-                reference,
-                speedRatio,
-                isAnti,
-                swapProps,
-                reversePlane,
-              })
-              candidates.set(signature, matches)
             }
           }
         }

@@ -6,6 +6,7 @@ import {
 } from '@/features/vtg/createVtgAnimation'
 import { buildVtgPattern as buildSelectedVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import type { VtgCellReference, VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
@@ -48,6 +49,60 @@ const createCurrentAnimation = () =>
   } satisfies RootData)
 
 describe('createVtgAnimation', () => {
+  it('rotates only the initial prop arcs by 45 degrees in Box mode', () => {
+    for (const reversePlane of [false, true]) {
+      const baseSelection = {
+        reference: '5-1',
+        speedRatio: '1:3',
+        reversePlane,
+      } as const satisfies VtgPatternSelection
+      const diamond = createVtgAnimationForSelection(createCurrentAnimation(), baseSelection)
+      const box = createVtgAnimationForSelection(createCurrentAnimation(), {
+        ...baseSelection,
+        shape: 'box',
+      })
+      if (!diamond || !box) throw new Error('Expected Diamond and Box VTG animations')
+
+      const diamondCompiled = rootCompile(diamond)
+      const boxCompiled = rootCompile(box)
+
+      expect(boxCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
+        diamondCompiled.props.map((prop) => {
+          const firstFrame = prop.anim[0]!
+          const delta = Math.abs(firstFrame.plane) === 180 ? -45 : 45
+          return (firstFrame.arc + delta + 360) % 360
+        }),
+      )
+      expect(boxCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
+        diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
+      )
+    }
+  })
+
+  it('keeps the eight fixed-shape cells unchanged in Box mode', () => {
+    expect([...vtgFixedShapeCells]).toEqual([
+      '1-1',
+      '1-2',
+      '2-1',
+      '2-2',
+      '3-3',
+      '3-4',
+      '4-3',
+      '4-4',
+    ])
+
+    for (const reference of vtgFixedShapeCells) {
+      const selection = { reference, speedRatio: '1:3' } as const satisfies VtgPatternSelection
+      const diamond = createVtgAnimationForSelection(createCurrentAnimation(), selection)
+      const box = createVtgAnimationForSelection(createCurrentAnimation(), {
+        ...selection,
+        shape: 'box',
+      })
+
+      expect(box, reference).toEqual(diamond)
+    }
+  })
+
   it('applies Thick to main player data without changing preview thickness', () => {
     const selection = {
       reference: '1-6',

@@ -30,6 +30,7 @@ export const matchesQtrSelection = (
       match.quarters === selection.quarters &&
       match.isAnti === (selection.isAnti ?? false) &&
       match.swapProps === (selection.swapProps ?? false) &&
-      match.reversePlane === (selection.reversePlane ?? false),
+      match.reversePlane === (selection.reversePlane ?? false) &&
+      match.shape === (selection.shape ?? 'diamond'),
   )
 }

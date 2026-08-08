@@ -64,6 +64,22 @@ VTG matching compiles geometry and identifies Scale from the first frame's inter
 Distance is not part of the VTG geometry signature, so a distance mismatch does not by itself stop
 a pattern match.
 
+## Diamond and Box
+
+VTG and Quarter Spacing expose the shared Diamond/Box radio controls beside Paths, Hands, and Arms.
+Diamond is the default and preserves the source definition, so it is omitted from compact pattern
+selections. Box rotates each prop's first-frame `arc` by 45 degrees: plane 0 uses `+45`, while plane
+180 uses `-45` so both planes rotate in the same spatial direction. The original first continuation
+arc is made explicit so sparse-frame inheritance cannot carry the Box adjustment into later frames.
+
+Flip selects the effective plane before the Box direction is calculated, Swap exchanges the
+complete transformed tracks afterward, and Quarter Spacing applies its Qtr arc offsets after the
+shared VTG shape transform. Previews and compiled-geometry matching include the selected shape.
+
+Cells `1-1`, `1-2`, `2-1`, `2-2`, `3-3`, `3-4`, `4-3`, and `4-4` have an intentional fixed shape in
+their source patterns. Diamond and Box therefore produce identical animation data for those cells
+in both VTG and Quarter Spacing.
+
 ## Quarter Spacing transforms
 
 Quarter Spacing provides two mutually exclusive transforms and always has one selected. `Qtr #1`
@@ -117,15 +133,15 @@ uses VTG's Orange color set, matching the generated animation's prop colors.
 In Quarter Spacing, each left-header prop diagram is recalculated from the first compiled frame of
 the first cell in that row (`1-1` through `1-6`). The closest cardinal direction of `pos` selects
 top, right, bottom, or left. The sign of `pos dot rot` selects out or in. Placements reuse the exact
-bounds demonstrated by left rule 2 for left/right and bottom rule 2 for top/bottom. Swap and Flip
+bounds demonstrated by left rule 2 for left/right and top rule 2 for top/bottom. Swap and Flip
 participate in this calculation; controls that do not change first-frame geometry do not.
 
-The bottom-header prop diagrams are not displayed in Quarter Spacing.
+The top-header prop diagrams are not displayed in Quarter Spacing.
 
 Flip mirrors each left header from left to right. Its title block, divider, and regular prop
 placements move together, including which end of a prop is rendered as the head. Flipped
 left-header titles are right-aligned against the right edge. Header numbers remain in their normal
-bottom-right position. Bottom headers keep their normal layout when Flip is enabled. Quarter
+bottom-right position. Top headers keep their normal layout when Flip is enabled. Quarter
 Spacing header props are not mirrored a second time because their positions already come from
 compiled frames that include the Flip transform; the surrounding title layout still mirrors
 normally.
@@ -137,7 +153,8 @@ Changes in this area should cover the applicable behavior:
 - BPM, Scale, Thick, and derived Distance boundaries.
 - One undo step per continuous slider gesture.
 - Player-only Paths, Hands, and Arms settings remaining separate from thumbnails.
-- Pattern building, matching, Swap, Flip, speed ratios, and both Qtr modes.
+- Pattern building, matching, Swap, Flip, Diamond/Box, fixed-shape cells, speed ratios, and both Qtr
+  modes.
 - Relationship classifications derived from compiled geometry, including the `6-3` `QO/QS`
   reference.
 - Header labels, tooltip availability, dividers, colors, and prop placement.

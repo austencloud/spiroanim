@@ -1,4 +1,5 @@
 import type { PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
+import type { PatternShape } from '@/types/PatternTypes'
 
 export type VtgRuleNumber = 1 | 2 | 3 | 4 | 5 | 6
 
@@ -27,6 +28,7 @@ export interface VtgPatternSelection {
   isAnti?: boolean
   swapProps?: boolean
   reversePlane?: boolean
+  shape?: PatternShape
   bpm?: number
   scale?: number
   thick?: number
@@ -41,6 +43,7 @@ export interface VtgPatternMatch {
   isAnti: boolean
   swapProps: boolean
   reversePlane: boolean
+  shape?: PatternShape
   bpm: number
   scale: number
 }

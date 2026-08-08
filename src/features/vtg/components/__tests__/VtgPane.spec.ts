@@ -349,6 +349,43 @@ describe('VtgPane', () => {
     ])
   })
 
+  it('offers Diamond and Box modes that reapply VTG and Qtr patterns', async () => {
+    for (const [Pane, quarters] of [
+      [VtgPane, undefined],
+      [QtrPane, 1],
+    ] as const) {
+      const wrapper = mount(Pane)
+      const diamond = wrapper.get<HTMLInputElement>('[data-role="vtg-shape-diamond"]')
+      const box = wrapper.get<HTMLInputElement>('[data-role="vtg-shape-box"]')
+
+      expect(diamond.element.checked).toBe(true)
+      expect(box.element.checked).toBe(false)
+      expect(diamond.element.name).toBe('vtg-shape')
+      expect(wrapper.get('[data-role="vtg-shape-controls"]').text()).toBe('DiamondBox')
+
+      await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+      await box.setValue()
+
+      expect(wrapper.emitted('patternSelect')).toEqual([
+        [
+          {
+            reference: '5-1',
+            speedRatio: '1:3',
+            ...(quarters === undefined ? {} : { quarters }),
+          },
+        ],
+        [
+          {
+            reference: '5-1',
+            speedRatio: '1:3',
+            shape: 'box',
+            ...(quarters === undefined ? {} : { quarters }),
+          },
+        ],
+      ])
+    }
+  })
+
   it('offers mutually exclusive Quarters radio options that reapply the current pattern', async () => {
     const wrapper = mount(QtrPane)
     const quarters = wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]')

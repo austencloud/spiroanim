@@ -63,6 +63,23 @@ describe('VTG animation matching', () => {
     expect(findVtgPatternMatch(createAnimation(selection))).toEqual(selection)
   })
 
+  it('recovers Box mode for a shape-transformable cell', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:5',
+      swapProps: true,
+      reversePlane: true,
+      shape: 'box',
+      bpm: 87,
+      scale: 1.1,
+    } as const satisfies VtgPatternSelection
+
+    expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual({
+      ...selection,
+      isAnti: false,
+    })
+  })
+
   it('recognizes a pattern regardless of non-pattern animation settings', () => {
     const animation = createAnimation({
       reference: '3-4',

@@ -1,17 +1,13 @@
 <template>
-  <section class="eight-step-shape-controls" data-role="eight-step-shape-controls">
-    <div
-      class="eight-step-shape-controls__group"
-      role="radiogroup"
-      aria-label="Eight Step display mode"
-    >
-      <label v-for="option in eightStepShapes" :key="option">
+  <section class="pattern-shape-controls" :data-role="`${rolePrefix}-shape-controls`">
+    <div class="pattern-shape-controls__group" role="radiogroup" aria-label="Pattern shape">
+      <label v-for="option in patternShapes" :key="option">
         <input
           v-model="shape"
           type="radio"
-          name="eight-step-shape"
+          :name="`${rolePrefix}-shape`"
           :value="option"
-          :data-role="`eight-step-shape-${option}`"
+          :data-role="`${rolePrefix}-shape-${option}`"
         />
         <span>{{ shapeLabels[option] }}</span>
       </label>
@@ -20,23 +16,25 @@
 </template>
 
 <script setup lang="ts">
-import { eightStepShapes } from '@/features/eight-step/types'
-import type { EightStepShape } from '@/features/eight-step/types'
+import { patternShapes } from '@/types/PatternTypes'
+import type { PatternShape } from '@/types/PatternTypes'
 
-const shape = defineModel<EightStepShape>('shape', { required: true })
+withDefaults(defineProps<{ rolePrefix?: string }>(), { rolePrefix: 'vtg' })
+
+const shape = defineModel<PatternShape>('shape', { required: true })
 
 const shapeLabels = {
   diamond: 'Diamond',
   box: 'Box',
-} as const satisfies Readonly<Record<EightStepShape, string>>
+} as const satisfies Readonly<Record<PatternShape, string>>
 </script>
 
 <style scoped>
-.eight-step-shape-controls {
+.pattern-shape-controls {
   display: contents;
 }
 
-.eight-step-shape-controls__group {
+.pattern-shape-controls__group {
   display: grid;
   grid-auto-columns: max-content;
   grid-auto-flow: column;
@@ -46,19 +44,19 @@ const shapeLabels = {
   border: 0;
 }
 
-.eight-step-shape-controls__group label {
+.pattern-shape-controls__group label {
   position: relative;
   cursor: pointer;
 }
 
-.eight-step-shape-controls__group input {
+.pattern-shape-controls__group input {
   position: absolute;
   width: 1px;
   height: 1px;
   opacity: 0;
 }
 
-.eight-step-shape-controls__group span {
+.pattern-shape-controls__group span {
   display: grid;
   padding: var(--space-2);
   color: var(--color-text);
@@ -74,13 +72,13 @@ const shapeLabels = {
     border-color var(--transition-fast);
 }
 
-.eight-step-shape-controls__group input:checked + span {
+.pattern-shape-controls__group input:checked + span {
   color: var(--color-on-action-primary);
   background: var(--color-action-primary);
   border-color: var(--color-action-primary);
 }
 
-.eight-step-shape-controls__group input:focus-visible + span {
+.pattern-shape-controls__group input:focus-visible + span {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }
