@@ -20,6 +20,7 @@ export const VDEF = {
   guides: [0, 1, 2, Boolean], // 1
   paths: [0, 1, 2, Boolean], // 1
   travel: [0, 1, 2, Boolean], // Reserved for QS v4 Motion rendering
+  precision: [0, 1, 2, Boolean], // Reserved for QS v6 Motion rendering precision
   hands: [0, 1, 2, Boolean], // 1
   // Defined for shared property constraints, but intentionally absent from the immutable v1 layout.
   arms: [0, 1, 2, Boolean], // 1

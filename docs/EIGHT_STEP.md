@@ -152,8 +152,9 @@ by substituting the source-page Orange track.
 
 ## Diamond and Box
 
-Eight Step has one unlabeled pair of radio controls immediately to the right of Paths, Hands, and
-Arms: Diamond and Box. Diamond is the default and reproduces the original generated definitions.
+Eight Step has one unlabeled pair of radio controls immediately to the right of the Left and Right
+prop checkboxes: Diamond and Box. Diamond is the default and reproduces the original generated
+definitions.
 Because it is the default, Diamond is omitted from a compact selection.
 
 Box applies a 45-degree spatial rotation through frame 0's initial `arc` for both source props. It
@@ -208,9 +209,17 @@ modification.
 Eight Step reuses the shared Concepts controls and store used by VTG and Quarter Spacing:
 
 - Flip and Swap;
-- BPM, Scale, and Thick;
-- Paths, Hands, and Arms; and
+- BPM, Scale, Thick, and persisted Spacing;
+- Paths, Hands, and Arms;
+- checked-by-default Left and Right prop visibility controls; and
 - Reset.
+
+At least one prop must remain enabled. Disabling the only enabled side automatically enables the
+opposite side.
+
+Scale, Thick, Spacing, and BPM are placed below the Diamond/Box controls. On detected mobile devices,
+including modern iPads that identify as Macs, vertical touch gestures beginning on these sliders
+remain page-scroll gestures and restore any touch-down value change.
 
 Changing concepts does not reset these shared settings. A setting remains available even when the
 currently displayed animation does not correspond to an active cell in the newly opened concept.
@@ -225,11 +234,13 @@ first empty animation, Eight Step resets its controls and chooses a random initi
 Pattern creation replaces the two pattern props, assigns the standard Green and Orange prop
 defaults, and preserves unrelated current root settings. Scale is written to both props' initial
 frames and the corresponding player distance is updated. BPM is clamped to the shared VTG range.
+Spacing alternates precise horizontal Motion placement between the props and is not recovered from
+loaded pattern geometry.
 
 When an existing animation is supplied, the pane attempts to recover its cell, Flip, Swap, Shape,
-BPM, and Scale from geometry. Thick, Paths, Hands, and Arms are read directly from the animation. If
-the geometry is not an Eight Step candidate, no cell is shown as active and the shared controls are
-not forcibly reset.
+BPM, and Scale from geometry. Thick, Paths, Hands, Arms, and the per-prop Left/Right visibility state
+are read directly from the animation. If the geometry is not an Eight Step candidate, no cell is
+shown as active and the shared controls are not forcibly reset.
 
 ## Matrix thumbnails
 

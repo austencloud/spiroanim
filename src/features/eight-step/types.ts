@@ -1,6 +1,8 @@
 import type { PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
 import type { PatternShape } from '@/types/PatternTypes'
+import type { PatternPropVisibilitySelection } from '@/features/concepts/patternPropVisibility'
+import type { PatternPropSpacingSelection } from '@/features/concepts/patternPropSpacing'
 
 export const eightStepColumns = [1, 2, 3, 4, 5, 6, 7, 8] as const
 export const eightStepRows = ['AA', 'AE', 'AI', 'EA', 'EE', 'EI', 'IA', 'IE', 'II'] as const
@@ -21,7 +23,8 @@ export type EightStepShape = PatternShape
 /** Eight Step references use the top-header number first and the left-header code second. */
 export type EightStepCellReference = `${EightStepColumn}-${EightStepRow}`
 
-export interface EightStepPatternSelection {
+export interface EightStepPatternSelection
+  extends PatternPropVisibilitySelection, PatternPropSpacingSelection {
   concept: '8stp'
   reference: EightStepCellReference
   swapProps?: boolean

@@ -12,6 +12,7 @@ interface UseEightStepPreviewsOptions {
   swapProps: Ref<boolean>
   reversePlane: Ref<boolean>
   scale: Ref<number>
+  spacing: Ref<number>
   shape: Ref<EightStepShape>
 }
 
@@ -32,6 +33,7 @@ export const useEightStepPreviews = ({
   swapProps,
   reversePlane,
   scale,
+  spacing,
   shape,
 }: UseEightStepPreviewsOptions) => {
   const renderer = useConceptPreviewRenderer({
@@ -43,6 +45,7 @@ export const useEightStepPreviews = ({
         concept: '8stp',
         reference,
         scale: scale.value,
+        spacing: spacing.value,
         shape: shape.value,
       }
 
@@ -53,7 +56,7 @@ export const useEightStepPreviews = ({
   })
 
   // BPM affects timing only; visual controls use the same fixed preview presentation as VTG/QTR.
-  watch([swapProps, reversePlane, scale, shape], renderer.requestPreviews)
+  watch([swapProps, reversePlane, scale, spacing, shape], renderer.requestPreviews)
 
   return {
     previewUrls: renderer.previewUrls,

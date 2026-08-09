@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
+import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import QtrPane from '@/features/qtr/components/QtrPane.vue'
 import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
@@ -156,22 +157,22 @@ describe('VtgPane', () => {
     expect(firstSideProps[0]?.attributes('style')).toContain('inset-block-start: 4%')
     expect(firstSideProps[1]?.attributes('style')).toContain('inset-inline-start: 59%')
     expect(firstSideProps[0]?.attributes('style')).toContain(
-      '--vtg-rule-prop-head-color: rgb(0,255,0)',
-    )
-    expect(firstSideProps[0]?.attributes('style')).toContain(
-      '--vtg-rule-prop-handle-color: rgb(0,136,0)',
-    )
-    expect(firstSideProps[0]?.attributes('style')).toContain(
-      '--vtg-rule-prop-tether-color: rgb(0,85,0)',
-    )
-    expect(firstSideProps[1]?.attributes('style')).toContain(
       '--vtg-rule-prop-head-color: rgb(255,165,0)',
     )
-    expect(firstSideProps[1]?.attributes('style')).toContain(
+    expect(firstSideProps[0]?.attributes('style')).toContain(
       '--vtg-rule-prop-handle-color: rgb(136,165,0)',
     )
-    expect(firstSideProps[1]?.attributes('style')).toContain(
+    expect(firstSideProps[0]?.attributes('style')).toContain(
       '--vtg-rule-prop-tether-color: rgb(85,26,0)',
+    )
+    expect(firstSideProps[1]?.attributes('style')).toContain(
+      '--vtg-rule-prop-head-color: rgb(0,255,0)',
+    )
+    expect(firstSideProps[1]?.attributes('style')).toContain(
+      '--vtg-rule-prop-handle-color: rgb(0,136,0)',
+    )
+    expect(firstSideProps[1]?.attributes('style')).toContain(
+      '--vtg-rule-prop-tether-color: rgb(0,85,0)',
     )
 
     expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-label')).toContain('QO/QS')
@@ -393,6 +394,55 @@ describe('VtgPane', () => {
     }
   })
 
+  it('controls left and right prop visibility between Arms and Diamond', async () => {
+    for (const [Pane, quarters] of [
+      [VtgPane, undefined],
+      [QtrPane, 1],
+    ] as const) {
+      const wrapper = mount(Pane)
+      const left = wrapper.get<HTMLInputElement>('[data-role="vtg-left"]')
+      const right = wrapper.get<HTMLInputElement>('[data-role="vtg-right"]')
+      const options = left.element.closest('fieldset')
+
+      expect(left.element.checked).toBe(true)
+      expect(right.element.checked).toBe(true)
+      expect(
+        Array.from(options?.querySelectorAll('label span') ?? []).map(
+          (option) => option.textContent,
+        ),
+      ).toEqual(['Paths', 'Hands', 'Arms', 'Left', 'Right', 'Diamond', 'Box'])
+
+      await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+      await left.setValue(false)
+      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+        {
+          reference: '5-1',
+          speedRatio: '1:3',
+          left: false,
+          ...(quarters === undefined ? {} : { quarters }),
+        },
+      ])
+
+      await right.setValue(false)
+      expect(left.element.checked).toBe(true)
+      expect(right.element.checked).toBe(false)
+      expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('left')
+      expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toHaveProperty('right', false)
+
+      await left.setValue(false)
+      expect(left.element.checked).toBe(false)
+      expect(right.element.checked).toBe(true)
+      expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toHaveProperty('left', false)
+      expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('right')
+
+      await left.setValue(true)
+      expect(left.element.checked).toBe(true)
+      expect(right.element.checked).toBe(true)
+      expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('left')
+      wrapper.unmount()
+    }
+  })
+
   it('offers starting-beat and reciprocal transition controls while keeping Double hidden', async () => {
     for (const [Pane, concept, quarters] of [
       [VtgPane, 'vtg', undefined],
@@ -572,10 +622,13 @@ describe('VtgPane', () => {
   })
 
   it('hydrates a selected Qtr cell', async () => {
+    const store = useConceptsStore()
+    store.spacing = 9
     const animation = createDefaultQtrAnimation({
       reference: '3-4',
       speedRatio: '1:5',
       quarters: 1,
+      spacing: 2,
     })
     if (!animation) throw new Error('Expected a supported VTG animation')
 
@@ -585,6 +638,7 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="qtr-pane"]').attributes('data-selected-cell')).toBe('3-4')
     expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-spacing"]').element.value).toBe('9')
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
@@ -597,6 +651,7 @@ describe('VtgPane', () => {
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(0.7)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').setValue(12)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-spacing"]').setValue(12)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').setValue(90)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]').setValue(false)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-hands"]').setValue(true)
@@ -610,7 +665,8 @@ describe('VtgPane', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(false)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(false)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').element.value).toBe('0.8')
-    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').element.value).toBe('4')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').element.value).toBe('5')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-spacing"]').element.value).toBe('1')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('60')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-hands"]').element.checked).toBe(false)
@@ -623,11 +679,12 @@ describe('VtgPane', () => {
     ])
   })
 
-  it('offers BPM, Scale, and full-range Thick sliders that reapply the current pattern', async () => {
+  it('offers Scale, Thick, Spacing, and BPM sliders that reapply the current pattern', async () => {
     const wrapper = mount(VtgPane)
     const bpm = wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]')
     const scale = wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]')
     const thick = wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]')
+    const spacing = wrapper.get<HTMLInputElement>('[data-role="vtg-spacing"]')
     const outputs = wrapper.findAll('fieldset.vtg-slider-controls output')
 
     expect(
@@ -640,27 +697,43 @@ describe('VtgPane', () => {
     expect(bpm.attributes()).toMatchObject({ min: '40', max: '140', step: '1' })
     expect(scale.attributes()).toMatchObject({ min: '0.5', max: '1.4', step: '0.1' })
     expect(thick.attributes()).toMatchObject({ min: '1', max: '15', step: '1' })
+    expect(spacing.attributes()).toMatchObject({ min: '0', max: '20', step: '1' })
     expect(bpm.element.value).toBe('60')
     expect(scale.element.value).toBe('0.8')
-    expect(thick.element.value).toBe('4')
-    expect(outputs.map((output) => output.text())).toEqual(['0.8', '4', '60'])
+    expect(thick.element.value).toBe('5')
+    expect(spacing.element.value).toBe('1')
+    expect(outputs.map((output) => output.text())).toEqual(['0.8', '5', '1', '60'])
 
     await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
     await bpm.setValue(40)
     await scale.setValue(1.4)
     await thick.setValue(15)
+    await spacing.setValue(20)
 
     expect(wrapper.emitted('patternSelect')).toEqual([
       [{ reference: '1-6', speedRatio: '1:3' }],
       [{ reference: '1-6', speedRatio: '1:3', bpm: 40 }],
       [{ reference: '1-6', speedRatio: '1:3', bpm: 40, scale: 1.4 }],
       [{ reference: '1-6', speedRatio: '1:3', bpm: 40, scale: 1.4, thick: 15 }],
+      [
+        {
+          reference: '1-6',
+          speedRatio: '1:3',
+          bpm: 40,
+          scale: 1.4,
+          thick: 15,
+          spacing: 20,
+        },
+      ],
     ])
-    expect(outputs.map((output) => output.text())).toEqual(['1.4', '15', '40'])
+    expect(outputs.map((output) => output.text())).toEqual(['1.4', '15', '20', '40'])
   })
 
-  it('offers Paths, Hands, and Arms checkboxes below the sliders for VTG and Qtr', async () => {
-    for (const component of [VtgPane, QtrPane]) {
+  it('places sliders below playback controls for VTG and Qtr', async () => {
+    for (const [component, concept] of [
+      [VtgPane, 'vtg'],
+      [QtrPane, 'qtr'],
+    ] as const) {
       const wrapper = mount(component)
       const paths = wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]')
       const hands = wrapper.get<HTMLInputElement>('[data-role="vtg-hands"]')
@@ -674,8 +747,13 @@ describe('VtgPane', () => {
       expect(hands.element.nextElementSibling?.textContent).toBe('Hands')
       expect(arms.element.nextElementSibling?.textContent).toBe('Arms')
       expect(options.classes()).toContain('vtg-pattern-options')
+      const playbackControls = wrapper.get(`[data-role="${concept}-playback-controls"]`).element
       expect(
-        wrapper.get('.vtg-slider-controls').element.compareDocumentPosition(options.element) &
+        options.element.compareDocumentPosition(playbackControls) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+      expect(
+        playbackControls.compareDocumentPosition(wrapper.get('.vtg-slider-controls').element) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy()
 
@@ -732,6 +810,26 @@ describe('VtgPane', () => {
 
     expect(beginHistoryGroup).toHaveBeenCalledTimes(4)
     expect(endHistoryGroup).toHaveBeenCalledTimes(4)
+  })
+
+  it('restores a mobile slider when a touch gesture becomes page scrolling', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Android')
+    const wrapper = mount(VtgPane)
+    const scale = wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]')
+
+    expect(wrapper.get('.concept-slider-controls').classes()).toContain(
+      'concept-slider-controls--touch',
+    )
+
+    await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
+    await scale.trigger('pointerdown', { pointerId: 7, pointerType: 'touch' })
+    await scale.setValue(1.2)
+    await scale.trigger('pointercancel', { pointerId: 7, pointerType: 'touch' })
+
+    expect(scale.element.value).toBe('0.8')
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { reference: '1-6', speedRatio: '1:3' },
+    ])
   })
 
   it('hydrates every VTG control from a supported animation without selecting it again', async () => {

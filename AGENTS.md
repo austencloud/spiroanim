@@ -99,6 +99,10 @@
 
 # Component Standards
 
+- For mobile- or touch-specific behavior, always use the shared `isTouchDevice` helper from
+  `src/utils/device.ts` instead of adding local user-agent or pointer heuristics. It intentionally
+  detects modern iPads that report a desktop-class Macintosh user agent.
+
 - Reusable components belong in `src/components`. Place low-level controlled UI primitives in `src/components/ui`, layout and application-shell components in `src/components/layout`, and feature-owned components under their feature.
 - Keep UI components focused, reusable, and presentational where practical. Prefer controlled components using props and emitted events.
 - Low-level reusable UI components must not import application stores. Feature-specific components may use stores only when that dependency is part of their documented responsibility.

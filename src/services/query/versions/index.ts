@@ -11,6 +11,7 @@ export interface SpiroAnimQSVersion {
   createCameraConfig?(): ConfigData<AllVars>
   encodeMotionFrame?(frame: MotionData): MotionData
   decodeMotionFrame?(frame: MotionData): MotionData
+  omitStandaloneMotionPrefix?: boolean
 }
 
 export class UnsupportedSpiroAnimQSVersionError extends RangeError {
@@ -39,6 +40,8 @@ export async function loadSpiroAnimQSVersion(version: number): Promise<SpiroAnim
       return import('@/services/query/versions/SpiroAnimQSv4')
     case 5:
       return import('@/services/query/versions/SpiroAnimQSv5')
+    case 6:
+      return import('@/services/query/versions/SpiroAnimQSv6')
     default:
       throw new UnsupportedSpiroAnimQSVersionError(version)
   }

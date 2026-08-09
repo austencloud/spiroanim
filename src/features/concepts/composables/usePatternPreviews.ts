@@ -23,6 +23,7 @@ interface UseVtgPreviewsOptions {
   beat: Ref<VtgBeat>
   double: Ref<boolean>
   scale: Ref<number>
+  spacing: Ref<number>
   quarters: Ref<QtrMode | false>
 }
 
@@ -53,6 +54,7 @@ export const usePatternPreviews = ({
   beat,
   double,
   scale,
+  spacing,
   quarters,
 }: UseVtgPreviewsOptions) => {
   const buildSelection = (
@@ -62,6 +64,7 @@ export const usePatternPreviews = ({
       reference,
       speedRatio: speedRatio.value,
       scale: scale.value,
+      spacing: spacing.value,
     }
 
     if (spinToggleCells.has(reference)) selection.isAnti = isAnti.value
@@ -88,7 +91,7 @@ export const usePatternPreviews = ({
 
   // BPM changes animation timing only, so it intentionally does not invalidate still previews.
   watch(
-    [speedRatio, swapProps, reversePlane, shape, beat, double, scale, quarters],
+    [speedRatio, swapProps, reversePlane, shape, beat, double, scale, spacing, quarters],
     renderer.requestPreviews,
   )
   watch(isAnti, renderer.requestPartialPreviews)

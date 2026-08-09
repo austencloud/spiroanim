@@ -243,6 +243,26 @@ describe('createVtgAnimation', () => {
     ).toBe(true)
   })
 
+  it('applies prop visibility overrides only to unchecked sides', () => {
+    const visible = createVtgAnimationForSelection(createCurrentAnimation(), {
+      reference: '1-6',
+      speedRatio: '1:3',
+    })
+    const leftHidden = createVtgAnimationForSelection(createCurrentAnimation(), {
+      reference: '1-6',
+      speedRatio: '1:3',
+      left: false,
+    })
+    if (!visible || !leftHidden) throw new Error('Expected VTG animations')
+
+    for (const key of ['paths', 'hands', 'arms', 'visible'] as const) {
+      expect(visible.props[0]).not.toHaveProperty(key)
+      expect(visible.props[1]).not.toHaveProperty(key)
+      expect(leftHidden.props[0]?.[key]).toBe(false)
+      expect(leftHidden.props[1]).not.toHaveProperty(key)
+    }
+  })
+
   it('builds the first SO/TS cell from the edited readable template', () => {
     const current = createCurrentAnimation()
     const animation = createVtgAnimation(current, {
@@ -257,11 +277,11 @@ describe('createVtgAnimation', () => {
       speed: vtgPlayerSettings.speed,
       props: [
         {
-          color: 1,
+          color: 6,
           anim: [{ plane: 180, arc: 90 }, { plane: 180, arc: 90 }, {}, {}, {}],
         },
         {
-          color: 6,
+          color: 1,
           anim: [{ plane: 180, arc: 90 }, { arc: 90, turns: -180 }, {}, {}, {}],
         },
       ],
@@ -393,7 +413,7 @@ describe('createVtgAnimation', () => {
       isAnti: false,
     })
 
-    expect(animation?.props.map((prop) => prop.color)).toEqual([1, 6])
+    expect(animation?.props.map((prop) => prop.color)).toEqual([6, 1])
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([{ arc: 90, scale: 8 }, { arc: 90 }])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { plane: 180, arc: 90, turns: 180, scale: 8 },
@@ -413,7 +433,7 @@ describe('createVtgAnimation', () => {
       swapProps: true,
     })
 
-    expect(swapped?.props.map((prop) => prop.color)).toEqual([1, 6])
+    expect(swapped?.props.map((prop) => prop.color)).toEqual([6, 1])
     expect(swapped?.props[0]?.anim).toEqual(original?.props[1]?.anim)
     expect(swapped?.props[1]?.anim).toEqual(original?.props[0]?.anim)
   })

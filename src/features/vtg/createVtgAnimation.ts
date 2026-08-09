@@ -10,6 +10,8 @@ import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import { alternatePatternPlayback } from '@/math/animation/alternatePatternPlayback'
+import { applyPatternPropVisibility } from '@/features/concepts/patternPropVisibility'
+import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
 
 const vtgFrameCount = 5
 
@@ -71,13 +73,20 @@ export const createVtgAnimation = (
   const selectedPattern = buildVtgPattern(selection)
   if (!selectedPattern) return undefined
 
-  const pattern = addDefaultFrames({
+  const patternWithDefaults = addDefaultFrames({
     ...selectedPattern,
     ...(selection.thick === undefined ? {} : { thick: selection.thick }),
     paths: selection.paths ?? vtgPlayerSettings.paths,
     hands: selection.hands ?? vtgPlayerSettings.hands,
     arms: selection.arms ?? vtgPlayerSettings.arms,
   })
+  const pattern = {
+    ...patternWithDefaults,
+    props: applyPatternPropVisibility(
+      applyPatternPropSpacing(patternWithDefaults.props, selection),
+      selection,
+    ),
+  }
   const decoded = decodeReadable(mergeWithCurrentAnimation(current, pattern))
 
   const animation = {

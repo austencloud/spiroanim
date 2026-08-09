@@ -1,5 +1,37 @@
 <template>
-  <fieldset class="concept-slider-controls vtg-slider-controls">
+  <fieldset
+    class="concept-pattern-options concept-render-options vtg-pattern-options vtg-render-options"
+  >
+    <legend class="concept-controls__visually-hidden">Rendered features</legend>
+    <label>
+      <input v-model="paths" type="checkbox" :data-role="`${rolePrefix}-paths`" />
+      <span>Paths</span>
+    </label>
+    <label>
+      <input v-model="hands" type="checkbox" :data-role="`${rolePrefix}-hands`" />
+      <span>Hands</span>
+    </label>
+    <label>
+      <input v-model="arms" type="checkbox" :data-role="`${rolePrefix}-arms`" />
+      <span>Arms</span>
+    </label>
+    <label>
+      <input v-model="leftPropVisible" type="checkbox" :data-role="`${rolePrefix}-left`" />
+      <span>Left</span>
+    </label>
+    <label>
+      <input v-model="rightPropVisible" type="checkbox" :data-role="`${rolePrefix}-right`" />
+      <span>Right</span>
+    </label>
+    <slot name="after-controls" />
+  </fieldset>
+
+  <slot name="before-sliders" />
+
+  <fieldset
+    class="concept-slider-controls vtg-slider-controls"
+    :class="{ 'concept-slider-controls--touch': protectTouchScrolling }"
+  >
     <legend class="concept-controls__visually-hidden">Animation settings</legend>
     <label>
       <span class="concept-slider-controls__label vtg-slider-controls__label">
@@ -13,9 +45,9 @@
         :max="vtgScaleControl.max"
         :step="vtgScaleControl.step"
         :data-role="`${rolePrefix}-scale`"
-        @pointerdown="beginSliderHistory"
-        @pointerup="endSliderHistory"
-        @pointercancel="endSliderHistory"
+        @pointerdown="beginPointerSliderHistory"
+        @pointerup="endPointerSliderHistory"
+        @pointercancel="cancelPointerSliderHistory"
         @keydown="beginSliderHistory"
         @keyup="endSliderHistory"
         @blur="endSliderHistory"
@@ -33,9 +65,29 @@
         :max="vtgThickControl.max"
         :step="vtgThickControl.step"
         :data-role="`${rolePrefix}-thick`"
-        @pointerdown="beginSliderHistory"
-        @pointerup="endSliderHistory"
-        @pointercancel="endSliderHistory"
+        @pointerdown="beginPointerSliderHistory"
+        @pointerup="endPointerSliderHistory"
+        @pointercancel="cancelPointerSliderHistory"
+        @keydown="beginSliderHistory"
+        @keyup="endSliderHistory"
+        @blur="endSliderHistory"
+      />
+    </label>
+    <label>
+      <span class="concept-slider-controls__label vtg-slider-controls__label">
+        <span>Spacing</span>
+        <output>{{ spacing }}</output>
+      </span>
+      <input
+        v-model.number="spacing"
+        type="range"
+        :min="vtgSpacingControl.min"
+        :max="vtgSpacingControl.max"
+        :step="vtgSpacingControl.step"
+        :data-role="`${rolePrefix}-spacing`"
+        @pointerdown="beginPointerSliderHistory"
+        @pointerup="endPointerSliderHistory"
+        @pointercancel="cancelPointerSliderHistory"
         @keydown="beginSliderHistory"
         @keyup="endSliderHistory"
         @blur="endSliderHistory"
@@ -53,33 +105,14 @@
         :max="vtgBpmControl.max"
         :step="vtgBpmControl.step"
         :data-role="`${rolePrefix}-bpm`"
-        @pointerdown="beginSliderHistory"
-        @pointerup="endSliderHistory"
-        @pointercancel="endSliderHistory"
+        @pointerdown="beginPointerSliderHistory"
+        @pointerup="endPointerSliderHistory"
+        @pointercancel="cancelPointerSliderHistory"
         @keydown="beginSliderHistory"
         @keyup="endSliderHistory"
         @blur="endSliderHistory"
       />
     </label>
-  </fieldset>
-
-  <fieldset
-    class="concept-pattern-options concept-render-options vtg-pattern-options vtg-render-options"
-  >
-    <legend class="concept-controls__visually-hidden">Rendered features</legend>
-    <label>
-      <input v-model="paths" type="checkbox" :data-role="`${rolePrefix}-paths`" />
-      <span>Paths</span>
-    </label>
-    <label>
-      <input v-model="hands" type="checkbox" :data-role="`${rolePrefix}-hands`" />
-      <span>Hands</span>
-    </label>
-    <label>
-      <input v-model="arms" type="checkbox" :data-role="`${rolePrefix}-arms`" />
-      <span>Arms</span>
-    </label>
-    <slot name="after-controls" />
   </fieldset>
 </template>
 
@@ -88,10 +121,12 @@ import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import {
   vtgBpmControl,
   vtgScaleControl,
+  vtgSpacingControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { isTouchDevice } from '@/utils/device'
 
 const props = withDefaults(
   defineProps<{
@@ -101,9 +136,31 @@ const props = withDefaults(
   { rolePrefix: 'vtg' },
 )
 
-const { bpm, scale, thick, paths, hands, arms } = storeToRefs(useConceptsStore())
+const { bpm, scale, thick, spacing, paths, hands, arms, leftPropVisible, rightPropVisible } =
+  storeToRefs(useConceptsStore())
+
+watch(
+  [leftPropVisible, rightPropVisible],
+  ([leftVisible, rightVisible], previousVisibility) => {
+    if (leftVisible || rightVisible) return
+
+    const [previousLeft, previousRight] = previousVisibility ?? [true, true]
+    if (!previousLeft && previousRight) leftPropVisible.value = true
+    else rightPropVisible.value = true
+  },
+  { flush: 'sync', immediate: true },
+)
+
 const { beginHistoryGroup, endHistoryGroup } = useQSMainStore()
 let sliderHistoryActive = false
+const protectTouchScrolling = typeof navigator !== 'undefined' && isTouchDevice()
+let touchSliderStart:
+  | {
+      input: HTMLInputElement
+      pointerId: number
+      value: string
+    }
+  | undefined
 
 const beginSliderHistory = () => {
   if (sliderHistoryActive || props.animation === undefined) return
@@ -117,6 +174,39 @@ const endSliderHistory = () => {
 
   sliderHistoryActive = false
   endHistoryGroup()
+}
+
+const beginPointerSliderHistory = (event: PointerEvent) => {
+  if (
+    protectTouchScrolling &&
+    event.pointerType !== 'mouse' &&
+    event.currentTarget instanceof HTMLInputElement
+  ) {
+    touchSliderStart = {
+      input: event.currentTarget,
+      pointerId: event.pointerId,
+      value: event.currentTarget.value,
+    }
+  }
+
+  beginSliderHistory()
+}
+
+const endPointerSliderHistory = () => {
+  touchSliderStart = undefined
+  endSliderHistory()
+}
+
+const cancelPointerSliderHistory = (event: PointerEvent) => {
+  const start = touchSliderStart
+  touchSliderStart = undefined
+
+  if (start?.pointerId === event.pointerId && start.input.value !== start.value) {
+    start.input.value = start.value
+    start.input.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+
+  endSliderHistory()
 }
 
 onBeforeUnmount(endSliderHistory)
@@ -159,6 +249,10 @@ onBeforeUnmount(endSliderHistory)
   margin-block: 0;
   cursor: pointer;
   accent-color: var(--color-action-primary);
+}
+
+.concept-slider-controls--touch input {
+  touch-action: pan-y;
 }
 
 .concept-slider-controls input:focus-visible {

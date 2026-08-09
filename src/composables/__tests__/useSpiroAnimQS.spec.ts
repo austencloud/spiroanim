@@ -7,6 +7,7 @@ import { VDEF as VDEF_V2 } from '@/services/query/versions/SpiroAnimQSv2'
 import { CHARSET as CHARSET_V3, VDEF as VDEF_V3 } from '@/services/query/versions/SpiroAnimQSv3'
 import { CHARSET as CHARSET_V4, VDEF as VDEF_V4 } from '@/services/query/versions/SpiroAnimQSv4'
 import { CHARSET as CHARSET_V5, VDEF as VDEF_V5 } from '@/services/query/versions/SpiroAnimQSv5'
+import { CHARSET as CHARSET_V6, VDEF as VDEF_V6 } from '@/services/query/versions/SpiroAnimQSv6'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -190,6 +191,69 @@ describe('useSpiroAnimQS', () => {
     const example = query.decodeQS({ ...encoded, c: '__7._m_sNR~.' })
     expect(example.camera).toHaveLength(2)
     expect(query.encodeQS(example, false).c).toBe('__7._m_sNR~.')
+  })
+
+  it('stores inherited Motion and Camera Precision in version 6', async () => {
+    const query = await useSpiroAnimQS(VDEF_V6, useBaseQS(VDEF_V6, { charset: CHARSET_V6 }), 6)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props[0]!.motion = [
+      { distance: 10, precision: true },
+      { distance: 20 },
+      { distance: 30, precision: false },
+    ]
+    root.camera = [
+      {
+        orbit: { distance: 22, precision: true },
+        center: { arc: 90, distance: 10, precision: false },
+      },
+    ]
+
+    const encoded = query.encodeQS(root, false)
+    expect(encoded.m0).toBe('_a____v__._k_._u____f__')
+    expect(encoded.c).toBe('_m____v__~_a__Vqf__')
+    expect(encoded.v).toBe('6')
+
+    const decoded = query.decodeQS(encoded)
+    expect(decoded.props[0]!.motion).toEqual(root.props[0]!.motion)
+    expect(decoded.camera).toEqual(root.camera)
+    expect(query.encodeQS(decoded, false)).toEqual(encoded)
+  })
+
+  it('uses dots only between standalone Motion frames in version 6', async () => {
+    const query = await useSpiroAnimQS(VDEF_V6, useBaseQS(VDEF_V6, { charset: CHARSET_V6 }), 6)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+
+    root.props[0]!.motion = [{ distance: 10, precision: true }]
+    const oneFrame = query.encodeQS(root, false)
+    expect(oneFrame.m0).toBe('_a____v__')
+    expect(query.decodeQS(oneFrame).props[0]!.motion).toEqual(root.props[0]!.motion)
+
+    root.props[0]!.motion = [{}]
+    const emptyTrack = query.encodeQS(root, false)
+    expect(emptyTrack).not.toHaveProperty('m0')
+
+    root.props[0]!.motion = [{}, {}]
+    const twoEmptyFrames = query.encodeQS(root, false)
+    expect(twoEmptyFrames.m0).toBe('.')
+    expect(query.decodeQS(twoEmptyFrames).props[0]!.motion).toEqual(root.props[0]!.motion)
+  })
+
+  it('encodes the first two precise horizontal spacing moves in version 6', async () => {
+    const query = await useSpiroAnimQS(VDEF_V6, useBaseQS(VDEF_V6, { charset: CHARSET_V6 }), 6)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props.push(structuredClone(root.props[0]!))
+    root.props[0]!.motion = [{ precision: true, arc: 90, plane: 0, distance: 1 }]
+    root.props[1]!.motion = [{ precision: true, arc: 90, plane: 180, distance: 1 }]
+
+    const encoded = query.encodeQS(root, false)
+    expect(encoded.m0).toBe('_1_mxqv__')
+    expect(encoded.m1).toBe('_1_J1qv__')
+    expect(query.decodeQS(encoded).props.map(({ motion }) => motion)).toEqual(
+      root.props.map(({ motion }) => motion),
+    )
   })
 
   it('migrates the existing multi-prop MOVE query into optional m values', async () => {

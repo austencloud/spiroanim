@@ -104,6 +104,27 @@ describe('compressAnimation', () => {
     expect(after[0]!.center.offset).toEqual(before[0]!.center.offset)
   })
 
+  it('compacts inherited Precision without changing rendered offsets', () => {
+    const root = createRoot()
+    root.props[0]!.motion = [
+      { distance: 10, precision: false },
+      { distance: 20, precision: true },
+      { distance: 30, precision: true },
+      { distance: 40, precision: false },
+    ]
+    const before = rootCompile(root).props[0]!.motion.map(({ offset }) => offset)
+
+    compressAnimation(root)
+
+    expect(root.props[0]!.motion).toEqual([
+      { distance: 10 },
+      { distance: 20, precision: true },
+      { distance: 30 },
+      { distance: 40, precision: false },
+    ])
+    expect(rootCompile(root).props[0]!.motion.map(({ offset }) => offset)).toEqual(before)
+  })
+
   it('is idempotent', () => {
     const root = createRoot()
     compressAnimation(root)

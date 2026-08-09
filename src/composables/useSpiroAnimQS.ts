@@ -27,6 +27,7 @@ export async function useSpiroAnimQS(
     createCameraConfig,
     encodeMotionFrame,
     decodeMotionFrame,
+    omitStandaloneMotionPrefix,
   } = await loadSpiroAnimQSVersion(VER)
 
   /**
@@ -102,11 +103,16 @@ export async function useSpiroAnimQS(
       if (prop !== undefined) {
         query[`p${i}`] = encodeVar(propConfig, prop)
         if (motionConfig && (prop.motion?.length ?? 0) > 0) {
-          query[`m${i}`] = encodeVar(motionConfig, {
+          const encodedMotion = encodeVar(motionConfig, {
             anim: (prop.motion ?? []).map((frame) =>
               encodeMotionFrame ? encodeMotionFrame(frame) : frame,
             ),
           })
+          const standaloneMotion =
+            omitStandaloneMotionPrefix && encodedMotion.startsWith('.')
+              ? encodedMotion.slice(1)
+              : encodedMotion
+          if (standaloneMotion !== '') query[`m${i}`] = standaloneMotion
         }
       }
     }
@@ -191,7 +197,8 @@ export async function useSpiroAnimQS(
       const prop = Object.assign({ anim: [], motion: [] }, decodeVar(propConfig, val)) as PropData
       const motion = route[`m${i - 1}`] as string | undefined
       if (motionConfig && motion) {
-        const decoded = decodeVar(motionConfig, motion)
+        const encodedMotion = omitStandaloneMotionPrefix ? `.${motion}` : motion
+        const decoded = decodeVar(motionConfig, encodedMotion)
         const frames: MotionData[] = Array.isArray(decoded.anim)
           ? (decoded.anim as MotionData[])
           : []

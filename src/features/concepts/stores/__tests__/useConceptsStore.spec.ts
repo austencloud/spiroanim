@@ -39,10 +39,13 @@ describe('useConceptsStore', () => {
     expect(store.reversePlane).toBe(false)
     expect(store.bpm).toBe(60)
     expect(store.scale).toBe(0.8)
-    expect(store.thick).toBe(4)
+    expect(store.thick).toBe(5)
+    expect(store.spacing).toBe(1)
     expect(store.paths).toBe(true)
     expect(store.hands).toBe(false)
     expect(store.arms).toBe(true)
+    expect(store.leftPropVisible).toBe(true)
+    expect(store.rightPropVisible).toBe(true)
     app.unmount()
   })
 
@@ -54,9 +57,12 @@ describe('useConceptsStore', () => {
     store.bpm = 90
     store.scale = 1.2
     store.thick = 12
+    store.spacing = 17
     store.paths = false
     store.hands = true
     store.arms = false
+    store.leftPropVisible = false
+    store.rightPropVisible = false
 
     store.resetPatternControls()
 
@@ -67,19 +73,25 @@ describe('useConceptsStore', () => {
       bpm: store.bpm,
       scale: store.scale,
       thick: store.thick,
+      spacing: store.spacing,
       paths: store.paths,
       hands: store.hands,
       arms: store.arms,
+      leftPropVisible: store.leftPropVisible,
+      rightPropVisible: store.rightPropVisible,
     }).toEqual({
       speedRatio: '1:3',
       swapProps: false,
       reversePlane: false,
       bpm: 60,
       scale: 0.8,
-      thick: 4,
+      thick: 5,
+      spacing: 1,
       paths: true,
       hands: false,
       arms: true,
+      leftPropVisible: true,
+      rightPropVisible: true,
     })
     app.unmount()
   })
@@ -101,6 +113,7 @@ describe('useConceptsStore', () => {
         speedRatio: '1:5',
         swapProps: true,
         reversePlane: true,
+        spacing: 7,
       }),
     )
 
@@ -110,6 +123,7 @@ describe('useConceptsStore', () => {
     expect(store.speedRatio).toBe('1:5')
     expect(store.swapProps).toBe(true)
     expect(store.reversePlane).toBe(true)
+    expect(store.spacing).toBe(7)
     app.unmount()
   })
 

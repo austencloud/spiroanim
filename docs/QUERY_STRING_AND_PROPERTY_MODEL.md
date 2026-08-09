@@ -35,7 +35,7 @@ ROOT (sparse editable RootDataFinal)
         |
         +-- player-store watcher --> rootCompile() --> worker-ready data
         |
-        +-- route watcher --> encodeQS() --> ?r=...&p0=...&c=...&v=5
+        +-- route watcher --> encodeQS() --> ?r=...&p0=...&c=...&v=6
 ```
 
 Loading a shared URL follows the reverse path:
@@ -83,7 +83,7 @@ Camera frame.
 - `src/features/editor/composables/useProperties.ts` - property reads, writes, display values,
   and editor-side range constraints.
 - `src/features/editor/stores/usePropertiesStore.ts` - active prop/frame selection.
-- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv5.ts` - versioned ranges, bit
+- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv6.ts` - versioned ranges, bit
   widths, field order, and segment layouts.
 - `src/services/query/createBaseQueryCodec.ts` - integer normalization and bit packing.
 - `src/composables/useSpiroAnimQS.ts` - root/prop/frame encoding, decoding, and query history.

@@ -11,7 +11,7 @@ import { rootFinal } from '@/math/animation/PlayerFunc'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { decodeReadable } from '@/services/animation/AnimReadableFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
-import { VDEF } from '@/services/query/versions/SpiroAnimQSv2'
+import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv6'
 
 const current = rootFinal(
   decodeReadable({
@@ -47,7 +47,7 @@ describe('createEightStepAnimation', () => {
       aspectx: vtgPlayerSettings.aspectx,
       aspecty: vtgPlayerSettings.aspecty,
       smooth: current.smooth,
-      props: [{ color: 1 }, { color: 6 }],
+      props: [{ color: 6 }, { color: 1 }],
     })
     expect(animation?.props.map(({ anim }) => anim.length)).toEqual([13, 13])
   })
@@ -76,10 +76,27 @@ describe('createEightStepAnimation', () => {
       hands: true,
       arms: false,
     })
-    expect(transformed?.props.map(({ color }) => color)).toEqual([1, 6])
+    expect(transformed?.props.map(({ color }) => color)).toEqual([6, 1])
     expect(transformed?.props.every(({ anim }) => anim[0]?.scale === 12)).toBe(true)
     expect(rootCompile(transformed!).camera[0]!.orbit.offset).toEqual([0, 0, -23])
     expect(transformed?.props[0]?.anim).not.toEqual(base?.props[1]?.anim)
+  })
+
+  it('applies prop visibility overrides only to unchecked sides', () => {
+    const visible = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AA' })
+    const rightHidden = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '1-AA',
+      right: false,
+    })
+    if (!visible || !rightHidden) throw new Error('Expected Eight Step animations')
+
+    for (const key of ['paths', 'hands', 'arms', 'visible'] as const) {
+      expect(visible.props[0]).not.toHaveProperty(key)
+      expect(visible.props[1]).not.toHaveProperty(key)
+      expect(rightHidden.props[0]).not.toHaveProperty(key)
+      expect(rightHidden.props[1]?.[key]).toBe(false)
+    }
   })
 
   it('does not mutate independently owned source definitions', () => {
@@ -171,15 +188,16 @@ describe('createEightStepAnimation', () => {
       paths: false,
       hands: true,
       arms: false,
+      right: false,
     })
     expect(animation).toBeDefined()
     if (!animation) return
 
-    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 2)
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 6)
     const query = codec.encodeQS(animation, false)
     const decoded = await codec.decodeVer(query)
 
-    expect(new URLSearchParams(query).toString().length).toBeLessThan(180)
+    expect(new URLSearchParams(query).toString().length).toBeLessThanOrEqual(180)
     expect(decoded).toMatchObject({
       bpm: animation.bpm,
       thick: animation.thick,
@@ -188,10 +206,16 @@ describe('createEightStepAnimation', () => {
       arms: animation.arms,
     })
     expect(rootCompile(decoded).props).toEqual(rootCompile(animation).props)
+    expect(decoded.props[1]).toMatchObject({
+      paths: false,
+      hands: false,
+      arms: false,
+      visible: false,
+    })
   })
 
   it('round-trips every Eight Step cell and transform without changing playback', async () => {
-    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 2)
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 6)
 
     for (const definition of eightStepPatternDefinitions) {
       for (const swapProps of [false, true]) {

@@ -97,6 +97,48 @@ describe('usePropertiesStore', () => {
     expect(runtime.ROOT.value.props[0]!.anim).toEqual([{ beats: 1 }, { beats: 1 }, { beats: 1 }])
   })
 
+  it('edits inherited Precision for Motion and Camera paths', async () => {
+    const storeId = 'editor-motion-precision'
+    const player = usePlayerStore(storeId)
+    const runtime = player.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      camera: [{ orbit: { beats: 1, distance: 20 }, center: { distance: 10 } }],
+      props: [{ anim: [{}], motion: [{ distance: 10 }, { distance: 20 }] }],
+    }
+    const properties = usePropertiesStore(storeId)
+    const editor = useProperties(storeId)
+    player.PLAYING = false
+
+    properties.pFRAMES = 'motion'
+    await nextTick()
+    editor.motionSet('precision', true)
+    await nextTick()
+
+    expect(runtime.ROOT.value.props[0]!.motion[0]!.precision).toBe(true)
+    expect(runtime.COMPILED.value.props[0]!.motion[0]).toMatchObject({
+      precision: true,
+      distance: 10,
+      offset: [0, -1, 0],
+    })
+    expect(editor.motionGet('precision')).toEqual([true, true, 'true', false])
+
+    properties.pFRAMES = 'camera'
+    await nextTick()
+    editor.cameraPathSet('orbit', 'precision', true)
+    editor.cameraPathSet('center', 'precision', true)
+    await nextTick()
+
+    expect(runtime.ROOT.value.camera[0]).toMatchObject({
+      orbit: { precision: true },
+      center: { precision: true },
+    })
+    expect(runtime.COMPILED.value.camera[0]).toMatchObject({
+      orbit: { precision: true, distance: 20, offset: [0, -2, 0] },
+      center: { precision: true, distance: 10, offset: [0, -1, 0] },
+    })
+  })
+
   it('derives displayed Motion times from selected props and can show every prop', async () => {
     const storeId = 'editor-selected-motion-times'
     const player = usePlayerStore(storeId)

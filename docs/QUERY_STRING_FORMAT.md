@@ -6,7 +6,7 @@ persisted-data contract.
 
 The authoritative implementations are:
 
-- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv5.ts` for versioned ranges,
+- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv6.ts` for versioned ranges,
   bit widths, field order, and segment layouts.
 - `src/services/query/createBaseQueryCodec.ts` for integer normalization and bit packing.
 - `src/composables/useSpiroAnimQS.ts` for root, prop, and frame encoding and decoding.
@@ -24,33 +24,34 @@ Every definition is:
 Version 1 stores integer values. One all-ones bit pattern is reserved for `undefined`, so a field
 with `N` bits has at most `2^N - 1` defined codes.
 
-| Field      |       V1 range |   Bits | Stored scope and notes                                |
-| ---------- | -------------: | -----: | ----------------------------------------------------- |
-| `bpm`      |        20..520 |      9 | Root                                                  |
-| `beats`    |          1..63 |      6 | Frame                                                 |
-| `prop`     | 0..1 currently |      4 | Root and prop; range follows `PTEXT` length           |
-| `color`    | 0..6 currently |      4 | Root and prop; range follows `COLORS` length          |
-| `guides`   |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `paths`    |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `hands`    |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `arms`     |           0..1 |      2 | Root and prop in V2; decoded with `Boolean`           |
-| `visible`  |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `nodes`    |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `anchors`  |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `smooth`   |           0..1 |      2 | Defined, but not currently included in a V1 segment   |
-| `type`     | 0..1 currently |      2 | Frame; range follows `TTEXT` length                   |
-| `scale`    |        -20..40 |      6 | Frame, in internal tenths                             |
-| `depth`    |        -30..30 |      6 | Frame, in internal tenths                             |
-| `turns`    |    -1980..1980 |     12 | Frame degrees                                         |
-| `adjust`   |      -180..180 |      9 | Frame degrees                                         |
-| `arc`      |         0..360 |      9 | Frame degrees                                         |
-| `plane`    |      -180..180 |      9 | Frame degrees                                         |
-| `axis`     |      -180..180 |      9 | Frame degrees                                         |
-| `move`     |        -30..30 | 6 each | Animation frame in V1-V3; Motion frame in V4          |
-| `aspectx`  |          0..32 |      6 | Root                                                  |
-| `aspecty`  |          0..32 |      6 | Root                                                  |
-| `distance` |          4..66 |      6 | Root in V1-V4; Motion and Camera path field           |
-| `thick`    |          1..15 |      4 | Root only in V1; prop-level `thick` is not serialized |
+| Field       |       V1 range |   Bits | Stored scope and notes                                |
+| ----------- | -------------: | -----: | ----------------------------------------------------- |
+| `bpm`       |        20..520 |      9 | Root                                                  |
+| `beats`     |          1..63 |      6 | Frame                                                 |
+| `prop`      | 0..1 currently |      4 | Root and prop; range follows `PTEXT` length           |
+| `color`     | 0..6 currently |      4 | Root and prop; range follows `COLORS` length          |
+| `guides`    |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
+| `paths`     |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
+| `hands`     |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
+| `precision` |           0..1 |      2 | Motion and Camera in V6; decoded with `Boolean`       |
+| `arms`      |           0..1 |      2 | Root and prop in V2; decoded with `Boolean`           |
+| `visible`   |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
+| `nodes`     |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
+| `anchors`   |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
+| `smooth`    |           0..1 |      2 | Defined, but not currently included in a V1 segment   |
+| `type`      | 0..1 currently |      2 | Frame; range follows `TTEXT` length                   |
+| `scale`     |        -20..40 |      6 | Frame, in internal tenths                             |
+| `depth`     |        -30..30 |      6 | Frame, in internal tenths                             |
+| `turns`     |    -1980..1980 |     12 | Frame degrees                                         |
+| `adjust`    |      -180..180 |      9 | Frame degrees                                         |
+| `arc`       |         0..360 |      9 | Frame degrees                                         |
+| `plane`     |      -180..180 |      9 | Frame degrees                                         |
+| `axis`      |      -180..180 |      9 | Frame degrees                                         |
+| `move`      |        -30..30 | 6 each | Animation frame in V1-V3; Motion frame in V4          |
+| `aspectx`   |          0..32 |      6 | Root                                                  |
+| `aspecty`   |          0..32 |      6 | Root                                                  |
+| `distance`  |          4..66 |      6 | Root in V1-V4; Motion and Camera path field           |
+| `thick`     |          1..15 |      4 | Root only in V1; prop-level `thick` is not serialized |
 
 The declared range must fit while retaining the undefined code. Development builds call
 `validateQueryDefinitions()`, which logs an error for an oversized definition but does not throw.
@@ -177,6 +178,26 @@ creates a centered first frame with Center `[0, 0, 0]` and Orbit `[0, 0, -distan
 runtime root data no longer retains global Distance. Historical codecs derive Distance from the
 first Camera Orbit when an older URL must be re-encoded, preserving published URL round trips.
 
+## Version 6 Precision layout
+
+Version 6 adds inheritable `precision` to prop Motion, Camera Orbit, and Camera Center frames. It
+uses the two previously unused high bits in the final three-character Motion group:
+
+```text
+axis (9 bits), amount (7 bits), precision (2 bits)
+```
+
+Precision is deliberately the final packed value. Because fields are packed least-significant
+first, its two bits occupy the beginning of that encoded segment without increasing Motion or
+Camera frame length. `undefined`, `false`, and `true` remain distinct query values. Versions 1-5
+do not serialize Precision and compile missing values from the initial `false` default.
+
+Version 6 also removes the redundant leading `.` from standalone prop Motion (`mN`) values. A dot
+separates adjacent Motion frames; it does not precede the first frame. Consequently, a single
+completely empty Motion frame produces no `mN` parameter, while multiple empty frames retain the
+dots needed to preserve their frame count. Versions 4 and 5 keep their historical leading-dot
+format for compatibility.
+
 ## Low-level packing
 
 Versions 1 and 2 use this custom URL-safe radix-64 alphabet:
@@ -188,7 +209,7 @@ Versions 1 and 2 use this custom URL-safe radix-64 alphabet:
 This is not standard Base64. The final character, `-`, is also the maximum radix digit used for
 all-ones padding.
 
-Versions 3 through 5 use the same characters with the final pair reversed:
+Versions 3 through 6 use the same characters with the final pair reversed:
 
 ```text
 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_

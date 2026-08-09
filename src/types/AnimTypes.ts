@@ -60,6 +60,7 @@ export interface AnimData {
 
 export interface MotionData {
   beats?: number
+  precision?: boolean
   arc?: number
   plane?: number
   distance?: number
@@ -178,6 +179,7 @@ export interface AnimDataCompiled {
 
 export interface MotionDataCompiled {
   beats: number
+  precision: boolean
   arc: number
   plane: number
   distance: number

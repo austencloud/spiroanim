@@ -16,6 +16,7 @@ export type MotionCartesian = [x: number, y: number, z: number]
 export const MAX_MOTION_DISTANCE = 62
 export const DEFAULT_MOTION_AMOUNT = 50
 export const DEFAULT_CAMERA_DISTANCE = 22
+export const PRECISION_DISTANCE_DIVISOR = 10
 
 export interface MotionDirectionState {
   direction: Vector3
@@ -216,6 +217,7 @@ export const fitMotionPathEndpoint = (
 
 export const compileMotionTrack = (frames: readonly MotionData[]): MotionDataCompiled[] => {
   let beats = 1
+  let precision = false
   let shape: MotionShapeInd = MOTION_SHAPE.LINE
   let amount = DEFAULT_MOTION_AMOUNT
   const state = createMotionDirectionState()
@@ -224,12 +226,14 @@ export const compileMotionTrack = (frames: readonly MotionData[]): MotionDataCom
 
   return frames.map((frame) => {
     beats = frame.beats ?? beats
+    precision = frame.precision ?? precision
     shape = frame.shape ?? shape
     amount = frame.amount ?? amount
 
     const arc = frame.arc ?? 0
     const plane = frame.plane ?? 0
     const distance = frame.distance ?? 0
+    const renderedDistance = precision ? distance / PRECISION_DISTANCE_DIVISOR : distance
     const axis = frame.axis ?? 0
     const active =
       frame.arc !== undefined || frame.plane !== undefined || frame.distance !== undefined
@@ -239,11 +243,12 @@ export const compileMotionTrack = (frames: readonly MotionData[]): MotionDataCom
     const direction = cleanMotionVector(state.direction.toArray())
     const curve = cleanMotionVector(motionCurveDirection(state, axis))
 
-    motionPathOffset(direction, curve, distance, shape, amount, active ? 1 : 0, delta)
+    motionPathOffset(direction, curve, renderedDistance, shape, amount, active ? 1 : 0, delta)
     offset.add(delta)
 
     return {
       beats,
+      precision,
       arc,
       plane,
       distance,
@@ -289,7 +294,7 @@ export const sampleCompiledMotion = (
     motionPathOffset(
       next.direction,
       next.curve,
-      next.distance,
+      next.precision ? next.distance / PRECISION_DISTANCE_DIVISOR : next.distance,
       next.shape,
       next.amount,
       percentage,
@@ -331,7 +336,7 @@ export const sampleCompiledOrbit = (
     motionPathOffset(
       next.direction,
       next.curve,
-      next.distance,
+      next.precision ? next.distance / PRECISION_DISTANCE_DIVISOR : next.distance,
       next.shape,
       next.amount,
       percentage,

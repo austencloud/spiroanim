@@ -23,7 +23,14 @@ export const vtgThickControl = {
   min: 1,
   max: 15,
   step: 1,
-  default: 4,
+  default: 5,
+} as const
+
+export const vtgSpacingControl = {
+  min: 0,
+  max: 20,
+  step: 1,
+  default: 1,
 } as const
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -72,7 +79,7 @@ export const vtgBaseFrameSettings = {
   scale: toVtgInternalScale(vtgScaleControl.default),
 } satisfies AnimReadable
 
-export const vtgPropSettings = [{ color: 'Green' }, { color: 'Orange' }] satisfies readonly Omit<
+export const vtgPropSettings = [{ color: 'Orange' }, { color: 'Green' }] satisfies readonly Omit<
   PropReadable,
   'anim'
 >[]

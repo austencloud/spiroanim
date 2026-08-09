@@ -28,11 +28,18 @@ the Qtr builder. Eight Step sends an `EightStepPatternSelection` to its builder.
 Flip, and the player controls are held in the shared Concepts store so their applicable values
 remain unchanged when switching panels.
 
-Each VTG and Quarter Spacing slider gesture is one undo step. Scale, Thick, and BPM begin a query
+Scale, Thick, Spacing, and BPM appear below the Starting Beat and transition controls in VTG and Quarter
+Spacing. Each slider gesture is one undo step. The sliders begin a query
 history group on pointer-down or key-down and end it on pointer-up, pointer-cancel, key-up, or blur,
-matching the editor slider interaction boundary.
+matching the editor slider interaction boundary. On devices recognized by the shared mobile/iPad
+detection, sliders allow vertical touch panning. If the browser cancels a slider gesture to begin
+page scrolling, its original value is restored rather than committing the touch-down position.
 
-Paths, Hands, and Arms are native checkbox controls below the sliders. VTG and Quarter Spacing
+Paths, Hands, Arms, Left, and Right are native checkbox controls above the sliders. Left and Right
+represent `props[0]` and `props[1]` and default to checked. Unchecking one writes `paths`, `hands`,
+`arms`, and `visible` as `false` on that prop; checking it removes those prop-level overrides so
+they are inherited and omitted from the query string. At least one prop must remain enabled;
+disabling the only enabled side automatically enables the other side. VTG and Quarter Spacing
 players default to Paths on, Hands off, and Arms on; non-default choices are added to the pattern
 selection before the player animation is built. These choices are intentionally excluded from
 `usePatternPreviews`: thumbnail animations always use their canonical Paths-on, Hands-off,
@@ -45,7 +52,14 @@ Current VTG numeric behavior is:
 | BPM                    | 40..140, step 1      | Explicitly clamped by `clampVtgBpm()`                               |
 | Scale                  | 0.5..1.4, step 0.1   | Explicitly clamped, multiplied by 10, and rounded for frame `scale` |
 | Scale-derived Distance | Piecewise 14..15..25 | Interpolated from Scale and rounded to the nearest whole number     |
-| Thick                  | 1..15, step 1        | Passed directly from the UI selection                               |
+| Thick                  | 1..15, step 1        | Defaults to 5 and is passed directly from the UI selection          |
+| Spacing                | 0..20, step 1        | Alternates precise horizontal placement between the two props       |
+
+Spacing is a persisted Concepts preference and is never inferred from a loaded pattern. Its
+default is `1`. The integer value is distributed outward one step at a time: `0 -> (0, 0)`,
+`1 -> (+1, 0)`, `2 -> (+1, -1)`, `3 -> (+2, -1)`, and so on. These placements are stored as one
+Precision Motion frame per nonzero prop. In QS v6 the first positive and negative moves encode as
+`m0=_1_mxqv__` and `m1=_1_J1qv__`, respectively.
 
 The Scale-to-Distance mapping uses a pivot:
 
@@ -114,7 +128,8 @@ form and the URL form with trailing inherited frames omitted are recognized.
 
 ## Diamond and Box
 
-VTG and Quarter Spacing expose the shared Diamond/Box radio controls beside Paths, Hands, and Arms.
+VTG and Quarter Spacing expose the shared Diamond/Box radio controls after the Left and Right
+checkboxes.
 Diamond is the default and preserves the source definition, so it is omitted from compact pattern
 selections. Box rotates each prop's first-frame `arc` by 45 degrees: plane 0 uses `+45`, while plane
 180 uses `-45` so both planes rotate in the same spatial direction. The original first continuation
@@ -208,7 +223,7 @@ normally.
 
 Changes in this area should cover the applicable behavior:
 
-- BPM, Scale, Thick, and derived Distance boundaries.
+- BPM, Scale, Thick, Spacing, and derived Distance boundaries.
 - One undo step per continuous slider gesture.
 - Player-only Paths, Hands, and Arms settings remaining separate from thumbnails.
 - Pattern building, matching, Swap, Flip, Diamond/Box, fixed-shape cells, starting-beat shifts,

@@ -178,15 +178,16 @@
       <template #after-controls>
         <PatternShapeControls v-model:shape="shape" />
       </template>
+      <template #before-sliders>
+        <PatternPlaybackControls
+          v-model:beat="beat"
+          v-model:double="double"
+          v-model:transition="transition"
+          :concept="matrixConcept"
+          :transition-available="transitionAvailable"
+        />
+      </template>
     </ConceptAnimationControls>
-
-    <PatternPlaybackControls
-      v-model:beat="beat"
-      v-model:double="double"
-      v-model:transition="transition"
-      :concept="matrixConcept"
-      :transition-available="transitionAvailable"
-    />
 
     <p v-if="isQtr" class="qtr-development-note" data-role="qtr-development-note">
       Quarter Spacing is experimental and still under development. It may change drastically or be
@@ -206,6 +207,7 @@ import PatternPlaybackControls from '@/features/concepts/components/PatternPlayb
 import PatternShapeControls from '@/features/concepts/components/PatternShapeControls.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
+import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptKey, ConceptPatternSelection } from '@/features/concepts/types'
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/qtr/data/qtrLabels'
@@ -222,6 +224,7 @@ import {
   vtgPlayerSettings,
   vtgPropSettings,
   vtgScaleControl,
+  vtgSpacingControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import { findVtgPatternMatch, matchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
@@ -279,8 +282,20 @@ const isQtr = computed(() => props.concept === 'qtr')
 const matrixConcept = computed<'vtg' | 'qtr'>(() => (isQtr.value ? 'qtr' : 'vtg'))
 const speedRatios = vtgSpeedRatios
 const conceptsStore = useConceptsStore()
-const { speedRatio, swapProps, reversePlane, bpm, scale, thick, paths, hands, arms } =
-  storeToRefs(conceptsStore)
+const {
+  speedRatio,
+  swapProps,
+  reversePlane,
+  bpm,
+  scale,
+  thick,
+  spacing,
+  paths,
+  hands,
+  arms,
+  leftPropVisible,
+  rightPropVisible,
+} = storeToRefs(conceptsStore)
 const isAnti = ref(false)
 const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
@@ -381,9 +396,12 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) baseSelection.scale = scale.value
   if (thick.value !== vtgThickControl.default) baseSelection.thick = thick.value
+  if (spacing.value !== vtgSpacingControl.default) baseSelection.spacing = spacing.value
   if (paths.value !== vtgPlayerSettings.paths) baseSelection.paths = paths.value
   if (hands.value !== vtgPlayerSettings.hands) baseSelection.hands = hands.value
   if (arms.value !== vtgPlayerSettings.arms) baseSelection.arms = arms.value
+  if (!leftPropVisible.value) baseSelection.left = false
+  if (!rightPropVisible.value) baseSelection.right = false
   const selection: ConceptPatternSelection = isQtr.value
     ? { ...baseSelection, quarters: quarterMode.value }
     : baseSelection
@@ -469,9 +487,12 @@ watch(
     bpm,
     scale,
     thick,
+    spacing,
     paths,
     hands,
     arms,
+    leftPropVisible,
+    rightPropVisible,
     activeQuarterMode,
   ],
   () => {
@@ -532,6 +553,8 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     paths.value = animation.paths
     hands.value = animation.hands ?? vtgPlayerSettings.hands
     arms.value = animation.arms
+    leftPropVisible.value = isPatternPropVisible(animation.props[0])
+    rightPropVisible.value = isPatternPropVisible(animation.props[1])
     if (qtrMatch) quarterMode.value = qtrMatch.quarters
     if (shouldApplyCurrentConcept) tileToApply = tile
   } else {
@@ -769,6 +792,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   beat,
   double,
   scale,
+  spacing,
   quarters: activeQuarterMode,
 })
 
@@ -827,9 +851,12 @@ defineExpose({
   bpm,
   scale,
   thick,
+  spacing,
   paths,
   hands,
   arms,
+  leftPropVisible,
+  rightPropVisible,
   quarterMode,
   previewUrls,
 })

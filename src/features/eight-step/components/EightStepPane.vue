@@ -176,6 +176,7 @@ import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import {
   eightStepPreviewReferences,
   useEightStepPreviews,
@@ -198,6 +199,7 @@ import {
   vtgPlayerSettings,
   vtgPropSettings,
   vtgScaleControl,
+  vtgSpacingControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import type { RootDataFinal } from '@/types/AnimTypes'
@@ -285,8 +287,19 @@ const markedCellReferences: ReadonlySet<string> = new Set([
 ])
 
 const conceptsStore = useConceptsStore()
-const { swapProps, reversePlane, bpm, scale, thick, paths, hands, arms } =
-  storeToRefs(conceptsStore)
+const {
+  swapProps,
+  reversePlane,
+  bpm,
+  scale,
+  thick,
+  spacing,
+  paths,
+  hands,
+  arms,
+  leftPropVisible,
+  rightPropVisible,
+} = storeToRefs(conceptsStore)
 const selectedCell = ref<EightStepPatternDefinition>()
 const shape = ref<EightStepShape>('diamond')
 
@@ -331,6 +344,7 @@ const { previewUrls, requestPreviews } = useEightStepPreviews({
   swapProps,
   reversePlane,
   scale,
+  spacing,
   shape,
 })
 
@@ -365,9 +379,12 @@ const createSelection = (cell: EightStepPatternDefinition): EightStepPatternSele
   if (bpm.value !== vtgBpmControl.default) selection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
   if (thick.value !== vtgThickControl.default) selection.thick = thick.value
+  if (spacing.value !== vtgSpacingControl.default) selection.spacing = spacing.value
   if (paths.value !== vtgPlayerSettings.paths) selection.paths = paths.value
   if (hands.value !== vtgPlayerSettings.hands) selection.hands = hands.value
   if (arms.value !== vtgPlayerSettings.arms) selection.arms = arms.value
+  if (!leftPropVisible.value) selection.left = false
+  if (!rightPropVisible.value) selection.right = false
 
   return selection
 }
@@ -427,9 +444,25 @@ const resetPatternControls = async () => {
   if (selectedCell.value) emitPatternSelection(selectedCell.value)
 }
 
-watch([swapProps, reversePlane, shape, bpm, scale, thick, paths, hands, arms], () => {
-  if (!suppressPatternEmit && selectedCell.value) emitPatternSelection(selectedCell.value)
-})
+watch(
+  [
+    swapProps,
+    reversePlane,
+    shape,
+    bpm,
+    scale,
+    thick,
+    spacing,
+    paths,
+    hands,
+    arms,
+    leftPropVisible,
+    rightPropVisible,
+  ],
+  () => {
+    if (!suppressPatternEmit && selectedCell.value) emitPatternSelection(selectedCell.value)
+  },
+)
 
 const hydratePatternControls = (animation: RootDataFinal) => {
   if (lastEmittedSelection && matchesEightStepSelection(animation, lastEmittedSelection)) {
@@ -453,6 +486,8 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     paths.value = animation.paths
     hands.value = animation.hands ?? vtgPlayerSettings.hands
     arms.value = animation.arms
+    leftPropVisible.value = isPatternPropVisible(animation.props[0])
+    rightPropVisible.value = isPatternPropVisible(animation.props[1])
   } else {
     selectedCell.value = undefined
   }
@@ -532,9 +567,12 @@ defineExpose({
   bpm,
   scale,
   thick,
+  spacing,
   paths,
   hands,
   arms,
+  leftPropVisible,
+  rightPropVisible,
 })
 </script>
 

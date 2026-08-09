@@ -139,7 +139,8 @@ prop.anim    Animation frames
 prop.motion  Motion frames
 ```
 
-Motion frames contain `beats`, `arc`, `plane`, `distance`, `shape`, `axis`, and `amount`. Their
+Motion frames contain `beats`, `precision`, `arc`, `plane`, `distance`, `shape`, `axis`, and
+`amount`. Their
 frame boundaries do not need to align with Animation. An unused Motion track is always represented
 in memory as `motion: []`. Cartesian Move is an editor conversion into Arc, Plane, and Distance;
 X/Y/Z is not stored in Motion frames.
@@ -150,9 +151,10 @@ after the current position or selected range without invoking player point selec
 applies the declared default, inheritance, and applicability rules to props, Motion, Camera Orbit,
 and Camera Center. Fields without a declared compression rule are preserved.
 
-Motion `beats` defaults to `1` on the first frame and inherits afterward. Shape initially defaults
-to Linear and Amount initially defaults to 50%; both inherit. Arc, Plane, and Axis default to zero
-without inheriting. Distance also defaults to zero without inheriting, so empty and Beats-only
+Motion `beats` defaults to `1` on the first frame and inherits afterward. Precision initially
+defaults to `false`; Shape initially defaults to Linear and Amount initially defaults to 50%.
+Precision, Shape, and Amount inherit. Arc, Plane, and Axis default to zero without inheriting.
+Distance also defaults to zero without inheriting, so empty and Beats-only
 frames hold position.
 
 An authored Arc, Plane, or Distance marks a directional command. Arc and Plane are relative to the
@@ -199,7 +201,9 @@ camera[i].center  Motion-style world-space look-at path without Beats
 ```
 
 Center and Orbit use the same Arc, Plane, Distance, Shape, Axis, Amount, Cartesian conversion, and
-inheritance rules as Motion. They are compiled with the shared Motion path compiler and evaluated
+inheritance rules as Motion, including Precision. When Precision is enabled, authored Move and
+Distance remain unchanged while their rendered path offsets are divided by 10. They are compiled
+with the shared Motion path compiler and evaluated
 at the same absolute Camera timeline time. The rendered camera position is `center + orbit`, and
 the camera always looks at Center. Center's Linear shape uses ordinary Cartesian interpolation.
 Orbit's Linear shape instead interpolates direction around Center and interpolates radius directly,
@@ -236,6 +240,9 @@ outgoing `beats` value determines when movement begins.
 
 QS versions 1 through 4 stored a global root Distance. Version 5 migrates that value into the first
 Camera Orbit and removes Distance from finalized root settings.
+
+QS version 6 adds Precision to Motion and both Camera paths. Older versions compile its missing
+value as `false`.
 
 ## Sparse frame compaction
 

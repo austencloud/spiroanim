@@ -22,6 +22,46 @@ describe('Motion angle conversion', () => {
     ])
   })
 
+  it('renders inherited Precision at one tenth scale without changing authored values', () => {
+    const compiled = compileMotionTrack([
+      { distance: 10, precision: true },
+      { distance: 20 },
+      { distance: 30, precision: false },
+    ])
+
+    expect(
+      compiled.map(({ precision, distance, move, delta, offset }) => ({
+        precision,
+        distance,
+        move,
+        delta,
+        offset,
+      })),
+    ).toEqual([
+      {
+        precision: true,
+        distance: 10,
+        move: [0, -10, 0],
+        delta: [0, -1, 0],
+        offset: [0, -1, 0],
+      },
+      {
+        precision: true,
+        distance: 20,
+        move: [0, -20, 0],
+        delta: [0, -2, 0],
+        offset: [0, -3, 0],
+      },
+      {
+        precision: false,
+        distance: 30,
+        move: [0, -30, 0],
+        delta: [0, -30, 0],
+        offset: [0, -33, 0],
+      },
+    ])
+  })
+
   it('converts Cartesian movements into equivalent chained angles', () => {
     const cartesian = [
       [2, 0, 0],

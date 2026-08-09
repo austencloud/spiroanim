@@ -13,6 +13,12 @@
       direction remains unchanged.
     </template>
 
+    <template #precision>
+      <strong>Precision</strong><br />
+      Renders Move and Distance at one tenth of their authored values.<br />
+      <br /><i>When undefined, Precision inherits and initially defaults to Disabled.</i>
+    </template>
+
     <template #arc>
       <strong>Arc</strong><br />
       Turns the travel direction away from the preceding {{ title }} direction.<br />
@@ -86,6 +92,7 @@ const setter: SetterFunc = (key, value) =>
 const data = ref({})
 const fields = [
   { name: 'beats', text: 'Beats', component: 'Beats', undef: true },
+  { name: 'precision', text: 'Precision', component: 'Boolean', undef: true },
   { name: 'move', text: 'Move', component: 'Offset', undef: true },
   {
     name: 'arc',

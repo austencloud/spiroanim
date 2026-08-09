@@ -101,6 +101,10 @@ Important current behavior:
 - Point/path/direction controls calculate underlying `arc`, `plane`, `axis`, or `turns` values from
   compiled geometry rather than storing `point`, `path`, or `direct` fields.
 
+Motion, Camera Orbit, and Camera Center expose the shared inheritable Precision boolean. It defaults
+to Disabled and renders authored Move and Distance at one tenth scale without changing their raw
+editor or query values.
+
 ## Property getters, selection, and inheritance display
 
 `usePropertiesStore.ts` derives the currently active raw frames, compiled frames, and props from

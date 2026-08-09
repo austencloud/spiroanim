@@ -52,12 +52,14 @@ const compressAnimationFrames = (frames: AnimData[]): number => {
 const compressMotionFrames = (frames: MotionData[]): number => {
   let removed = 0
   let inheritedBeats = 1
+  let inheritedPrecision = false
   let inheritedShape: MotionShapeInd = MOTION_SHAPE.LINE
   let sourceAmount = DEFAULT_MOTION_AMOUNT
   let compressedAmount = DEFAULT_MOTION_AMOUNT
 
   for (const frame of frames) {
     const effectiveBeats = frame.beats ?? inheritedBeats
+    const effectivePrecision: boolean = frame.precision ?? inheritedPrecision
     const effectiveShape: MotionShapeInd = frame.shape ?? inheritedShape
     const effectiveAmount = frame.amount ?? sourceAmount
 
@@ -66,6 +68,12 @@ const compressMotionFrames = (frames: MotionData[]): number => {
         delete frame.beats
         removed++
       } else inheritedBeats = frame.beats
+    }
+    if (frame.precision !== undefined) {
+      if (frame.precision === inheritedPrecision) {
+        delete frame.precision
+        removed++
+      } else inheritedPrecision = frame.precision
     }
     if (frame.shape !== undefined) {
       if (frame.shape === inheritedShape) {
@@ -107,6 +115,7 @@ const compressMotionFrames = (frames: MotionData[]): number => {
     }
 
     inheritedBeats = effectiveBeats
+    inheritedPrecision = effectivePrecision
     inheritedShape = effectiveShape
     sourceAmount = effectiveAmount
   }

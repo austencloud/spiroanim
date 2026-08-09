@@ -1,5 +1,7 @@
 import type { PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
+import type { PatternPropVisibilitySelection } from '@/features/concepts/patternPropVisibility'
+import type { PatternPropSpacingSelection } from '@/features/concepts/patternPropSpacing'
 
 export type VtgRuleNumber = 1 | 2 | 3 | 4 | 5 | 6
 
@@ -25,7 +27,8 @@ export const vtgDefaultSpeedRatio = '1:3' satisfies VtgSpeedRatio
 export const vtgBeats = [1, 2, 3, 4] as const
 export type VtgBeat = (typeof vtgBeats)[number]
 
-export interface VtgPatternSelection {
+export interface VtgPatternSelection
+  extends PatternPropVisibilitySelection, PatternPropSpacingSelection {
   reference: VtgCellReference
   speedRatio: VtgSpeedRatio
   isAnti?: boolean

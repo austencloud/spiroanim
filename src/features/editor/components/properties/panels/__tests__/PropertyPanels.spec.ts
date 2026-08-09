@@ -52,6 +52,7 @@ describe('editor property panel organization', () => {
   it('keeps the independent Motion controls in their intended order', () => {
     expect(propertyNames(MotionPathPanel, 'motion-panel-order')).toEqual([
       'beats',
+      'precision',
       'move',
       'arc',
       'plane',
@@ -70,6 +71,12 @@ describe('editor property panel organization', () => {
         showBeats: false,
       }),
     ).not.toContain('beats')
+    expect(propertyNames(MotionPathPanel, 'orbit-precision', { path: 'orbit' })).toContain(
+      'precision',
+    )
+    expect(
+      propertyNames(MotionPathPanel, 'center-precision', { path: 'center', showBeats: false }),
+    ).toContain('precision')
   })
 
   it('moves global numeric controls from Root into Settings', () => {

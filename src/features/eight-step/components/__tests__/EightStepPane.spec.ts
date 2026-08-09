@@ -331,7 +331,7 @@ describe('EightStepPane', () => {
     const shapeControls = wrapper.get('[data-role="eight-step-shape-controls"]').element
     const renderControls = wrapper.get('.concept-render-options').element
     expect(
-      sliderControls.compareDocumentPosition(renderControls) & Node.DOCUMENT_POSITION_FOLLOWING,
+      renderControls.compareDocumentPosition(sliderControls) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(
       renderControls.compareDocumentPosition(shapeControls) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -363,6 +363,39 @@ describe('EightStepPane', () => {
     ])
   })
 
+  it('controls left and right prop visibility between Arms and Diamond', async () => {
+    const wrapper = mount(EightStepPane)
+    const left = wrapper.get<HTMLInputElement>('[data-role="eight-step-left"]')
+    const right = wrapper.get<HTMLInputElement>('[data-role="eight-step-right"]')
+    const options = left.element.closest('fieldset')
+
+    expect(left.element.checked).toBe(true)
+    expect(right.element.checked).toBe(true)
+    expect(
+      Array.from(options?.querySelectorAll('label span') ?? []).map((option) => option.textContent),
+    ).toEqual(['Paths', 'Hands', 'Arms', 'Left', 'Right', 'Diamond', 'Box'])
+
+    await wrapper.get('[data-cell-reference="1-AA"]').trigger('click')
+    await right.setValue(false)
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { concept: '8stp', reference: '1-AA', right: false },
+    ])
+
+    await left.setValue(false)
+    expect(left.element.checked).toBe(false)
+    expect(right.element.checked).toBe(true)
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { concept: '8stp', reference: '1-AA', left: false },
+    ])
+
+    await right.setValue(false)
+    expect(left.element.checked).toBe(true)
+    expect(right.element.checked).toBe(false)
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { concept: '8stp', reference: '1-AA', right: false },
+    ])
+  })
+
   it('places the random control in the top-left and selects from all cells', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0)
     const wrapper = mount(EightStepPane)
@@ -387,16 +420,16 @@ describe('EightStepPane', () => {
     const wrapper = mount(EightStepPane)
 
     expect(wrapper.get('[data-role="eight-step-board"]').attributes('style')).toContain(
-      '--eight-step-first-head: rgb(0,255,0)',
+      '--eight-step-first-head: rgb(255,165,0)',
     )
     expect(wrapper.get('[data-role="eight-step-board"]').attributes('style')).toContain(
-      '--eight-step-first-tether: rgb(0,85,0)',
+      '--eight-step-first-tether: rgb(85,26,0)',
     )
     expect(wrapper.get('[data-role="eight-step-board"]').attributes('style')).toContain(
-      '--eight-step-second-head: rgb(255,165,0)',
+      '--eight-step-second-head: rgb(0,255,0)',
     )
     expect(wrapper.get('[data-role="eight-step-board"]').attributes('style')).toContain(
-      '--eight-step-second-tether: rgb(85,26,0)',
+      '--eight-step-second-tether: rgb(0,85,0)',
     )
 
     await wrapper.get('[data-cell-reference="2-AE"]').trigger('click')
@@ -462,10 +495,10 @@ describe('EightStepPane', () => {
     await wrapper.get<HTMLInputElement>('[data-role="eight-step-swap"]').setValue(true)
 
     const boardStyle = wrapper.get('[data-role="eight-step-board"]').attributes('style')
-    expect(boardStyle).toContain('--eight-step-first-head: rgb(255,165,0)')
-    expect(boardStyle).toContain('--eight-step-first-tether: rgb(85,26,0)')
-    expect(boardStyle).toContain('--eight-step-second-head: rgb(0,255,0)')
-    expect(boardStyle).toContain('--eight-step-second-tether: rgb(0,85,0)')
+    expect(boardStyle).toContain('--eight-step-first-head: rgb(0,255,0)')
+    expect(boardStyle).toContain('--eight-step-first-tether: rgb(0,85,0)')
+    expect(boardStyle).toContain('--eight-step-second-head: rgb(255,165,0)')
+    expect(boardStyle).toContain('--eight-step-second-tether: rgb(85,26,0)')
   })
 
   it('uses and resets the shared concept controls', async () => {
@@ -475,6 +508,7 @@ describe('EightStepPane', () => {
     store.bpm = 84
     store.scale = 1.2
     store.thick = 11
+    store.spacing = 13
     store.paths = false
     store.hands = true
     store.arms = false
@@ -491,6 +525,9 @@ describe('EightStepPane', () => {
       '1.2',
     )
     expect(wrapper.get<HTMLInputElement>('[data-role="eight-step-thick"]').element.value).toBe('11')
+    expect(wrapper.get<HTMLInputElement>('[data-role="eight-step-spacing"]').element.value).toBe(
+      '13',
+    )
 
     await wrapper.get('[data-role="eight-step-reset"]').trigger('click')
 
@@ -498,7 +535,8 @@ describe('EightStepPane', () => {
     expect(store.reversePlane).toBe(false)
     expect(store.bpm).toBe(60)
     expect(store.scale).toBe(0.8)
-    expect(store.thick).toBe(4)
+    expect(store.thick).toBe(5)
+    expect(store.spacing).toBe(1)
     expect(store.paths).toBe(true)
     expect(store.hands).toBe(false)
     expect(store.arms).toBe(true)
@@ -511,6 +549,7 @@ describe('EightStepPane', () => {
     store.bpm = 84
     store.scale = 1.2
     store.thick = 11
+    store.spacing = 13
     store.paths = false
     store.hands = true
     store.arms = false
@@ -528,6 +567,7 @@ describe('EightStepPane', () => {
           bpm: 84,
           scale: 1.2,
           thick: 11,
+          spacing: 13,
           paths: false,
           hands: true,
           arms: false,

@@ -9,6 +9,8 @@ import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
+import { applyPatternPropVisibility } from '@/features/concepts/patternPropVisibility'
+import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
 
 const addPropDefaults = (pattern: EightStepReadableAnimation): EightStepReadableAnimation => ({
   ...pattern,
@@ -42,13 +44,20 @@ export const createEightStepAnimation = (
   const selectedPattern = buildEightStepPattern(selection)
   if (!selectedPattern) return undefined
 
-  const pattern = addPropDefaults({
+  const patternWithDefaults = addPropDefaults({
     ...selectedPattern,
     ...(selection.thick === undefined ? {} : { thick: selection.thick }),
     paths: selection.paths ?? vtgPlayerSettings.paths,
     hands: selection.hands ?? vtgPlayerSettings.hands,
     arms: selection.arms ?? vtgPlayerSettings.arms,
   })
+  const pattern = {
+    ...patternWithDefaults,
+    props: applyPatternPropVisibility(
+      applyPatternPropSpacing(patternWithDefaults.props, selection),
+      selection,
+    ),
+  }
   const decoded = decodeReadable(mergeWithCurrentAnimation(current, pattern))
 
   return {
