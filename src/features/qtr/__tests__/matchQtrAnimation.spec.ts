@@ -110,6 +110,27 @@ describe('Qtr animation matching', () => {
     })
   })
 
+  it('recovers the VTG transition by matching only its doubled base cycle', () => {
+    const selection = {
+      reference: '1-1',
+      speedRatio: '1:3',
+      quarters: 1,
+      beat: 2,
+      transition: true,
+      bpm: 79,
+    } as const satisfies QtrPatternSelection
+
+    expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
+      ...selection,
+      double: true,
+      isAnti: false,
+      swapProps: false,
+      reversePlane: false,
+      bpm: 79,
+      scale: 0.8,
+    })
+  })
+
   it('keeps the fixed-shape cells unchanged when Qtr uses Box mode', () => {
     for (const reference of vtgFixedShapeCells) {
       const selection = {

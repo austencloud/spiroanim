@@ -73,7 +73,12 @@ export const createQtrAnimation = (
   current: RootDataFinal,
   selection: QtrPatternSelection,
 ): RootDataFinal | undefined => {
-  const animation = createVtgAnimation(current, { ...selection, beat: 1, double: false })
+  const animation = createVtgAnimation(current, {
+    ...selection,
+    beat: 1,
+    double: false,
+    transition: false,
+  })
   if (!animation) return undefined
 
   return applyVtgPlaybackControls(
@@ -85,7 +90,12 @@ export const createQtrAnimation = (
 export const createDefaultQtrAnimation = (
   selection: QtrPatternSelection,
 ): RootDataFinal | undefined => {
-  const animation = createDefaultVtgAnimation({ ...selection, beat: 1, double: false })
+  const animation = createDefaultVtgAnimation({
+    ...selection,
+    beat: 1,
+    double: false,
+    transition: false,
+  })
   if (!animation) return undefined
 
   return applyVtgPlaybackControls(

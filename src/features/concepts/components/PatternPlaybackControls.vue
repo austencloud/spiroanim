@@ -16,13 +16,25 @@
     </div>
 
     <button
+      v-if="showDouble"
       type="button"
-      :class="{ 'pattern-playback-controls__double--active': double }"
+      :class="{ 'pattern-playback-controls__button--active': double }"
       :aria-pressed="double"
       :data-role="`${concept}-double`"
-      @click="double = !double"
+      @click="toggleDouble"
     >
       Double
+    </button>
+
+    <button
+      v-if="transitionAvailable"
+      type="button"
+      :class="{ 'pattern-playback-controls__button--active': transition }"
+      :aria-pressed="transition"
+      :data-role="`${concept}-transition`"
+      @click="toggleTransition"
+    >
+      {{ concept === 'vtg' ? "QTR Trans'" : "VTG Trans'" }}
     </button>
   </fieldset>
 </template>
@@ -31,10 +43,33 @@
 import { vtgBeats } from '@/features/vtg/types'
 import type { VtgBeat } from '@/features/vtg/types'
 
-defineProps<{ concept: 'vtg' | 'qtr' }>()
+withDefaults(
+  defineProps<{
+    concept: 'vtg' | 'qtr'
+    showDouble?: boolean
+    transitionAvailable?: boolean
+  }>(),
+  {
+    showDouble: false,
+    transitionAvailable: true,
+  },
+)
 
 const beat = defineModel<VtgBeat>('beat', { required: true })
 const double = defineModel<boolean>('double', { required: true })
+const transition = defineModel<boolean>('transition', { required: true })
+
+const toggleDouble = () => {
+  const nextDouble = !double.value
+  double.value = nextDouble
+  if (!nextDouble) transition.value = false
+}
+
+const toggleTransition = () => {
+  const nextTransition = !transition.value
+  transition.value = nextTransition
+  double.value = nextTransition
+}
 </script>
 
 <style scoped>
@@ -89,7 +124,7 @@ const double = defineModel<boolean>('double', { required: true })
 }
 
 .pattern-playback-controls__beats input:checked + span,
-.pattern-playback-controls .pattern-playback-controls__double--active {
+.pattern-playback-controls .pattern-playback-controls__button--active {
   color: var(--color-on-action-primary);
   background: var(--color-action-primary);
   border-color: var(--color-action-primary);

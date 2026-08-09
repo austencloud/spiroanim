@@ -135,6 +135,21 @@ describe('createVtgAnimation', () => {
     }
   })
 
+  it('ignores the reciprocal transition at 1:1 while preserving Double', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:1',
+      double: true,
+    } as const satisfies VtgPatternSelection
+
+    expect(
+      createVtgAnimationForSelection(createCurrentAnimation(), {
+        ...selection,
+        transition: true,
+      }),
+    ).toEqual(createVtgAnimationForSelection(createCurrentAnimation(), selection))
+  })
+
   it('rotates only the initial prop arcs by 45 degrees in Box mode', () => {
     for (const reversePlane of [false, true]) {
       const baseSelection = {

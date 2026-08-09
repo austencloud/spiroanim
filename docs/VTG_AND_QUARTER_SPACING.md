@@ -72,7 +72,7 @@ part of the pattern signature, so a distance mismatch does not by itself stop a 
 indexes derive shifted and doubled variants incrementally from each base pattern and are built only
 for the active concept unless fallback matching is required.
 
-## Starting beat and Double
+## Starting beat, Double, and QTR/VTG transitions
 
 VTG and Quarter Spacing expose Starting Beat radios `1` through `4` at the bottom of the Concepts
 pane. Beat `1` is the default. Each following value applies one additional closed-cycle frame shift
@@ -82,14 +82,35 @@ Spacing applies this shift to the completed QTR animation, after its quarter-arc
 control changes only the cycle's starting point rather than which source frame receives the QTR
 adjustment.
 
-The adjacent Double toggle subdivides every authored frame interval in two and doubles the stored
-animation BPM. The added frame is the midpoint of the interval: incremental turns and arcs are
+The Double control is currently hidden but retained for future experiments. Double subdivision
+subdivides every authored frame interval in two and doubles the stored animation BPM. The added
+frame is the midpoint of the interval: incremental turns and arcs are
 halved, while scale, depth, and adjustment values are interpolated. The BPM control continues to
 show the user's undoubled value, and matching maps the stored BPM back to that displayed value.
 Because both rate and frame count change by the same multiplier, total duration, interval endpoints,
 and visible motion remain unchanged. Subdivision derives its output from the animation's actual
 frame tracks and does not assume a fixed pattern length. Added frames remain sparse: inherited
 animation values and zero-angle defaults are omitted unless a frame must explicitly change them.
+
+The reciprocal transition toggle is labeled `QTR Trans'` in VTG and `VTG Trans'` in Quarter
+Spacing. Enabling it also enables Double, and disabling it turns Double off. Starting from the
+doubled closed cycle, the transform inserts one
+doubled beat before each relationship change, changes alternating prop tracks, and plays one full
+derived cycle between changes. For a change frame, Plane is 180 and Turns is derived as
+`-turns - 2 * arc`. This reverses the local rotation axis while preserving the compiled prop
+rotation at the handoff. The process visits each prop twice, returning both tracks to their original
+turn values before the animation loops into its original doubled cycle. Cycle and transition sizes
+come from the animation and subdivision multiplier rather than fixed frame counts.
+
+The transition is temporarily unavailable at 1:1. Its button is hidden and the builder ignores the
+transition flag at that ratio. The pane retains the local, non-persisted toggle preference while the
+user remains on the pane, so switching back to 1:3 or 1:5 reapplies it automatically. Resetting or
+remounting the pane clears that preference normally.
+
+Matching does not precompute the extended transition animations. Their derived frame-count shape is
+used to recover the doubled base cycle, which is matched through the existing Double index; the
+remaining extended frames are treated as the transition produced by this control. Both the in-memory
+form and the URL form with trailing inherited frames omitted are recognized.
 
 ## Diamond and Box
 
@@ -130,12 +151,13 @@ antiparallel timing is Split (`S`), and orthogonal timing is Quarter (`Q`); dire
 (`S`) or Opposite (`O`). The generated tooltip expands those letters as
 `Hands: Timing / Direction` and `Props: Timing / Direction`.
 
-Beat and Double are playback-only controls and are removed before relationship classification.
+Beat, Double, and the QTR/VTG transition are playback-only controls and are removed before
+relationship classification.
 This distinction matters for unequal speed ratios: advancing both tracks by one beat can change
 their instantaneous Together/Split checkpoint because their relative phase advances at the
 difference between their rates. That checkpoint change does not change the semantic catalog
-pattern. Beat and Double changes still rerun semantic classification so this invariant remains
-validated in the reactive UI. Shape, Speed Ratio, Anti, Swap, Flip, and the Qtr mode remain part of
+pattern. Changes to these playback controls still rerun semantic classification so this invariant
+remains validated in the reactive UI. Shape, Speed Ratio, Anti, Swap, Flip, and the Qtr mode remain part of
 the relationship input because they define the pattern itself rather than only its playback origin
 or subdivision.
 
@@ -190,7 +212,7 @@ Changes in this area should cover the applicable behavior:
 - One undo step per continuous slider gesture.
 - Player-only Paths, Hands, and Arms settings remaining separate from thumbnails.
 - Pattern building, matching, Swap, Flip, Diamond/Box, fixed-shape cells, starting-beat shifts,
-  Double subdivision, speed ratios, and both Qtr modes.
+  Double subdivision, reciprocal QTR/VTG transitions, speed ratios, and both Qtr modes.
 - Relationship classifications derived from compiled geometry, including the `6-3` `QO/QS`
   reference.
 - Header labels, tooltip availability, dividers, colors, and prop placement.

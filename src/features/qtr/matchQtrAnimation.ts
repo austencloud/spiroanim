@@ -7,11 +7,12 @@ import {
 } from '@/features/vtg/math/createVtgAnimationSignature'
 import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import type { VtgCellReference, VtgRuleNumber } from '@/features/vtg/types'
-import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { supportsVtgQtrTransition, vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import {
   doubleAnimationPlayback,
   doublePlaybackMultiplier,
 } from '@/math/animation/subdivideAnimationPlayback'
+import { getAlternatingPatternBase } from '@/math/animation/alternatePatternPlayback'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
 
@@ -105,22 +106,32 @@ const buildCandidateCache = () => {
 }
 
 export const findQtrPatternMatches = (animation: RootDataFinal): readonly QtrPatternMatch[] => {
-  const scale = getVtgAnimationScale(animation)
+  const alternatingBase = getAlternatingPatternBase(animation)
+  const matchingAnimation = alternatingBase ?? animation
+  const scale = getVtgAnimationScale(matchingAnimation)
   if (scale === undefined) return []
 
-  const signature = createVtgAnimationSignature(animation)
+  const signature = createVtgAnimationSignature(matchingAnimation)
   if (!signature) return []
 
   const candidates = candidateCache ?? buildCandidateCache()
-  return (candidates.get(signature) ?? []).map((candidate) => ({
-    ...candidate,
-    bpm: candidate.double ? animation.bpm / doublePlaybackMultiplier : animation.bpm,
-    scale,
-  }))
+  return (candidates.get(signature) ?? [])
+    .filter(
+      (candidate) =>
+        !alternatingBase || (candidate.double && supportsVtgQtrTransition(candidate.speedRatio)),
+    )
+    .map((candidate) => ({
+      ...candidate,
+      ...(alternatingBase ? { transition: true } : undefined),
+      bpm: candidate.double ? animation.bpm / doublePlaybackMultiplier : animation.bpm,
+      scale,
+    }))
 }
 
 const playbackTransformationCount = (match: QtrPatternMatch) =>
-  Number((match.beat ?? 1) !== 1) + Number(match.double === true)
+  Number((match.beat ?? 1) !== 1) +
+  Number(match.double === true) +
+  Number(match.transition === true)
 
 export const findQtrPatternMatch = (animation: RootDataFinal): QtrPatternMatch | undefined =>
   [...findQtrPatternMatches(animation)].sort(

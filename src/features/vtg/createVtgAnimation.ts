@@ -2,12 +2,14 @@ import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { toConceptPreviewAnimation } from '@/features/concepts/data/toConceptPreviewAnimation'
 import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
+import { supportsVtgQtrTransition } from '@/features/vtg/types'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
+import { alternatePatternPlayback } from '@/math/animation/alternatePatternPlayback'
 
 const vtgFrameCount = 5
 
@@ -46,12 +48,16 @@ const vtgStandaloneBase = rootFinal(
 
 export const applyVtgPlaybackControls = (
   animation: RootDataFinal,
-  selection: Pick<VtgPatternSelection, 'beat' | 'double'>,
+  selection: Pick<VtgPatternSelection, 'speedRatio' | 'beat' | 'double' | 'transition'>,
 ): RootDataFinal | undefined => {
   const shifted = shiftVtgStartingBeat(animation, selection.beat ?? 1)
-  if (!shifted || !selection.double) return shifted
+  const transition = selection.transition === true && supportsVtgQtrTransition(selection.speedRatio)
+  if (!shifted || (!selection.double && !transition)) return shifted
 
-  return doubleAnimationPlayback(shifted)
+  const doubled = doubleAnimationPlayback(shifted)
+  if (!doubled || !transition) return doubled
+
+  return alternatePatternPlayback(doubled)
 }
 
 /**

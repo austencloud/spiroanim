@@ -48,14 +48,19 @@ describe('describePatternRelationships', () => {
 
         for (const beat of [1, 2, 3, 4] as const) {
           for (const double of booleanOptions) {
-            const actual = describePatternSelectionRelationships({
-              reference,
-              speedRatio: '1:3',
-              beat,
-              double,
-            }).label
-            if (actual !== expected) {
-              mismatches.push(`${reference}/${beat}/${double}: ${expected} -> ${actual}`)
+            for (const transition of booleanOptions) {
+              const actual = describePatternSelectionRelationships({
+                reference,
+                speedRatio: '1:3',
+                beat,
+                double,
+                transition,
+              }).label
+              if (actual !== expected) {
+                mismatches.push(
+                  `${reference}/${beat}/${double}/${transition}: ${expected} -> ${actual}`,
+                )
+              }
             }
           }
         }
@@ -78,17 +83,20 @@ describe('describePatternRelationships', () => {
         for (const quarters of qtrModes) {
           for (const beat of [1, 2, 3, 4] as const) {
             for (const double of booleanOptions) {
-              const actual = describePatternSelectionRelationships({
-                reference,
-                speedRatio: '1:3',
-                quarters,
-                beat,
-                double,
-              }).label
-              if (actual !== expected) {
-                mismatches.push(
-                  `${reference}/${quarters}/${beat}/${double}: ${expected} -> ${actual}`,
-                )
+              for (const transition of booleanOptions) {
+                const actual = describePatternSelectionRelationships({
+                  reference,
+                  speedRatio: '1:3',
+                  quarters,
+                  beat,
+                  double,
+                  transition,
+                }).label
+                if (actual !== expected) {
+                  mismatches.push(
+                    `${reference}/${quarters}/${beat}/${double}/${transition}: ${expected} -> ${actual}`,
+                  )
+                }
               }
             }
           }

@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import QtrPane from '@/features/qtr/components/QtrPane.vue'
 import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
@@ -392,7 +393,7 @@ describe('VtgPane', () => {
     }
   })
 
-  it('offers starting-beat radios and Double at the bottom for VTG and Qtr', async () => {
+  it('offers starting-beat and reciprocal transition controls while keeping Double hidden', async () => {
     for (const [Pane, concept, quarters] of [
       [VtgPane, 'vtg', undefined],
       [QtrPane, 'qtr', 1],
@@ -400,13 +401,14 @@ describe('VtgPane', () => {
       const wrapper = mount(Pane)
       const firstBeat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat-1"]`)
       const thirdBeat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat-3"]`)
-      const double = wrapper.get<HTMLButtonElement>(`[data-role="${concept}-double"]`)
+      const transition = wrapper.get<HTMLButtonElement>(`[data-role="${concept}-transition"]`)
 
       expect(firstBeat.element.checked).toBe(true)
       expect(thirdBeat.element.checked).toBe(false)
       expect(firstBeat.element.name).toBe(`${concept}-beat`)
-      expect(double.text()).toBe('Double')
-      expect(double.attributes('aria-pressed')).toBe('false')
+      expect(wrapper.find(`[data-role="${concept}-double"]`).exists()).toBe(false)
+      expect(transition.text()).toBe(concept === 'vtg' ? "QTR Trans'" : "VTG Trans'")
+      expect(transition.attributes('aria-pressed')).toBe('false')
 
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
       const initialLabels = wrapper.findAll('[data-role="vtg-tile"]').map((tile) => tile.text())
@@ -414,13 +416,9 @@ describe('VtgPane', () => {
       expect(wrapper.findAll('[data-role="vtg-tile"]').map((tile) => tile.text())).toEqual(
         initialLabels,
       )
-      await double.trigger('click')
-      expect(wrapper.findAll('[data-role="vtg-tile"]').map((tile) => tile.text())).toEqual(
-        initialLabels,
-      )
-
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('60')
-      expect(double.attributes('aria-pressed')).toBe('true')
+      await transition.trigger('click')
+      expect(transition.attributes('aria-pressed')).toBe('true')
       expect(wrapper.emitted('patternSelect')).toEqual([
         [
           {
@@ -443,10 +441,69 @@ describe('VtgPane', () => {
             speedRatio: '1:3',
             beat: 3,
             double: true,
+            transition: true,
             ...(quarters === undefined ? {} : { quarters }),
           },
         ],
       ])
+
+      await transition.trigger('click')
+      expect(transition.attributes('aria-pressed')).toBe('false')
+      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+        {
+          reference: '5-1',
+          speedRatio: '1:3',
+          beat: 3,
+          ...(quarters === undefined ? {} : { quarters }),
+        },
+      ])
+    }
+  })
+
+  it('temporarily hides the transition at 1:1 and restores its local preference', async () => {
+    for (const [Pane, concept, quarters] of [
+      [VtgPane, 'vtg', undefined],
+      [QtrPane, 'qtr', 1],
+    ] as const) {
+      const wrapper = mount(Pane)
+      await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+      await wrapper.get(`[data-role="${concept}-transition"]`).trigger('click')
+
+      const oneToOne = wrapper.get<HTMLInputElement>('input[value="1:1"]')
+      await oneToOne.setValue()
+
+      expect(oneToOne.element.checked).toBe(true)
+      expect(wrapper.getComponent(PatternPlaybackControls).props('transitionAvailable')).toBe(false)
+      expect(wrapper.find(`[data-role="${concept}-transition"]`).exists()).toBe(false)
+      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+        {
+          reference: '5-1',
+          speedRatio: '1:1',
+          double: true,
+          ...(quarters === undefined ? {} : { quarters }),
+        },
+      ])
+
+      await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
+
+      const restored = wrapper.get(`[data-role="${concept}-transition"]`)
+      expect(restored.attributes('aria-pressed')).toBe('true')
+      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+        {
+          reference: '5-1',
+          speedRatio: '1:5',
+          double: true,
+          transition: true,
+          ...(quarters === undefined ? {} : { quarters }),
+        },
+      ])
+
+      wrapper.unmount()
+      const remounted = mount(Pane)
+      expect(remounted.get(`[data-role="${concept}-transition"]`).attributes('aria-pressed')).toBe(
+        'false',
+      )
+      remounted.unmount()
     }
   })
 

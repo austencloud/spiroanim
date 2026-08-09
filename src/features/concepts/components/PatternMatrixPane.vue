@@ -180,7 +180,13 @@
       </template>
     </ConceptAnimationControls>
 
-    <PatternPlaybackControls v-model:beat="beat" v-model:double="double" :concept="matrixConcept" />
+    <PatternPlaybackControls
+      v-model:beat="beat"
+      v-model:double="double"
+      v-model:transition="transition"
+      :concept="matrixConcept"
+      :transition-available="transitionAvailable"
+    />
 
     <p v-if="isQtr" class="qtr-development-note" data-role="qtr-development-note">
       Quarter Spacing is experimental and still under development. It may change drastically or be
@@ -232,7 +238,7 @@ import type {
   VtgRuleSpec,
   VtgPatternSelection,
 } from '@/features/vtg/types'
-import { vtgSpeedRatios } from '@/features/vtg/types'
+import { supportsVtgQtrTransition, vtgSpeedRatios } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import { toColor } from '@/utils/UtilFunc'
@@ -279,6 +285,8 @@ const isAnti = ref(false)
 const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
 const double = ref(false)
+const transition = ref(false)
+const transitionAvailable = computed(() => supportsVtgQtrTransition(speedRatio.value))
 const quarterMode = ref<QtrMode>(1)
 const activeQuarterMode = computed<QtrMode | false>(() => (isQtr.value ? quarterMode.value : false))
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
@@ -331,6 +339,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       ...(shape.value === 'box' ? { shape: shape.value } : undefined),
       ...(beat.value === 1 ? undefined : { beat: beat.value }),
       ...(double.value ? { double: true } : undefined),
+      ...(transition.value && transitionAvailable.value ? { transition: true } : undefined),
     }
     const selection: VtgPatternSelection | QtrPatternSelection = isQtr.value
       ? { ...baseSelection, quarters: quarterMode.value }
@@ -368,6 +377,7 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (shape.value === 'box') baseSelection.shape = shape.value
   if (beat.value !== 1) baseSelection.beat = beat.value
   if (double.value) baseSelection.double = true
+  if (transition.value && transitionAvailable.value) baseSelection.transition = true
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) baseSelection.scale = scale.value
   if (thick.value !== vtgThickControl.default) baseSelection.thick = thick.value
@@ -440,6 +450,7 @@ const resetPatternControls = async () => {
   shape.value = 'diamond'
   beat.value = 1
   double.value = false
+  transition.value = false
   quarterMode.value = 1
   await nextTick()
   suppressPatternEmit = false
@@ -454,6 +465,7 @@ watch(
     shape,
     beat,
     double,
+    transition,
     bpm,
     scale,
     thick,
@@ -513,6 +525,7 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     shape.value = match.shape ?? 'diamond'
     beat.value = match.beat ?? 1
     double.value = match.double ?? false
+    transition.value = match.transition ?? false
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
@@ -527,6 +540,7 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     shape.value = 'diamond'
     beat.value = 1
     double.value = false
+    transition.value = false
     quarterMode.value = 1
   }
 
@@ -547,6 +561,7 @@ const selectInitialRandomPattern = () => {
   shape.value = 'diamond'
   beat.value = 1
   double.value = false
+  transition.value = false
   quarterMode.value = 1
   selectRandomTile()
 
@@ -807,6 +822,8 @@ defineExpose({
   shape,
   beat,
   double,
+  transition,
+  transitionAvailable,
   bpm,
   scale,
   thick,

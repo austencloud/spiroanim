@@ -11,10 +11,12 @@ import type {
   VtgRuleNumber,
 } from '@/features/vtg/types'
 import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { supportsVtgQtrTransition } from '@/features/vtg/types'
 import {
   doubleAnimationPlayback,
   doublePlaybackMultiplier,
 } from '@/math/animation/subdivideAnimationPlayback'
+import { getAlternatingPatternBase } from '@/math/animation/alternatePatternPlayback'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
 
@@ -119,11 +121,18 @@ const findBaseVtgPatternMatches = (animation: RootDataFinal): readonly VtgPatter
 }
 
 export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPatternMatch[] => {
-  return findBaseVtgPatternMatches(animation)
+  const alternatingBase = getAlternatingPatternBase(animation)
+  if (!alternatingBase) return findBaseVtgPatternMatches(animation)
+
+  return findBaseVtgPatternMatches(alternatingBase)
+    .filter((match) => match.double && supportsVtgQtrTransition(match.speedRatio))
+    .map((match) => ({ ...match, transition: true }))
 }
 
 const transformationCount = (match: VtgPatternMatch) =>
-  Number((match.beat ?? 1) !== 1) + Number(match.double === true)
+  Number((match.beat ?? 1) !== 1) +
+  Number(match.double === true) +
+  Number(match.transition === true)
 
 /**
  * Prefers the original playback when a shifted or doubled candidate is also

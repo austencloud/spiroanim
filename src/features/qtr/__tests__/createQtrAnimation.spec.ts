@@ -129,4 +129,17 @@ describe('createQtrAnimation', () => {
 
     expect(shifted).toEqual(shiftVtgStartingBeat(completed, beat))
   })
+
+  it('ignores the reciprocal transition at 1:1 while preserving Double', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:1',
+      quarters: 1,
+      double: true,
+    } as const satisfies QtrPatternSelection
+
+    expect(
+      createQtrAnimation(createCurrentAnimation(), { ...selection, transition: true }),
+    ).toEqual(createQtrAnimation(createCurrentAnimation(), selection))
+  })
 })

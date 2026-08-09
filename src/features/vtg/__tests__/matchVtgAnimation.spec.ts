@@ -101,6 +101,26 @@ describe('VTG animation matching', () => {
     })
   })
 
+  it('recovers the QTR transition by matching only its doubled base cycle', () => {
+    const selection = {
+      reference: '1-1',
+      speedRatio: '1:3',
+      beat: 2,
+      transition: true,
+      bpm: 83,
+    } as const satisfies VtgPatternSelection
+
+    expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual({
+      ...selection,
+      double: true,
+      isAnti: false,
+      swapProps: false,
+      reversePlane: false,
+      bpm: 83,
+      scale: 0.8,
+    })
+  })
+
   it('recovers every authored starting beat for every VTG cell', () => {
     const mismatches: string[] = []
 
