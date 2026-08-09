@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
+import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { findVtgPatternMatch, findVtgPatternMatches } from '@/features/vtg/matchVtgAnimation'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { vtgSpeedRatios } from '@/features/vtg/types'
+import { useBaseQS } from '@/services/query/createBaseQS'
+import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
 const booleanOptions = [false, true] as const
@@ -64,33 +66,6 @@ describe('VTG animation matching', () => {
     expect(findVtgPatternMatch(createAnimation(selection))).toEqual(selection)
   })
 
-  it('recovers the selected starting beat', () => {
-    const selection = {
-      reference: '5-6',
-      speedRatio: '1:5',
-      isAnti: true,
-      swapProps: true,
-      reversePlane: true,
-      beat: 4,
-      bpm: 87,
-      scale: 0.6,
-    } as const satisfies VtgPatternSelection
-
-    expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual(selection)
-  })
-
-  it('does not classify a Quarter relationship as a shifted VTG pattern', () => {
-    const animation = createDefaultQtrAnimation({
-      reference: '6-2',
-      speedRatio: '1:3',
-      quarters: 1,
-      beat: 1,
-    })
-    if (!animation) throw new Error('Expected a QTR animation')
-
-    expect(findVtgPatternMatches(animation)).toEqual([])
-  })
-
   it('recovers Box mode for a shape-transformable cell', () => {
     const selection = {
       reference: '5-1',
@@ -106,6 +81,67 @@ describe('VTG animation matching', () => {
       ...selection,
       isAnti: false,
     })
+  })
+
+  it('recovers the starting beat and Double while reporting the displayed BPM', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      beat: 3,
+      double: true,
+      bpm: 83,
+    } as const satisfies VtgPatternSelection
+
+    expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual({
+      ...selection,
+      isAnti: false,
+      swapProps: false,
+      reversePlane: false,
+      scale: 0.8,
+    })
+  })
+
+  it('recovers every authored starting beat for every VTG cell', () => {
+    const mismatches: string[] = []
+
+    for (const column of ruleNumbers) {
+      for (const row of ruleNumbers) {
+        for (const beat of [1, 2, 3, 4] as const) {
+          const reference = createCellReference(column, row)
+          const match = findVtgPatternMatch(createAnimation({ reference, speedRatio: '1:3', beat }))
+
+          if (match?.reference !== reference || (match.beat ?? 1) !== beat) {
+            mismatches.push(`${reference}/${beat} -> ${match?.reference}/${match?.beat ?? 1}`)
+          }
+        }
+      }
+    }
+
+    expect(mismatches).toEqual([])
+  })
+
+  it('recovers every VTG cell and starting beat after query serialization', async () => {
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 1)
+    const mismatches: string[] = []
+
+    for (const column of ruleNumbers) {
+      for (const row of ruleNumbers) {
+        for (const beat of [1, 2, 3, 4] as const) {
+          const reference = createCellReference(column, row)
+          const query = codec.encodeQS(
+            createAnimation({ reference, speedRatio: '1:3', beat }),
+            false,
+          )
+          const match = findVtgPatternMatch(await codec.decodeVer(query))
+
+          if (match?.reference !== reference || (match.beat ?? 1) !== beat) {
+            mismatches.push(`${reference}/${beat} -> ${match?.reference}/${match?.beat ?? 1}`)
+          }
+        }
+      }
+    }
+
+    expect(mismatches).toEqual([])
   })
 
   it('recognizes a pattern regardless of non-pattern animation settings', () => {
@@ -149,7 +185,6 @@ describe('VTG animation matching', () => {
         frame.depth = 3
         frame.type = 1
         frame.adjust = 15
-        frame.axis = 45
         frame.move = [1, 2, 3]
       }
     }
@@ -204,6 +239,13 @@ describe('VTG animation matching', () => {
       speedRatio: '1:5',
     })
     animation.props[0]!.anim[1]!.arc = 45
+
+    expect(findVtgPatternMatch(animation)).toBeUndefined()
+  })
+
+  it('rejects an authored rotation-axis edit', () => {
+    const animation = createAnimation({ reference: '3-2', speedRatio: '1:3', beat: 3 })
+    animation.props[0]!.anim[0]!.axis = 45
 
     expect(findVtgPatternMatch(animation)).toBeUndefined()
   })

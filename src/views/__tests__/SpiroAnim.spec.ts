@@ -197,7 +197,6 @@ describe('SpiroAnim view', () => {
       reference: '6-2',
       speedRatio: '1:3',
       quarters: 1,
-      beat: 1,
     })
     await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('qtr')
     await flushPromises()
@@ -205,7 +204,7 @@ describe('SpiroAnim view', () => {
     expect(playerRoot.value).toEqual(expectedQuarter)
 
     const expectedVtgAgain = createVtgAnimation(playerRoot.value, {
-      reference: '6-1',
+      reference: '6-2',
       speedRatio: '1:3',
     })
     await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('vtg')

@@ -156,13 +156,11 @@ Eight Step has one unlabeled pair of radio controls immediately to the right of 
 Arms: Diamond and Box. Diamond is the default and reproduces the original generated definitions.
 Because it is the default, Diamond is omitted from a compact selection.
 
-Box derives a spherical midpoint for each source prop from frame 0's position relationship. It
-calculates an orthogonal position from the source position and transported path axis, orients that
-relationship against the source plane, and normalizes the sum of the two position vectors. The
-derived target is converted back to `arc` and `plane`, without applying a numeric angle offset. This
-keeps flipped Quarter Aligned and Quarter Opposed props one quarter apart. It does not modify
-`turns`. The original first continuation arc is made explicit when Box is built so sparse-frame
-inheritance cannot accidentally carry the derived placement into later frames.
+Box applies a 45-degree spatial rotation through frame 0's initial `arc` for both source props. It
+uses `+45` on plane 0 and `-45` on plane 180 because those plane coordinates rotate in opposite
+spatial directions. This keeps flipped Quarter Aligned and Quarter Opposed props one quarter apart.
+It does not modify `turns`. The original first continuation arc is made explicit when Box is built
+so sparse-frame inheritance cannot accidentally carry the adjustment into later frames.
 
 The Box transformation occurs after the source/paired handpath has been chosen by Flip and before the
 tracks are exchanged by Swap. It applies to all row families and both props. Selecting Box refreshes
@@ -218,8 +216,7 @@ Changing concepts does not reset these shared settings. A setting remains availa
 currently displayed animation does not correspond to an active cell in the newly opened concept.
 Swap and Flip are persisted with the selected concept; the remaining player settings are shared for
 the current application session. Diamond/Box uses the shared Concepts control, while each concept
-applies the shape through its own pattern builder and recovers it from the current animation during
-control hydration.
+keeps its local shape choice and applies the transform through its own pattern builder.
 
 Once a cell is active, changing any applicable control rebuilds that selection. Reset restores the
 shared pattern and player defaults and restores Diamond, while retaining the selected cell. On the
@@ -277,7 +274,7 @@ The regression suite validates:
 - closed first/final prop orientation;
 - the capping and continual curve-family turn sequences;
 - all eight generated Flip results against the supplied paired-page handpath table;
-- Box's geometry-derived initial placements without altering continuation arcs or `turns`;
+- Box's 45-degree initial arcs without altering continuation arcs or `turns`;
 - Swap/Flip/Box composition, matching, hydration, and full player application;
 - paired top-header, exact row-header, row/column cell highlighting, active-prop header colors,
   marked borders, and tooltips;

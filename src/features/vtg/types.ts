@@ -4,7 +4,7 @@ import type { PatternShape } from '@/types/PatternTypes'
 export type VtgRuleNumber = 1 | 2 | 3 | 4 | 5 | 6
 
 /**
- * VTG matrix references use the bottom-header number first, followed by the
+ * VTG matrix references use the top-header number first, followed by the
  * left-header number. For example, `1-5` is their intersection.
  */
 export type VtgCellReference = `${VtgRuleNumber}-${VtgRuleNumber}`
@@ -32,6 +32,7 @@ export interface VtgPatternSelection {
   reversePlane?: boolean
   shape?: PatternShape
   beat?: VtgBeat
+  double?: boolean
   bpm?: number
   scale?: number
   thick?: number
@@ -48,6 +49,7 @@ export interface VtgPatternMatch {
   reversePlane: boolean
   shape?: PatternShape
   beat?: VtgBeat
+  double?: boolean
   bpm: number
   scale: number
 }

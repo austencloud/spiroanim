@@ -20,9 +20,10 @@ interface UseVtgPreviewsOptions {
   swapProps: Ref<boolean>
   reversePlane: Ref<boolean>
   shape: Ref<PatternShape>
+  beat: Ref<VtgBeat>
+  double: Ref<boolean>
   scale: Ref<number>
   quarters: Ref<QtrMode | false>
-  beat: Ref<VtgBeat>
 }
 
 export const patternPreviewReferences = [
@@ -49,9 +50,10 @@ export const usePatternPreviews = ({
   swapProps,
   reversePlane,
   shape,
+  beat,
+  double,
   scale,
   quarters,
-  beat,
 }: UseVtgPreviewsOptions) => {
   const buildSelection = (
     reference: VtgCellReference,
@@ -67,7 +69,8 @@ export const usePatternPreviews = ({
     if (reversePlane.value) selection.reversePlane = true
     if (shape.value === 'box') selection.shape = shape.value
     if (beat.value !== 1) selection.beat = beat.value
-    return quarters.value ? { ...selection, quarters: quarters.value, beat: beat.value } : selection
+    if (double.value) selection.double = true
+    return quarters.value ? { ...selection, quarters: quarters.value } : selection
   }
 
   const renderer = useConceptPreviewRenderer({
@@ -85,7 +88,7 @@ export const usePatternPreviews = ({
 
   // BPM changes animation timing only, so it intentionally does not invalidate still previews.
   watch(
-    [speedRatio, swapProps, reversePlane, shape, scale, quarters, beat],
+    [speedRatio, swapProps, reversePlane, shape, beat, double, scale, quarters],
     renderer.requestPreviews,
   )
   watch(isAnti, renderer.requestPartialPreviews)

@@ -3,7 +3,7 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import { shiftAnimationFrames } from '@/math/animation/shiftAnimationFrames'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
-/** Applies the editor's SHIFT operation until the selected VTG beat becomes beat 1. */
+/** Applies Shift until the selected VTG/QTR beat becomes beat 1. */
 export const shiftVtgStartingBeat = (
   animation: RootDataFinal,
   beat: VtgBeat,

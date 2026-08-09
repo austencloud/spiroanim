@@ -15,6 +15,8 @@ The authoritative implementations are:
 - `src/features/vtg/math/` for VTG building, matching, and relationship classification.
 - `src/features/qtr/` for Quarter Spacing transforms, matching, labels, and frame-derived headers.
 - The shared Concepts store for Speed Ratio, Swap, and Flip state.
+- `src/math/animation/subdivideAnimationPlayback.ts` for frame subdivision that preserves the
+  visible path while changing the authored playback rate.
 
 ## Control and player behavior
 
@@ -60,54 +62,60 @@ VTG builds a new two-prop pattern, merges most current root settings, applies th
 features, replaces pattern props, and then assigns `ROOT.value`. The normal route watcher
 subsequently serializes it.
 
-VTG matching compiles geometry and identifies Scale from the first frame's internal scale. Root
-Distance is not part of the VTG geometry signature, so a distance mismatch does not by itself stop
-a pattern match.
+VTG matching identifies patterns from their normalized authored `turns`, `arc`, `plane`, and `axis`
+frame values, and identifies Scale from the first frame's internal scale. Matching authored frames
+is important because two closed cycles can compile to the same geometry while retaining different
+first-frame instructions that identify their selected starting beat. The authored rotation axis is
+also pattern-defining and distinguishes cells whose hand paths coincide but whose prop rotations do
+not. Equivalent positive and negative angles are normalized before comparison. Root Distance is not
+part of the pattern signature, so a distance mismatch does not by itself stop a match. Candidate
+indexes derive shifted and doubled variants incrementally from each base pattern and are built only
+for the active concept unless fallback matching is required.
+
+## Starting beat and Double
+
+VTG and Quarter Spacing expose Starting Beat radios `1` through `4` at the bottom of the Concepts
+pane. Beat `1` is the default. Each following value applies one additional closed-cycle frame shift
+to both prop tracks, so Beat `2` shifts once, Beat `3` twice, and Beat `4` three times. Reset returns
+the control to Beat `1`; previews and compiled-geometry matching include the selected shift. Quarter
+Spacing applies this shift to the completed QTR animation, after its quarter-arc transform, so the
+control changes only the cycle's starting point rather than which source frame receives the QTR
+adjustment.
+
+The adjacent Double toggle subdivides every authored frame interval in two and doubles the stored
+animation BPM. The added frame is the midpoint of the interval: incremental turns and arcs are
+halved, while scale, depth, and adjustment values are interpolated. The BPM control continues to
+show the user's undoubled value, and matching maps the stored BPM back to that displayed value.
+Because both rate and frame count change by the same multiplier, total duration, interval endpoints,
+and visible motion remain unchanged. Subdivision derives its output from the animation's actual
+frame tracks and does not assume a fixed pattern length. Added frames remain sparse: inherited
+animation values and zero-angle defaults are omitted unless a frame must explicitly change them.
 
 ## Diamond and Box
 
 VTG and Quarter Spacing expose the shared Diamond/Box radio controls beside Paths, Hands, and Arms.
 Diamond is the default and preserves the source definition, so it is omitted from compact pattern
-selections. Box is derived from each prop's initial VTG geometry. The builder calculates an
-orthogonal position from the initial position and transported path axis, orients that relationship
-against the initial VTG plane, and normalizes the sum of those vectors to obtain their spherical
-midpoint. That target is converted back to first-frame `arc` and `plane`; no angle offset is stored in
-the conversion. The original first continuation arc is made explicit so sparse-frame inheritance
-cannot carry the Box placement into later frames.
-
-VTG and Quarter Spacing each expose their own 1-4 beat selector directly below Diamond/Box. VTG
-uses the same closed-loop reconstruction as the editor's Shift command: Beat 1 preserves the
-authored cycle, while Beats 2, 3, and 4 apply Shift one, two, or three times. Quarter Spacing uses
-the selected number to read VTG `anim[0]`, `anim[1]`, `anim[2]`, or `anim[3]` when deriving its
-starting relationship; it does not apply VTG's cycle shift first.
+selections. Box rotates each prop's first-frame `arc` by 45 degrees: plane 0 uses `+45`, while plane
+180 uses `-45` so both planes rotate in the same spatial direction. The original first continuation
+arc is made explicit so sparse-frame inheritance cannot carry the Box adjustment into later frames.
 
 Flip selects the effective plane before the Box direction is calculated, Swap exchanges the
-complete transformed tracks afterward, and Quarter Spacing derives its starting positions after
-the shared VTG shape transform. Previews and compiled-geometry matching include the selected shape.
+complete transformed tracks afterward, and Quarter Spacing applies its Qtr arc offsets after the
+shared VTG shape transform. Previews and compiled-geometry matching include the selected shape.
 
-The source patterns have two explicitly notated fixed-shape groups:
-
-- Diamond: `1-1`, `1-2`, `2-1`, and `2-2`.
-- Box: `3-3`, `3-4`, `4-3`, and `4-4`.
-
-The authoritative mapping is `vtgFixedShapeByCell` in `vtgPatternCatalog.ts`. Diamond and Box UI
-selections produce identical animation data for these cells in both VTG and Quarter Spacing because
-their shape is already intrinsic to the source pattern.
+Cells `1-1`, `1-2`, `2-1`, `2-2`, `3-3`, `3-4`, `4-3`, and `4-4` have an intentional fixed shape in
+their source patterns. Diamond and Box therefore produce identical animation data for those cells
+in both VTG and Quarter Spacing.
 
 ## Quarter Spacing transforms
 
-Quarter Spacing compiles the selected VTG beat to obtain each prop's authoritative position and
-transported path axis. One prop remains anchored at its selected VTG position. The other uses the
-cross product of its transported path axis and position as its orthogonal Quarter target. Swap
-carries that derived relationship with the original source track. The resulting positions are
-converted back to first-frame `arc` and `plane` values. No angle offset is part of this conversion;
-continuation frames and `turns` are unchanged.
-
-QTR preserves the selected shape when choosing its VTG source: QTR Diamond builds from VTG Diamond,
-while QTR Box builds from VTG Box. The beat-selected starting-position calculation runs after that
-source shape is applied. Each fixed cell keeps its own VTG source reference, so Diamond cells
-`1-1`, `1-2`, `2-1`, and `2-2` retain their intrinsic Diamond definitions, while Box cells `3-3`,
-`3-4`, `4-3`, and `4-4` retain their intrinsic Box definitions.
+Quarter Spacing provides two mutually exclusive transforms and always has one selected. `Qtr #1`
+adds 90 degrees to the original first animation track's first-frame arc. `Qtr #2` rotates the
+complete Qtr #1 pattern another 90 degrees using first-frame arc adjustments. Plane 0 receives +90
+degrees and plane 180 receives -90 degrees so both planes rotate in the same spatial direction
+without changing their paths. Arc adjustments wrap within 0-359 degrees. Qtr #1 is the default;
+selecting an active radio again cannot clear it, and Reset returns to Qtr #1. With Swap, the
+adjustments move with their original tracks.
 
 Quarter Spacing previews and matching apply the Qtr transform around the shared VTG pattern builder
 and matcher so selected cells and shared options can be recovered when switching panels or loading
@@ -121,6 +129,15 @@ rotation vectors, and direction compares their travel axes. Parallel timing is T
 antiparallel timing is Split (`S`), and orthogonal timing is Quarter (`Q`); direction remains Same
 (`S`) or Opposite (`O`). The generated tooltip expands those letters as
 `Hands: Timing / Direction` and `Props: Timing / Direction`.
+
+Beat and Double are playback-only controls and are removed before relationship classification.
+This distinction matters for unequal speed ratios: advancing both tracks by one beat can change
+their instantaneous Together/Split checkpoint because their relative phase advances at the
+difference between their rates. That checkpoint change does not change the semantic catalog
+pattern. Beat and Double changes still rerun semantic classification so this invariant remains
+validated in the reactive UI. Shape, Speed Ratio, Anti, Swap, Flip, and the Qtr mode remain part of
+the relationship input because they define the pattern itself rather than only its playback origin
+or subdivision.
 
 Prop direction must be compared in the props' local hand/phase frames, not by directly comparing
 their world-space rotation axes. A quarter-phase transform can mirror one local frame, making two
@@ -142,7 +159,7 @@ Swap states, and Flip states.
 Qtr header display labels remain configured separately in `qtrLabels.ts`. Quarter Spacing disables
 all header tooltips because the normal VTG descriptions do not explain the transformed header
 states. It also hides every header divider, including rule 5's offset divider, and hides the prop
-diagrams in the bottom headers. The left-header prop diagrams remain visible.
+diagrams in the top headers. The left-header prop diagrams remain visible.
 
 The visible Quarter Spacing header props mirror the rendered POI material colors. Each prop's large
 end is the head (`COLSET` slot 0), its small end is the handle (`COLSET` slot 1), and its connecting
@@ -155,24 +172,15 @@ top, right, bottom, or left. The sign of `pos dot rot` selects out or in. Placem
 bounds demonstrated by left rule 2 for left/right and top rule 2 for top/bottom. Swap and Flip
 participate in this calculation; controls that do not change first-frame geometry do not.
 
-The top-header and left-header prop diagrams are currently not displayed in Quarter Spacing. The
-left-header calculation remains in place so it can be restored if the revised model requires it.
+The top-header prop diagrams are not displayed in Quarter Spacing.
 
 Flip mirrors each left header from left to right. Its title block, divider, and regular prop
 placements move together, including which end of a prop is rendered as the head. Flipped
 left-header titles are right-aligned against the right edge. Header numbers remain in their normal
-bottom-right position. Top headers keep their normal layout when Flip is enabled. The retained Qtr
-header calculation already includes the Flip transform and must not be mirrored a second time if
-the prop diagrams are restored later.
-
-## Quarter Spacing cell availability
-
-Quarter Spacing currently keeps all 36 matrix cells active. Direct selection, header selection,
-random selection, and animation hydration retain the exact selected cell without redirecting to an
-adjacent reference.
-
-The stored VTG reference contract is column-first (`column-row`), although visual cell descriptions
-may use row and column language. For example, visual row 2, column 1 maps to stored reference `1-2`.
+bottom-right position. Top headers keep their normal layout when Flip is enabled. Quarter
+Spacing header props are not mirrored a second time because their positions already come from
+compiled frames that include the Flip transform; the surrounding title layout still mirrors
+normally.
 
 ## Regression coverage
 
@@ -181,9 +189,8 @@ Changes in this area should cover the applicable behavior:
 - BPM, Scale, Thick, and derived Distance boundaries.
 - One undo step per continuous slider gesture.
 - Player-only Paths, Hands, and Arms settings remaining separate from thumbnails.
-- Pattern building, matching, Swap, Flip, Diamond/Box, fixed-shape cells, speed ratios, and QTR
-  beat-selected starting positions.
-- Exact Qtr cell selection for direct, header, random, and hydrated selection.
+- Pattern building, matching, Swap, Flip, Diamond/Box, fixed-shape cells, starting-beat shifts,
+  Double subdivision, speed ratios, and both Qtr modes.
 - Relationship classifications derived from compiled geometry, including the `6-3` `QO/QS`
   reference.
 - Header labels, tooltip availability, dividers, colors, and prop placement.

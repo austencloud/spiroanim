@@ -1,4 +1,3 @@
-import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
@@ -10,10 +9,6 @@ import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightSte
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { rootCompile } from '@/math/animation/AnimFunc'
-import {
-  deriveBoxInitialPlacement,
-  getInitialPositionGeometry,
-} from '@/math/animation/SpatialRelationshipFunc'
 import { decodeReadable } from '@/services/animation/AnimReadableFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv2'
@@ -100,7 +95,7 @@ describe('createEightStepAnimation', () => {
     expect(second?.props[0]?.anim[0]?.scale).toBe(8)
   })
 
-  it('derives both Box starts from their initial-position relationships', () => {
+  it('adds 45 degrees only to both initial arcs in Box mode', () => {
     const diamond = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AI' })
     const box = createDefaultEightStepAnimation({
       concept: '8stp',
@@ -120,17 +115,13 @@ describe('createEightStepAnimation', () => {
 
     const diamondCompiled = rootCompile(diamond)
     const boxCompiled = rootCompile(box)
-    for (const [propIndex, prop] of boxCompiled.props.entries()) {
-      const diamondStart = diamondCompiled.props[propIndex]!.anim[0]!
-      const expectedPosition = getInitialPositionGeometry(
-        deriveBoxInitialPlacement({ arc: diamondStart.arc, plane: diamondStart.plane }),
-      ).position
-
-      expect(expectedPosition.distanceTo(new Vector3().fromArray(prop.anim[0]!.pos))).toBeCloseTo(
-        0,
-        10,
-      )
-    }
+    expect(boxCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
+      diamondCompiled.props.map((prop) => {
+        const initial = prop.anim[0]!
+        const delta = Math.abs(initial.plane) === 180 ? -45 : 45
+        return (initial.arc + delta + 360) % 360
+      }),
+    )
     expect(boxCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
       diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
     )

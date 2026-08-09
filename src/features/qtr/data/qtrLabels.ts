@@ -2,7 +2,7 @@ import type { VtgRuleNumber } from '@/features/vtg/types'
 
 type QtrRuleLabels = readonly [string, string]
 
-export const qtrBottomRuleLabels = {
+export const qtrColumnRuleLabels = {
   1: ['', ''],
   2: ['', ''],
   3: ['', ''],

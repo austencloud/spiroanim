@@ -1,5 +1,7 @@
 import { MathUtils, Vector3 } from 'three'
 
+// Shared reconstruction math for rotating closed animation-frame ranges.
+
 import { TTYPE } from '@/domain/animation/AnimStruct'
 import { InitialOrtho, InitialPoint, orthoAngle, orthoNext } from '@/math/animation/OrthogonalFunc'
 import type { AnimData, AnimDataCompiled } from '@/types/AnimTypes'

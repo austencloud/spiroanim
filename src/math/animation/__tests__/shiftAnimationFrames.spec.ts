@@ -42,7 +42,7 @@ const closedFrames: AnimData[] = [
   { arc: 90, plane: 180, beats: 4, scale: 10, depth: 3, move: [3, 0, 0] },
 ]
 
-describe('shiftAnimationFrames', () => {
+describe('shared shiftAnimationFrames', () => {
   it('requires both compiled position and rotation to close', () => {
     const compiled = compileFrames(closedFrames)
     expect(animationEndpointsAlign(compiled)).toBe(true)

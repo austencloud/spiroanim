@@ -1,4 +1,3 @@
-import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -6,20 +5,14 @@ import {
   createVtgPreviewAnimation as createVtgPreviewAnimationForSelection,
 } from '@/features/vtg/createVtgAnimation'
 import { buildVtgPattern as buildSelectedVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
+import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
-import {
-  getVtgFixedShape,
-  vtgBoxCellReferences,
-  vtgDiamondCellReferences,
-} from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgBeats } from '@/features/vtg/types'
 import type { VtgCellReference, VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
-import {
-  deriveBoxInitialPlacement,
-  getInitialPositionGeometry,
-} from '@/math/animation/SpatialRelationshipFunc'
+import { FRAMESTARTS } from '@/math/animation/PlayerFunc'
+import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import type { RootData, RootDataFinal } from '@/types/AnimTypes'
 
 const transposeSelection = <Selection extends VtgPatternSelection>(
@@ -58,8 +51,13 @@ const createCurrentAnimation = () =>
     thick: 8,
   } satisfies RootData)
 
+const expectVectorClose = (actual: readonly number[], expected: readonly number[]) => {
+  expect(actual).toHaveLength(expected.length)
+  actual.forEach((value, index) => expect(value).toBeCloseTo(expected[index]!, 9))
+}
+
 describe('createVtgAnimation', () => {
-  it.each(vtgBeats)('uses SHIFT to start the closed VTG cycle on beat %s', (beat) => {
+  it.each(vtgBeats)('uses Shift to start the closed cycle on beat %s', (beat) => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:3',
@@ -77,6 +75,8 @@ describe('createVtgAnimation', () => {
     const original = rootCompile(originalAnimation)
     const shifted = rootCompile(shiftedAnimation)
 
+    expect(shifted.props).toHaveLength(original.props.length)
+
     for (const [propIndex, shiftedProp] of shifted.props.entries()) {
       const originalFrames = original.props[propIndex]!.anim
       const cycleLength = originalFrames.length - 1
@@ -85,21 +85,57 @@ describe('createVtgAnimation', () => {
         const originalIndex = (beat - 1 + (frameIndex % cycleLength)) % cycleLength
         const expectedFrame = originalFrames[originalIndex]!
 
-        expect(
-          new Vector3()
-            .fromArray(shiftedFrame.pos)
-            .distanceTo(new Vector3().fromArray(expectedFrame.pos)),
-        ).toBeCloseTo(0, 9)
-        expect(
-          new Vector3()
-            .fromArray(shiftedFrame.rot)
-            .distanceTo(new Vector3().fromArray(expectedFrame.rot)),
-        ).toBeCloseTo(0, 9)
+        expectVectorClose(shiftedFrame.pos, expectedFrame.pos)
+        expectVectorClose(shiftedFrame.rot, expectedFrame.rot)
       }
     }
   })
 
-  it('derives Box starts from each VTG initial-position relationship', () => {
+  it('doubles BPM and subdivides every interval without changing playback', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      bpm: 87,
+    } as const satisfies VtgPatternSelection
+    const original = createVtgAnimationForSelection(createCurrentAnimation(), selection)
+    const doubled = createVtgAnimationForSelection(createCurrentAnimation(), {
+      ...selection,
+      double: true,
+    })
+    if (!original || !doubled) throw new Error('Expected normal and doubled VTG animations')
+
+    const originalCompiled = rootCompile(original)
+    const doubledCompiled = rootCompile(doubled)
+
+    expect(doubled.bpm).toBe(original.bpm * doublePlaybackMultiplier)
+    expect(doubled.props[0]!.anim).toHaveLength(
+      (original.props[0]!.anim.length - 1) * doublePlaybackMultiplier + 1,
+    )
+    expect(doubled.props[0]!.anim[2]).toEqual({})
+    for (const frame of doubled.props[0]!.anim.slice(1)) {
+      expect(frame).not.toHaveProperty('beats')
+      expect(frame).not.toHaveProperty('scale')
+      expect(frame).not.toHaveProperty('depth')
+      expect(frame).not.toHaveProperty('type')
+      expect(frame).not.toHaveProperty('adjust')
+    }
+    expect(FRAMESTARTS(doubledCompiled.props[0]!.anim, doubled.bpm).at(-1)).toBe(
+      FRAMESTARTS(originalCompiled.props[0]!.anim, original.bpm).at(-1),
+    )
+
+    for (const [propIndex, originalProp] of originalCompiled.props.entries()) {
+      const doubledFrames = doubledCompiled.props[propIndex]!.anim
+      for (const [frameIndex, originalFrame] of originalProp.anim.entries()) {
+        const doubledFrame = doubledFrames[frameIndex * doublePlaybackMultiplier]!
+        expectVectorClose(doubledFrame.pos, originalFrame.pos)
+        expectVectorClose(doubledFrame.rot, originalFrame.rot)
+        expect(doubledFrame.scale).toBe(originalFrame.scale)
+        expect(doubledFrame.depth).toBe(originalFrame.depth)
+      }
+    }
+  })
+
+  it('rotates only the initial prop arcs by 45 degrees in Box mode', () => {
     for (const reversePlane of [false, true]) {
       const baseSelection = {
         reference: '5-1',
@@ -116,17 +152,13 @@ describe('createVtgAnimation', () => {
       const diamondCompiled = rootCompile(diamond)
       const boxCompiled = rootCompile(box)
 
-      for (const [propIndex, prop] of boxCompiled.props.entries()) {
-        const diamondStart = diamondCompiled.props[propIndex]!.anim[0]!
-        const expectedPosition = getInitialPositionGeometry(
-          deriveBoxInitialPlacement({ arc: diamondStart.arc, plane: diamondStart.plane }),
-        ).position
-
-        expect(expectedPosition.distanceTo(new Vector3().fromArray(prop.anim[0]!.pos))).toBeCloseTo(
-          0,
-          10,
-        )
-      }
+      expect(boxCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
+        diamondCompiled.props.map((prop) => {
+          const firstFrame = prop.anim[0]!
+          const delta = Math.abs(firstFrame.plane) === 180 ? -45 : 45
+          return (firstFrame.arc + delta + 360) % 360
+        }),
+      )
       expect(boxCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
         diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
       )
@@ -134,17 +166,18 @@ describe('createVtgAnimation', () => {
   })
 
   it('keeps the eight fixed-shape cells unchanged in Box mode', () => {
-    expect(vtgDiamondCellReferences).toEqual(['1-1', '1-2', '2-1', '2-2'])
-    expect(vtgBoxCellReferences).toEqual(['3-3', '3-4', '4-3', '4-4'])
+    expect([...vtgFixedShapeCells]).toEqual([
+      '1-1',
+      '1-2',
+      '2-1',
+      '2-2',
+      '3-3',
+      '3-4',
+      '4-3',
+      '4-4',
+    ])
 
-    for (const reference of vtgDiamondCellReferences) {
-      expect(getVtgFixedShape(reference)).toBe('diamond')
-    }
-    for (const reference of vtgBoxCellReferences) {
-      expect(getVtgFixedShape(reference)).toBe('box')
-    }
-
-    for (const reference of [...vtgDiamondCellReferences, ...vtgBoxCellReferences]) {
+    for (const reference of vtgFixedShapeCells) {
       const selection = { reference, speedRatio: '1:3' } as const satisfies VtgPatternSelection
       const diamond = createVtgAnimationForSelection(createCurrentAnimation(), selection)
       const box = createVtgAnimationForSelection(createCurrentAnimation(), {

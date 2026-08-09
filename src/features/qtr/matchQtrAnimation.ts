@@ -1,10 +1,18 @@
 import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
-import { qtrBeats } from '@/features/qtr/types'
+import { qtrModes } from '@/features/qtr/types'
 import type { QtrPatternMatch, QtrPatternSelection } from '@/features/qtr/types'
+import {
+  createVtgAnimationSignature,
+  getVtgAnimationScale,
+} from '@/features/vtg/math/createVtgAnimationSignature'
+import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import type { VtgCellReference, VtgRuleNumber } from '@/features/vtg/types'
-import { vtgSpeedRatios } from '@/features/vtg/types'
-import { rootCompile } from '@/math/animation/AnimFunc'
-import type { AnimDataCompiled, RootDataFinal } from '@/types/AnimTypes'
+import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import {
+  doubleAnimationPlayback,
+  doublePlaybackMultiplier,
+} from '@/math/animation/subdivideAnimationPlayback'
+import type { RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
@@ -18,79 +26,71 @@ let candidateCache: ReadonlyMap<string, readonly QtrCandidateMatch[]> | undefine
 const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
   `${column}-${row}`
 
-const roundNumber = (value: number) => {
-  const rounded = Math.round(value * 1e9) / 1e9
-  return Object.is(rounded, -0) ? 0 : rounded
-}
+const addCandidate = (
+  candidates: Map<string, QtrCandidateMatch[]>,
+  animation: RootDataFinal,
+  candidate: QtrCandidateMatch,
+) => {
+  const signature = createVtgAnimationSignature(animation)
+  if (!signature) return
 
-const normalizeAngle = (value: number) => roundNumber(((value % 360) + 360) % 360)
-
-const frameSignature = (frame: AnimDataCompiled) => [
-  roundNumber(frame.turns),
-  roundNumber(frame.arc),
-  normalizeAngle(frame.plane),
-  normalizeAngle(frame.axis),
-  roundNumber(frame.adjust),
-  frame.type,
-]
-
-const createSignature = (animation: RootDataFinal): string | undefined => {
-  if (animation.props.length !== 2) return undefined
-
-  try {
-    return JSON.stringify(rootCompile(animation).props.map((prop) => prop.anim.map(frameSignature)))
-  } catch {
-    return undefined
-  }
-}
-
-const getScale = (animation: RootDataFinal): number | undefined => {
-  const firstScale = animation.props[0]?.anim[0]?.scale
-  return firstScale === undefined ? undefined : firstScale / 10
+  const matches = candidates.get(signature) ?? []
+  matches.push(candidate)
+  candidates.set(signature, matches)
 }
 
 const buildCandidateCache = () => {
   const candidates = new Map<string, QtrCandidateMatch[]>()
 
-  for (const column of ruleNumbers) {
-    for (const row of ruleNumbers) {
-      const reference = createCellReference(column, row)
-      const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
+  for (const quarters of qtrModes) {
+    for (const column of ruleNumbers) {
+      for (const row of ruleNumbers) {
+        const reference = createCellReference(column, row)
+        const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
 
-      for (const speedRatio of vtgSpeedRatios) {
-        for (const isAnti of antiOptions) {
-          for (const shape of patternShapes) {
-            for (const swapProps of booleanOptions) {
-              for (const reversePlane of booleanOptions) {
-                for (const beat of qtrBeats) {
+        for (const speedRatio of vtgSpeedRatios) {
+          for (const isAnti of antiOptions) {
+            for (const shape of patternShapes) {
+              for (const swapProps of booleanOptions) {
+                for (const reversePlane of booleanOptions) {
                   const selection: QtrPatternSelection = {
                     reference,
                     speedRatio,
+                    quarters,
                     isAnti,
                     swapProps,
                     reversePlane,
-                    quarters: 1,
-                    beat,
                     ...(shape === 'box' ? { shape } : undefined),
                   }
-                  const animation = createDefaultQtrAnimation(selection)
-                  if (!animation) continue
+                  let shifted = createDefaultQtrAnimation(selection)
+                  if (!shifted) continue
 
-                  const signature = createSignature(animation)
-                  if (!signature) continue
+                  for (const beat of vtgBeats) {
+                    if (beat > 1) {
+                      shifted = shiftVtgStartingBeat(shifted, 2)
+                      if (!shifted) break
+                    }
 
-                  const matches = candidates.get(signature) ?? []
-                  matches.push({
-                    reference,
-                    speedRatio,
-                    isAnti,
-                    swapProps,
-                    reversePlane,
-                    quarters: 1,
-                    beat,
-                    ...(shape === 'box' ? { shape } : undefined),
-                  })
-                  candidates.set(signature, matches)
+                    const candidate: QtrCandidateMatch = {
+                      reference,
+                      speedRatio,
+                      quarters,
+                      isAnti,
+                      swapProps,
+                      reversePlane,
+                      ...(beat === 1 ? undefined : { beat }),
+                      ...(shape === 'box' ? { shape } : undefined),
+                    }
+                    addCandidate(candidates, shifted, candidate)
+
+                    const doubled = doubleAnimationPlayback(shifted)
+                    if (doubled) {
+                      addCandidate(candidates, doubled, {
+                        ...candidate,
+                        double: true,
+                      })
+                    }
+                  }
                 }
               }
             }
@@ -105,25 +105,34 @@ const buildCandidateCache = () => {
 }
 
 export const findQtrPatternMatches = (animation: RootDataFinal): readonly QtrPatternMatch[] => {
-  const signature = createSignature(animation)
-  const scale = getScale(animation)
-  if (!signature || scale === undefined) return []
+  const scale = getVtgAnimationScale(animation)
+  if (scale === undefined) return []
+
+  const signature = createVtgAnimationSignature(animation)
+  if (!signature) return []
 
   const candidates = candidateCache ?? buildCandidateCache()
   return (candidates.get(signature) ?? []).map((candidate) => ({
     ...candidate,
-    bpm: animation.bpm,
+    bpm: candidate.double ? animation.bpm / doublePlaybackMultiplier : animation.bpm,
     scale,
   }))
 }
 
+const playbackTransformationCount = (match: QtrPatternMatch) =>
+  Number((match.beat ?? 1) !== 1) + Number(match.double === true)
+
 export const findQtrPatternMatch = (animation: RootDataFinal): QtrPatternMatch | undefined =>
-  findQtrPatternMatches(animation)[0]
+  [...findQtrPatternMatches(animation)].sort(
+    (first, second) => playbackTransformationCount(first) - playbackTransformationCount(second),
+  )[0]
 
 export const matchesQtrSelection = (
   animation: RootDataFinal,
   selection: QtrPatternSelection,
 ): boolean => {
   const candidate = createDefaultQtrAnimation(selection)
-  return candidate !== undefined && createSignature(animation) === createSignature(candidate)
+  if (!candidate) return false
+
+  return createVtgAnimationSignature(animation) === createVtgAnimationSignature(candidate)
 }

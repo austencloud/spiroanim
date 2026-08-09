@@ -7,6 +7,7 @@ import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadabl
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
+import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 
 const vtgFrameCount = 5
 
@@ -43,6 +44,16 @@ const vtgStandaloneBase = rootFinal(
   }),
 )
 
+export const applyVtgPlaybackControls = (
+  animation: RootDataFinal,
+  selection: Pick<VtgPatternSelection, 'beat' | 'double'>,
+): RootDataFinal | undefined => {
+  const shifted = shiftVtgStartingBeat(animation, selection.beat ?? 1)
+  if (!shifted || !selection.double) return shifted
+
+  return doubleAnimationPlayback(shifted)
+}
+
 /**
  * Builds fresh player data for a VTG selection. Undefined means that the
  * selected cell has no pattern for that speed ratio yet.
@@ -72,7 +83,7 @@ export const createVtgAnimation = (
     depth: pattern.depth ?? current.depth,
   }
 
-  return shiftVtgStartingBeat(animation, selection.beat ?? 1)
+  return applyVtgPlaybackControls(animation, selection)
 }
 
 /**

@@ -1,212 +1,132 @@
 import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
-import { applyQtrStartingPosition } from '@/features/qtr/math/applyQtrStartingPosition'
-import { qtrBeats } from '@/features/qtr/types'
+import { createQtrAnimation as createQtrAnimationForSelection } from '@/features/qtr/createQtrAnimation'
 import type { QtrPatternSelection } from '@/features/qtr/types'
-import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
-import type { VtgCellReference } from '@/features/vtg/types'
+import { createVtgAnimation as createVtgAnimationForSelection } from '@/features/vtg/createVtgAnimation'
+import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
+import type { VtgCellReference, VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
-import type { RootDataFinal } from '@/types/AnimTypes'
+import { rootFinal } from '@/math/animation/PlayerFunc'
+import type { RootData, RootDataFinal } from '@/types/AnimTypes'
 
-const enabledReferences = [
-  '2-1',
-  '4-1',
-  '6-1',
-  '1-2',
-  '3-2',
-  '5-2',
-  '2-3',
-  '4-3',
-  '6-3',
-  '1-4',
-  '3-4',
-  '5-4',
-  '2-5',
-  '4-5',
-  '6-5',
-  '1-6',
-  '3-6',
-  '5-6',
-] as const satisfies readonly VtgCellReference[]
-
-const createQtr = (selection: QtrPatternSelection): RootDataFinal => {
-  const animation = createDefaultQtrAnimation(selection)
-  if (!animation) throw new Error(`Expected QTR animation for ${selection.reference}`)
-  return animation
+const transposeSelection = <Selection extends VtgPatternSelection>(
+  selection: Selection,
+): Selection => {
+  const [column, row] = selection.reference.split('-')
+  return { ...selection, reference: `${row}-${column}` as VtgCellReference }
 }
 
-const createVtg = (selection: QtrPatternSelection): RootDataFinal => {
-  const { beat: _beat, quarters: _quarters, ...vtgSelection } = selection
-  const animation = createDefaultVtgAnimation(vtgSelection)
-  if (!animation) throw new Error(`Expected VTG animation for ${selection.reference}`)
-  return animation
-}
+const createVtgAnimation = (current: RootDataFinal, selection: VtgPatternSelection) =>
+  createVtgAnimationForSelection(current, transposeSelection(selection))
+
+const createQtrAnimation = (current: RootDataFinal, selection: QtrPatternSelection) =>
+  createQtrAnimationForSelection(current, transposeSelection(selection))
+
+const createCurrentAnimation = () =>
+  rootFinal({
+    bpm: 90,
+    prop: 0,
+    color: 0,
+    smooth: true,
+    guides: true,
+    paths: false,
+    hands: true,
+    arms: false,
+    visible: true,
+    nodes: true,
+    anchors: true,
+    props: [{ anim: [{ arc: 45 }] }],
+    aspectx: 16,
+    aspecty: 9,
+    distance: 30,
+    thick: 8,
+  } satisfies RootData)
 
 describe('createQtrAnimation', () => {
-  it('sources QTR Diamond from VTG Diamond and QTR Box from VTG Box', () => {
-    const baseSelection = {
-      reference: '5-1',
-      speedRatio: '1:3',
-      quarters: 1,
-      beat: 1,
-    } as const satisfies QtrPatternSelection
-    const qtrDiamond = createQtr(baseSelection)
-    const qtrBox = createQtr({ ...baseSelection, shape: 'box' })
-    const vtgBox = createDefaultVtgAnimation({ ...baseSelection, shape: 'box' })
-    const vtgDiamond = createDefaultVtgAnimation({ ...baseSelection, shape: 'diamond' })
-    if (!vtgBox || !vtgDiamond) throw new Error('Expected both VTG shape sources')
+  it('adds 90 degrees to only the first prop first-frame arc for Qtr #1', () => {
+    const selection = { reference: '1-6', speedRatio: '1:1' } as const
+    const standard = createVtgAnimation(createCurrentAnimation(), selection)
+    const quarter = createQtrAnimation(createCurrentAnimation(), { ...selection, quarters: 1 })
 
-    expect(qtrDiamond.props.map((prop) => prop.anim.slice(1))).toEqual(
-      vtgDiamond.props.map((prop) => prop.anim.slice(1)),
-    )
-    expect(qtrBox.props.map((prop) => prop.anim.slice(1))).toEqual(
-      vtgBox.props.map((prop) => prop.anim.slice(1)),
-    )
-    expect(qtrDiamond.props.map((prop) => prop.anim[0]?.arc)).not.toEqual(
-      qtrBox.props.map((prop) => prop.anim[0]?.arc),
-    )
+    expect(quarter?.props[0]?.anim[0]?.arc).toBe((standard?.props[0]?.anim[0]?.arc ?? 0) + 90)
+    expect(quarter?.props[0]?.anim.slice(1)).toEqual(standard?.props[0]?.anim.slice(1))
+    expect(quarter?.props[1]?.anim).toEqual(standard?.props[1]?.anim)
   })
 
-  it('sources fixed-shape cells from their own intrinsic VTG definitions', () => {
-    for (const [diamondReference, boxReference] of [
-      ['1-1', '3-3'],
-      ['1-2', '3-4'],
-      ['2-1', '4-3'],
-      ['2-2', '4-4'],
-    ] as const) {
-      const qtrDiamondCell = createQtr({
-        reference: diamondReference,
-        speedRatio: '1:3',
-        quarters: 1,
-        beat: 1,
-      })
-      const qtrBoxCell = createQtr({
-        reference: boxReference,
-        speedRatio: '1:3',
-        quarters: 1,
-        beat: 1,
-      })
-      const vtgBox = createDefaultVtgAnimation({
-        reference: boxReference,
-        speedRatio: '1:3',
-      })
-      const vtgDiamond = createDefaultVtgAnimation({
-        reference: diamondReference,
-        speedRatio: '1:3',
-      })
-      if (!vtgBox || !vtgDiamond) throw new Error('Expected both fixed-shape VTG sources')
-
-      expect(qtrDiamondCell).toEqual(applyQtrStartingPosition(vtgDiamond, 1))
-      expect(qtrDiamondCell).not.toEqual(applyQtrStartingPosition(vtgBox, 1))
-      expect(qtrBoxCell).toEqual(applyQtrStartingPosition(vtgBox, 1))
-      expect(qtrBoxCell).not.toEqual(applyQtrStartingPosition(vtgDiamond, 1))
-    }
-  })
-
-  it.each([
-    ['1-2', '3-4'],
-    ['2-1', '4-3'],
-  ] as const)(
-    'keeps fixed counterpart cells %s and %s distinct',
-    (firstReference, secondReference) => {
-      const first = createQtr({
-        reference: firstReference,
-        speedRatio: '1:3',
-        quarters: 1,
-        beat: 1,
-      })
-      const second = createQtr({
-        reference: secondReference,
-        speedRatio: '1:3',
-        quarters: 1,
-        beat: 1,
-      })
-
-      expect(first).not.toEqual(second)
-    },
-  )
-
-  it.each(qtrBeats)('anchors QTR on VTG anim[%s - 1] and quarters one prop', (beat) => {
-    for (const swapProps of [false, true]) {
-      const selection = {
-        reference: '2-3',
-        speedRatio: '1:3',
-        quarters: 1,
-        beat,
-        swapProps,
-      } as const satisfies QtrPatternSelection
-      const source = createVtg(selection)
-      const qtr = createQtr(selection)
-      const vtg = rootCompile(source)
-      const quarter = rootCompile(qtr)
-      const quarterPropIndex = swapProps ? 1 : 0
-
-      for (const [propIndex, prop] of quarter.props.entries()) {
-        const selectedBeat = vtg.props[propIndex]!.anim[beat - 1]!
-        const selectedTarget = new Vector3().fromArray(selectedBeat.pos)
-        const qtrTarget = new Vector3().fromArray(prop.anim[0]!.pos)
-        const relationshipDistance =
-          propIndex === quarterPropIndex
-            ? qtrTarget.dot(selectedTarget)
-            : qtrTarget.distanceTo(selectedTarget)
-
-        expect(relationshipDistance).toBeCloseTo(0, 8)
-      }
-
-      expect(qtr.props.map((prop) => prop.anim.slice(1))).toEqual(
-        source.props.map((prop) => prop.anim.slice(1)),
-      )
-    }
-  })
-
-  it('changes only first-frame arc and plane when entering the QTR relationship', () => {
+  it('keeps the Qtr adjustment on its original track when Swap is enabled', () => {
     const selection = {
       reference: '2-1',
       speedRatio: '1:3',
       quarters: 1,
-      beat: 1,
-    } as const satisfies QtrPatternSelection
-    const vtg = createVtg(selection)
-    const quarter = createQtr(selection)
+    } as const
+    const quarter = createQtrAnimation(createCurrentAnimation(), selection)
+    const swapped = createQtrAnimation(createCurrentAnimation(), { ...selection, swapProps: true })
 
-    expect(quarter.props.map((prop) => prop.anim.slice(1))).toEqual(
-      vtg.props.map((prop) => prop.anim.slice(1)),
-    )
-    expect(quarter.props.map((prop) => prop.anim[0]!.turns)).toEqual(
-      vtg.props.map((prop) => prop.anim[0]!.turns),
-    )
+    expect(swapped?.props[0]?.anim).toEqual(quarter?.props[1]?.anim)
+    expect(swapped?.props[1]?.anim).toEqual(quarter?.props[0]?.anim)
   })
 
-  it('keeps the enabled cells in a Quarter relationship across shared transforms', () => {
-    for (const reference of enabledReferences) {
-      for (const beat of qtrBeats) {
-        for (const reversePlane of [false, true]) {
-          for (const swapProps of [false, true]) {
-            for (const shape of ['diamond', 'box'] as const) {
-              const animation = rootCompile(
-                createQtr({
-                  reference,
-                  speedRatio: '1:3',
-                  quarters: 1,
-                  beat,
-                  reversePlane,
-                  swapProps,
-                  shape,
-                }),
-              )
-              const first = new Vector3().fromArray(animation.props[0]!.anim[0]!.pos)
-              const second = new Vector3().fromArray(animation.props[1]!.anim[0]!.pos)
+  it.each(['1-1', '2-2', '5-5', '6-6'] as const)(
+    'rotates every compiled Qtr #1 path by 90 degrees for Qtr #2 at %s',
+    (reference) => {
+      const selection = { reference, speedRatio: '1:3' } as const
+      const firstQuarter = createQtrAnimation(createCurrentAnimation(), {
+        ...selection,
+        quarters: 1,
+      })
+      const secondQuarter = createQtrAnimation(createCurrentAnimation(), {
+        ...selection,
+        quarters: 2,
+      })
+      if (!firstQuarter || !secondQuarter) throw new Error('Expected both quarter modes')
 
-              expect(
-                first.dot(second),
-                `${reference}, beat ${beat}, Flip ${reversePlane}, Swap ${swapProps}, ${shape}`,
-              ).toBeCloseTo(0, 8)
-            }
+      const firstCompiled = rootCompile(firstQuarter)
+      const secondCompiled = rootCompile(secondQuarter)
+      const frontAxis = new Vector3(0, 0, 1)
+
+      for (const [propIndex, secondProp] of secondCompiled.props.entries()) {
+        const firstProp = firstCompiled.props[propIndex]!
+        for (const [frameIndex, secondFrame] of secondProp.anim.entries()) {
+          const firstFrame = firstProp.anim[frameIndex]!
+          for (const key of ['pos', 'rot', 'posx', 'rotx'] as const) {
+            const expected = new Vector3()
+              .fromArray(firstFrame[key])
+              .applyAxisAngle(frontAxis, Math.PI / 2)
+            secondFrame[key].forEach((coordinate, axis) =>
+              expect(coordinate).toBeCloseTo(expected.getComponent(axis), 9),
+            )
           }
         }
       }
-    }
+    },
+  )
+
+  it('keeps paired Qtr #2 starting positions distinct', () => {
+    const create = (reference: '1-1' | '2-2') =>
+      createQtrAnimation(createCurrentAnimation(), {
+        reference,
+        speedRatio: '1:3',
+        quarters: 2,
+      })
+
+    expect(create('1-1')?.props.map((prop) => prop.anim[0]?.arc)).toEqual([90, 0])
+    expect(create('2-2')?.props.map((prop) => prop.anim[0]?.arc)).toEqual([90, 180])
+  })
+
+  it.each([1, 2, 3, 4] as const)('shifts the completed Qtr pattern to starting beat %s', (beat) => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      quarters: 2,
+      swapProps: true,
+      reversePlane: true,
+      shape: 'box',
+    } as const satisfies QtrPatternSelection
+    const completed = createQtrAnimation(createCurrentAnimation(), selection)
+    const shifted = createQtrAnimation(createCurrentAnimation(), { ...selection, beat })
+    if (!completed) throw new Error('Expected a completed Qtr animation')
+
+    expect(shifted).toEqual(shiftVtgStartingBeat(completed, beat))
   })
 })

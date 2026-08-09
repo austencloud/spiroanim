@@ -118,7 +118,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
     expect(wrapper.findAll('[data-role="vtg-rule-card"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
-    expect(wrapper.findAll('button')).toHaveLength(50)
+    expect(wrapper.findAll('button')).toHaveLength(51)
     expect(wrapper.findAll('[data-role="vtg-divider"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--large')).toHaveLength(24)
@@ -142,9 +142,36 @@ describe('VtgPane', () => {
     )
     expect(wrapper.findAll('[data-role="vtg-rule-card"][aria-describedby]')).toHaveLength(0)
     expect(wrapper.findAll('[data-role="vtg-divider"]')).toHaveLength(0)
-    expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(0)
-    expect(wrapper.findAll('[data-role="vtg-sidebar"] [data-role="vtg-prop"]')).toHaveLength(0)
-    expect(wrapper.findAll('[data-role="vtg-footer"] [data-role="vtg-prop"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(12)
+    expect(wrapper.findAll('[data-role="vtg-sidebar"] [data-role="vtg-prop"]')).toHaveLength(12)
+    expect(wrapper.findAll('[data-role="vtg-column-headers"] [data-role="vtg-prop"]')).toHaveLength(
+      0,
+    )
+    const firstSideProps = wrapper.findAll(
+      '[data-role="vtg-sidebar"] [data-role="vtg-rule-card"]:first-child [data-role="vtg-prop"]',
+    )
+    expect(firstSideProps[0]?.classes()).toContain('vtg-rule-card__prop--vertical')
+    expect(firstSideProps[1]?.classes()).toContain('vtg-rule-card__prop--horizontal')
+    expect(firstSideProps[0]?.attributes('style')).toContain('inset-block-start: 4%')
+    expect(firstSideProps[1]?.attributes('style')).toContain('inset-inline-start: 59%')
+    expect(firstSideProps[0]?.attributes('style')).toContain(
+      '--vtg-rule-prop-head-color: rgb(0,255,0)',
+    )
+    expect(firstSideProps[0]?.attributes('style')).toContain(
+      '--vtg-rule-prop-handle-color: rgb(0,136,0)',
+    )
+    expect(firstSideProps[0]?.attributes('style')).toContain(
+      '--vtg-rule-prop-tether-color: rgb(0,85,0)',
+    )
+    expect(firstSideProps[1]?.attributes('style')).toContain(
+      '--vtg-rule-prop-head-color: rgb(255,165,0)',
+    )
+    expect(firstSideProps[1]?.attributes('style')).toContain(
+      '--vtg-rule-prop-handle-color: rgb(136,165,0)',
+    )
+    expect(firstSideProps[1]?.attributes('style')).toContain(
+      '--vtg-rule-prop-tether-color: rgb(85,26,0)',
+    )
 
     expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-label')).toContain('QO/QS')
     expect(
@@ -193,11 +220,11 @@ describe('VtgPane', () => {
     vi.useFakeTimers()
     const wrapper = mount(VtgPane)
     const sideRule = wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
-    const bottomRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]')
+    const columnRule = wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 5"]')
 
     expect(wrapper.findAll('[data-role="vtg-rule-card"][aria-describedby]')).toHaveLength(12)
     expect(sideRule.attributes('aria-describedby')).toBeTruthy()
-    expect(bottomRule.attributes('aria-describedby')).toBeTruthy()
+    expect(columnRule.attributes('aria-describedby')).toBeTruthy()
 
     await sideRule.trigger('mouseenter')
     vi.runAllTimers()
@@ -228,7 +255,7 @@ describe('VtgPane', () => {
     wrapper.unmount()
   })
 
-  it('uses bottom-then-left references and highlights a selected matrix cross', async () => {
+  it('uses top-then-left references and highlights a selected matrix cross', async () => {
     const wrapper = mount(VtgPane)
     const pane = wrapper.get('[data-role="vtg-pane"]')
     const exampleCell = wrapper.get('[data-cell-reference="5-1"]')
@@ -242,7 +269,9 @@ describe('VtgPane', () => {
       wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]').attributes('aria-pressed'),
     ).toBe('false')
     expect(
-      wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 6"]').attributes('aria-pressed'),
+      wrapper
+        .get('[data-role="vtg-column-headers"] [aria-label$="rule 6"]')
+        .attributes('aria-pressed'),
     ).toBe('false')
 
     await exampleCell.trigger('click')
@@ -253,7 +282,9 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('.vtg-tile--selected')).toHaveLength(1)
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
     expect(
-      wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]').attributes('aria-pressed'),
+      wrapper
+        .get('[data-role="vtg-column-headers"] [aria-label$="rule 5"]')
+        .attributes('aria-pressed'),
     ).toBe('true')
     expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '5-1', speedRatio: '1:3' }]])
   })
@@ -265,7 +296,7 @@ describe('VtgPane', () => {
     await wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 4"]').trigger('click')
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-4')
 
-    await wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 2"]').trigger('click')
+    await wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 2"]').trigger('click')
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('2-4')
   })
 
@@ -346,7 +377,7 @@ describe('VtgPane', () => {
           {
             reference: '5-1',
             speedRatio: '1:3',
-            ...(quarters === undefined ? {} : { quarters, beat: 1 }),
+            ...(quarters === undefined ? {} : { quarters }),
           },
         ],
         [
@@ -354,108 +385,149 @@ describe('VtgPane', () => {
             reference: '5-1',
             speedRatio: '1:3',
             shape: 'box',
-            ...(quarters === undefined ? {} : { quarters, beat: 1 }),
+            ...(quarters === undefined ? {} : { quarters }),
           },
         ],
       ])
     }
   })
 
-  it('uses the QTR 1-4 radio field as the selected VTG beat', async () => {
+  it('offers starting-beat radios and Double at the bottom for VTG and Qtr', async () => {
+    for (const [Pane, concept, quarters] of [
+      [VtgPane, 'vtg', undefined],
+      [QtrPane, 'qtr', 1],
+    ] as const) {
+      const wrapper = mount(Pane)
+      const firstBeat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat-1"]`)
+      const thirdBeat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat-3"]`)
+      const double = wrapper.get<HTMLButtonElement>(`[data-role="${concept}-double"]`)
+
+      expect(firstBeat.element.checked).toBe(true)
+      expect(thirdBeat.element.checked).toBe(false)
+      expect(firstBeat.element.name).toBe(`${concept}-beat`)
+      expect(double.text()).toBe('Double')
+      expect(double.attributes('aria-pressed')).toBe('false')
+
+      await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+      const initialLabels = wrapper.findAll('[data-role="vtg-tile"]').map((tile) => tile.text())
+      await thirdBeat.setValue()
+      expect(wrapper.findAll('[data-role="vtg-tile"]').map((tile) => tile.text())).toEqual(
+        initialLabels,
+      )
+      await double.trigger('click')
+      expect(wrapper.findAll('[data-role="vtg-tile"]').map((tile) => tile.text())).toEqual(
+        initialLabels,
+      )
+
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('60')
+      expect(double.attributes('aria-pressed')).toBe('true')
+      expect(wrapper.emitted('patternSelect')).toEqual([
+        [
+          {
+            reference: '5-1',
+            speedRatio: '1:3',
+            ...(quarters === undefined ? {} : { quarters }),
+          },
+        ],
+        [
+          {
+            reference: '5-1',
+            speedRatio: '1:3',
+            beat: 3,
+            ...(quarters === undefined ? {} : { quarters }),
+          },
+        ],
+        [
+          {
+            reference: '5-1',
+            speedRatio: '1:3',
+            beat: 3,
+            double: true,
+            ...(quarters === undefined ? {} : { quarters }),
+          },
+        ],
+      ])
+    }
+  })
+
+  it('offers mutually exclusive Quarters radio options that reapply the current pattern', async () => {
     const wrapper = mount(QtrPane)
-    const modeControls = wrapper.get('[data-role="qtr-radio-field"]')
-    const modeOptions = modeControls.findAll<HTMLInputElement>('input[type="radio"]')
-    const shapeControls = wrapper.get('[data-role="vtg-shape-controls"]')
+    const quarters = wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]')
+    const quarters2 = wrapper.get<HTMLInputElement>('[data-role="vtg-quarters-2"]')
 
     expect(wrapper.get('[data-role="qtr-pane"]').attributes('data-concept')).toBe('qtr')
-    expect(modeControls.attributes('data-role')).toBe('qtr-radio-field')
-    expect(modeControls.get('[role="radiogroup"]').attributes('aria-label')).toBe(
-      'QTR starting beat',
-    )
-    expect(modeOptions.map(({ element }) => element.value)).toEqual(['1', '2', '3', '4'])
-    expect(modeOptions.every(({ element }) => element.name === 'qtr-selection')).toBe(true)
-    expect(modeOptions.map(({ element }) => element.checked)).toEqual([true, false, false, false])
-    expect(
-      shapeControls.element.compareDocumentPosition(modeControls.element) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+    expect(quarters.element.checked).toBe(true)
+    expect(quarters.element.type).toBe('radio')
+    expect(quarters.element.name).toBe('vtg-quarters')
+    expect(quarters.element.nextElementSibling?.textContent).toBe('Qtr #1')
+    expect(quarters2.element.checked).toBe(false)
+    expect(quarters2.element.type).toBe('radio')
+    expect(quarters2.element.name).toBe('vtg-quarters')
+    expect(quarters2.element.nextElementSibling?.textContent).toBe('Qtr #2')
+    expect(wrapper.get('.vtg-quarter-options legend').text()).toBe('Quarters')
+    expect(wrapper.findAll('.vtg-quarter-options label')).toHaveLength(2)
     expect(wrapper.findAll('.vtg-top-options .vtg-pattern-options label')).toHaveLength(2)
     expect(wrapper.get('.vtg-top-options').find('.vtg-pattern-options').exists()).toBe(true)
-
-    await wrapper.get('[data-cell-reference="2-3"]').trigger('click')
-    expect(shapeControls.find('[data-role="qtr-radio-field"]').exists()).toBe(false)
-
-    await wrapper.get<HTMLInputElement>('[data-role="qtr-selection-4"]').setValue()
-
-    expect(modeOptions.map(({ element }) => element.checked)).toEqual([false, false, false, true])
-
-    expect(wrapper.emitted('patternSelect')).toEqual([
-      [{ reference: '2-3', speedRatio: '1:3', quarters: 1, beat: 1 }],
-      [{ reference: '2-3', speedRatio: '1:3', quarters: 1, beat: 4 }],
-    ])
-  })
-
-  it('uses the VTG 1-4 radio field to SHIFT the selected starting beat', async () => {
-    const wrapper = mount(VtgPane)
-    const beatControls = wrapper.get('[data-role="vtg-radio-field"]')
-    const beatOptions = beatControls.findAll<HTMLInputElement>('input[type="radio"]')
-    const shapeControls = wrapper.get('[data-role="vtg-shape-controls"]')
-
-    expect(beatControls.get('[role="radiogroup"]').attributes('aria-label')).toBe(
-      'VTG starting beat',
-    )
-    expect(beatOptions.map(({ element }) => element.value)).toEqual(['1', '2', '3', '4'])
-    expect(beatOptions.every(({ element }) => element.name === 'vtg-selection')).toBe(true)
-    expect(beatOptions.map(({ element }) => element.checked)).toEqual([true, false, false, false])
     expect(
-      shapeControls.element.compareDocumentPosition(beatControls.element) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      wrapper
+        .get('.vtg-quarter-options')
+        .element.compareDocumentPosition(
+          wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element,
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
-    await wrapper.get('[data-cell-reference="2-3"]').trigger('click')
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-selection-4"]').setValue()
+    await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
+    await quarters.trigger('click')
+    await quarters2.setValue()
 
-    expect(beatOptions.map(({ element }) => element.checked)).toEqual([false, false, false, true])
     expect(wrapper.emitted('patternSelect')).toEqual([
-      [{ reference: '2-3', speedRatio: '1:3' }],
-      [{ reference: '2-3', speedRatio: '1:3', beat: 4 }],
+      [{ reference: '2-6', speedRatio: '1:3', quarters: 1 }],
+      [{ reference: '2-6', speedRatio: '1:3', swapProps: true, quarters: 1 }],
+      [{ reference: '2-6', speedRatio: '1:3', swapProps: true, quarters: 2 }],
     ])
   })
 
-  it('keeps every Qtr cell enabled and selects it directly', async () => {
+  it('always keeps one Quarters radio selected for pointer and keyboard-generated clicks', async () => {
     const wrapper = mount(QtrPane)
-    expect(wrapper.findAll('.vtg-tile')).toHaveLength(36)
-    expect(wrapper.findAll('.vtg-tile--disabled')).toHaveLength(0)
-    expect(wrapper.get('[data-cell-reference="2-4"]').attributes('aria-label')).toContain(
-      'cell 2-4',
-    )
-
-    await wrapper.get('[data-cell-reference="2-4"]').trigger('click')
-    expect(wrapper.get('[data-role="qtr-pane"]').attributes('data-selected-cell')).toBe('2-4')
+    const quarters = wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]')
+    const quarters2 = wrapper.get<HTMLInputElement>('[data-role="vtg-quarters-2"]')
 
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
-    expect(wrapper.get('[data-role="qtr-pane"]').attributes('data-selected-cell')).toBe('2-6')
+    quarters.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+    await nextTick()
 
+    expect(quarters.element.checked).toBe(true)
+
+    quarters.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }))
+    await nextTick()
+
+    expect(quarters.element.checked).toBe(true)
+
+    await quarters2.setValue()
+
+    expect(quarters.element.checked).toBe(false)
+    expect(quarters2.element.checked).toBe(true)
     expect(wrapper.emitted('patternSelect')).toEqual([
-      [{ reference: '2-4', speedRatio: '1:3', quarters: 1, beat: 1 }],
-      [{ reference: '2-6', speedRatio: '1:3', quarters: 1, beat: 1 }],
+      [{ reference: '2-6', speedRatio: '1:3', quarters: 1 }],
+      [{ reference: '2-6', speedRatio: '1:3', quarters: 2 }],
     ])
   })
 
   it('hydrates a selected Qtr cell', async () => {
     const animation = createDefaultQtrAnimation({
-      reference: '2-1',
+      reference: '3-4',
       speedRatio: '1:5',
       quarters: 1,
-      beat: 1,
     })
     if (!animation) throw new Error('Expected a supported VTG animation')
 
     const wrapper = mount(QtrPane, { props: { animation } })
     await nextTick()
 
-    expect(wrapper.get('[data-role="qtr-pane"]').attributes('data-selected-cell')).toBe('2-1')
+    expect(wrapper.get('[data-role="qtr-pane"]').attributes('data-selected-cell')).toBe('3-4')
     expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]').element.checked).toBe(true)
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
@@ -486,7 +558,8 @@ describe('VtgPane', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-hands"]').element.checked).toBe(false)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-arms"]').element.checked).toBe(true)
-    expect(wrapper.find('[data-role="qtr-radio-field"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-quarters"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-quarters-2"]').exists()).toBe(false)
     expect(wrapper.emitted('patternSelect')).toHaveLength(emissionCount + 1)
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
       { reference: '5-6', speedRatio: '1:3', isAnti: false },
@@ -795,7 +868,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(0)
   })
 
-  it('selects a random matrix cell from the bottom-left button', async () => {
+  it('selects a random matrix cell from the top-left button', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0)
     const wrapper = mount(VtgPane)
 
@@ -811,7 +884,7 @@ describe('VtgPane', () => {
     const pane = wrapper.get('[data-role="vtg-pane"]')
 
     await wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 6"]').trigger('click')
-    await wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 1"]').trigger('click')
+    await wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 1"]').trigger('click')
 
     expect(pane.attributes('data-selected-cell')).toBe('1-6')
   })
@@ -829,15 +902,15 @@ describe('VtgPane', () => {
       }),
     ).toBe(true)
 
-    const bottomSplitRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]')
-    const bottomSplitProps = bottomSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+    const columnSplitRule = wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 5"]')
+    const columnSplitProps = columnSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
 
-    expect(bottomSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
+    expect(columnSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
       '4%',
       '48%',
     ])
     expect(
-      bottomSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
+      columnSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
     ).toBe('97%')
 
     const sideSplitRule = wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
@@ -853,7 +926,7 @@ describe('VtgPane', () => {
     expect(sideSplitRule.findAll('.vtg-rule-card__prop-handle')).toHaveLength(4)
   })
 
-  it('flips left header elements without mirroring bottom headers', async () => {
+  it('flips left header elements without mirroring top headers', async () => {
     const wrapper = mount(VtgPane)
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
@@ -875,19 +948,19 @@ describe('VtgPane', () => {
       'vtg-rule-card__prop-handle--large',
     )
 
-    const bottomSplitRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 5"]')
-    const bottomSplitProps = bottomSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
-    expect(bottomSplitRule.classes()).not.toContain('vtg-rule-card--reversed')
+    const columnSplitRule = wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 5"]')
+    const columnSplitProps = columnSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+    expect(columnSplitRule.classes()).not.toContain('vtg-rule-card--reversed')
     expect(
-      bottomSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
+      columnSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
     ).toBe('97%')
-    expect(bottomSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
+    expect(columnSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
       '4%',
       '48%',
     ])
   })
 
-  it('keeps Qtr header props hidden when Flip is enabled', async () => {
+  it('does not mirror frame-derived Quarters props a second time when Flip is enabled', async () => {
     const wrapper = mount(QtrPane)
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
@@ -895,13 +968,17 @@ describe('VtgPane', () => {
     const firstSideRule = wrapper.get(
       '[data-role="vtg-sidebar"] [data-role="vtg-rule-card"]:first-child',
     )
+    const firstSideProps = firstSideRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
     expect(firstSideRule.classes()).toContain('vtg-rule-card--reversed')
-    expect(wrapper.findAll('[data-role="vtg-sidebar"] [data-role="vtg-prop"]')).toHaveLength(0)
+    expect(firstSideProps[0]?.classes()).toContain('vtg-rule-card__prop--vertical')
+    expect(firstSideProps[0]?.attributes('style')).toContain('inset-block-start: 4%')
+    expect(firstSideProps[1]?.classes()).toContain('vtg-rule-card__prop--horizontal')
+    expect(firstSideProps[1]?.attributes('style')).toContain('inset-inline-start: 4%')
   })
 
-  it('places the bottom TOG IN props after the divider', () => {
+  it('places the top TOG IN props after the divider', () => {
     const wrapper = mount(VtgPane)
-    const togInRule = wrapper.get('[data-role="vtg-footer"] [aria-label$="rule 3"]')
+    const togInRule = wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 3"]')
     const props = togInRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
 
     expect(props.map(({ element }) => element.style.insetBlockStart)).toEqual(['59%', '59%'])

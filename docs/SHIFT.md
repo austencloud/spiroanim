@@ -7,12 +7,10 @@ frame defaults, incoming axes, and worker ownership rules.
 
 The authoritative implementations are:
 
-- `src/math/animation/shiftAnimationFrames.ts` for endpoint checks and reconstruction shared by the
-  editor and VTG generator.
+- `src/features/editor/manage/shiftAnimationFrames.ts` for endpoint checks and reconstruction.
 - `src/features/editor/components/properties/manage/ShiftFrames.vue` for selection, warning, and
   atomic application behavior.
-- `src/features/vtg/math/shiftVtgStartingBeat.ts` for applying the same operation to VTG's selected
-  starting beat.
+- The adjacent tests under their respective `__tests__` directories.
 
 ## Eligibility and endpoint warning
 
@@ -63,9 +61,6 @@ Shift changes the timeline's starting point while leaving a closed loop's comple
 position and rotation paths where they were. The new first frame's incoming path is not displayed,
 so a minimal position and rotation are used. Its adjustment is re-expressed around the
 reconstructed rotation axis.
-
-VTG's 1-4 starting-beat control applies this operation zero through three times. Beat 1 preserves
-the authored cycle, Beat 2 applies Shift once, Beat 3 twice, and Beat 4 three times.
 
 ## Durations and outgoing state
 
@@ -142,4 +137,3 @@ Shift tests cover:
 - Sparse raw output.
 - Atomic multi-prop behavior.
 - A two-prop VTG pattern through query-string encode/decode.
-- VTG starting beats 1-4 preserving the same closed position and rotation cycle.
