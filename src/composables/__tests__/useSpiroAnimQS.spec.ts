@@ -220,6 +220,17 @@ describe('useSpiroAnimQS', () => {
     expect(query.encodeQS(decoded, false)).toEqual(encoded)
   })
 
+  it('omits an empty trailing Camera Center track in version 6', async () => {
+    const query = await useSpiroAnimQS(VDEF_V6, useBaseQS(VDEF_V6, { charset: CHARSET_V6 }), 6)
+    const { distance: _legacyDistance, ...root } = createRoot()
+
+    const encoded = query.encodeQS(root, false)
+
+    expect(encoded.c).not.toContain('~')
+    expect(query.decodeQS(encoded).camera).toEqual(root.camera)
+    expect(query.encodeQS(query.decodeQS(encoded), false)).toEqual(encoded)
+  })
+
   it('uses dots only between standalone Motion frames in version 6', async () => {
     const query = await useSpiroAnimQS(VDEF_V6, useBaseQS(VDEF_V6, { charset: CHARSET_V6 }), 6)
     const { distance: _legacyDistance, ...root } = createRoot()

@@ -28,6 +28,7 @@ export async function useSpiroAnimQS(
     encodeMotionFrame,
     decodeMotionFrame,
     omitStandaloneMotionPrefix,
+    omitEmptyCameraCenter,
   } = await loadSpiroAnimQSVersion(VER)
 
   /**
@@ -120,14 +121,16 @@ export async function useSpiroAnimQS(
     if (cameraConfig) {
       const orbit = root.camera.map((frame) => frame.orbit ?? {})
       const center = root.camera.map((frame) => frame.center ?? {})
-      query.c = [orbit, center]
-        .map((frames) =>
-          encodeVar(cameraConfig, {
-            anim: frames.map((frame) => (encodeMotionFrame ? encodeMotionFrame(frame) : frame)),
-          }),
-        )
-        .map((encoded) => (encoded.startsWith('.') ? encoded.slice(1) : encoded))
-        .join('~')
+      const [encodedOrbit = '', encodedCenter = ''] = [orbit, center].map((frames) =>
+        encodeVar(cameraConfig, {
+          anim: frames.map((frame) => (encodeMotionFrame ? encodeMotionFrame(frame) : frame)),
+        }).replace(/^\./, ''),
+      )
+      const centerIsEmpty = /^\.*$/.test(encodedCenter)
+      query.c =
+        omitEmptyCameraCenter && encodedOrbit !== '' && centerIsEmpty
+          ? encodedOrbit
+          : `${encodedOrbit}~${encodedCenter}`
     }
 
     query.v = String(VER)

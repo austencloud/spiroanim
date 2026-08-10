@@ -12,6 +12,7 @@ export interface SpiroAnimQSVersion {
   encodeMotionFrame?(frame: MotionData): MotionData
   decodeMotionFrame?(frame: MotionData): MotionData
   omitStandaloneMotionPrefix?: boolean
+  omitEmptyCameraCenter?: boolean
 }
 
 export class UnsupportedSpiroAnimQSVersionError extends RangeError {

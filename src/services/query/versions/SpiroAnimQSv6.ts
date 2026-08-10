@@ -19,6 +19,10 @@ export { CHARSET, createPropConfig, createRootConfig, decodeMotionFrame, encodeM
 // distinguishes an embedded animation from the fields preceding it in a prop value.
 export const omitStandaloneMotionPrefix = true
 
+// Orbit already carries the Camera frame count, so an entirely empty Center track does not need a
+// trailing separator. A leading separator remains necessary when Center has data but Orbit does not.
+export const omitEmptyCameraCenter = true
+
 export const VDEF = {
   ...LEGACY_VDEF,
   precision: [0, 1, 2, Boolean],
