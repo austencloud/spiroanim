@@ -1,32 +1,34 @@
 <template>
-  <fieldset
-    class="concept-pattern-options concept-render-options vtg-pattern-options vtg-render-options"
-  >
-    <legend class="concept-controls__visually-hidden">Rendered features</legend>
-    <label>
-      <input v-model="paths" type="checkbox" :data-role="`${rolePrefix}-paths`" />
-      <span>Paths</span>
-    </label>
-    <label>
-      <input v-model="hands" type="checkbox" :data-role="`${rolePrefix}-hands`" />
-      <span>Hands</span>
-    </label>
-    <label>
-      <input v-model="arms" type="checkbox" :data-role="`${rolePrefix}-arms`" />
-      <span>Arms</span>
-    </label>
-    <label>
-      <input v-model="leftPropVisible" type="checkbox" :data-role="`${rolePrefix}-left`" />
-      <span>Left</span>
-    </label>
-    <label>
-      <input v-model="rightPropVisible" type="checkbox" :data-role="`${rolePrefix}-right`" />
-      <span>Right</span>
-    </label>
-    <slot name="after-controls" />
-  </fieldset>
+  <div class="concept-button-rows">
+    <slot name="before-controls" />
 
-  <slot name="before-sliders" />
+    <fieldset
+      class="concept-pattern-options concept-render-options vtg-pattern-options vtg-render-options"
+    >
+      <legend class="concept-controls__visually-hidden">Rendered features</legend>
+      <label>
+        <input v-model="paths" type="checkbox" :data-role="`${rolePrefix}-paths`" />
+        <span>Paths</span>
+      </label>
+      <label>
+        <input v-model="hands" type="checkbox" :data-role="`${rolePrefix}-hands`" />
+        <span>Hands</span>
+      </label>
+      <label>
+        <input v-model="arms" type="checkbox" :data-role="`${rolePrefix}-arms`" />
+        <span>Arms</span>
+      </label>
+      <label>
+        <input v-model="leftPropVisible" type="checkbox" :data-role="`${rolePrefix}-left`" />
+        <span>Left</span>
+      </label>
+      <label>
+        <input v-model="rightPropVisible" type="checkbox" :data-role="`${rolePrefix}-right`" />
+        <span>Right</span>
+      </label>
+      <slot name="after-controls" />
+    </fieldset>
+  </div>
 
   <fieldset
     class="concept-slider-controls vtg-slider-controls"
@@ -217,7 +219,7 @@ onBeforeUnmount(endSliderHistory)
   display: flex;
   width: min(100%, 45rem);
   padding: var(--space-1) var(--space-2) 0;
-  margin: 0 auto;
+  margin: var(--space-1) auto 0;
   border: 0;
   flex-wrap: wrap;
   column-gap: var(--space-4);
@@ -310,13 +312,19 @@ onBeforeUnmount(endSliderHistory)
   outline-offset: 2px;
 }
 
+.concept-button-rows {
+  display: grid;
+  margin-block-start: 2px;
+  row-gap: var(--space-1);
+}
+
 .concept-render-options {
   container-type: inline-size;
   box-sizing: border-box;
-  width: calc(min(100%, 45rem) - 2px);
-  min-width: 0;
+  width: min(100%, 45rem);
+  min-width: var(--size-concept-content-min-width);
   padding-inline: var(--space-1);
-  margin: var(--space-1) auto 0;
+  margin: 0 auto;
   justify-content: center;
 }
 
@@ -325,16 +333,10 @@ onBeforeUnmount(endSliderHistory)
 }
 
 .concept-render-options span {
-  padding: clamp(var(--space-1), 1.2cqi, var(--space-2));
+  padding-block: var(--space-1);
+  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
   font-size: clamp(0.625rem, 3cqi, 0.875rem);
   white-space: nowrap;
-}
-
-@container concept-pane (max-width: 25rem) {
-  .concept-render-options {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-auto-columns: unset;
-  }
 }
 
 .concept-controls__visually-hidden {

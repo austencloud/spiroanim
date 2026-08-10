@@ -214,11 +214,12 @@ describe('useMainRoute', () => {
     expect(router.currentRoute.value.path).toBe('/vulkantechgospel')
   })
 
-  it('maps the Quarter Spacing route to its full-width concept pane', async () => {
+  it('maps the legacy Quarter Spacing route to full-width VTG with QTR enabled', async () => {
     const { paneStore, conceptsStore, router, splitterStore } = await mountRoute(
       '/quarterspacing',
       createLoadedAnimation(),
     )
+    await flushPromises()
 
     expect(paneStore.parents).toEqual({
       player: 'left',
@@ -226,9 +227,10 @@ describe('useMainRoute', () => {
       timeline: 'hidden',
       concepts: 'right',
     })
-    expect(conceptsStore.selectedConcept).toBe('qtr')
+    expect(conceptsStore.selectedConcept).toBe('vtg')
+    expect(conceptsStore.qtrEnabled).toBe(true)
     expect(splitterStore.leftPerc).toBe(0)
-    expect(router.currentRoute.value.path).toBe('/quarterspacing')
+    expect(router.currentRoute.value.path).toBe('/vulkantechgospel')
   })
 
   it('maps the 8-step route to the full-width Eight Step pane', async () => {
@@ -247,9 +249,9 @@ describe('useMainRoute', () => {
     expect(splitterStore.leftPerc).toBe(0)
     expect(router.currentRoute.value.path).toBe('/8-step')
 
-    conceptsStore.selectedConcept = 'qtr'
+    conceptsStore.selectedConcept = 'vtg'
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/quarterspacing')
+    expect(router.currentRoute.value.path).toBe('/vulkantechgospel')
 
     conceptsStore.selectedConcept = '8stp'
     await flushPromises()

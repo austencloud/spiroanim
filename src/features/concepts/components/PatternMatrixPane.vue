@@ -10,9 +10,7 @@
     :data-speed-ratio="speedRatio"
     :data-concept="concept"
   >
-    <h1 :id="`${concept}-pane-title`" class="vtg-pane__visually-hidden">
-      {{ isQtr ? 'Quarter Spacing' : 'VTG' }} generator
-    </h1>
+    <h1 :id="`${concept}-pane-title`" class="vtg-pane__visually-hidden">VTG generator</h1>
 
     <div class="vtg-top-options">
       <fieldset class="vtg-speed-ratio">
@@ -175,24 +173,21 @@
     </div>
 
     <ConceptAnimationControls :animation="animation">
-      <template #after-controls>
-        <PatternShapeControls v-model:shape="shape" />
-      </template>
-      <template #before-sliders>
+      <template #before-controls>
         <PatternPlaybackControls
           v-model:beat="beat"
+          v-model:qtr="isQtr"
           v-model:double="double"
           v-model:transition="transition"
           :concept="matrixConcept"
           :transition-available="transitionAvailable"
-        />
+        >
+          <template #before-controls>
+            <PatternShapeControls v-model:shape="shape" />
+          </template>
+        </PatternPlaybackControls>
       </template>
     </ConceptAnimationControls>
-
-    <p v-if="isQtr" class="qtr-development-note" data-role="qtr-development-note">
-      Quarter Spacing is experimental and still under development. It may change drastically or be
-      condensed in future releases.
-    </p>
   </section>
 </template>
 
@@ -209,7 +204,7 @@ import PatternTransformControls from '@/features/concepts/components/PatternTran
 import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
-import type { ConceptKey, ConceptPatternSelection } from '@/features/concepts/types'
+import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/qtr/data/qtrLabels'
 import { findQtrPatternMatch, matchesQtrSelection } from '@/features/qtr/matchQtrAnimation'
 import { createQtrSideDiagram } from '@/features/qtr/math/createQtrHeaderDiagram'
@@ -265,7 +260,7 @@ type VtgMatrixAddress = Omit<VtgMatrixTile, 'label' | 'description'>
 
 const props = withDefaults(
   defineProps<{
-    concept: ConceptKey
+    concept: 'vtg' | 'qtr'
     animation?: RootDataFinal
     animationReady?: boolean
   }>(),
@@ -278,8 +273,7 @@ const emit = defineEmits<{
   patternSelect: [selection: ConceptPatternSelection]
 }>()
 
-const isQtr = computed(() => props.concept === 'qtr')
-const matrixConcept = computed<'vtg' | 'qtr'>(() => (isQtr.value ? 'qtr' : 'vtg'))
+const matrixConcept = computed<'vtg' | 'qtr'>(() => props.concept)
 const speedRatios = vtgSpeedRatios
 const conceptsStore = useConceptsStore()
 const {
@@ -295,7 +289,9 @@ const {
   arms,
   leftPropVisible,
   rightPropVisible,
+  qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
+if (props.concept === 'qtr') isQtr.value = true
 const isAnti = ref(false)
 const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
@@ -464,6 +460,7 @@ const resetPatternControls = async () => {
   const tile = matrixTiles.value.find(({ reference }) => reference === selectedCellReference.value)
   suppressPatternEmit = true
   conceptsStore.resetPatternControls()
+  isQtr.value = false
   isAnti.value = false
   shape.value = 'diamond'
   beat.value = 1
@@ -517,24 +514,18 @@ const hydratePatternControls = (animation: RootDataFinal) => {
   }
   lastEmittedSelection = undefined
 
-  let qtrMatch: QtrPatternMatch | undefined
-  let vtgMatch: VtgPatternMatch | undefined
-
-  if (isQtr.value) {
-    qtrMatch = findQtrPatternMatch(animation)
-    if (!qtrMatch) vtgMatch = findVtgPatternMatch(animation)
-  } else {
-    vtgMatch = findVtgPatternMatch(animation)
-    if (!vtgMatch) qtrMatch = findQtrPatternMatch(animation)
+  const matchPreferences = {
+    swapProps: swapProps.value,
+    reversePlane: reversePlane.value,
   }
+  const vtgMatch: VtgPatternMatch | undefined = findVtgPatternMatch(animation, matchPreferences)
+  const qtrMatch: QtrPatternMatch | undefined = vtgMatch
+    ? undefined
+    : findQtrPatternMatch(animation, { ...matchPreferences, quarters: quarterMode.value })
 
-  const ownMatch = isQtr.value ? qtrMatch : vtgMatch
-  const fallbackMatch = isQtr.value ? vtgMatch : qtrMatch
-  const match = ownMatch ?? fallbackMatch
-  const shouldApplyCurrentConcept = ownMatch === undefined && fallbackMatch !== undefined
+  const match = vtgMatch ?? qtrMatch
   const version = ++hydrationVersion
   suppressPatternEmit = true
-  let tileToApply: VtgMatrixTile | undefined
 
   if (match) {
     const tile = matrixTiles.value.find(({ reference }) => reference === match.reference)
@@ -555,10 +546,11 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     arms.value = animation.arms
     leftPropVisible.value = isPatternPropVisible(animation.props[0])
     rightPropVisible.value = isPatternPropVisible(animation.props[1])
+    isQtr.value = qtrMatch !== undefined
     if (qtrMatch) quarterMode.value = qtrMatch.quarters
-    if (shouldApplyCurrentConcept) tileToApply = tile
   } else {
     selectedCell.value = undefined
+    isQtr.value = false
     isAnti.value = false
     shape.value = 'diamond'
     beat.value = 1
@@ -571,7 +563,6 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     if (version !== hydrationVersion) return
 
     suppressPatternEmit = false
-    if (tileToApply) emitPatternSelection(tileToApply)
   })
 }
 
@@ -876,7 +867,7 @@ defineExpose({
 
 .vtg-top-options {
   display: flex;
-  min-width: 20rem;
+  min-width: var(--size-concept-content-min-width);
   padding: 0 var(--space-2) var(--space-1);
   flex-wrap: wrap;
   gap: var(--space-1);
@@ -936,16 +927,6 @@ defineExpose({
   outline-offset: 2px;
 }
 
-.qtr-development-note {
-  width: min(100%, 45rem);
-  padding-inline: var(--space-2);
-  margin: var(--space-2) auto 0;
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  line-height: 1.4;
-  text-align: center;
-}
-
 .vtg-board {
   /* VTG categories are fixed domain colors, so they intentionally remain stable across themes. */
   --vtg-color-primary: #5968df;
@@ -960,7 +941,7 @@ defineExpose({
   container-type: inline-size;
   display: grid;
   width: 100%;
-  min-width: 20rem;
+  min-width: var(--size-concept-content-min-width);
   aspect-ratio: 1;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-template-rows: repeat(7, minmax(0, 1fr));

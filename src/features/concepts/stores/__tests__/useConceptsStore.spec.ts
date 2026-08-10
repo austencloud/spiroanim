@@ -34,6 +34,7 @@ describe('useConceptsStore', () => {
     const { app, store } = mountStore()
 
     expect(store.selectedConcept).toBe('vtg')
+    expect(store.qtrEnabled).toBe(false)
     expect(store.speedRatio).toBe('1:3')
     expect(store.swapProps).toBe(false)
     expect(store.reversePlane).toBe(false)
@@ -105,7 +106,7 @@ describe('useConceptsStore', () => {
     app.unmount()
   })
 
-  it('hydrates Quarter Spacing and its shared pattern controls', () => {
+  it('migrates a persisted Quarter Spacing selection into VTG with QTR enabled', () => {
     localStorage.setItem(
       'sa-concepts',
       JSON.stringify({
@@ -119,7 +120,8 @@ describe('useConceptsStore', () => {
 
     const { app, store } = mountStore()
 
-    expect(store.selectedConcept).toBe('qtr')
+    expect(store.selectedConcept).toBe('vtg')
+    expect(store.qtrEnabled).toBe(true)
     expect(store.speedRatio).toBe('1:5')
     expect(store.swapProps).toBe(true)
     expect(store.reversePlane).toBe(true)

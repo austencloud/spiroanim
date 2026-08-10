@@ -131,6 +131,47 @@ describe('Qtr animation matching', () => {
     })
   })
 
+  it('prioritizes lower Trans beats before the current transforms', () => {
+    for (const selection of [
+      {
+        reference: '2-2',
+        speedRatio: '1:3',
+        quarters: 1,
+        beat: 3,
+        swapProps: false,
+        reversePlane: false,
+        transition: true,
+      },
+      {
+        reference: '2-2',
+        speedRatio: '1:3',
+        quarters: 1,
+        beat: 4,
+        swapProps: true,
+        reversePlane: false,
+        transition: true,
+      },
+    ] as const satisfies readonly QtrPatternSelection[]) {
+      const preferences = {
+        quarters: selection.quarters,
+        swapProps: selection.swapProps,
+        reversePlane: selection.reversePlane,
+      }
+      const matches = findQtrPatternMatches(createQtrAnimation(selection))
+      const lowestBeat = Math.min(...matches.map((match) => match.beat ?? 1))
+      const lowestBeatMatches = matches.filter((match) => (match.beat ?? 1) === lowestBeat)
+      const preferenceDifference = (match: (typeof matches)[number]) =>
+        Number(match.quarters !== preferences.quarters) +
+        Number(match.swapProps !== preferences.swapProps) +
+        Number(match.reversePlane !== preferences.reversePlane)
+      const lowestPreferenceDifference = Math.min(...lowestBeatMatches.map(preferenceDifference))
+      const match = findQtrPatternMatch(createQtrAnimation(selection), preferences)
+
+      expect(match?.beat ?? 1).toBe(lowestBeat)
+      expect(match ? preferenceDifference(match) : undefined).toBe(lowestPreferenceDifference)
+    }
+  })
+
   it('keeps the fixed-shape cells unchanged when Qtr uses Box mode', () => {
     for (const reference of vtgFixedShapeCells) {
       const selection = {

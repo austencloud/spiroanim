@@ -30,7 +30,6 @@ type ShortKey = keyof typeof shortToView
 
 const fullPathByConcept = {
   vtg: 'vulkantechgospel',
-  qtr: 'quarterspacing',
   '8stp': '8-step',
 } as const satisfies Record<ConceptKey, string>
 
@@ -69,7 +68,7 @@ export function useMainRoute() {
   const paneStore = useMainPaneStore()
   const { rotatePane, setViewInPane } = paneStore
   const { parents } = storeToRefs(paneStore)
-  const { selectedConcept } = storeToRefs(useConceptsStore())
+  const { selectedConcept, qtrEnabled } = storeToRefs(useConceptsStore())
   const { unsupportedVersion } = storeToRefs(queryVersionStore)
 
   const router = useRouter()
@@ -89,8 +88,15 @@ export function useMainRoute() {
     if (isFullKey(page)) {
       const view = fullToView[page]
       const requestedConcept = conceptKeys.find((concept) => fullPathByConcept[concept] === page)
-      if (requestedConcept) selectedConcept.value = requestedConcept
-      shouldCanonicalizeConceptRoute = page === 'concepts'
+      if (requestedConcept) {
+        selectedConcept.value = requestedConcept
+        if (requestedConcept === 'vtg') qtrEnabled.value = false
+      }
+      if (page === 'quarterspacing') {
+        selectedConcept.value = 'vtg'
+        qtrEnabled.value = true
+      }
+      shouldCanonicalizeConceptRoute = page === 'concepts' || page === 'quarterspacing'
 
       switch (parents.value[view]) {
         case 'hidden':
@@ -113,9 +119,20 @@ export function useMainRoute() {
         const left = shortToView[leftKey]
         const right = shortToView[rightKey]
 
-        if (isConceptKey(leftKey)) selectedConcept.value = leftKey
-        if (isConceptKey(rightKey)) selectedConcept.value = rightKey
-        shouldCanonicalizeConceptRoute = leftKey === 'cnc' || rightKey === 'cnc'
+        if (isConceptKey(leftKey)) {
+          selectedConcept.value = leftKey
+          if (leftKey === 'vtg') qtrEnabled.value = false
+        }
+        if (isConceptKey(rightKey)) {
+          selectedConcept.value = rightKey
+          if (rightKey === 'vtg') qtrEnabled.value = false
+        }
+        if (leftKey === 'qtr' || rightKey === 'qtr') {
+          selectedConcept.value = 'vtg'
+          qtrEnabled.value = true
+        }
+        shouldCanonicalizeConceptRoute =
+          leftKey === 'cnc' || rightKey === 'cnc' || leftKey === 'qtr' || rightKey === 'qtr'
 
         setViewInPane(left, 'left')
         setViewInPane(right, 'right')

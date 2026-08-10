@@ -9,9 +9,7 @@
 
 <script setup lang="ts">
 import PatternMatrixPane from '@/features/concepts/components/PatternMatrixPane.vue'
-import { isVtgPatternSelection } from '@/features/concepts/types'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
-import type { VtgPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 withDefaults(
@@ -23,10 +21,10 @@ withDefaults(
 )
 
 const emit = defineEmits<{
-  patternSelect: [selection: VtgPatternSelection]
+  patternSelect: [selection: ConceptPatternSelection]
 }>()
 
 const forwardSelection = (selection: ConceptPatternSelection) => {
-  if (isVtgPatternSelection(selection)) emit('patternSelect', selection)
+  emit('patternSelect', selection)
 }
 </script>

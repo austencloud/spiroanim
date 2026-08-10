@@ -21,7 +21,7 @@ details.
 
 ## Concepts
 
-- [`VTG_AND_QUARTER_SPACING.md`](./VTG_AND_QUARTER_SPACING.md) - VTG and Quarter Spacing controls,
+- [`VTG_AND_QUARTER_SPACING.md`](./VTG_AND_QUARTER_SPACING.md) - VTG and integrated QTR controls,
   builders, transforms, matching, relationship classification, and headers.
 - [`EIGHT_STEP.md`](./EIGHT_STEP.md) - Eight Step source pages, per-cell frame derivation, curve
   families, Swap/Flip behavior, matching, and compiled-geometry validation.

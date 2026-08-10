@@ -593,7 +593,7 @@ defineExpose({
 
 .eight-step-top-options {
   display: flex;
-  min-width: 20rem;
+  min-width: var(--size-concept-content-min-width);
   padding: 0 var(--space-2) var(--space-1);
   justify-content: center;
 }
@@ -722,7 +722,7 @@ defineExpose({
   container-type: inline-size;
   display: grid;
   width: 100%;
-  min-width: 20rem;
+  min-width: var(--size-concept-content-min-width);
   aspect-ratio: 8.5 / 9.5;
   grid-template-columns: minmax(0, 0.5fr) repeat(8, minmax(0, 1fr));
   grid-template-rows: auto repeat(9, minmax(0, 1fr));

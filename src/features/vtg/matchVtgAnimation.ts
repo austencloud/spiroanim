@@ -7,6 +7,7 @@ import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import type {
   VtgCellReference,
   VtgPatternMatch,
+  VtgPatternMatchPreferences,
   VtgPatternSelection,
   VtgRuleNumber,
 } from '@/features/vtg/types'
@@ -129,20 +130,39 @@ export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPat
     .map((match) => ({ ...match, transition: true }))
 }
 
-const transformationCount = (match: VtgPatternMatch) =>
-  Number((match.beat ?? 1) !== 1) +
-  Number(match.double === true) +
-  Number(match.transition === true)
+const startingBeat = (match: VtgPatternMatch) => match.beat ?? 1
+
+const playbackTransformationCount = (match: VtgPatternMatch) =>
+  Number(match.double === true) + Number(match.transition === true)
+
+const preferenceDifferenceCount = (
+  match: VtgPatternMatch,
+  preferences: VtgPatternMatchPreferences,
+) =>
+  Number(match.swapProps !== preferences.swapProps) +
+  Number(match.reversePlane !== preferences.reversePlane)
 
 /**
- * Prefers the original playback when a shifted or doubled candidate is also
- * byte-for-byte equivalent, while retaining the established catalog order for
- * all other equivalent representations.
+ * Canonicalizes equivalent patterns to the lowest starting beat, then uses the
+ * current non-playback controls to disambiguate the remaining candidates.
  */
-export const findVtgPatternMatch = (animation: RootDataFinal): VtgPatternMatch | undefined =>
-  [...findVtgPatternMatches(animation)].sort(
-    (first, second) => transformationCount(first) - transformationCount(second),
-  )[0]
+export const findVtgPatternMatch = (
+  animation: RootDataFinal,
+  preferences?: VtgPatternMatchPreferences,
+): VtgPatternMatch | undefined =>
+  [...findVtgPatternMatches(animation)].sort((first, second) => {
+    const beatDifference = startingBeat(first) - startingBeat(second)
+    if (beatDifference !== 0) return beatDifference
+
+    if (preferences) {
+      const preferenceDifference =
+        preferenceDifferenceCount(first, preferences) -
+        preferenceDifferenceCount(second, preferences)
+      if (preferenceDifference !== 0) return preferenceDifference
+    }
+
+    return playbackTransformationCount(first) - playbackTransformationCount(second)
+  })[0]
 
 export const matchesVtgSelection = (
   animation: RootDataFinal,

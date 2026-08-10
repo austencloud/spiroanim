@@ -11,7 +11,7 @@ describe('ConceptsPane', () => {
     setActivePinia(createPinia())
   })
 
-  it('switches between all three concepts while preserving shared controls', async () => {
+  it('integrates QTR into VTG while preserving shared controls across concepts', async () => {
     const wrapper = mount(ConceptsPane)
     const pane = wrapper.get('[data-concepts-pane]')
     const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
@@ -21,7 +21,6 @@ describe('ConceptsPane', () => {
     expect(selector.attributes('aria-label')).toBe('Concept')
     expect(selector.findAll('option').map((option) => option.text())).toEqual([
       'Vulkan Tech Gospel',
-      'Quarter Spacing',
       'Eight Step',
     ])
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
@@ -46,10 +45,10 @@ describe('ConceptsPane', () => {
     await wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]').setValue(false)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-hands"]').setValue(true)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-arms"]').setValue(false)
-    await selector.setValue('qtr')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(true)
 
-    expect(wrapper.find('[data-role="vtg-pane"]').exists()).toBe(false)
-    expect(wrapper.get('[data-role="qtr-pane"]').attributes('data-concept')).toBe('qtr')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(true)
@@ -78,10 +77,8 @@ describe('ConceptsPane', () => {
       },
     ])
 
-    await selector.setValue('vtg')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(false)
 
-    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
-    expect(wrapper.find('[data-role="qtr-pane"]').exists()).toBe(false)
     expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(true)
@@ -133,7 +130,7 @@ describe('ConceptsPane', () => {
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
-  it('preserves shared controls when VTG and QTR receive an Eight Step animation', async () => {
+  it('preserves shared controls when merged VTG receives an Eight Step animation', async () => {
     const store = useConceptsStore()
     store.selectedConcept = '8stp'
     const animation = createDefaultEightStepAnimation({
@@ -183,10 +180,10 @@ describe('ConceptsPane', () => {
     expect(wrapper.find('[data-role="vtg-pane"]').exists()).toBe(true)
     expect(wrapper.findAll('.vtg-tile--selected')).toHaveLength(0)
 
-    await selector.setValue('qtr')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(true)
     await flushPromises()
     expectSharedControls()
-    expect(wrapper.find('[data-role="qtr-pane"]').exists()).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(true)
     expect(wrapper.findAll('.vtg-tile--selected')).toHaveLength(0)
   })
 })

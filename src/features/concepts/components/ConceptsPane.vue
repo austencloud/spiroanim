@@ -7,18 +7,11 @@
       data-role="concept-selector"
     >
       <option value="vtg">Vulkan Tech Gospel</option>
-      <option value="qtr">Quarter Spacing</option>
       <option value="8stp">Eight Step</option>
     </select>
 
     <VtgPane
       v-if="selectedConcept === 'vtg'"
-      :animation="animation"
-      :animation-ready="animationReady"
-      @pattern-select="emit('patternSelect', $event)"
-    />
-    <QtrPane
-      v-else-if="selectedConcept === 'qtr'"
       :animation="animation"
       :animation-ready="animationReady"
       @pattern-select="emit('patternSelect', $event)"
@@ -33,7 +26,6 @@
 </template>
 
 <script setup lang="ts">
-import QtrPane from '@/features/qtr/components/QtrPane.vue'
 import EightStepPane from '@/features/eight-step/components/EightStepPane.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'

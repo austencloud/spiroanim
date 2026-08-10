@@ -2,6 +2,13 @@
   <fieldset class="pattern-playback-controls" :data-role="`${concept}-playback-controls`">
     <legend class="pattern-playback-controls__visually-hidden">Starting beat and playback</legend>
 
+    <slot name="before-controls" />
+
+    <label class="pattern-playback-controls__qtr">
+      <input v-model="qtr" type="checkbox" :data-role="`${concept}-qtr`" />
+      <span>QTR</span>
+    </label>
+
     <div class="pattern-playback-controls__beats" role="radiogroup" aria-label="Starting beat">
       <label v-for="option in vtgBeats" :key="option">
         <input
@@ -29,12 +36,13 @@
     <button
       v-if="transitionAvailable"
       type="button"
+      class="pattern-playback-controls__transition"
       :class="{ 'pattern-playback-controls__button--active': transition }"
       :aria-pressed="transition"
       :data-role="`${concept}-transition`"
       @click="toggleTransition"
     >
-      {{ concept === 'vtg' ? "QTR Trans'" : "VTG Trans'" }}
+      45° Trans'
     </button>
   </fieldset>
 </template>
@@ -56,6 +64,7 @@ withDefaults(
 )
 
 const beat = defineModel<VtgBeat>('beat', { required: true })
+const qtr = defineModel<boolean>('qtr', { required: true })
 const double = defineModel<boolean>('double', { required: true })
 const transition = defineModel<boolean>('transition', { required: true })
 
@@ -74,10 +83,14 @@ const toggleTransition = () => {
 
 <style scoped>
 .pattern-playback-controls {
+  container-type: inline-size;
+  box-sizing: border-box;
   display: flex;
   width: min(100%, 45rem);
-  padding: 0 var(--space-2);
-  margin: var(--space-1) auto 0;
+  min-width: var(--size-concept-content-min-width);
+  padding-block: 0;
+  padding-inline: var(--space-1);
+  margin: 0 auto;
   border: 0;
   gap: var(--space-1);
   justify-content: center;
@@ -90,12 +103,15 @@ const toggleTransition = () => {
   gap: var(--space-1);
 }
 
-.pattern-playback-controls__beats label {
+.pattern-playback-controls__beats label,
+.pattern-playback-controls__qtr {
   position: relative;
+  min-width: 0;
   cursor: pointer;
 }
 
-.pattern-playback-controls__beats input {
+.pattern-playback-controls__beats input,
+.pattern-playback-controls__qtr input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -103,15 +119,17 @@ const toggleTransition = () => {
 }
 
 .pattern-playback-controls__beats span,
+.pattern-playback-controls__qtr span,
 .pattern-playback-controls button {
   display: grid;
   min-width: 2rem;
-  height: 100%;
-  padding: var(--space-2);
+  padding-block: var(--space-1);
+  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
   color: var(--color-text);
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: clamp(0.625rem, 3cqi, 0.875rem);
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -130,7 +148,16 @@ const toggleTransition = () => {
   border-color: var(--color-action-primary);
 }
 
+.pattern-playback-controls__qtr input:checked + span,
+.pattern-playback-controls
+  .pattern-playback-controls__transition.pattern-playback-controls__button--active {
+  color: var(--color-on-action-primary);
+  background: var(--color-pattern-mode-active);
+  border-color: var(--color-pattern-mode-active-border);
+}
+
 .pattern-playback-controls__beats input:focus-visible + span,
+.pattern-playback-controls__qtr input:focus-visible + span,
 .pattern-playback-controls button:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;

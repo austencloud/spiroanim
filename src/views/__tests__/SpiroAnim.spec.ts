@@ -198,7 +198,7 @@ describe('SpiroAnim view', () => {
       speedRatio: '1:3',
       quarters: 1,
     })
-    await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('qtr')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(true)
     await flushPromises()
 
     expect(playerRoot.value).toEqual(expectedQuarter)
@@ -207,7 +207,7 @@ describe('SpiroAnim view', () => {
       reference: '6-2',
       speedRatio: '1:3',
     })
-    await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('vtg')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(false)
     await flushPromises()
 
     expect(playerRoot.value).toEqual(expectedVtgAgain)
@@ -251,9 +251,9 @@ describe('SpiroAnim view', () => {
     const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBeUndefined()
 
-    await selector.setValue('qtr')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(true)
     await flushPromises()
-    expect(wrapper.get('[data-role="qtr-pane"]').attributes('data-selected-cell')).toBeUndefined()
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBeUndefined()
 
     await selector.setValue('8stp')
     await flushPromises()

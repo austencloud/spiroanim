@@ -60,6 +60,8 @@ export interface VtgPatternMatch {
   scale: number
 }
 
+export type VtgPatternMatchPreferences = Pick<VtgPatternMatch, 'swapProps' | 'reversePlane'>
+
 export type VtgReadableAnimation = Partial<
   Omit<RootReadable, 'props'> & Pick<RootDataFinal, 'speed' | 'type' | 'turns' | 'depth'>
 > & {

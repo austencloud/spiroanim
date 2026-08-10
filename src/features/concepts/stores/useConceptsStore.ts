@@ -14,6 +14,7 @@ export const useConceptsStore = defineStore(
   'sa-concepts',
   () => {
     const selectedConcept = ref<ConceptKey>('vtg')
+    const qtrEnabled = ref(false)
     const speedRatio = ref<VtgSpeedRatio>(vtgDefaultSpeedRatio)
     const swapProps = ref(false)
     const reversePlane = ref(false)
@@ -44,6 +45,7 @@ export const useConceptsStore = defineStore(
 
     return {
       selectedConcept,
+      qtrEnabled,
       speedRatio,
       swapProps,
       reversePlane,
@@ -61,8 +63,13 @@ export const useConceptsStore = defineStore(
   },
   {
     persist: {
-      pick: ['selectedConcept', 'speedRatio', 'swapProps', 'reversePlane', 'spacing'],
+      pick: ['selectedConcept', 'qtrEnabled', 'speedRatio', 'swapProps', 'reversePlane', 'spacing'],
       afterHydrate: ({ store }) => {
+        const hydratedConcept: string = store.selectedConcept
+        if (hydratedConcept === 'qtr') {
+          store.selectedConcept = 'vtg'
+          store.qtrEnabled = true
+        }
         if (!conceptKeys.some((concept) => concept === store.selectedConcept)) {
           store.selectedConcept = 'vtg'
         }

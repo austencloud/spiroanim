@@ -1,6 +1,6 @@
-# VTG and Quarter Spacing
+# VTG and QTR Mode
 
-This document describes the Concepts controls and the shared VTG/Quarter Spacing pattern pipeline,
+This document describes the Concepts controls and the shared VTG/QTR pattern pipeline,
 including player settings, transforms, matching, relationship classification, and matrix headers.
 These controls are separate from the editor property-panel pipeline documented in
 [`PROPERTY_CONTROLS.md`](./PROPERTY_CONTROLS.md).
@@ -14,22 +14,23 @@ The authoritative implementations are:
 - `src/features/vtg/data/vtgPatternCatalog.ts` for the VTG pattern catalog and builder inputs.
 - `src/features/vtg/math/` for VTG building, matching, and relationship classification.
 - `src/features/qtr/` for Quarter Spacing transforms, matching, labels, and frame-derived headers.
-- The shared Concepts store for Speed Ratio, Swap, and Flip state.
+- The shared Concepts store for QTR mode, Speed Ratio, Swap, and Flip state.
 - `src/math/animation/subdivideAnimationPlayback.ts` for frame subdivision that preserves the
   visible path while changing the authored playback rate.
 
 ## Control and player behavior
 
 The Concepts pane does not use `PropertyPanel`, `DynamicVal`, or `useProperties.constraints()`.
-Its VTG, Quarter Spacing, and Eight Step panels use the same native player and transform controls.
-VTG sends a
-`VtgPatternSelection` to the VTG builder, while Quarter Spacing sends a `QtrPatternSelection` to
-the Qtr builder. Eight Step sends an `EightStepPatternSelection` to its builder. Speed Ratio, Swap,
-Flip, and the player controls are held in the shared Concepts store so their applicable values
-remain unchanged when switching panels.
+Its VTG and Eight Step panels use the same native player and transform controls. VTG sends a
+`VtgPatternSelection` to the VTG builder when QTR is disabled and a `QtrPatternSelection` to the Qtr
+builder when QTR is enabled. Eight Step sends an `EightStepPatternSelection` to its builder. QTR,
+Speed Ratio, Swap, Flip, and the player controls are held in the shared Concepts store so their
+applicable values remain unchanged when switching panels. Persisted selections from the retired
+Quarter Spacing panel migrate to VTG with QTR enabled. Legacy Quarter Spacing routes do the same and
+then canonicalize to the VTG route.
 
-Scale, Thick, Spacing, and BPM appear below the Starting Beat and transition controls in VTG and Quarter
-Spacing. Each slider gesture is one undo step. The sliders begin a query
+Scale, Thick, Spacing, and BPM appear below the Starting Beat and transition controls in VTG. Each
+slider gesture is one undo step. The sliders begin a query
 history group on pointer-down or key-down and end it on pointer-up, pointer-cancel, key-up, or blur,
 matching the editor slider interaction boundary. On devices recognized by the shared mobile/iPad
 detection, sliders allow vertical touch panning. If the browser cancels a slider gesture to begin
@@ -86,15 +87,18 @@ part of the pattern signature, so a distance mismatch does not by itself stop a 
 indexes derive shifted and doubled variants incrementally from each base pattern and are built only
 for the active concept unless fallback matching is required.
 
-## Starting beat, Double, and QTR/VTG transitions
+## Starting beat, QTR, Double, and 45-degree transitions
 
-VTG and Quarter Spacing expose Starting Beat radios `1` through `4` at the bottom of the Concepts
-pane. Beat `1` is the default. Each following value applies one additional closed-cycle frame shift
+VTG exposes Starting Beat radios `1` through `4` at the bottom of the Concepts pane. Beat `1` is the
+default. Each following value applies one additional closed-cycle frame shift
 to both prop tracks, so Beat `2` shifts once, Beat `3` twice, and Beat `4` three times. Reset returns
 the control to Beat `1`; previews and compiled-geometry matching include the selected shift. Quarter
 Spacing applies this shift to the completed QTR animation, after its quarter-arc transform, so the
 control changes only the cycle's starting point rather than which source frame receives the QTR
-adjustment.
+adjustment. The responsive row is ordered Diamond, Box, QTR, beats `1` through `4`, and the
+`45° Trans'` button. QTR switches the matrix labels, cell descriptions, previews, generated
+selection, matching behavior, and headers as one mode change. The `Qtr #1` and `Qtr #2` radios
+appear above the matrix only while QTR is enabled.
 
 The Double control is currently hidden but retained for future experiments. Double subdivision
 subdivides every authored frame interval in two and doubles the stored animation BPM. The added
@@ -106,8 +110,8 @@ and visible motion remain unchanged. Subdivision derives its output from the ani
 frame tracks and does not assume a fixed pattern length. Added frames remain sparse: inherited
 animation values and zero-angle defaults are omitted unless a frame must explicitly change them.
 
-The reciprocal transition toggle is labeled `QTR Trans'` in VTG and `VTG Trans'` in Quarter
-Spacing. Enabling it also enables Double, and disabling it turns Double off. Starting from the
+The reciprocal transition toggle is labeled `45° Trans'`. Enabling it also enables Double, and
+disabling it turns Double off. Starting from the
 doubled closed cycle, the transform inserts one
 doubled beat before each relationship change, changes alternating prop tracks, and plays one full
 derived cycle between changes. For a change frame, Plane is 180 and Turns is derived as
@@ -128,8 +132,8 @@ form and the URL form with trailing inherited frames omitted are recognized.
 
 ## Diamond and Box
 
-VTG and Quarter Spacing expose the shared Diamond/Box radio controls after the Left and Right
-checkboxes.
+VTG exposes the shared Diamond/Box radio controls immediately before the Starting Beat radios in
+the responsive playback row.
 Diamond is the default and preserves the source definition, so it is omitted from compact pattern
 selections. Box rotates each prop's first-frame `arc` by 45 degrees: plane 0 uses `+45`, while plane
 180 uses `-45` so both planes rotate in the same spatial direction. The original first continuation
@@ -153,9 +157,8 @@ without changing their paths. Arc adjustments wrap within 0-359 degrees. Qtr #1 
 selecting an active radio again cannot clear it, and Reset returns to Qtr #1. With Swap, the
 adjustments move with their original tracks.
 
-Quarter Spacing previews and matching apply the Qtr transform around the shared VTG pattern builder
-and matcher so selected cells and shared options can be recovered when switching panels or loading
-animation data.
+QTR previews and matching apply the Qtr transform around the shared VTG pattern builder and matcher
+so selected cells and shared options can be recovered when toggling QTR or loading animation data.
 
 ## Relationship classification
 
@@ -191,25 +194,25 @@ the props are quarter-spaced and spin in the same direction, so the prop portion
 The established `6-3` classification remains the same across the supported speed ratios, Qtr modes,
 Swap states, and Flip states.
 
-## Quarter Spacing headers
+## QTR headers
 
-Qtr header display labels remain configured separately in `qtrLabels.ts`. Quarter Spacing disables
-all header tooltips because the normal VTG descriptions do not explain the transformed header
+Qtr header display labels remain configured separately in `qtrLabels.ts`. Enabling QTR disables all
+header tooltips because the normal VTG descriptions do not explain the transformed header
 states. It also hides every header divider, including rule 5's offset divider, and hides the prop
 diagrams in the top headers. The left-header prop diagrams remain visible.
 
-The visible Quarter Spacing header props mirror the rendered POI material colors. Each prop's large
+The visible QTR header props mirror the rendered POI material colors. Each prop's large
 end is the head (`COLSET` slot 0), its small end is the handle (`COLSET` slot 1), and its connecting
 line is the tether (`COLSET` slot 2). The first header prop uses VTG's Green color set and the second
 uses VTG's Orange color set, matching the generated animation's prop colors.
 
-In Quarter Spacing, each left-header prop diagram is recalculated from the first compiled frame of
+In QTR mode, each left-header prop diagram is recalculated from the first compiled frame of
 the first cell in that row (`1-1` through `1-6`). The closest cardinal direction of `pos` selects
 top, right, bottom, or left. The sign of `pos dot rot` selects out or in. Placements reuse the exact
 bounds demonstrated by left rule 2 for left/right and top rule 2 for top/bottom. Swap and Flip
 participate in this calculation; controls that do not change first-frame geometry do not.
 
-The top-header prop diagrams are not displayed in Quarter Spacing.
+The top-header prop diagrams are not displayed in QTR mode.
 
 Flip mirrors each left header from left to right. Its title block, divider, and regular prop
 placements move together, including which end of a prop is rendered as the head. Flipped

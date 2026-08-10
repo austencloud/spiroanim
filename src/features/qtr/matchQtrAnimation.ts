@@ -1,6 +1,10 @@
 import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
 import { qtrModes } from '@/features/qtr/types'
-import type { QtrPatternMatch, QtrPatternSelection } from '@/features/qtr/types'
+import type {
+  QtrPatternMatch,
+  QtrPatternMatchPreferences,
+  QtrPatternSelection,
+} from '@/features/qtr/types'
 import {
   createVtgAnimationSignature,
   getVtgAnimationScale,
@@ -128,15 +132,36 @@ export const findQtrPatternMatches = (animation: RootDataFinal): readonly QtrPat
     }))
 }
 
-const playbackTransformationCount = (match: QtrPatternMatch) =>
-  Number((match.beat ?? 1) !== 1) +
-  Number(match.double === true) +
-  Number(match.transition === true)
+const startingBeat = (match: QtrPatternMatch) => match.beat ?? 1
 
-export const findQtrPatternMatch = (animation: RootDataFinal): QtrPatternMatch | undefined =>
-  [...findQtrPatternMatches(animation)].sort(
-    (first, second) => playbackTransformationCount(first) - playbackTransformationCount(second),
-  )[0]
+const playbackTransformationCount = (match: QtrPatternMatch) =>
+  Number(match.double === true) + Number(match.transition === true)
+
+const preferenceDifferenceCount = (
+  match: QtrPatternMatch,
+  preferences: QtrPatternMatchPreferences,
+) =>
+  Number(match.quarters !== preferences.quarters) +
+  Number(match.swapProps !== preferences.swapProps) +
+  Number(match.reversePlane !== preferences.reversePlane)
+
+export const findQtrPatternMatch = (
+  animation: RootDataFinal,
+  preferences?: QtrPatternMatchPreferences,
+): QtrPatternMatch | undefined =>
+  [...findQtrPatternMatches(animation)].sort((first, second) => {
+    const beatDifference = startingBeat(first) - startingBeat(second)
+    if (beatDifference !== 0) return beatDifference
+
+    if (preferences) {
+      const preferenceDifference =
+        preferenceDifferenceCount(first, preferences) -
+        preferenceDifferenceCount(second, preferences)
+      if (preferenceDifference !== 0) return preferenceDifference
+    }
+
+    return playbackTransformationCount(first) - playbackTransformationCount(second)
+  })[0]
 
 export const matchesQtrSelection = (
   animation: RootDataFinal,

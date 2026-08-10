@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { findVtgPatternMatch, findVtgPatternMatches } from '@/features/vtg/matchVtgAnimation'
-import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
+import type {
+  VtgCellReference,
+  VtgPatternMatch,
+  VtgPatternSelection,
+  VtgRuleNumber,
+} from '@/features/vtg/types'
 import { vtgSpeedRatios } from '@/features/vtg/types'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
@@ -121,17 +126,24 @@ describe('VTG animation matching', () => {
     })
   })
 
-  it('recovers every authored starting beat for every VTG cell', () => {
+  it('selects the lowest equivalent beat for every VTG cell and speed ratio', () => {
     const mismatches: string[] = []
 
     for (const column of ruleNumbers) {
       for (const row of ruleNumbers) {
-        for (const beat of [1, 2, 3, 4] as const) {
-          const reference = createCellReference(column, row)
-          const match = findVtgPatternMatch(createAnimation({ reference, speedRatio: '1:3', beat }))
+        for (const speedRatio of vtgSpeedRatios) {
+          for (const beat of [1, 2, 3, 4] as const) {
+            const reference = createCellReference(column, row)
+            const animation = createAnimation({ reference, speedRatio, beat })
+            const matches = findVtgPatternMatches(animation)
+            const lowestBeat = Math.min(...matches.map((candidate) => candidate.beat ?? 1))
+            const match = findVtgPatternMatch(animation)
 
-          if (match?.reference !== reference || (match.beat ?? 1) !== beat) {
-            mismatches.push(`${reference}/${beat} -> ${match?.reference}/${match?.beat ?? 1}`)
+            if (match?.reference !== reference || (match.beat ?? 1) !== lowestBeat) {
+              mismatches.push(
+                `${reference}/${speedRatio}/${beat}/${lowestBeat} -> ${match?.reference}/${match?.speedRatio}/${match?.beat ?? 1}`,
+              )
+            }
           }
         }
       }
@@ -140,7 +152,39 @@ describe('VTG animation matching', () => {
     expect(mismatches).toEqual([])
   })
 
-  it('recovers every VTG cell and starting beat after query serialization', async () => {
+  it('prioritizes lower 2-2 Trans beats before the current transforms', () => {
+    for (const swapProps of booleanOptions) {
+      for (const reversePlane of booleanOptions) {
+        for (const beat of [3, 4] as const) {
+          const selection = {
+            reference: '2-2',
+            speedRatio: '1:3',
+            beat,
+            swapProps,
+            reversePlane,
+            transition: true,
+          } as const satisfies VtgPatternSelection
+          const matches = findVtgPatternMatches(createAnimation(selection))
+          const lowestBeat = Math.min(...matches.map((match) => match.beat ?? 1))
+          const lowestBeatMatches = matches.filter((match) => (match.beat ?? 1) === lowestBeat)
+          const preferenceDifference = (match: VtgPatternMatch) =>
+            Number(match.swapProps !== swapProps) + Number(match.reversePlane !== reversePlane)
+          const lowestPreferenceDifference = Math.min(
+            ...lowestBeatMatches.map(preferenceDifference),
+          )
+          const match = findVtgPatternMatch(createAnimation(selection), {
+            swapProps,
+            reversePlane,
+          })
+
+          expect(match?.beat ?? 1).toBe(lowestBeat)
+          expect(match ? preferenceDifference(match) : undefined).toBe(lowestPreferenceDifference)
+        }
+      }
+    }
+  })
+
+  it('selects the lowest equivalent beat after query serialization', async () => {
     const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 1)
     const mismatches: string[] = []
 
@@ -152,10 +196,15 @@ describe('VTG animation matching', () => {
             createAnimation({ reference, speedRatio: '1:3', beat }),
             false,
           )
-          const match = findVtgPatternMatch(await codec.decodeVer(query))
+          const animation = await codec.decodeVer(query)
+          const matches = findVtgPatternMatches(animation)
+          const lowestBeat = Math.min(...matches.map((candidate) => candidate.beat ?? 1))
+          const match = findVtgPatternMatch(animation)
 
-          if (match?.reference !== reference || (match.beat ?? 1) !== beat) {
-            mismatches.push(`${reference}/${beat} -> ${match?.reference}/${match?.beat ?? 1}`)
+          if (match?.reference !== reference || (match.beat ?? 1) !== lowestBeat) {
+            mismatches.push(
+              `${reference}/${beat}/${lowestBeat} -> ${match?.reference}/${match?.beat ?? 1}`,
+            )
           }
         }
       }
