@@ -1,10 +1,10 @@
-import type { QtrMode, QtrPatternSelection } from '@/features/qtr/types'
 import {
   applyVtgPlaybackControls,
   createDefaultVtgAnimation,
   createVtgAnimation,
   toVtgPreviewAnimation,
 } from '@/features/vtg/createVtgAnimation'
+import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const normalizeArc = (arc: number): number => ((arc % 360) + 360) % 360

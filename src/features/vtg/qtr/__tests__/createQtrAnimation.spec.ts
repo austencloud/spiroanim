@@ -1,8 +1,8 @@
 import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { createQtrAnimation as createQtrAnimationForSelection } from '@/features/qtr/createQtrAnimation'
-import type { QtrPatternSelection } from '@/features/qtr/types'
+import { createQtrAnimation as createQtrAnimationForSelection } from '@/features/vtg/qtr/createQtrAnimation'
+import type { QtrPatternSelection } from '@/features/vtg/types'
 import { createVtgAnimation as createVtgAnimationForSelection } from '@/features/vtg/createVtgAnimation'
 import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import type { VtgCellReference, VtgPatternSelection } from '@/features/vtg/types'

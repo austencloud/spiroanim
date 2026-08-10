@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
-import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
-import { findQtrPatternMatch, findQtrPatternMatches } from '@/features/qtr/matchQtrAnimation'
-import type { QtrPatternSelection } from '@/features/qtr/types'
+import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
+import { findQtrPatternMatch, findQtrPatternMatches } from '@/features/vtg/qtr/matchQtrAnimation'
+import type { QtrPatternSelection } from '@/features/vtg/types'
 import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'

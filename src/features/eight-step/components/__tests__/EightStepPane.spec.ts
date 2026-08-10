@@ -5,6 +5,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import EightStepPane from '@/features/eight-step/components/EightStepPane.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
+import type {
+  EightStepPatternMatchResult,
+  PatternMatchingClient,
+} from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
+
+const createDeferred = <Value>() => {
+  let resolve!: (value: Value) => void
+  const promise = new Promise<Value>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+  return { promise, resolve }
+}
 
 class FakeResizeObserver {
   static callback: ResizeObserverCallback | undefined
@@ -593,11 +605,12 @@ describe('EightStepPane', () => {
     expect(animation).toBeDefined()
 
     const wrapper = mount(EightStepPane, { props: { animation } })
-    await flushPromises()
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell')).toBe(
+        '6-AI',
+      )
+    })
 
-    expect(wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell')).toBe(
-      '6-AI',
-    )
     expect(wrapper.get<HTMLInputElement>('[data-role="eight-step-swap"]').element.checked).toBe(
       true,
     )
@@ -612,5 +625,72 @@ describe('EightStepPane', () => {
       wrapper.get<HTMLInputElement>('[data-role="eight-step-shape-box"]').element.checked,
     ).toBe(true)
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
+  })
+
+  it('ignores a stale match after a newer animation has been hydrated', async () => {
+    const firstAnimation = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '1-AA',
+    })
+    const secondAnimation = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '6-AI',
+      shape: 'box',
+    })
+    if (!firstAnimation || !secondAnimation) {
+      throw new Error('Expected supported Eight Step animations')
+    }
+
+    const first = createDeferred<EightStepPatternMatchResult>()
+    const second = createDeferred<EightStepPatternMatchResult>()
+    const matchEightStep = vi
+      .fn<PatternMatchingClient['matchEightStep']>()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const patternMatcher: PatternMatchingClient = {
+      matchVtg: async () => ({ status: 'unmatched' }),
+      matchEightStep,
+    }
+    const wrapper = mount(EightStepPane, {
+      props: { animation: firstAnimation, patternMatcher },
+    })
+    await vi.waitFor(() => expect(matchEightStep).toHaveBeenCalledOnce())
+
+    await wrapper.setProps({ animation: secondAnimation })
+    await vi.waitFor(() => expect(matchEightStep).toHaveBeenCalledTimes(2))
+
+    second.resolve({
+      status: 'matched',
+      match: {
+        reference: '6-AI',
+        swapProps: false,
+        reversePlane: false,
+        shape: 'box',
+        bpm: 60,
+        scale: 0.8,
+      },
+    })
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell')).toBe(
+        '6-AI',
+      )
+    })
+
+    first.resolve({
+      status: 'matched',
+      match: {
+        reference: '1-AA',
+        swapProps: false,
+        reversePlane: false,
+        shape: 'diamond',
+        bpm: 60,
+        scale: 0.8,
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-role="eight-step-pane"]').attributes('data-selected-cell')).toBe(
+      '6-AI',
+    )
   })
 })

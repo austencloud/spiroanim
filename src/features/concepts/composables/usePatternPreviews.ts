@@ -2,8 +2,8 @@ import {
   useConceptPreviewRenderer,
   type ConceptPreviewDimensions,
 } from '@/features/concepts/composables/useConceptPreviewRenderer'
-import { createQtrPreviewAnimation } from '@/features/qtr/createQtrAnimation'
-import type { QtrMode, QtrPatternSelection } from '@/features/qtr/types'
+import { createQtrPreviewAnimation } from '@/features/vtg/qtr/createQtrAnimation'
+import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import { createVtgPreviewAnimation } from '@/features/vtg/createVtgAnimation'
 import type {
   VtgBeat,

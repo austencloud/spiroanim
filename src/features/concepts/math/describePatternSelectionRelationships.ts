@@ -1,5 +1,5 @@
-import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
-import type { QtrPatternSelection } from '@/features/qtr/types'
+import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
+import type { QtrPatternSelection } from '@/features/vtg/types'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import type { VtgPatternSelection } from '@/features/vtg/types'
 import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'

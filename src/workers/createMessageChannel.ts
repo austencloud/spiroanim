@@ -37,6 +37,10 @@
  *   - Resolves with `ret` defined for that message type.
  *   - Rejects with an Error if the registered handler throws or returns a rejected Promise
  *
+ * close(reason):
+ *   - Removes the message listener and rejects every pending request.
+ *   - Prevents additional messages from being sent through this channel.
+ *
  * Example usage:
  *   export interface BridgeMap {
  *     init: { arg: { path: string }; ret: boolean }
@@ -104,6 +108,7 @@ export function createMessageChannel<
 
   const isWorker = typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope
   let nextId = 0
+  let closed = false
 
   // Separate scopes for main thread / worker (bug fix)
   function getNextId() {
@@ -113,6 +118,7 @@ export function createMessageChannel<
 
   // Fire-and-forget send to the other side (no response expected)
   function send<K extends MsgKey>(type: K, data: Input<K>, transfer?: Transferable[]) {
+    if (closed) return
     postMessageOut({ type, data }, transfer)
   }
 
@@ -122,6 +128,8 @@ export function createMessageChannel<
     data: Input<K>,
     transfer?: Transferable[],
   ): Promise<Output<K>> {
+    if (closed) return Promise.reject(new Error('Message channel is closed.'))
+
     const id = getNextId()
     return new Promise<Output<K>>((resolve, reject) => {
       pending.set(id, { resolve, reject })
@@ -150,6 +158,8 @@ export function createMessageChannel<
 
   // Cross-compatible way to post messages (works on both Worker and DedicatedWorkerGlobalScope)
   function postMessageOut(message: object, transfer?: Transferable[]) {
+    if (closed) return
+
     try {
       if ('postMessage' in port) {
         port.postMessage(message, transfer ?? [])
@@ -228,6 +238,15 @@ export function createMessageChannel<
   // Wire up the message listener
   port.addEventListener('message', handleMessage as EventListener)
 
+  function close(reason: Error = new Error('Message channel was closed.')) {
+    if (closed) return
+
+    closed = true
+    port.removeEventListener('message', handleMessage as EventListener)
+    pending.forEach(({ reject }) => reject(reason))
+    pending.clear()
+  }
+
   // Required for SharedWorker ports or MessageChannel ports
   if ('start' in port && typeof port.start === 'function') {
     port.start()
@@ -247,5 +266,7 @@ export function createMessageChannel<
     call,
     /** Set string for identifying warnings source */
     warnStr,
+    /** Stop listening and reject requests that have not received a response */
+    close,
   }
 }

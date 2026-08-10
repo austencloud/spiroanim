@@ -13,7 +13,7 @@ import { findKeyByValue } from '@/utils/UtilFunc'
 import { UnsupportedSpiroAnimQSVersionError } from '@/services/query/versions'
 //import { encodeReadable } from '@/func/AnimReadableFunc'
 
-const routeKeys = ['play', 'time', 'edit', 'cnc', 'vtg', 'qtr', '8stp'] as const
+const routeKeys = ['play', 'time', 'edit', 'cnc', 'vtg', 'qtr', '8stp', 'tka'] as const
 
 const shortToView = {
   play: 'player',
@@ -23,14 +23,16 @@ const shortToView = {
   vtg: 'concepts',
   qtr: 'concepts',
   '8stp': 'concepts',
+  tka: 'concepts',
 } as const
 
 type MainView = (typeof viewKeysMain)[number]
 type ShortKey = keyof typeof shortToView
 
 const fullPathByConcept = {
-  vtg: 'vulkantechgospel',
-  '8stp': '8-step',
+  vtg: 'vulkan-tech-gospel',
+  '8stp': 'eight-step',
+  tka: 'the-kinetic-alphabet',
 } as const satisfies Record<ConceptKey, string>
 
 const fullToView = {
@@ -38,9 +40,10 @@ const fullToView = {
   editor: 'editor',
   timeline: 'timeline',
   concepts: 'concepts',
-  vulkantechgospel: 'concepts',
+  'vulkan-tech-gospel': 'concepts',
   quarterspacing: 'concepts',
-  '8-step': 'concepts',
+  'eight-step': 'concepts',
+  'the-kinetic-alphabet': 'concepts',
 } as const satisfies Record<string, MainView>
 
 type FullKey = keyof typeof fullToView

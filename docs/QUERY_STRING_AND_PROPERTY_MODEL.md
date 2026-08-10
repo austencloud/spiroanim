@@ -92,7 +92,8 @@ Camera frame.
 - `src/math/animation/AnimFunc.ts` - frame defaults, inheritance, and compilation.
 - `src/features/vtg/data/vtgPlayerSettings.ts` and
   `src/features/vtg/data/vtgPatternCatalog.ts` - VTG-specific controls and transforms.
-- `src/features/qtr/` - Quarter Spacing transforms, matching, labels, and frame-derived headers.
+- `src/features/vtg/qtr/` and `src/features/vtg/types.ts` - VTG-owned QTR transforms, matching,
+  labels, frame-derived headers, and contracts.
 
 ## Cross-cutting cautions
 

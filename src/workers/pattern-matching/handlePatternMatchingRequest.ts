@@ -1,0 +1,45 @@
+import type {
+  EightStepPatternMatchRequest,
+  EightStepPatternMatchResult,
+  VtgPatternMatchRequest,
+  VtgPatternMatchResult,
+} from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
+
+export const matchVtgPatternRequest = async ({
+  animation,
+  preferences,
+  lastSelection,
+}: VtgPatternMatchRequest): Promise<VtgPatternMatchResult> => {
+  if (lastSelection && 'quarters' in lastSelection) {
+    const { matchesQtrSelection } = await import('@/features/vtg/qtr/matchQtrAnimation')
+    if (matchesQtrSelection(animation, lastSelection)) return { status: 'unchanged' }
+  }
+
+  const { findVtgPatternMatch, matchesVtgSelection } =
+    await import('@/features/vtg/matchVtgAnimation')
+  if (lastSelection && !('quarters' in lastSelection)) {
+    if (matchesVtgSelection(animation, lastSelection)) return { status: 'unchanged' }
+  }
+
+  const vtgMatch = findVtgPatternMatch(animation, preferences)
+  if (vtgMatch) return { status: 'matched', source: 'vtg', match: vtgMatch }
+
+  const { findQtrPatternMatch } = await import('@/features/vtg/qtr/matchQtrAnimation')
+  const qtrMatch = findQtrPatternMatch(animation, preferences)
+  return qtrMatch ? { status: 'matched', source: 'qtr', match: qtrMatch } : { status: 'unmatched' }
+}
+
+export const matchEightStepPatternRequest = async ({
+  animation,
+  lastSelection,
+}: EightStepPatternMatchRequest): Promise<EightStepPatternMatchResult> => {
+  const { findEightStepPatternMatch, matchesEightStepSelection } =
+    await import('@/features/eight-step/matchEightStepAnimation')
+
+  if (lastSelection && matchesEightStepSelection(animation, lastSelection)) {
+    return { status: 'unchanged' }
+  }
+
+  const match = findEightStepPatternMatch(animation)
+  return match ? { status: 'matched', match } : { status: 'unmatched' }
+}

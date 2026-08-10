@@ -8,27 +8,33 @@
     >
       <option value="vtg">Vulkan Tech Gospel</option>
       <option value="8stp">Eight Step</option>
+      <option value="tka">The Kinetic Alphabet</option>
     </select>
 
     <VtgPane
       v-if="selectedConcept === 'vtg'"
       :animation="animation"
       :animation-ready="animationReady"
+      :pattern-matcher="patternMatcher"
       @pattern-select="emit('patternSelect', $event)"
     />
     <EightStepPane
-      v-else
+      v-else-if="selectedConcept === '8stp'"
       :animation="animation"
       :animation-ready="animationReady"
+      :pattern-matcher="patternMatcher"
       @pattern-select="emit('patternSelect', $event)"
     />
+    <KineticAlphabetPane v-else />
   </section>
 </template>
 
 <script setup lang="ts">
 import EightStepPane from '@/features/eight-step/components/EightStepPane.vue'
+import { usePatternMatchingWorker } from '@/features/concepts/composables/usePatternMatchingWorker'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
+import KineticAlphabetPane from '@/features/kinetic-alphabet/components/KineticAlphabetPane.vue'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -42,6 +48,7 @@ const emit = defineEmits<{
 }>()
 
 const { selectedConcept } = storeToRefs(useConceptsStore())
+const patternMatcher = usePatternMatchingWorker(selectedConcept)
 </script>
 
 <style scoped>

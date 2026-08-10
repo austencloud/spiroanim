@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
-import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
-import { findQtrPatternMatch } from '@/features/qtr/matchQtrAnimation'
+import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
+import { findQtrPatternMatch } from '@/features/vtg/qtr/matchQtrAnimation'
 import { createVtgAnimationSignature } from '@/features/vtg/math/createVtgAnimationSignature'
 import { vtgSpeedRatios } from '@/features/vtg/types'
 import {

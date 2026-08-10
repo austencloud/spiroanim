@@ -275,6 +275,12 @@ Matching may produce more than one geometrically equivalent candidate; the pane 
 candidate in deterministic generation order. An animation emitted by the current selection is
 recognized directly to avoid a needless hydration loop.
 
+Recovery runs in the same lazily created Concepts pattern-matching worker used by VTG/QTR. Eight
+Step matching code and its candidate index load only when requested. The worker remains available
+when switching between supported Concepts so its candidate cache can be reused, and it terminates
+when the Concepts pane unmounts or a concept without matching support is selected. The pane ignores
+stale asynchronous responses after a newer animation or local interaction.
+
 ## Regression validation
 
 The regression suite validates:

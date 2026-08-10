@@ -183,10 +183,6 @@ import {
 } from '@/features/eight-step/composables/useEightStepPreviews'
 import PatternShapeControls from '@/features/concepts/components/PatternShapeControls.vue'
 import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
-import {
-  findEightStepPatternMatch,
-  matchesEightStepSelection,
-} from '@/features/eight-step/matchEightStepAnimation'
 import { eightStepRows } from '@/features/eight-step/types'
 import type {
   EightStepColumn,
@@ -204,11 +200,13 @@ import {
 } from '@/features/vtg/data/vtgPlayerSettings'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { toColor } from '@/utils/UtilFunc'
+import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
 const props = withDefaults(
   defineProps<{
     animation?: RootDataFinal
     animationReady?: boolean
+    patternMatcher?: PatternMatchingClient
   }>(),
   {
     animationReady: true,
@@ -390,6 +388,8 @@ const createSelection = (cell: EightStepPatternDefinition): EightStepPatternSele
 }
 
 const emitPatternSelection = (cell: EightStepPatternDefinition) => {
+  if (!suppressPatternEmit) hydrationVersion++
+
   const selection = createSelection(cell)
   lastEmittedSelection = selection
   emit('patternSelect', selection)
@@ -464,15 +464,36 @@ watch(
   },
 )
 
-const hydratePatternControls = (animation: RootDataFinal) => {
-  if (lastEmittedSelection && matchesEightStepSelection(animation, lastEmittedSelection)) {
-    lastEmittedSelection = undefined
-    return
-  }
+const matchPattern = async (request: Parameters<PatternMatchingClient['matchEightStep']>[0]) => {
+  if (props.patternMatcher) return props.patternMatcher.matchEightStep(request)
+
+  const { matchEightStepPatternRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return matchEightStepPatternRequest(request)
+}
+
+const hydratePatternControls = async (animation: RootDataFinal) => {
+  const version = ++hydrationVersion
+  const selection = lastEmittedSelection
   lastEmittedSelection = undefined
 
-  const match = findEightStepPatternMatch(animation)
-  const version = ++hydrationVersion
+  let result
+  try {
+    result = await matchPattern({
+      animation,
+      ...(selection ? { lastSelection: selection } : undefined),
+    })
+  } catch (error) {
+    if (version === hydrationVersion && componentMounted) {
+      console.warn('Eight Step pattern matching failed.', error)
+    }
+    return
+  }
+
+  if (version !== hydrationVersion || !componentMounted || props.animation !== animation) return
+  if (result.status === 'unchanged') return
+
+  const match = result.status === 'matched' ? result.match : undefined
   suppressPatternEmit = true
 
   if (match) {
@@ -520,7 +541,7 @@ const syncPatternControls = () => {
   }
 
   initialAnimationHandled = true
-  hydratePatternControls(props.animation)
+  void hydratePatternControls(props.animation)
 }
 
 watch([() => props.animationReady, () => props.animation], syncPatternControls)
@@ -553,6 +574,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   componentMounted = false
+  hydrationVersion++
   previewObserver?.disconnect()
 })
 

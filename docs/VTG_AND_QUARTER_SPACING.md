@@ -13,7 +13,8 @@ The authoritative implementations are:
 - `src/features/vtg/data/vtgPlayerSettings.ts` for numeric controls and rendering settings.
 - `src/features/vtg/data/vtgPatternCatalog.ts` for the VTG pattern catalog and builder inputs.
 - `src/features/vtg/math/` for VTG building, matching, and relationship classification.
-- `src/features/qtr/` for Quarter Spacing transforms, matching, labels, and frame-derived headers.
+- `src/features/vtg/qtr/` for the VTG-owned QTR transforms, matching, labels, and frame-derived
+  headers, with the shared QTR contracts in `src/features/vtg/types.ts`.
 - The shared Concepts store for QTR mode, Speed Ratio, Swap, and Flip state.
 - `src/math/animation/subdivideAnimationPlayback.ts` for frame subdivision that preserves the
   visible path while changing the authored playback rate.
@@ -86,6 +87,13 @@ not. Equivalent positive and negative angles are normalized before comparison. R
 part of the pattern signature, so a distance mismatch does not by itself stop a match. Candidate
 indexes derive shifted and doubled variants incrementally from each base pattern and are built only
 for the active concept unless fallback matching is required.
+
+Pattern recovery runs in the shared, lazily created Concepts pattern-matching worker. The worker
+stays alive while VTG or Eight Step is selected, preserving generated candidate indexes across
+animation changes and concept switches. VTG requests include the merged QTR fallback. Selecting a
+concept without matching support or unmounting the Concepts pane terminates the worker. Responses
+are versioned by the requesting pane so an older result cannot overwrite newer animation data or a
+user interaction.
 
 ## Starting beat, QTR, Double, and 45-degree transitions
 

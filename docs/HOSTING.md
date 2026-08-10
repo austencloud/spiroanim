@@ -11,8 +11,9 @@ Production hosting must:
 - serve the generated directory index files so `/`, `/index`, `/about`, and `/tips` return their
   prerendered HTML;
 - serve the generated client-only directory index files for `/app`, `/player`, `/editor`,
-  `/timeline`, `/concepts`, `/vulkantechgospel`, `/quarterspacing`, `/8-step`, and the pane-layout
-  aliases. A blanket rewrite to `/index.html` would replace this separation and should not be used;
+  `/timeline`, `/concepts`, `/vulkan-tech-gospel`, `/quarterspacing`, `/eight-step`,
+  `/the-kinetic-alphabet`, and the pane-layout aliases. A blanket rewrite to `/index.html` would
+  replace this separation and should not be used;
 - serve both web manifests as `application/manifest+json`;
 - revalidate HTML files, `/manifest.webmanifest`, `/manifest-dev.webmanifest`, and `/sw.js` rather
   than caching them as immutable;

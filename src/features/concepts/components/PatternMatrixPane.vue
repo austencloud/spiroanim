@@ -2,15 +2,15 @@
   <section
     ref="paneElement"
     class="vtg-pane"
-    :aria-labelledby="`${concept}-pane-title`"
-    :data-role="`${concept}-pane`"
+    aria-labelledby="vtg-pane-title"
+    data-role="vtg-pane"
     :data-blank-width="blankWidth"
     :data-blank-height="blankHeight"
     :data-selected-cell="selectedCellReference"
     :data-speed-ratio="speedRatio"
-    :data-concept="concept"
+    data-concept="vtg"
   >
-    <h1 :id="`${concept}-pane-title`" class="vtg-pane__visually-hidden">VTG generator</h1>
+    <h1 id="vtg-pane-title" class="vtg-pane__visually-hidden">VTG generator</h1>
 
     <div class="vtg-top-options">
       <fieldset class="vtg-speed-ratio">
@@ -179,7 +179,7 @@
           v-model:qtr="isQtr"
           v-model:double="double"
           v-model:transition="transition"
-          :concept="matrixConcept"
+          concept="vtg"
           :transition-available="transitionAvailable"
         >
           <template #before-controls>
@@ -205,10 +205,8 @@ import { describePatternSelectionRelationships } from '@/features/concepts/math/
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
-import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/qtr/data/qtrLabels'
-import { findQtrPatternMatch, matchesQtrSelection } from '@/features/qtr/matchQtrAnimation'
-import { createQtrSideDiagram } from '@/features/qtr/math/createQtrHeaderDiagram'
-import type { QtrMode, QtrPatternMatch, QtrPatternSelection } from '@/features/qtr/types'
+import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/vtg/qtr/data/qtrLabels'
+import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import {
   patternPreviewReferences,
@@ -222,13 +220,12 @@ import {
   vtgSpacingControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
-import { findVtgPatternMatch, matchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
-import { vtgPropBounds } from '@/features/qtr/math/createQtrHeaderDiagram'
 import type {
+  QtrMode,
+  QtrPatternSelection,
   VtgCellAddress,
   VtgBeat,
   VtgCellReference,
-  VtgPatternMatch,
   VtgPatternLabel,
   VtgPropPlacement,
   VtgRuleDiagram,
@@ -240,6 +237,7 @@ import { supportsVtgQtrTransition, vtgSpeedRatios } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import { toColor } from '@/utils/UtilFunc'
+import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
 interface BlankDimensions {
   width: number
@@ -260,9 +258,9 @@ type VtgMatrixAddress = Omit<VtgMatrixTile, 'label' | 'description'>
 
 const props = withDefaults(
   defineProps<{
-    concept: 'vtg' | 'qtr'
     animation?: RootDataFinal
     animationReady?: boolean
+    patternMatcher?: PatternMatchingClient
   }>(),
   {
     animationReady: true,
@@ -273,7 +271,6 @@ const emit = defineEmits<{
   patternSelect: [selection: ConceptPatternSelection]
 }>()
 
-const matrixConcept = computed<'vtg' | 'qtr'>(() => props.concept)
 const speedRatios = vtgSpeedRatios
 const conceptsStore = useConceptsStore()
 const {
@@ -291,7 +288,6 @@ const {
   rightPropVisible,
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
-if (props.concept === 'qtr') isQtr.value = true
 const isAnti = ref(false)
 const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
@@ -378,6 +374,8 @@ const isBottomSpinToggleCell = (reference: VtgCellReference) =>
   reference === '5-6' || reference === '6-6'
 
 const emitPatternSelection = (tile: VtgMatrixTile) => {
+  if (!suppressPatternEmit) hydrationVersion++
+
   const baseSelection: VtgPatternSelection = {
     reference: tile.reference,
     speedRatio: speedRatio.value,
@@ -502,29 +500,44 @@ watch(
   },
 )
 
-const hydratePatternControls = (animation: RootDataFinal) => {
-  const matchesLastSelection = lastEmittedSelection
-    ? 'quarters' in lastEmittedSelection
-      ? matchesQtrSelection(animation, lastEmittedSelection)
-      : matchesVtgSelection(animation, lastEmittedSelection)
-    : false
-  if (matchesLastSelection) {
-    lastEmittedSelection = undefined
-    return
-  }
+const matchPattern = async (request: Parameters<PatternMatchingClient['matchVtg']>[0]) => {
+  if (props.patternMatcher) return props.patternMatcher.matchVtg(request)
+
+  const { matchVtgPatternRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return matchVtgPatternRequest(request)
+}
+
+const hydratePatternControls = async (animation: RootDataFinal) => {
+  const version = ++hydrationVersion
+  const selection = lastEmittedSelection
   lastEmittedSelection = undefined
 
   const matchPreferences = {
     swapProps: swapProps.value,
     reversePlane: reversePlane.value,
+    quarters: quarterMode.value,
   }
-  const vtgMatch: VtgPatternMatch | undefined = findVtgPatternMatch(animation, matchPreferences)
-  const qtrMatch: QtrPatternMatch | undefined = vtgMatch
-    ? undefined
-    : findQtrPatternMatch(animation, { ...matchPreferences, quarters: quarterMode.value })
 
-  const match = vtgMatch ?? qtrMatch
-  const version = ++hydrationVersion
+  let result
+  try {
+    result = await matchPattern({
+      animation,
+      preferences: matchPreferences,
+      ...(selection ? { lastSelection: selection } : undefined),
+    })
+  } catch (error) {
+    if (version === hydrationVersion && componentMounted) {
+      console.warn('VTG pattern matching failed.', error)
+    }
+    return
+  }
+
+  if (version !== hydrationVersion || !componentMounted || props.animation !== animation) return
+  if (result.status === 'unchanged') return
+
+  const match = result.status === 'matched' ? result.match : undefined
+  const qtrMatch = result.status === 'matched' && result.source === 'qtr' ? result.match : undefined
   suppressPatternEmit = true
 
   if (match) {
@@ -546,7 +559,7 @@ const hydratePatternControls = (animation: RootDataFinal) => {
     arms.value = animation.arms
     leftPropVisible.value = isPatternPropVisible(animation.props[0])
     rightPropVisible.value = isPatternPropVisible(animation.props[1])
-    isQtr.value = qtrMatch !== undefined
+    isQtr.value = result.status === 'matched' && result.source === 'qtr'
     if (qtrMatch) quarterMode.value = qtrMatch.quarters
   } else {
     selectedCell.value = undefined
@@ -596,7 +609,7 @@ const syncPatternControls = () => {
   }
 
   initialAnimationHandled = true
-  hydratePatternControls(props.animation)
+  void hydratePatternControls(props.animation)
 }
 
 watch([() => props.animationReady, () => props.animation], syncPatternControls)
@@ -821,6 +834,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   componentMounted = false
+  hydrationVersion++
   blankObserver?.disconnect()
 })
 

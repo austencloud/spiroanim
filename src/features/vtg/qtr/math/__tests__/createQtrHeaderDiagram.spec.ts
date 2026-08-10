@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getQtrSidePropStates } from '@/features/qtr/math/createQtrHeaderDiagram'
+import { getQtrSidePropStates } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import type { VtgRuleNumber } from '@/features/vtg/types'
 
 const getStates = (

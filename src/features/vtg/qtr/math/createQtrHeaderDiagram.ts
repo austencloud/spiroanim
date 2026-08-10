@@ -1,8 +1,8 @@
 import { Vector3 } from 'three'
 
-import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
-import type { QtrMode } from '@/features/qtr/types'
+import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import type {
+  QtrMode,
   VtgCellReference,
   VtgPropPlacement,
   VtgRuleDiagram,

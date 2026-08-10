@@ -137,4 +137,13 @@ describe('useConceptsStore', () => {
     expect(store.selectedConcept).toBe('8stp')
     app.unmount()
   })
+
+  it('hydrates The Kinetic Alphabet as the selected concept', () => {
+    localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: 'tka' }))
+
+    const { app, store } = mountStore()
+
+    expect(store.selectedConcept).toBe('tka')
+    app.unmount()
+  })
 })

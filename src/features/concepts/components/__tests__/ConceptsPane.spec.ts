@@ -22,6 +22,7 @@ describe('ConceptsPane', () => {
     expect(selector.findAll('option').map((option) => option.text())).toEqual([
       'Vulkan Tech Gospel',
       'Eight Step',
+      'The Kinetic Alphabet',
     ])
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
 
@@ -127,6 +128,20 @@ describe('ConceptsPane', () => {
       'eight-step-pane',
     )
     expect(wrapper.findAll('[data-role="eight-step-cell"]')).toHaveLength(72)
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+  })
+
+  it('shows The Kinetic Alphabet placeholder last without selecting a pattern', async () => {
+    const wrapper = mount(ConceptsPane)
+    const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
+
+    await selector.setValue('tka')
+
+    expect(selector.element.value).toBe('tka')
+    expect(wrapper.find('[data-role="vtg-pane"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-pane"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('The Kinetic Alphabet')
+    expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('Possibly coming soon')
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 

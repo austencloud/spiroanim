@@ -1,17 +1,16 @@
-import { createDefaultQtrAnimation } from '@/features/qtr/createQtrAnimation'
-import { qtrModes } from '@/features/qtr/types'
+import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import type {
   QtrPatternMatch,
   QtrPatternMatchPreferences,
   QtrPatternSelection,
-} from '@/features/qtr/types'
+} from '@/features/vtg/types'
 import {
   createVtgAnimationSignature,
   getVtgAnimationScale,
 } from '@/features/vtg/math/createVtgAnimationSignature'
 import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import type { VtgCellReference, VtgRuleNumber } from '@/features/vtg/types'
-import { supportsVtgQtrTransition, vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { qtrModes, supportsVtgQtrTransition, vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import {
   doubleAnimationPlayback,
   doublePlaybackMultiplier,

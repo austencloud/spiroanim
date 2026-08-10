@@ -6,6 +6,7 @@ interface TestBridgeMap {
   notice: { arg: string }
   double: { arg: number; ret: number }
   fail: { arg: void; ret: void }
+  wait: { arg: void; ret: void }
 }
 
 class LinkedWorker extends EventTarget implements Worker {
@@ -59,5 +60,19 @@ describe('createMessageChannel', () => {
     })
 
     await expect(main.call('fail', undefined)).rejects.toThrow('worker failed')
+  })
+
+  it('rejects pending and future requests when closed', async () => {
+    const [mainPort, workerPort] = linkedWorkers()
+    const main = createMessageChannel<TestBridgeMap>(mainPort)
+    const worker = createMessageChannel<TestBridgeMap>(workerPort)
+
+    worker.register('wait', () => new Promise<void>(() => undefined))
+
+    const pending = main.call('wait', undefined)
+    main.close(new Error('test close'))
+
+    await expect(pending).rejects.toThrow('test close')
+    await expect(main.call('double', 21)).rejects.toThrow('Message channel is closed')
   })
 })

@@ -9,7 +9,7 @@ import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
-import { createQtrAnimation } from '@/features/qtr/createQtrAnimation'
+import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 
@@ -152,11 +152,13 @@ describe('SpiroAnim view', () => {
     useMainPaneStore().setViewInPane('concepts', 'left')
     await flushPromises()
     expect(wrapper.get('[data-role="left-pane"]').text()).toContain('VTG')
-    expect(
-      wrapper
-        .get('[data-role="concepts-view"] [data-role="vtg-pane"]')
-        .attributes('data-selected-cell'),
-    ).toBe('5-6')
+    await vi.waitFor(() => {
+      expect(
+        wrapper
+          .get('[data-role="concepts-view"] [data-role="vtg-pane"]')
+          .attributes('data-selected-cell'),
+      ).toBe('5-6')
+    })
     expect(wrapper.get<HTMLInputElement>('input[value="1:3"]').element.checked).toBe(true)
     expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Anti')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(true)
@@ -234,7 +236,7 @@ describe('SpiroAnim view', () => {
       history: createMemoryHistory(),
       routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
     })
-    await router.push('/vulkantechgospel?r=future-format&p0=untouched&v=999')
+    await router.push('/vulkan-tech-gospel?r=future-format&p0=untouched&v=999')
     await router.isReady()
     const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
 
