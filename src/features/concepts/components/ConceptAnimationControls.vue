@@ -311,9 +311,30 @@ onBeforeUnmount(endSliderHistory)
 }
 
 .concept-render-options {
-  width: min(100%, 45rem);
+  container-type: inline-size;
+  box-sizing: border-box;
+  width: calc(min(100%, 45rem) - 2px);
+  min-width: 0;
+  padding-inline: var(--space-1);
   margin: var(--space-1) auto 0;
   justify-content: center;
+}
+
+.concept-render-options label {
+  min-width: 0;
+}
+
+.concept-render-options span {
+  padding: clamp(var(--space-1), 1.2cqi, var(--space-2));
+  font-size: clamp(0.625rem, 3cqi, 0.875rem);
+  white-space: nowrap;
+}
+
+@container concept-pane (max-width: 25rem) {
+  .concept-render-options {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-columns: unset;
+  }
 }
 
 .concept-controls__visually-hidden {

@@ -45,6 +45,12 @@ describe('Landing view', () => {
       target: '_blank',
       rel: 'noopener noreferrer',
     })
+    expect(wrapper.get('.creator-note h2').text()).toBe('Built for the way I want to animate')
+    expect(wrapper.get('.creator-note').text()).toContain(
+      'I always wanted to animate my POI the way I imagined it, potentially in 3D.',
+    )
+    expect(wrapper.get('.creator-note').text()).toContain('SpiroAnim is built for me')
+    expect(wrapper.get('.creator-note').text()).toContain('I might take special requests')
     expect(wrapper.get('.offline-note').text()).toContain('Built to work offline')
     expect(wrapper.get('.offline-note').text()).toContain('After one online visit')
     expect(wrapper.get('.mobile-guidance').text()).toContain('high-end mobile device')

@@ -12,7 +12,8 @@
           <h2 id="preview-title">A 3D playground for flow arts</h2>
           <p>
             SpiroAnim is a proof-of-concept rendering tool with a basic editor.<br />
-            Now includes a VTG3 Generator, a duplicate of Vulkan Tech Gospel v3.<br />
+            Now includes a VTG3 Generator, a duplicate of Vulkan Tech Gospel v3 with several
+            functional additions and upgrades.<br />
             Credit to:
             <a
               class="vtg-link"
@@ -21,6 +22,16 @@
               rel="noopener noreferrer"
               >vtg-v3.web.app</a
             >
+          </p>
+        </section>
+
+        <section class="creator-note" aria-labelledby="creator-note-title">
+          <p class="eyebrow">Why SpiroAnim exists</p>
+          <h2 id="creator-note-title">Built for the way I want to animate</h2>
+          <p>
+            I always wanted to animate my POI the way I imagined it, potentially in 3D. It is
+            finally here, and more recently it has evolved dramatically. SpiroAnim is built for me,
+            with the features I want. If you know how to reach me, I might take special requests.
           </p>
         </section>
 
@@ -186,6 +197,27 @@ h1 {
   outline-offset: 2px;
 }
 
+.creator-note {
+  padding: var(--space-6);
+  margin-block-end: var(--space-6);
+  text-align: start;
+  background: color-mix(in srgb, var(--color-status-success) 8%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-status-success) 30%, var(--color-border));
+  border-inline-start-width: 0.25rem;
+  border-radius: var(--radius-md);
+}
+
+.creator-note h2 {
+  margin: 0 0 var(--space-2);
+  font-size: clamp(1.15rem, 3vw, 1.35rem);
+}
+
+.creator-note > p:last-child {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
 .offline-note {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -310,6 +342,10 @@ h1 {
   }
 
   .project-note {
+    padding: var(--space-4);
+  }
+
+  .creator-note {
     padding: var(--space-4);
   }
 }

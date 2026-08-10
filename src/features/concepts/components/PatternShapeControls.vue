@@ -35,17 +35,12 @@ const shapeLabels = {
 }
 
 .pattern-shape-controls__group {
-  display: grid;
-  grid-auto-columns: max-content;
-  grid-auto-flow: column;
-  gap: var(--space-1);
-  padding: 0;
-  margin: 0;
-  border: 0;
+  display: contents;
 }
 
 .pattern-shape-controls__group label {
   position: relative;
+  min-width: 0;
   cursor: pointer;
 }
 
@@ -58,10 +53,11 @@ const shapeLabels = {
 
 .pattern-shape-controls__group span {
   display: grid;
-  padding: var(--space-2);
+  padding: clamp(var(--space-1), 1.2cqi, var(--space-2));
   color: var(--color-text);
-  font-size: 0.875rem;
+  font-size: clamp(0.625rem, 3cqi, 0.875rem);
   font-weight: 700;
+  white-space: nowrap;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -74,12 +70,19 @@ const shapeLabels = {
 
 .pattern-shape-controls__group input:checked + span {
   color: var(--color-on-action-primary);
-  background: var(--color-action-primary);
-  border-color: var(--color-action-primary);
+  background: color-mix(in srgb, var(--color-action-primary) 55%, var(--color-status-success));
+  border-color: color-mix(in srgb, var(--color-action-primary) 44%, var(--color-status-success));
 }
 
 .pattern-shape-controls__group input:focus-visible + span {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
+}
+
+@container concept-pane (max-width: 25rem) {
+  .pattern-shape-controls__group label:first-child span {
+    padding-inline: clamp(2px, 0.75cqi, var(--space-1));
+    font-size: clamp(0.5rem, 2.7cqi, 0.75rem);
+  }
 }
 </style>

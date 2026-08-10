@@ -581,6 +581,8 @@ defineExpose({
   --eight-step-color-marked: #8a7600;
   --eight-step-color-marked-selected: #ff0000;
 
+  container-name: concept-pane;
+  container-type: inline-size;
   width: 100%;
   min-inline-size: 0;
   min-block-size: 0;
