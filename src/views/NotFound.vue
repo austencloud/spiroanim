@@ -77,7 +77,8 @@ const brandIconUrl = '/images/app-icons/pwa-source.svg'
   padding-block-end: max(var(--space-6), var(--safe-area-inset-bottom));
   padding-inline-start: max(var(--space-6), var(--safe-area-inset-left));
   overflow: hidden auto;
-  place-items: center;
+  align-items: start;
+  justify-items: center;
   color: var(--color-text);
   background:
     radial-gradient(
@@ -121,6 +122,7 @@ const brandIconUrl = '/images/app-icons/pwa-source.svg'
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(16rem, 0.95fr);
   width: min(100%, 62rem);
+  margin-block: auto;
   overflow: hidden;
   background: color-mix(in srgb, var(--color-surface) 92%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-workspace-boundary) 55%, var(--color-border));
@@ -366,7 +368,10 @@ h1 {
 
 @media (max-width: 48rem) {
   .not-found-page {
-    padding: var(--space-4);
+    padding-block-start: max(var(--space-4), var(--safe-area-inset-top));
+    padding-inline-end: max(var(--space-4), var(--safe-area-inset-right));
+    padding-block-end: max(var(--space-4), var(--safe-area-inset-bottom));
+    padding-inline-start: max(var(--space-4), var(--safe-area-inset-left));
   }
 
   .not-found-card {

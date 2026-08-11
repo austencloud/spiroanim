@@ -37,7 +37,7 @@
           />
           <span v-else aria-hidden="true" />
         </div>
-        <div class="qst-pattern-line__tiles">
+        <div class="qst-pattern-line__tiles" :style="{ '--qst-line-beats': line.tiles.length }">
           <QstPositionTile v-for="(tile, index) in line.tiles" :key="index" :tile="tile" />
         </div>
       </div>
@@ -272,11 +272,15 @@ onBeforeUnmount(() => previewObserver?.disconnect())
 }
 
 .qst-pattern-line__tiles {
-  display: flex;
+  --qst-line-beats: 4;
+  --qst-line-gap: clamp(0.15rem, 0.8vw, var(--space-2));
+
+  display: grid;
   min-inline-size: 0;
   flex: 1 1 auto;
+  grid-template-columns: repeat(var(--qst-line-beats), minmax(0, 4.25rem));
   justify-content: space-around;
-  gap: clamp(0.15rem, 0.8vw, var(--space-2));
+  gap: var(--qst-line-gap);
 }
 
 @keyframes qst-preview-pulse {

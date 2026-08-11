@@ -63,10 +63,11 @@ const ariaLabel = computed(
 .qst-position-tile {
   position: relative;
   display: grid;
-  width: var(--qst-tile-size, 4.25rem);
+  width: min(100%, var(--qst-tile-size, 4.25rem));
   aspect-ratio: 1;
   padding: 0.125rem;
   flex: 0 0 auto;
+  justify-self: center;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: 0.125rem;
