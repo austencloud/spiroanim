@@ -1,11 +1,10 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import type { AnimData, RootDataFinal } from '@/types/AnimTypes'
-import type { VtgTransitionBeats } from '@/features/vtg/types'
+import { vtgDefaultTransitionBeats, type VtgTransitionBeats } from '@/features/vtg/types'
 
 const rotationTolerance = 0.000_001
 const transitionPlane = 180
-const defaultTransitionBeats = 5 satisfies VtgTransitionBeats
 const doubledVtgBaseFrameCount = 9
 
 const rotationsMatch = (first: readonly number[], second: readonly number[]) =>
@@ -103,7 +102,7 @@ const findFirstConvertibleProp = (animation: RootDataFinal): number | undefined 
  */
 export const alternatePatternPlayback = (
   animation: RootDataFinal,
-  transitionBeats: VtgTransitionBeats = defaultTransitionBeats,
+  transitionBeats: VtgTransitionBeats = vtgDefaultTransitionBeats,
 ): RootDataFinal | undefined => {
   const firstProp = animation.props[0]
   if (!firstProp || animation.props.some((prop) => prop.anim.length !== firstProp.anim.length)) {

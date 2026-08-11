@@ -244,7 +244,12 @@ import type {
   VtgPatternSelection,
   VtgTransitionBeats,
 } from '@/features/vtg/types'
-import { supportsVtgQtrTransition, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
+import {
+  supportsVtgQtrTransition,
+  vtgDefaultTransitionBeats,
+  vtgSpeedRatios,
+  vtgTransitionBeats,
+} from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import { toColor } from '@/utils/UtilFunc'
@@ -304,7 +309,7 @@ const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
 const double = ref(false)
 const transition = ref(false)
-const transitionBeats = ref<VtgTransitionBeats>(2)
+const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
 const transitionAvailable = computed(() => supportsVtgQtrTransition(speedRatio.value))
 const quarterMode = ref<QtrMode>(1)
 const activeQuarterMode = computed<QtrMode | false>(() => (isQtr.value ? quarterMode.value : false))
@@ -399,7 +404,11 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (beat.value !== 1) baseSelection.beat = beat.value
   if (double.value) baseSelection.double = true
   if (transition.value && transitionAvailable.value) baseSelection.transition = true
-  if (transition.value && transitionAvailable.value && transitionBeats.value !== 2) {
+  if (
+    transition.value &&
+    transitionAvailable.value &&
+    transitionBeats.value !== vtgDefaultTransitionBeats
+  ) {
     baseSelection.transitionBeats = transitionBeats.value
   }
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
@@ -567,7 +576,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     beat.value = match.beat ?? 1
     double.value = match.double ?? false
     transition.value = match.transition ?? false
-    transitionBeats.value = match.transitionBeats ?? 2
+    transitionBeats.value = match.transitionBeats ?? vtgDefaultTransitionBeats
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
@@ -586,7 +595,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     beat.value = 1
     double.value = false
     transition.value = false
-    transitionBeats.value = 2
+    transitionBeats.value = vtgDefaultTransitionBeats
     quarterMode.value = 1
   }
 
@@ -608,7 +617,7 @@ const selectInitialRandomPattern = () => {
   beat.value = 1
   double.value = false
   transition.value = false
-  transitionBeats.value = 2
+  transitionBeats.value = vtgDefaultTransitionBeats
   quarterMode.value = 1
   selectRandomTile()
 

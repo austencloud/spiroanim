@@ -28,6 +28,7 @@ export const vtgBeats = [1, 2, 3, 4] as const
 export type VtgBeat = (typeof vtgBeats)[number]
 export const vtgTransitionBeats = [6, 5, 4, 3, 2] as const
 export type VtgTransitionBeats = (typeof vtgTransitionBeats)[number]
+export const vtgDefaultTransitionBeats = 3 satisfies VtgTransitionBeats
 
 export interface VtgPatternSelection
   extends PatternPropVisibilitySelection, PatternPropSpacingSelection {

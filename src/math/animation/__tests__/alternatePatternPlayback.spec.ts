@@ -10,7 +10,6 @@ import {
   alternatePatternPlayback,
   getAlternatingPatternBase,
 } from '@/math/animation/alternatePatternPlayback'
-import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv5'
 
@@ -27,21 +26,13 @@ describe('alternatePatternPlayback', () => {
     const animation = alternatePatternPlayback(base)
     if (!animation) throw new Error('Expected alternating animation')
 
-    const cycleFrameCount = base.props[0]!.anim.length - 1
-    const blockFrameCount = doublePlaybackMultiplier + cycleFrameCount
-    const changeFrames = Array.from(
-      { length: base.props.length * doublePlaybackMultiplier },
-      (_unused, index) => base.props[0]!.anim.length + index * blockFrameCount + 1,
-    )
-
-    expect(animation.props.map((prop) => prop.anim.length)).toEqual([41, 41])
-    expect(changeFrames).toEqual([10, 20, 30, 40])
-    expect(animation.props[0]!.anim[10]).toEqual({ turns: 90, plane: 180 })
-    expect(animation.props[1]!.anim[20]).toEqual({ turns: 90, plane: 180 })
-    expect(animation.props[0]!.anim[30]).toEqual({ turns: -180, plane: 180 })
-    expect(animation.props[1]!.anim[40]).toEqual({ turns: -180, plane: 180 })
-    expect(animation.props[1]!.anim[10]).toEqual({})
-    expect(animation.props[0]!.anim[20]).toEqual({})
+    expect(animation.props.map((prop) => prop.anim.length)).toEqual([25, 25])
+    expect(animation.props[0]!.anim[6]).toEqual({ turns: 90, plane: 180 })
+    expect(animation.props[1]!.anim[12]).toEqual({ turns: 90, plane: 180 })
+    expect(animation.props[0]!.anim[18]).toEqual({ turns: -180, plane: 180 })
+    expect(animation.props[1]!.anim[24]).toEqual({ turns: -180, plane: 180 })
+    expect(animation.props[1]!.anim[6]).toEqual({})
+    expect(animation.props[0]!.anim[12]).toEqual({})
   })
 
   it.each(vtgSpeedRatios)('derives valid alternating turns for %s', (speedRatio) => {

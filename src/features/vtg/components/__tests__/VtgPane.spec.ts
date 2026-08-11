@@ -597,7 +597,7 @@ describe('VtgPane', () => {
 
     const selector = wrapper.get<HTMLSelectElement>('[data-role="vtg-transition-beats"]')
     const right = wrapper.get<HTMLInputElement>('[data-role="vtg-right"]')
-    expect(selector.element.value).toBe('2')
+    expect(selector.element.value).toBe('3')
     expect(selector.findAll('option').map((option) => option.text())).toEqual([
       '6',
       '5',
@@ -609,14 +609,14 @@ describe('VtgPane', () => {
       right.element.compareDocumentPosition(selector.element) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
-    await selector.setValue('3')
+    await selector.setValue('4')
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
       {
         reference: '5-1',
         speedRatio: '1:3',
         double: true,
         transition: true,
-        transitionBeats: 3,
+        transitionBeats: 4,
       },
     ])
 
