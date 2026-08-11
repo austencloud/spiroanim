@@ -13,7 +13,7 @@
     <p class="reset-guidance">Close any other SpiroAnim tabs before continuing.</p>
     <div class="reset-actions">
       <button type="button" @click="isOpen = false">Cancel</button>
-      <a class="reset-action" href="/reset">Continue to Reset</a>
+      <a class="reset-action" href="/reset/">Continue to Reset</a>
     </div>
   </BaseDialog>
 </template>

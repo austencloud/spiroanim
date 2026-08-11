@@ -572,15 +572,16 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     quarterMode.value = 1
   }
 
+  // Suppression only protects the control writes above through their watcher flush. A newer
+  // hydration may start before this callback runs, but it must not prevent this suppression from
+  // being released or subsequent option changes will be ignored indefinitely.
   void nextTick(() => {
-    if (version !== hydrationVersion) return
-
     suppressPatternEmit = false
   })
 }
 
 const selectInitialRandomPattern = () => {
-  const version = ++hydrationVersion
+  hydrationVersion++
   suppressPatternEmit = true
   selectedCell.value = undefined
   conceptsStore.resetPatternControls()
@@ -593,7 +594,7 @@ const selectInitialRandomPattern = () => {
   selectRandomTile()
 
   void nextTick(() => {
-    if (version === hydrationVersion) suppressPatternEmit = false
+    suppressPatternEmit = false
   })
 }
 

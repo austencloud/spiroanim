@@ -96,7 +96,7 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
 })
 
 test('serves the PWA reset page outside the application shell', async ({ request }) => {
-  const response = await request.get('/reset')
+  const response = await request.get('/reset/')
   const html = await response.text()
 
   expect(response.ok()).toBe(true)
@@ -130,7 +130,7 @@ test('removes service workers and all locally stored app data for the current or
     })
   })
 
-  const response = requireResponse(await page.goto('/reset'))
+  const response = requireResponse(await page.goto('/reset/'))
   expect(response.fromServiceWorker()).toBe(false)
   await expect(page.getByRole('heading', { name: 'Reset complete' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Open a fresh copy' })).toBeVisible()

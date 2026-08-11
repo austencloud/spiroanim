@@ -357,7 +357,7 @@ describe('AppNavigationMenu', () => {
     expect(wrapper.get('.pwa-reset-dialog').attributes()).toHaveProperty('open')
     expect(wrapper.get('.reset-warning').text()).toContain('Are you sure?')
     expect(wrapper.get('.reset-warning').text()).toContain('saved editor preferences')
-    expect(wrapper.get('.reset-action').attributes('href')).toBe('/reset')
+    expect(wrapper.get('.reset-action').attributes('href')).toBe('/reset/')
 
     await wrapper.get('.reset-actions button').trigger('click')
     expect(wrapper.get('.pwa-reset-dialog').attributes()).not.toHaveProperty('open')

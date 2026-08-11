@@ -7,7 +7,9 @@ import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
 import { useQSMainStore } from '@/stores/useQSMainStore'
+import type { RootDataFinal } from '@/types/AnimTypes'
 import type {
   PatternMatchingClient,
   VtgPatternMatchResult,
@@ -1029,6 +1031,38 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
     expect(wrapper.get<HTMLInputElement>('input[value="1:3"]').element.checked).toBe(true)
     expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-1', speedRatio: '1:3' }]])
+  })
+
+  it('keeps option updates enabled when the initial selection immediately feeds back', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const populatedAnimation = createDefaultVtgAnimation({
+      reference: '1-1',
+      speedRatio: '1:3',
+    })
+    if (!populatedAnimation) throw new Error('Expected a supported VTG animation')
+
+    const animation = ref<RootDataFinal>({ ...populatedAnimation, props: [] })
+    const applyPattern = vi.fn<(selection: VtgPatternSelection | QtrPatternSelection) => void>(
+      (selection) => {
+        const nextAnimation = createDefaultVtgAnimation(selection)
+        if (nextAnimation) animation.value = nextAnimation
+      },
+    )
+    const Host = defineComponent({
+      components: { VtgPane },
+      setup: () => ({ animation, applyPattern }),
+      template: '<VtgPane :animation="animation" @pattern-select="applyPattern" />',
+    })
+    const wrapper = mount(Host)
+
+    await vi.waitFor(() => expect(applyPattern).toHaveBeenCalledOnce())
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(true)
+
+    expect(applyPattern).toHaveBeenCalledTimes(2)
+    expect(applyPattern.mock.calls[1]?.[0]).toMatchObject({
+      reference: '1-1',
+      quarters: 1,
+    })
   })
 
   it('waits for shared animation data before deciding whether to select a random pattern', async () => {
