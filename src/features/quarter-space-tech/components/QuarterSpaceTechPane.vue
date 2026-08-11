@@ -663,6 +663,7 @@ defineExpose({
   display: grid;
   min-block-size: 15rem;
   padding: var(--space-4);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   color: var(--color-text);
   text-align: start;
   cursor: pointer;
