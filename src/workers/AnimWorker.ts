@@ -14,7 +14,11 @@ import { createCameraAnimator } from '@/workers/animation/createCameraAnimator'
 
 import { CMODES } from '@/domain/animation/AnimStruct'
 import { CAMERATIMES, MOTIONTIMES, PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
-import { videoExportFrameCount, videoExportFrameTimeMs } from '@/math/videoExportTiming'
+import {
+  videoExportAnimationTimeMs,
+  videoExportFrameCount,
+  videoExportFrameTimeMs,
+} from '@/math/videoExportTiming'
 
 import { WebGLRenderer, Scene, PerspectiveCamera, Raycaster, Vector2, Mesh } from 'three'
 import { Color } from 'three'
@@ -63,7 +67,7 @@ let speed = 1
 let currentMs = 0
 let playbackStartedAt = 0
 let girth = 1
-let animationId: number
+let animationId: number | undefined
 let selection = false
 let min = 0
 let max = 0
@@ -148,8 +152,8 @@ on('animate', ({ val, play }) => {
     playbackStartedAt = performance.now()
     playing = true
   }
-  if (animating) animate()
-  else cancelAnimationFrame(animationId)
+  if (animating) restartAnimationLoop()
+  else stopAnimationLoop()
 })
 
 // Jump play and stop commands
@@ -157,6 +161,9 @@ on('jump', (ms) => jump(ms))
 on('play', () => {
   playbackStartedAt = performance.now()
   playing = true
+  // Mobile browsers can drop a worker's animation-frame callback during app or tab transitions
+  // without terminating the worker. Restarting here lets Play recover that otherwise live worker.
+  if (animating) restartAnimationLoop(false)
 })
 on('stop', () => (playing = false))
 
@@ -272,10 +279,7 @@ on('data', (compiled) => {
   for (const animator of animators) animator.seek(currentMs)
 
   // Restart animate()
-  if (animating) {
-    if (animationId) cancelAnimationFrame(animationId)
-    animate(undefined, false)
-  }
+  if (animating) restartAnimationLoop(false)
 
   // TODO: Why is this necessary when the values are supplied above?
   // (appears to affect lines when new data is received, if this isn't called)
@@ -366,7 +370,7 @@ register(
     try {
       playing = false
       animating = false
-      if (animationId) cancelAnimationFrame(animationId)
+      stopAnimationLoop()
 
       Object.assign(dim, { width, height, ratio: 1 })
       resize(dim)
@@ -399,7 +403,7 @@ register(
       cameraAnimator?.setExporting(false)
       deferredResize = undefined
       deferredProjection = undefined
-      if (animating) animate(undefined, false)
+      if (animating) restartAnimationLoop(false)
     }
   },
 )
@@ -420,6 +424,7 @@ register(
     codec,
     container,
     durationMs,
+    playbackSpeed,
     restorePositionMs,
   }) => {
     if (videoExportActive) throw new Error('A video export is already in progress.')
@@ -448,7 +453,7 @@ register(
 
       playing = false
       animating = false
-      if (animationId) cancelAnimationFrame(animationId)
+      stopAnimationLoop()
 
       Object.assign(dim, { width, height, ratio: 1 })
       resize(dim)
@@ -481,7 +486,12 @@ register(
         if (cancelVideoExport) break
 
         const timestamp = frame * frameDuration
-        jump(videoExportFrameTimeMs(frame, totalFrames, durationMs, framerate))
+        jump(
+          videoExportAnimationTimeMs(
+            videoExportFrameTimeMs(frame, totalFrames, durationMs, framerate),
+            playbackSpeed,
+          ),
+        )
         renderer.render(scene, camera)
         await source.add(timestamp, frameDuration)
         send('exportVideoProgress', {
@@ -527,14 +537,14 @@ register(
       cancelVideoExport = false
       deferredResize = undefined
       deferredProjection = undefined
-      if (animating) animate(undefined, false)
+      if (animating) restartAnimationLoop(false)
     }
   },
 )
 
 // Cleanup resources, main then terminates the worker
 register('dispose', () => {
-  if (animating) cancelAnimationFrame(animationId)
+  stopAnimationLoop()
   if (scene) disposeScene(scene)
   if (renderer) renderer.dispose()
 })
@@ -634,6 +644,16 @@ function animate(time: number | undefined = undefined, render: boolean | undefin
   //})
 
   if (render) renderer.render(scene, camera)
+}
+
+function stopAnimationLoop() {
+  if (animationId !== undefined) cancelAnimationFrame(animationId)
+  animationId = undefined
+}
+
+function restartAnimationLoop(render = true) {
+  stopAnimationLoop()
+  if (animating) animate(undefined, render)
 }
 
 // Moves to a specific millisecond of the animations

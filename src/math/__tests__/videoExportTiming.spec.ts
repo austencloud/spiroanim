@@ -1,8 +1,25 @@
 import { describe, expect, it } from 'vitest'
 
-import { videoExportFrameCount, videoExportFrameTimeMs } from '@/math/videoExportTiming'
+import {
+  videoExportAnimationTimeMs,
+  videoExportDurationMs,
+  videoExportFrameCount,
+  videoExportFrameTimeMs,
+} from '@/math/videoExportTiming'
 
 describe('video export timing', () => {
+  it('scales the output duration and sampled animation time with playback speed', () => {
+    expect(videoExportDurationMs(4000, 2)).toBe(2000)
+    expect(videoExportAnimationTimeMs(1500, 2)).toBe(3000)
+    expect(videoExportDurationMs(4000, 0.5)).toBe(8000)
+    expect(videoExportAnimationTimeMs(6000, 0.5)).toBe(3000)
+  })
+
+  it('falls back to normal speed for an invalid playback speed', () => {
+    expect(videoExportDurationMs(4000, 0)).toBe(4000)
+    expect(videoExportAnimationTimeMs(1500, 0)).toBe(1500)
+  })
+
   it('adds a held endpoint frame after a frame-aligned animation', () => {
     const totalFrames = videoExportFrameCount(1000, 60)
 

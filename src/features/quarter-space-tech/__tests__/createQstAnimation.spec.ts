@@ -5,6 +5,7 @@ import {
   createDefaultQstAnimation,
   createQstLinePreviewAnimation,
   createQstPreviewAnimation,
+  createQstAnimation,
 } from '@/features/quarter-space-tech/createQstAnimation'
 import { qstPatternDefinitions } from '@/features/quarter-space-tech/data/qstPatternCatalog'
 import { analyzeQstPositionPairs } from '@/features/quarter-space-tech/math/analyzeQstAnimation'
@@ -63,6 +64,22 @@ describe('createQstAnimation', () => {
       rootCompile(original).props[0]?.anim,
     )
     expect(original.props.every(({ anim }) => anim[0]?.scale === 8)).toBe(true)
+  })
+
+  it('preserves the active playback speed when BPM rebuilds the pattern', () => {
+    const current = createDefaultQstAnimation({ concept: 'qst', reference: 'breaks-1' })
+    if (!current) throw new Error('Missing breaks-1')
+
+    const animation = createQstAnimation(
+      { ...current, speed: 4 },
+      {
+        concept: 'qst',
+        reference: 'advanced-1',
+        bpm: 96,
+      },
+    )
+
+    expect(animation).toMatchObject({ bpm: 96, speed: 4 })
   })
 
   it('creates a distinct worker thumbnail animation for each configured line', () => {

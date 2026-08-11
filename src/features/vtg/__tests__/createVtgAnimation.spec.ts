@@ -333,6 +333,19 @@ describe('createVtgAnimation', () => {
     expect(animation?.smooth).toBe(true)
   })
 
+  it('preserves the active playback speed when BPM rebuilds the pattern', () => {
+    const current = createCurrentAnimation()
+    current.speed = 2
+
+    const animation = createVtgAnimation(current, {
+      reference: '1-6',
+      speedRatio: '1:3',
+      bpm: 90,
+    })
+
+    expect(animation).toMatchObject({ bpm: 90, speed: 2 })
+  })
+
   it('returns fresh data without mutating the player state', () => {
     const current = createCurrentAnimation()
     const currentSnapshot = structuredClone(current)

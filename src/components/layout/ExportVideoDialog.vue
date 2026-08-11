@@ -157,7 +157,7 @@ import {
 } from '@/utils/exportFileName'
 
 const emit = defineEmits<{
-  export: [settings: Omit<VideoExportSettings, 'durationMs'>]
+  export: [settings: Omit<VideoExportSettings, 'durationMs' | 'playbackSpeed'>]
 }>()
 
 const isOpen = ref(false)

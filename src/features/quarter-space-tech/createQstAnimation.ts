@@ -75,7 +75,7 @@ export const createQstAnimation = (
   return {
     ...rootFinal(decoded),
     camera: [createQstCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
-    speed: pattern.speed ?? current.speed,
+    speed: current.speed,
     type: pattern.type ?? current.type,
     turns: pattern.turns ?? current.turns,
     depth: pattern.depth ?? current.depth,

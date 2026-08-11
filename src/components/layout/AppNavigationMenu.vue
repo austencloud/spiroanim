@@ -168,6 +168,7 @@ import PwaResetDialog from '@/components/layout/PwaResetDialog.vue'
 import ShareDialog from '@/components/layout/ShareDialog.vue'
 import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 import { hasVideoExportApi, probeVideoExportCodecs } from '@/services/videoExportSupport'
+import { videoExportDurationMs } from '@/math/videoExportTiming'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import type {
@@ -216,7 +217,7 @@ const fullscreenLabel = computed(() =>
   isFullscreen.value ? 'Exit Full Screen' : 'Enter Full Screen',
 )
 const playerStore = usePlayerStore('main')
-const { COMPILED } = playerStore.raw()
+const { COMPILED, ROOT } = playerStore.raw()
 const {
   ASPECT,
   CANVAS_DIM,
@@ -300,12 +301,14 @@ function openExportVideoDialog() {
   void exportVideoDialog.value?.open(videoExportAvailable.value, CANVAS_DIM.value, ASPECT.value)
 }
 
-function startVideoExport(settings: Omit<VideoExportSettings, 'durationMs'>) {
+function startVideoExport(settings: Omit<VideoExportSettings, 'durationMs' | 'playbackSpeed'>) {
+  const playbackSpeed = ROOT.value.speed > 0 ? ROOT.value.speed : 1
   videoExportRequest.value = {
     id: Symbol(),
     settings: {
       ...settings,
-      durationMs: MAX.value,
+      durationMs: videoExportDurationMs(MAX.value, playbackSpeed),
+      playbackSpeed,
     },
   }
   void exportVideoProgressDialog.value?.open()

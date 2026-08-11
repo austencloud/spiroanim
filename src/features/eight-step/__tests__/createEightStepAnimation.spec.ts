@@ -82,6 +82,19 @@ describe('createEightStepAnimation', () => {
     expect(transformed?.props[0]?.anim).not.toEqual(base?.props[1]?.anim)
   })
 
+  it('preserves the active playback speed when BPM rebuilds the pattern', () => {
+    const animation = createEightStepAnimation(
+      { ...current, speed: 0.5 },
+      {
+        concept: '8stp',
+        reference: '5-II',
+        bpm: 84,
+      },
+    )
+
+    expect(animation).toMatchObject({ bpm: 84, speed: 0.5 })
+  })
+
   it('applies prop visibility overrides only to unchecked sides', () => {
     const visible = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AA' })
     const rightHidden = createDefaultEightStepAnimation({

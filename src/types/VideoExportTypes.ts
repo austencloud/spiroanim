@@ -11,6 +11,7 @@ export interface VideoExportSettings {
   codec: string
   container: VideoExportContainer
   durationMs: number
+  playbackSpeed: number
 }
 
 export interface VideoExportRequest {
