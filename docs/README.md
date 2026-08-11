@@ -25,6 +25,8 @@ details.
   builders, transforms, matching, relationship classification, and headers.
 - [`EIGHT_STEP.md`](./EIGHT_STEP.md) - Eight Step source pages, per-cell frame derivation, curve
   families, Swap/Flip behavior, matching, and compiled-geometry validation.
+- [`QUARTER_SPACE_TECH.md`](./QUARTER_SPACE_TECH.md) - QST catalog data, position analysis,
+  responsive diagrams, line splitting, pagination, and worker-rendered thumbnails.
 
 ## Web delivery
 
@@ -48,6 +50,7 @@ details.
 | URL hydration, replacement, undo, or redo         | `QUERY_STATE_AND_HISTORY.md`   |
 | VTG or Quarter Spacing controls and relationships | `VTG_AND_QUARTER_SPACING.md`   |
 | Eight Step definitions, transforms, or matching   | `EIGHT_STEP.md`                |
+| Quarter Space Tech catalog and diagrams           | `QUARTER_SPACE_TECH.md`        |
 | Public routes or search metadata                  | `SEO.md` and `PRERENDERING.md` |
 | Installation, offline, or service-worker updates  | `PWA.md`                       |
 | The application icon                              | `APP_ICONS.md`                 |

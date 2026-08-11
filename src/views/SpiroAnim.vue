@@ -82,8 +82,13 @@ import Editor from '@/components/SpiroAnim/AnimEditor.vue'
 import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
 import { createEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
+import { createQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
-import { isEightStepPatternSelection, isQtrPatternSelection } from '@/features/concepts/types'
+import {
+  isEightStepPatternSelection,
+  isQstPatternSelection,
+  isQtrPatternSelection,
+} from '@/features/concepts/types'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 
@@ -179,9 +184,11 @@ registerComponentEl(cConcepts, eConcepts)
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
   const animation = isEightStepPatternSelection(selection)
     ? createEightStepAnimation(ROOT.value, selection)
-    : isQtrPatternSelection(selection)
-      ? createQtrAnimation(ROOT.value, selection)
-      : createVtgAnimation(ROOT.value, selection)
+    : isQstPatternSelection(selection)
+      ? createQstAnimation(ROOT.value, selection)
+      : isQtrPatternSelection(selection)
+        ? createQtrAnimation(ROOT.value, selection)
+        : createVtgAnimation(ROOT.value, selection)
   if (animation) {
     ROOT.value = animation
     playerStore.cameraReset = Symbol()

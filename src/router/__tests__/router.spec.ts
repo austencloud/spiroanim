@@ -13,6 +13,8 @@ describe('application routes', () => {
     expect(router.resolve('/concepts').name).toBe('main')
     expect(router.resolve('/play-cnc').name).toBe('main')
     expect(router.resolve('/play-vtg').name).toBe('main')
+    expect(router.resolve('/quarter-space-tech').name).toBe('main')
+    expect(router.resolve('/play-qst').name).toBe('main')
     expect(router.resolve('/about').name).toBe('about')
     expect(router.resolve('/tips').name).toBe('tips')
   })

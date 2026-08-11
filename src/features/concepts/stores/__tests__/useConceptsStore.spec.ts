@@ -146,4 +146,13 @@ describe('useConceptsStore', () => {
     expect(store.selectedConcept).toBe('tka')
     app.unmount()
   })
+
+  it('hydrates Quarter Space Tech as the selected concept', () => {
+    localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: 'qst' }))
+
+    const { app, store } = mountStore()
+
+    expect(store.selectedConcept).toBe('qst')
+    app.unmount()
+  })
 })

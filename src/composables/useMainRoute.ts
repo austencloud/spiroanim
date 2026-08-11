@@ -13,7 +13,7 @@ import { findKeyByValue } from '@/utils/UtilFunc'
 import { UnsupportedSpiroAnimQSVersionError } from '@/services/query/versions'
 //import { encodeReadable } from '@/func/AnimReadableFunc'
 
-const routeKeys = ['play', 'time', 'edit', 'cnc', 'vtg', 'qtr', '8stp', 'tka'] as const
+const routeKeys = ['play', 'time', 'edit', 'cnc', 'vtg', 'qtr', '8stp', 'qst', 'tka'] as const
 
 const shortToView = {
   play: 'player',
@@ -23,6 +23,7 @@ const shortToView = {
   vtg: 'concepts',
   qtr: 'concepts',
   '8stp': 'concepts',
+  qst: 'concepts',
   tka: 'concepts',
 } as const
 
@@ -32,6 +33,7 @@ type ShortKey = keyof typeof shortToView
 const fullPathByConcept = {
   vtg: 'vulkan-tech-gospel',
   '8stp': 'eight-step',
+  qst: 'quarter-space-tech',
   tka: 'the-kinetic-alphabet',
 } as const satisfies Record<ConceptKey, string>
 
@@ -43,6 +45,7 @@ const fullToView = {
   'vulkan-tech-gospel': 'concepts',
   quarterspacing: 'concepts',
   'eight-step': 'concepts',
+  'quarter-space-tech': 'concepts',
   'the-kinetic-alphabet': 'concepts',
 } as const satisfies Record<string, MainView>
 

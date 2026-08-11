@@ -924,6 +924,7 @@ describe('VtgPane', () => {
     const patternMatcher: PatternMatchingClient = {
       matchVtg,
       matchEightStep: async () => ({ status: 'unmatched' }),
+      matchQst: async () => ({ status: 'unmatched' }),
     }
     const wrapper = mount(VtgPane, {
       props: { animation: firstAnimation, patternMatcher },

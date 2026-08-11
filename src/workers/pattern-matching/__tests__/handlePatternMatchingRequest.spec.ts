@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
+import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import {
   matchEightStepPatternRequest,
+  matchQstPatternRequest,
   matchVtgPatternRequest,
 } from '@/workers/pattern-matching/handlePatternMatchingRequest'
 
@@ -75,6 +77,34 @@ describe('handlePatternMatchingRequest', () => {
     })
     await expect(
       matchEightStepPatternRequest({ animation, lastSelection: selection }),
+    ).resolves.toEqual({ status: 'unchanged' })
+  })
+
+  it('matches QST and recognizes the last emitted selection', async () => {
+    const selection = {
+      concept: 'qst',
+      reference: 'beyond-100',
+      swapProps: true,
+      reversePlane: true,
+    } as const
+    const animation = createDefaultQstAnimation(selection)
+    if (!animation) throw new Error('Expected a supported QST animation')
+
+    await expect(
+      matchQstPatternRequest({
+        animation,
+        preferences: { swapProps: true, reversePlane: true },
+      }),
+    ).resolves.toMatchObject({
+      status: 'matched',
+      match: { swapProps: true, reversePlane: true },
+    })
+    await expect(
+      matchQstPatternRequest({
+        animation,
+        preferences: { swapProps: true, reversePlane: true },
+        lastSelection: selection,
+      }),
     ).resolves.toEqual({ status: 'unchanged' })
   })
 })

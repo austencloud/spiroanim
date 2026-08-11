@@ -1,6 +1,8 @@
 import type {
   EightStepPatternMatchRequest,
   EightStepPatternMatchResult,
+  QstPatternMatchRequest,
+  QstPatternMatchResult,
   VtgPatternMatchRequest,
   VtgPatternMatchResult,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
@@ -41,5 +43,21 @@ export const matchEightStepPatternRequest = async ({
   }
 
   const match = findEightStepPatternMatch(animation)
+  return match ? { status: 'matched', match } : { status: 'unmatched' }
+}
+
+export const matchQstPatternRequest = async ({
+  animation,
+  preferences,
+  lastSelection,
+}: QstPatternMatchRequest): Promise<QstPatternMatchResult> => {
+  const { findQstPatternMatch, matchesQstSelection } =
+    await import('@/features/quarter-space-tech/matchQstAnimation')
+
+  if (lastSelection && matchesQstSelection(animation, lastSelection)) {
+    return { status: 'unchanged' }
+  }
+
+  const match = findQstPatternMatch(animation, preferences)
   return match ? { status: 'matched', match } : { status: 'unmatched' }
 }

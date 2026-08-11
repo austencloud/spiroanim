@@ -650,6 +650,7 @@ describe('EightStepPane', () => {
     const patternMatcher: PatternMatchingClient = {
       matchVtg: async () => ({ status: 'unmatched' }),
       matchEightStep,
+      matchQst: async () => ({ status: 'unmatched' }),
     }
     const wrapper = mount(EightStepPane, {
       props: { animation: firstAnimation, patternMatcher },

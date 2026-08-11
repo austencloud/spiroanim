@@ -78,6 +78,7 @@ describe('useMainRoute', () => {
       '/play-vtg',
       '/play-qtr',
       '/play-8stp',
+      '/play-qst',
       '/play-tka',
       '/time-play',
       '/time-edit',
@@ -85,6 +86,7 @@ describe('useMainRoute', () => {
       '/time-vtg',
       '/time-qtr',
       '/time-8stp',
+      '/time-qst',
       '/time-tka',
       '/edit-play',
       '/edit-time',
@@ -92,6 +94,7 @@ describe('useMainRoute', () => {
       '/edit-vtg',
       '/edit-qtr',
       '/edit-8stp',
+      '/edit-qst',
       '/edit-tka',
       '/cnc-play',
       '/cnc-time',
@@ -105,6 +108,9 @@ describe('useMainRoute', () => {
       '/8stp-play',
       '/8stp-time',
       '/8stp-edit',
+      '/qst-play',
+      '/qst-time',
+      '/qst-edit',
       '/tka-play',
       '/tka-time',
       '/tka-edit',
@@ -279,6 +285,29 @@ describe('useMainRoute', () => {
     expect(conceptsStore.selectedConcept).toBe('tka')
     expect(splitterStore.leftPerc).toBe(0)
     expect(router.currentRoute.value.path).toBe('/the-kinetic-alphabet')
+  })
+
+  it('maps the Quarter Space Tech route and short key to its Concepts pane', async () => {
+    const { conceptsStore, paneStore, router, splitterStore } = await mountRoute(
+      '/quarter-space-tech',
+      createLoadedAnimation(),
+    )
+
+    expect(paneStore.parents).toEqual({
+      player: 'left',
+      editor: 'hidden',
+      timeline: 'hidden',
+      concepts: 'right',
+    })
+    expect(conceptsStore.selectedConcept).toBe('qst')
+    expect(splitterStore.leftPerc).toBe(0)
+    expect(router.currentRoute.value.path).toBe('/quarter-space-tech')
+
+    paneStore.setViewInPane('player', 'left')
+    paneStore.setViewInPane('concepts', 'right')
+    splitterStore.leftPerc = 50
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/play-qst')
   })
 
   it('canonicalizes a generic Concepts route and unsupported saved state to VTG', async () => {

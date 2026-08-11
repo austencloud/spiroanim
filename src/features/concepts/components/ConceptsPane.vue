@@ -8,6 +8,7 @@
     >
       <option value="vtg">Vulkan Tech Gospel</option>
       <option value="8stp">Eight Step</option>
+      <option value="qst">Quarter Space Tech</option>
       <option value="tka">The Kinetic Alphabet</option>
     </select>
 
@@ -25,6 +26,13 @@
       :pattern-matcher="patternMatcher"
       @pattern-select="emit('patternSelect', $event)"
     />
+    <QuarterSpaceTechPane
+      v-else-if="selectedConcept === 'qst'"
+      :animation="animation"
+      :animation-ready="animationReady"
+      :pattern-matcher="patternMatcher"
+      @pattern-select="emit('patternSelect', $event)"
+    />
     <KineticAlphabetPane v-else />
   </section>
 </template>
@@ -35,6 +43,7 @@ import { usePatternMatchingWorker } from '@/features/concepts/composables/usePat
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import KineticAlphabetPane from '@/features/kinetic-alphabet/components/KineticAlphabetPane.vue'
+import QuarterSpaceTechPane from '@/features/quarter-space-tech/components/QuarterSpaceTechPane.vue'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import type { RootDataFinal } from '@/types/AnimTypes'
 

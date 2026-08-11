@@ -3,12 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { usePatternMatchingWorker } from '@/features/concepts/composables/usePatternMatchingWorker'
 import type { ConceptKey } from '@/features/concepts/types'
+import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
 interface FakeWorkerMessage {
   id?: string
-  type: 'matchVtg' | 'matchEightStep'
+  type: 'matchVtg' | 'matchEightStep' | 'matchQst'
   data: unknown
 }
 
@@ -87,6 +88,19 @@ describe('usePatternMatchingWorker', () => {
     selectedConcept.value = '8stp'
     await nextTick()
     await expect(client.matchEightStep({ animation })).resolves.toEqual({ status: 'unmatched' })
+    expect(FakeWorker.instances).toHaveLength(1)
+    expect(FakeWorker.instances[0]!.terminated).toBe(false)
+
+    const qstAnimation = createDefaultQstAnimation({ concept: 'qst', reference: 'breaks-1' })
+    if (!qstAnimation) throw new Error('Expected a QST animation')
+    selectedConcept.value = 'qst'
+    await nextTick()
+    await expect(
+      client.matchQst({
+        animation: qstAnimation,
+        preferences: { swapProps: false, reversePlane: false },
+      }),
+    ).resolves.toEqual({ status: 'unmatched' })
     expect(FakeWorker.instances).toHaveLength(1)
     expect(FakeWorker.instances[0]!.terminated).toBe(false)
 

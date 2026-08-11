@@ -1,10 +1,12 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
+import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
+
 describe('ConceptsPane', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -22,6 +24,7 @@ describe('ConceptsPane', () => {
     expect(selector.findAll('option').map((option) => option.text())).toEqual([
       'Vulkan Tech Gospel',
       'Eight Step',
+      'Quarter Space Tech',
       'The Kinetic Alphabet',
     ])
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
@@ -143,6 +146,113 @@ describe('ConceptsPane', () => {
     expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('The Kinetic Alphabet')
     expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('Possibly coming soon')
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
+  })
+
+  it('shows the Quarter Space Tech libraries before The Kinetic Alphabet', async () => {
+    const wrapper = mount(ConceptsPane)
+    const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
+
+    await selector.setValue('qst')
+
+    expect(selector.element.value).toBe('qst')
+    expect(wrapper.find('[data-role="vtg-pane"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-pane"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="qst-pane"]').text()).toContain('Quarter Space Tech')
+    expect(wrapper.findAll('[data-role="qst-collection"]')).toHaveLength(3)
+    expect(wrapper.findAll('[data-role="qst-collection"]').map((item) => item.text())).toEqual([
+      expect.stringContaining('Quarter "Time" Breaks'),
+      expect.stringContaining('Quarter "Time" Advanced'),
+      expect.stringContaining('Quarter Space Beyond'),
+    ])
+    expect(wrapper.find('[data-role="qst-reset"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="qst-paths"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="qst-history-note"]').text()).toContain(
+      'Quarter Space Tech predates SpiroAnim',
+    )
+    const more = wrapper.get('[data-role="qst-more"]')
+    expect(more.get('summary').text()).toBe('MORE...')
+    expect(more.findAll('a').map((link) => link.attributes('href'))).toEqual([
+      '/docs/qst/01_Quarter_Time_Breaks.pdf',
+      '/docs/qst/02_Quarter_Time_Advanced.pdf',
+      '/docs/qst/03_Quarter_Space_Beyond.pdf',
+    ])
+    expect(more.text()).toContain('original Quarter Space Tech documents')
+    expect(more.text()).toContain('legacy purposes')
+    expect(wrapper.find('[data-role="tka-pane"]').exists()).toBe(false)
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+
+    await wrapper.get('[data-collection="breaks"]').trigger('click')
+    expect(wrapper.find('[data-role="qst-history-note"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="qst-more"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="qst-reset"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="qst-paths"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-role="qst-pattern-card"]')).toHaveLength(8)
+    expect(wrapper.findAll('[data-role="qst-page"]')).toHaveLength(7)
+
+    await wrapper.get('[data-role="qst-page"][data-page="3"]').trigger('click')
+    await wrapper.get('[data-role="qst-back"]').trigger('click')
+    await wrapper.get('[data-collection="advanced"]').trigger('click')
+    await wrapper.get('[data-role="qst-page"][data-page="2"]').trigger('click')
+    await wrapper.get('[data-role="qst-back"]').trigger('click')
+    await wrapper.get('[data-collection="breaks"]').trigger('click')
+    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('3')
+    await wrapper.get('[data-role="qst-back"]').trigger('click')
+    await wrapper.get('[data-collection="advanced"]').trigger('click')
+    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('2')
+    await wrapper.get('[data-role="qst-back"]').trigger('click')
+    await wrapper.get('[data-collection="breaks"]').trigger('click')
+    await wrapper.get('[data-pattern-reference="breaks-17"] button').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { concept: 'qst', reference: 'breaks-17' },
+    ])
+    await wrapper.get('[data-role="qst-page"][data-page="4"]').trigger('click')
+    await wrapper.get('[data-role="qst-back"]').trigger('click')
+    await wrapper.get('[data-collection="breaks"]').trigger('click')
+    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('3')
+  })
+
+  it('opens the matching QST library page and highlights the loaded pattern', async () => {
+    const store = useConceptsStore()
+    store.selectedConcept = 'qst'
+    const animation = createDefaultQstAnimation({
+      concept: 'qst',
+      reference: 'beyond-100',
+      swapProps: true,
+      reversePlane: true,
+      bpm: 87,
+      scale: 1.2,
+      thick: 12,
+      paths: false,
+      hands: true,
+      arms: false,
+      right: false,
+    })
+    if (!animation) throw new Error('Expected a supported QST animation')
+
+    const wrapper = mount(ConceptsPane, { props: { animation, animationReady: true } })
+    await flushPromises()
+    await vi.waitFor(() => expect(wrapper.find('[data-role="qst-library"]').exists()).toBe(true))
+
+    expect(wrapper.get('[data-role="qst-library"]').text()).toContain('Quarter Space Beyond')
+    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('13')
+    const selectedPattern = wrapper.get('[data-pattern-reference="beyond-100"]')
+    expect(selectedPattern.classes()).toContain('qst-pattern-card--selected')
+    expect(selectedPattern.get('button').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get<HTMLInputElement>('[data-role="qst-swap"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="qst-reverse"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="qst-bpm"]').element.value).toBe('87')
+    expect(wrapper.get<HTMLInputElement>('[data-role="qst-scale"]').element.value).toBe('1.2')
+    expect(wrapper.get<HTMLInputElement>('[data-role="qst-thick"]').element.value).toBe('12')
+    expect(wrapper.get<HTMLInputElement>('[data-role="qst-paths"]').element.checked).toBe(false)
+    expect(wrapper.get<HTMLInputElement>('[data-role="qst-hands"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="qst-arms"]').element.checked).toBe(false)
+    expect(wrapper.get<HTMLInputElement>('[data-role="qst-right"]').element.checked).toBe(false)
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+
+    await wrapper.get('[data-role="qst-page"][data-page="14"]').trigger('click')
+    await wrapper.get('[data-role="qst-back"]').trigger('click')
+    await wrapper.get('[data-collection="beyond"]').trigger('click')
+    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('13')
   })
 
   it('preserves shared controls when merged VTG receives an Eight Step animation', async () => {

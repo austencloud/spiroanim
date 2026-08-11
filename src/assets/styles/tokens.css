@@ -18,6 +18,10 @@
 
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  --shadow-sm: 0 0.2rem 0.55rem color-mix(in srgb, var(--color-text) 12%, transparent);
+  --shadow-md: 0 0.5rem 1.25rem color-mix(in srgb, var(--color-text) 16%, transparent);
 
   --z-tooltip: 10000;
   --z-pwa-prompt: 9000;

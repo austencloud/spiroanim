@@ -11,6 +11,7 @@ const appRouteAliases = [
   '/vulkan-tech-gospel',
   '/quarterspacing',
   '/eight-step',
+  '/quarter-space-tech',
   '/the-kinetic-alphabet',
   ...paneSplits,
 ]

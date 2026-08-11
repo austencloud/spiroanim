@@ -5,11 +5,14 @@ import type {
   EightStepPatternMatchResult,
   PatternMatchingBridgeMap,
   PatternMatchingClient,
+  QstPatternMatchRequest,
+  QstPatternMatchResult,
   VtgPatternMatchRequest,
   VtgPatternMatchResult,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
-const supportsPatternMatching = (concept: ConceptKey) => concept === 'vtg' || concept === '8stp'
+const supportsPatternMatching = (concept: ConceptKey) =>
+  concept === 'vtg' || concept === '8stp' || concept === 'qst'
 
 const matchVtgWithoutWorker = async (
   request: VtgPatternMatchRequest,
@@ -25,6 +28,14 @@ const matchEightStepWithoutWorker = async (
   const { matchEightStepPatternRequest } =
     await import('@/workers/pattern-matching/handlePatternMatchingRequest')
   return matchEightStepPatternRequest(request)
+}
+
+const matchQstWithoutWorker = async (
+  request: QstPatternMatchRequest,
+): Promise<QstPatternMatchResult> => {
+  const { matchQstPatternRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return matchQstPatternRequest(request)
 }
 
 export const usePatternMatchingWorker = (
@@ -57,10 +68,13 @@ export const usePatternMatchingWorker = (
   const matchEightStep = (request: EightStepPatternMatchRequest) =>
     ensureChannel()?.call('matchEightStep', request) ?? matchEightStepWithoutWorker(request)
 
+  const matchQst = (request: QstPatternMatchRequest) =>
+    ensureChannel()?.call('matchQst', request) ?? matchQstWithoutWorker(request)
+
   watch(selectedConcept, (concept) => {
     if (!supportsPatternMatching(concept)) stop()
   })
   onBeforeUnmount(stop)
 
-  return { matchVtg, matchEightStep }
+  return { matchVtg, matchEightStep, matchQst }
 }
