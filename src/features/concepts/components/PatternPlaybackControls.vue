@@ -148,7 +148,12 @@ const toggleTransition = () => {
   border-color: var(--color-action-primary);
 }
 
-.pattern-playback-controls__qtr input:checked + span,
+.pattern-playback-controls__qtr input:checked + span {
+  color: var(--color-on-action-primary);
+  background: var(--color-pattern-mode-active);
+  border-color: var(--color-pattern-mode-active-border);
+}
+
 .pattern-playback-controls
   .pattern-playback-controls__transition.pattern-playback-controls__button--active {
   color: var(--color-on-action-primary);
