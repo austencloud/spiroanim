@@ -792,13 +792,7 @@ defineExpose({
 }
 
 .qst-pagination-top {
-  display: none;
-}
-
-@container concept-pane (max-width: 44rem) {
-  .qst-pagination-top {
-    display: block;
-  }
+  display: block;
 }
 
 .qst-more {
