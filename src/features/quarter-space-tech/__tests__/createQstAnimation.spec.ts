@@ -77,6 +77,21 @@ describe('createQstAnimation', () => {
     expect(rootCompile(second).camera[0]?.orbit.offset).toEqual([0, 0, -18])
   })
 
+  it('preserves Scale and its derived camera distance in line thumbnails', () => {
+    const preview = createQstLinePreviewAnimation(
+      { concept: 'qst', reference: 'advanced-1', scale: 1.2 },
+      0,
+      4,
+    )
+    if (!preview) throw new Error('Missing scaled advanced-1 line preview')
+
+    expect(preview.props.every(({ anim }) => anim[0]?.scale === 12)).toBe(true)
+    expect(
+      rootCompile(preview).props.every(({ anim }) => anim.every(({ scale }) => scale === 12)),
+    ).toBe(true)
+    expect(rootCompile(preview).camera[0]?.orbit.offset).toEqual([0, 0, -23])
+  })
+
   it('uses the standard concept camera for thumbnails', () => {
     const preview = createQstPreviewAnimation({ concept: 'qst', reference: 'breaks-1' })
     if (!preview) throw new Error('Missing breaks-1 preview')

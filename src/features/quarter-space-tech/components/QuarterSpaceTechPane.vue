@@ -17,7 +17,6 @@
     <div v-if="!selectedCollection" class="qst-landing" data-role="qst-collection-chooser">
       <header class="qst-landing__intro">
         <span class="qst-landing__eyebrow">Six positions. Infinite connections.</span>
-        <h2>Quarter Space Tech</h2>
         <p>Choose a library to explore its patterns.</p>
       </header>
 
@@ -634,13 +633,6 @@ defineExpose({
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.qst-landing h2 {
-  margin: var(--space-1) 0 0;
-  font-size: clamp(1.75rem, 7cqi, 3.2rem);
-  letter-spacing: -0.04em;
-  line-height: 1;
 }
 
 .qst-landing__intro p {

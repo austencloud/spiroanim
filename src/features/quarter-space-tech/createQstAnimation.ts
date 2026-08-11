@@ -109,7 +109,12 @@ export const createQstLinePreviewAnimation = (
   const readable = encodeReadable(animation)
   readable.props = readable.props.map((prop, propIndex) => ({
     ...prop,
-    anim: createQstFrames(linePairs.map((pair) => pair[propIndex === 0 ? 0 : 1])),
+    anim: createQstFrames(linePairs.map((pair) => pair[propIndex === 0 ? 0 : 1])).map(
+      (frame, frameIndex) =>
+        frameIndex === 0 && prop.anim[0]?.scale !== undefined
+          ? { ...frame, scale: prop.anim[0].scale }
+          : frame,
+    ),
   }))
 
   return toQstPreviewAnimation(rootFinal(decodeReadable(readable)))
