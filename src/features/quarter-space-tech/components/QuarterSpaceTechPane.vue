@@ -43,6 +43,49 @@
         </button>
       </div>
 
+      <aside class="qst-label-guide" data-role="qst-label-guide">
+        <strong>Reading the pattern labels</strong>
+        <p>
+          Each two-letter label describes how the relationship between the props changes. The first
+          letter is the starting relationship and the second is the ending relationship. For
+          example, <b>TS</b> means Together to Split and <b>SQ</b> means Split to Quarter.
+        </p>
+        <dl>
+          <div>
+            <dt>T</dt>
+            <dd>Together</dd>
+          </div>
+          <div>
+            <dt>S</dt>
+            <dd>Split</dd>
+          </div>
+          <div>
+            <dt>Q</dt>
+            <dd>Quarter</dd>
+          </div>
+          <div>
+            <dt>F</dt>
+            <dd>Follow</dd>
+          </div>
+          <div>
+            <dt>FB</dt>
+            <dd>Follow Break</dd>
+          </div>
+          <div>
+            <dt>O</dt>
+            <dd>Opposite</dd>
+          </div>
+          <div>
+            <dt>OB</dt>
+            <dd>Opposite Break</dd>
+          </div>
+        </dl>
+        <p>
+          Follow and Opposite describe special Quarter-to-Quarter transitions. A Break means the
+          props travel through different planes.
+        </p>
+      </aside>
+
       <aside class="qst-history-note" data-role="qst-history-note">
         <strong>About this library</strong>
         <p>
@@ -489,25 +532,68 @@ defineExpose({
   justify-content: center;
 }
 
+.qst-label-guide,
 .qst-history-note {
   width: min(100%, 45rem);
   padding: var(--space-3) var(--space-4);
   margin: var(--space-4) auto 0;
-  background: color-mix(in srgb, var(--color-action-primary) 8%, var(--color-surface));
-  border: 1px solid color-mix(in srgb, var(--color-action-primary) 38%, var(--color-border));
   border-radius: var(--radius-md);
 }
 
+.qst-label-guide {
+  background: color-mix(in srgb, var(--qst-prop-first) 7%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--qst-prop-first) 34%, var(--color-border));
+}
+
+.qst-history-note {
+  background: color-mix(in srgb, var(--color-action-primary) 8%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-action-primary) 38%, var(--color-border));
+}
+
+.qst-label-guide strong,
 .qst-history-note strong {
   color: var(--color-text);
   font-size: 0.78rem;
 }
 
+.qst-label-guide p,
 .qst-history-note p {
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
   font-size: 0.75rem;
   line-height: 1.45;
+}
+
+.qst-label-guide dl {
+  display: flex;
+  margin: var(--space-3) 0;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.qst-label-guide dl > div {
+  display: flex;
+  min-inline-size: 6.5rem;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.qst-label-guide dt {
+  min-inline-size: 1.5rem;
+  color: var(--qst-prop-first);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.qst-label-guide dd {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.72rem;
 }
 
 .qst-landing,
@@ -716,7 +802,7 @@ defineExpose({
   display: none;
 }
 
-@container concept-pane (max-width: 52rem) {
+@container concept-pane (max-width: 44rem) {
   .qst-pagination-top {
     display: block;
   }

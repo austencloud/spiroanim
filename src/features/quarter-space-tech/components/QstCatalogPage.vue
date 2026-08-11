@@ -165,7 +165,7 @@ onBeforeUnmount(() => previewObserver?.disconnect())
 
   position: relative;
   display: grid;
-  flex: 1 1 calc(7rem + var(--qst-card-beats) * 4.5rem);
+  flex: 1 1 calc(7rem + var(--qst-card-beats) * 3.55rem);
   min-inline-size: min(100%, calc(7rem + var(--qst-card-beats) * 3.55rem));
   padding: var(--space-3);
   background: var(--color-surface);

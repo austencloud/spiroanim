@@ -186,6 +186,11 @@ describe('ConceptsPane', () => {
     ])
     expect(wrapper.find('[data-role="qst-reset"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="qst-paths"]').exists()).toBe(false)
+    const labelGuide = wrapper.get('[data-role="qst-label-guide"]')
+    expect(labelGuide.text()).toContain('TS means Together to Split')
+    expect(labelGuide.text()).toContain('SQ means Split to Quarter')
+    expect(labelGuide.text()).toContain('FBFollow Break')
+    expect(labelGuide.text()).toContain('OBOpposite Break')
     expect(wrapper.get('[data-role="qst-history-note"]').text()).toContain(
       'Quarter Space Tech predates SpiroAnim',
     )
@@ -202,6 +207,7 @@ describe('ConceptsPane', () => {
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
 
     await wrapper.get('[data-collection="breaks"]').trigger('click')
+    expect(wrapper.find('[data-role="qst-label-guide"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="qst-history-note"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="qst-more"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="qst-reset"]').exists()).toBe(true)
