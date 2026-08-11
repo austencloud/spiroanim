@@ -152,8 +152,8 @@ const toggleTransition = () => {
 .pattern-playback-controls
   .pattern-playback-controls__transition.pattern-playback-controls__button--active {
   color: var(--color-on-action-primary);
-  background: var(--color-pattern-mode-active);
-  border-color: var(--color-pattern-mode-active-border);
+  background: var(--color-transition-mode-active);
+  border-color: var(--color-transition-mode-active-border);
 }
 
 .pattern-playback-controls__beats input:focus-visible + span,

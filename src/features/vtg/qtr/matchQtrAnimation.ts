@@ -15,7 +15,7 @@ import {
   doubleAnimationPlayback,
   doublePlaybackMultiplier,
 } from '@/math/animation/subdivideAnimationPlayback'
-import { getAlternatingPatternBase } from '@/math/animation/alternatePatternPlayback'
+import { analyzeAlternatingPatternPlayback } from '@/math/animation/alternatePatternPlayback'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
 
@@ -109,8 +109,8 @@ const buildCandidateCache = () => {
 }
 
 export const findQtrPatternMatches = (animation: RootDataFinal): readonly QtrPatternMatch[] => {
-  const alternatingBase = getAlternatingPatternBase(animation)
-  const matchingAnimation = alternatingBase ?? animation
+  const alternating = analyzeAlternatingPatternPlayback(animation)
+  const matchingAnimation = alternating?.base ?? animation
   const scale = getVtgAnimationScale(matchingAnimation)
   if (scale === undefined) return []
 
@@ -121,11 +121,13 @@ export const findQtrPatternMatches = (animation: RootDataFinal): readonly QtrPat
   return (candidates.get(signature) ?? [])
     .filter(
       (candidate) =>
-        !alternatingBase || (candidate.double && supportsVtgQtrTransition(candidate.speedRatio)),
+        !alternating || (candidate.double && supportsVtgQtrTransition(candidate.speedRatio)),
     )
     .map((candidate) => ({
       ...candidate,
-      ...(alternatingBase ? { transition: true } : undefined),
+      ...(alternating
+        ? { transition: true, transitionBeats: alternating.transitionBeats }
+        : undefined),
       bpm: candidate.double ? animation.bpm / doublePlaybackMultiplier : animation.bpm,
       scale,
     }))

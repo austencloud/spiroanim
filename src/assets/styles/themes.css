@@ -48,6 +48,16 @@
     var(--color-action-primary) 44%,
     var(--color-status-success)
   );
+  --color-transition-mode-active: color-mix(
+    in srgb,
+    var(--color-status-warning) 62%,
+    var(--color-surface)
+  );
+  --color-transition-mode-active-border: color-mix(
+    in srgb,
+    var(--color-status-warning) 78%,
+    var(--color-border)
+  );
   --color-status-warning: var(--palette-orange-700);
   --color-property-value-defined: var(--palette-blue-800);
   --color-property-value-inherited: var(--palette-green-900);

@@ -8,7 +8,13 @@ type MatrixPatternSelection = VtgPatternSelection | QtrPatternSelection
 
 /** Classifies pattern semantics without playback-only Beat, Double, and transition transforms. */
 export const describePatternSelectionRelationships = (selection: MatrixPatternSelection) => {
-  const { beat: _beat, double: _double, transition: _transition, ...semanticSelection } = selection
+  const {
+    beat: _beat,
+    double: _double,
+    transition: _transition,
+    transitionBeats: _transitionBeats,
+    ...semanticSelection
+  } = selection
   const animation =
     'quarters' in semanticSelection
       ? createDefaultQtrAnimation(semanticSelection)

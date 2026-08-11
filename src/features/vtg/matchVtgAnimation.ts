@@ -17,7 +17,7 @@ import {
   doubleAnimationPlayback,
   doublePlaybackMultiplier,
 } from '@/math/animation/subdivideAnimationPlayback'
-import { getAlternatingPatternBase } from '@/math/animation/alternatePatternPlayback'
+import { analyzeAlternatingPatternPlayback } from '@/math/animation/alternatePatternPlayback'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
 
@@ -122,12 +122,16 @@ const findBaseVtgPatternMatches = (animation: RootDataFinal): readonly VtgPatter
 }
 
 export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPatternMatch[] => {
-  const alternatingBase = getAlternatingPatternBase(animation)
-  if (!alternatingBase) return findBaseVtgPatternMatches(animation)
+  const alternating = analyzeAlternatingPatternPlayback(animation)
+  if (!alternating) return findBaseVtgPatternMatches(animation)
 
-  return findBaseVtgPatternMatches(alternatingBase)
+  return findBaseVtgPatternMatches(alternating.base)
     .filter((match) => match.double && supportsVtgQtrTransition(match.speedRatio))
-    .map((match) => ({ ...match, transition: true }))
+    .map((match) => ({
+      ...match,
+      transition: true,
+      transitionBeats: alternating.transitionBeats,
+    }))
 }
 
 const startingBeat = (match: VtgPatternMatch) => match.beat ?? 1

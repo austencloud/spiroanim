@@ -187,6 +187,16 @@
           </template>
         </PatternPlaybackControls>
       </template>
+      <template #after-controls>
+        <label v-if="transition && transitionAvailable" class="vtg-transition-beats">
+          <span class="vtg-pane__visually-hidden">45 degree transition beats</span>
+          <select v-model.number="transitionBeats" data-role="vtg-transition-beats">
+            <option v-for="option in vtgTransitionBeats" :key="option" :value="option">
+              {{ option }}
+            </option>
+          </select>
+        </label>
+      </template>
     </ConceptAnimationControls>
   </section>
 </template>
@@ -232,8 +242,9 @@ import type {
   VtgRuleNumber,
   VtgRuleSpec,
   VtgPatternSelection,
+  VtgTransitionBeats,
 } from '@/features/vtg/types'
-import { supportsVtgQtrTransition, vtgSpeedRatios } from '@/features/vtg/types'
+import { supportsVtgQtrTransition, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import { toColor } from '@/utils/UtilFunc'
@@ -293,6 +304,7 @@ const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
 const double = ref(false)
 const transition = ref(false)
+const transitionBeats = ref<VtgTransitionBeats>(2)
 const transitionAvailable = computed(() => supportsVtgQtrTransition(speedRatio.value))
 const quarterMode = ref<QtrMode>(1)
 const activeQuarterMode = computed<QtrMode | false>(() => (isQtr.value ? quarterMode.value : false))
@@ -387,6 +399,9 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (beat.value !== 1) baseSelection.beat = beat.value
   if (double.value) baseSelection.double = true
   if (transition.value && transitionAvailable.value) baseSelection.transition = true
+  if (transition.value && transitionAvailable.value && transitionBeats.value !== 2) {
+    baseSelection.transitionBeats = transitionBeats.value
+  }
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) baseSelection.scale = scale.value
   if (thick.value !== vtgThickControl.default) baseSelection.thick = thick.value
@@ -479,6 +494,7 @@ watch(
     beat,
     double,
     transition,
+    transitionBeats,
     bpm,
     scale,
     thick,
@@ -551,6 +567,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     beat.value = match.beat ?? 1
     double.value = match.double ?? false
     transition.value = match.transition ?? false
+    transitionBeats.value = match.transitionBeats ?? 2
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
@@ -569,6 +586,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     beat.value = 1
     double.value = false
     transition.value = false
+    transitionBeats.value = 2
     quarterMode.value = 1
   }
 
@@ -590,6 +608,7 @@ const selectInitialRandomPattern = () => {
   beat.value = 1
   double.value = false
   transition.value = false
+  transitionBeats.value = 2
   quarterMode.value = 1
   selectRandomTile()
 
@@ -938,6 +957,29 @@ defineExpose({
 }
 
 .vtg-radio-options input:focus-visible + span {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+.vtg-transition-beats {
+  display: grid;
+  min-width: 0;
+}
+
+.vtg-transition-beats select {
+  min-width: 2.75rem;
+  padding-block: var(--space-1);
+  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
+  color: var(--color-on-action-primary);
+  font: inherit;
+  font-size: clamp(0.625rem, 3cqi, 0.875rem);
+  font-weight: 700;
+  background: var(--color-transition-mode-active);
+  border: 1px solid var(--color-transition-mode-active-border);
+  border-radius: var(--radius-sm);
+}
+
+.vtg-transition-beats select:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }

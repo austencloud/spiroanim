@@ -9,7 +9,7 @@ import type {
   VtgPatternSelection,
   VtgRuleNumber,
 } from '@/features/vtg/types'
-import { vtgSpeedRatios } from '@/features/vtg/types'
+import { vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 
@@ -27,6 +27,20 @@ const createAnimation = (selection: VtgPatternSelection) => {
 }
 
 describe('VTG animation matching', () => {
+  it.each(vtgTransitionBeats)('detects the %s-beat reciprocal transition', (transitionBeats) => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      transition: true,
+      transitionBeats,
+    } as const satisfies VtgPatternSelection
+
+    expect(findVtgPatternMatch(createAnimation(selection))).toMatchObject({
+      ...selection,
+      double: true,
+    })
+  })
+
   it('recognizes every generated transform among its supported matches', () => {
     for (const column of ruleNumbers) {
       for (const row of ruleNumbers) {
@@ -115,9 +129,12 @@ describe('VTG animation matching', () => {
       bpm: 83,
     } as const satisfies VtgPatternSelection
 
-    expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual({
+    expect(
+      findVtgPatternMatches(createAnimation({ ...selection, transitionBeats: 5 })),
+    ).toContainEqual({
       ...selection,
       double: true,
+      transitionBeats: 5,
       isAnti: false,
       swapProps: false,
       reversePlane: false,
@@ -164,7 +181,8 @@ describe('VTG animation matching', () => {
             reversePlane,
             transition: true,
           } as const satisfies VtgPatternSelection
-          const matches = findVtgPatternMatches(createAnimation(selection))
+          const animation = createAnimation({ ...selection, transitionBeats: 5 })
+          const matches = findVtgPatternMatches(animation)
           const lowestBeat = Math.min(...matches.map((match) => match.beat ?? 1))
           const lowestBeatMatches = matches.filter((match) => (match.beat ?? 1) === lowestBeat)
           const preferenceDifference = (match: VtgPatternMatch) =>
@@ -172,7 +190,7 @@ describe('VTG animation matching', () => {
           const lowestPreferenceDifference = Math.min(
             ...lowestBeatMatches.map(preferenceDifference),
           )
-          const match = findVtgPatternMatch(createAnimation(selection), {
+          const match = findVtgPatternMatch(animation, {
             swapProps,
             reversePlane,
           })

@@ -588,6 +588,59 @@ describe('VtgPane', () => {
     }
   })
 
+  it('offers an experimental transition-beat selector after Right while transition is active', async () => {
+    const wrapper = mount(VtgPane)
+    await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+
+    expect(wrapper.find('[data-role="vtg-transition-beats"]').exists()).toBe(false)
+    await wrapper.get('[data-role="vtg-transition"]').trigger('click')
+
+    const selector = wrapper.get<HTMLSelectElement>('[data-role="vtg-transition-beats"]')
+    const right = wrapper.get<HTMLInputElement>('[data-role="vtg-right"]')
+    expect(selector.element.value).toBe('2')
+    expect(selector.findAll('option').map((option) => option.text())).toEqual([
+      '6',
+      '5',
+      '4',
+      '3',
+      '2',
+    ])
+    expect(
+      right.element.compareDocumentPosition(selector.element) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+
+    await selector.setValue('3')
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      {
+        reference: '5-1',
+        speedRatio: '1:3',
+        double: true,
+        transition: true,
+        transitionBeats: 3,
+      },
+    ])
+
+    await wrapper.get('[data-role="vtg-transition"]').trigger('click')
+    expect(wrapper.find('[data-role="vtg-transition-beats"]').exists()).toBe(false)
+  })
+
+  it('hydrates a detected experimental transition timing', async () => {
+    const animation = createDefaultVtgAnimation({
+      reference: '5-1',
+      speedRatio: '1:3',
+      transition: true,
+      transitionBeats: 2,
+    })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+
+    const wrapper = mount(VtgPane, { props: { animation } })
+    await vi.waitFor(() => {
+      expect(
+        wrapper.get<HTMLSelectElement>('[data-role="vtg-transition-beats"]').element.value,
+      ).toBe('2')
+    })
+  })
+
   it('offers mutually exclusive Quarters radio options that reapply the current pattern', async () => {
     const wrapper = await mountVtgPane(true)
     const quarters = wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]')
@@ -986,6 +1039,7 @@ describe('VtgPane', () => {
         beat: example.authoredBeat,
         swapProps: example.authoredSwap,
         transition: true,
+        transitionBeats: 5,
       })
       if (!animation) throw new Error('Expected a supported VTG animation')
 

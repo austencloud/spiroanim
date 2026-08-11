@@ -26,6 +26,8 @@ export const supportsVtgQtrTransition = (speedRatio: VtgSpeedRatio) => speedRati
 export const vtgDefaultSpeedRatio = '1:3' satisfies VtgSpeedRatio
 export const vtgBeats = [1, 2, 3, 4] as const
 export type VtgBeat = (typeof vtgBeats)[number]
+export const vtgTransitionBeats = [6, 5, 4, 3, 2] as const
+export type VtgTransitionBeats = (typeof vtgTransitionBeats)[number]
 
 export interface VtgPatternSelection
   extends PatternPropVisibilitySelection, PatternPropSpacingSelection {
@@ -38,6 +40,7 @@ export interface VtgPatternSelection
   beat?: VtgBeat
   double?: boolean
   transition?: boolean
+  transitionBeats?: VtgTransitionBeats
   bpm?: number
   scale?: number
   thick?: number
@@ -56,6 +59,7 @@ export interface VtgPatternMatch {
   beat?: VtgBeat
   double?: boolean
   transition?: boolean
+  transitionBeats?: VtgTransitionBeats
   bpm: number
   scale: number
 }

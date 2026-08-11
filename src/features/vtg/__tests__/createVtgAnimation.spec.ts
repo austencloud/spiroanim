@@ -1,19 +1,21 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  createDefaultVtgAnimation,
   createVtgAnimation as createVtgAnimationForSelection,
   createVtgPreviewAnimation as createVtgPreviewAnimationForSelection,
 } from '@/features/vtg/createVtgAnimation'
 import { buildVtgPattern as buildSelectedVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
-import { vtgBeats } from '@/features/vtg/types'
-import type { VtgCellReference, VtgPatternSelection } from '@/features/vtg/types'
+import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { FRAMESTARTS } from '@/math/animation/PlayerFunc'
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import type { RootData, RootDataFinal } from '@/types/AnimTypes'
+import { patternShapes } from '@/types/PatternTypes'
 
 const transposeSelection = <Selection extends VtgPatternSelection>(
   selection: Selection,
@@ -57,6 +59,48 @@ const expectVectorClose = (actual: readonly number[], expected: readonly number[
 }
 
 describe('createVtgAnimation', () => {
+  it('keeps every removable doubled VTG continuation frame empty', () => {
+    const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
+    const booleanOptions = [false, true] as const
+    const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
+
+    for (const column of ruleNumbers) {
+      for (const row of ruleNumbers) {
+        const reference = `${column}-${row}` as VtgCellReference
+        const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
+        for (const speedRatio of vtgSpeedRatios) {
+          for (const isAnti of antiOptions) {
+            for (const shape of patternShapes) {
+              for (const beat of vtgBeats) {
+                for (const swapProps of booleanOptions) {
+                  for (const reversePlane of booleanOptions) {
+                    const animation = createDefaultVtgAnimation({
+                      reference,
+                      speedRatio,
+                      isAnti,
+                      shape,
+                      beat,
+                      swapProps,
+                      reversePlane,
+                      double: true,
+                    })
+                    if (!animation) continue
+
+                    for (const prop of animation.props) {
+                      expect(prop.anim[4]).toEqual({})
+                      expect(prop.anim[6]).toEqual({})
+                      expect(prop.anim[8]).toEqual({})
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  })
+
   it.each(vtgBeats)('uses Shift to start the closed cycle on beat %s', (beat) => {
     const selection = {
       reference: '5-1',

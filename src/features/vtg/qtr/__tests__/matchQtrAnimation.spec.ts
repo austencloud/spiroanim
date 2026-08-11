@@ -4,6 +4,7 @@ import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { findQtrPatternMatch, findQtrPatternMatches } from '@/features/vtg/qtr/matchQtrAnimation'
 import type { QtrPatternSelection } from '@/features/vtg/types'
+import { vtgTransitionBeats } from '@/features/vtg/types'
 import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
@@ -17,6 +18,21 @@ const createQtrAnimation = (selection: QtrPatternSelection) => {
 }
 
 describe('Qtr animation matching', () => {
+  it.each(vtgTransitionBeats)('detects the %s-beat reciprocal transition', (transitionBeats) => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      quarters: 1,
+      transition: true,
+      transitionBeats,
+    } as const satisfies QtrPatternSelection
+
+    expect(findQtrPatternMatch(createQtrAnimation(selection))).toMatchObject({
+      ...selection,
+      double: true,
+    })
+  })
+
   it('recognizes the Qtr transform', () => {
     const selection = {
       reference: '3-4',
@@ -120,9 +136,12 @@ describe('Qtr animation matching', () => {
       bpm: 79,
     } as const satisfies QtrPatternSelection
 
-    expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
+    expect(
+      findQtrPatternMatches(createQtrAnimation({ ...selection, transitionBeats: 5 })),
+    ).toContainEqual({
       ...selection,
       double: true,
+      transitionBeats: 5,
       isAnti: false,
       swapProps: false,
       reversePlane: false,
@@ -157,7 +176,8 @@ describe('Qtr animation matching', () => {
         swapProps: selection.swapProps,
         reversePlane: selection.reversePlane,
       }
-      const matches = findQtrPatternMatches(createQtrAnimation(selection))
+      const animation = createQtrAnimation({ ...selection, transitionBeats: 5 })
+      const matches = findQtrPatternMatches(animation)
       const lowestBeat = Math.min(...matches.map((match) => match.beat ?? 1))
       const lowestBeatMatches = matches.filter((match) => (match.beat ?? 1) === lowestBeat)
       const preferenceDifference = (match: (typeof matches)[number]) =>
@@ -165,7 +185,7 @@ describe('Qtr animation matching', () => {
         Number(match.swapProps !== preferences.swapProps) +
         Number(match.reversePlane !== preferences.reversePlane)
       const lowestPreferenceDifference = Math.min(...lowestBeatMatches.map(preferenceDifference))
-      const match = findQtrPatternMatch(createQtrAnimation(selection), preferences)
+      const match = findQtrPatternMatch(animation, preferences)
 
       expect(match?.beat ?? 1).toBe(lowestBeat)
       expect(match ? preferenceDifference(match) : undefined).toBe(lowestPreferenceDifference)
