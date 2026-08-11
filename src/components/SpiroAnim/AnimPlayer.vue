@@ -214,6 +214,16 @@ onMounted(() => {
   // Stop animating when page isn't visible
   watchImmediate(isVisible, (val) => send('animate', { val }))
 
+  // Some mobile browsers do not reliably deliver the matching visible state after the app has
+  // been backgrounded. Focus/pageshow provide a second foreground signal for the main player.
+  const recoverAfterForeground = () => {
+    if (document.visibilityState === 'visible') {
+      send('animate', { val: true, play: PLAYING.value })
+    }
+  }
+  useEventListener(window, 'focus', recoverAfterForeground)
+  useEventListener(window, 'pageshow', recoverAfterForeground)
+
   // Play / Pause
   watchImmediate(PLAYING, (val) => {
     if (val) {

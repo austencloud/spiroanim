@@ -161,9 +161,11 @@ on('jump', (ms) => jump(ms))
 on('play', () => {
   playbackStartedAt = performance.now()
   playing = true
+  animating = true
   // Mobile browsers can drop a worker's animation-frame callback during app or tab transitions
-  // without terminating the worker. Restarting here lets Play recover that otherwise live worker.
-  if (animating) restartAnimationLoop(false)
+  // or leave its visibility state stale without terminating the worker. An explicit Play action is
+  // authoritative and must recover the loop even when the last visibility message said hidden.
+  restartAnimationLoop(false)
 })
 on('stop', () => (playing = false))
 
