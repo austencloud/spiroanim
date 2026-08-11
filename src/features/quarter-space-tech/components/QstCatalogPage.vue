@@ -165,8 +165,8 @@ onBeforeUnmount(() => previewObserver?.disconnect())
 
   position: relative;
   display: grid;
-  flex: 1 1 calc(7rem + var(--qst-card-beats) * 3.55rem);
-  min-inline-size: min(100%, calc(7rem + var(--qst-card-beats) * 3.55rem));
+  flex: 1 1 calc(5rem + var(--qst-card-beats) * 2.75rem);
+  min-inline-size: min(100%, calc(5rem + var(--qst-card-beats) * 2.75rem));
   padding: var(--space-3);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -278,8 +278,8 @@ onBeforeUnmount(() => previewObserver?.disconnect())
   display: grid;
   min-inline-size: 0;
   flex: 1 1 auto;
-  grid-template-columns: repeat(var(--qst-line-beats), minmax(0, 4.25rem));
-  justify-content: space-around;
+  grid-template-columns: repeat(var(--qst-line-beats), minmax(0, 3.5rem));
+  justify-content: space-evenly;
   gap: var(--qst-line-gap);
 }
 
