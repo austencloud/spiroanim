@@ -1,16 +1,36 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
 import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 
+const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
+const scrollIntoView = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>()
+
 describe('ConceptsPane', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+    scrollIntoView.mockClear()
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    if (originalScrollIntoView) {
+      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+        configurable: true,
+        value: originalScrollIntoView,
+      })
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
+    }
   })
 
   it('integrates QTR into VTG while preserving shared controls across concepts', async () => {
@@ -187,7 +207,9 @@ describe('ConceptsPane', () => {
     expect(wrapper.find('[data-role="qst-reset"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="qst-paths"]').exists()).toBe(true)
     expect(wrapper.findAll('[data-role="qst-pattern-card"]')).toHaveLength(8)
-    expect(wrapper.findAll('[data-role="qst-page"]')).toHaveLength(7)
+    expect(wrapper.findAll('[data-role="qst-page"]')).toHaveLength(14)
+    expect(wrapper.find('[data-role="qst-pagination-top"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="qst-pagination-bottom"]').exists()).toBe(true)
 
     await wrapper.get('[data-role="qst-page"][data-page="3"]').trigger('click')
     await wrapper.get('[data-role="qst-back"]').trigger('click')
@@ -253,6 +275,44 @@ describe('ConceptsPane', () => {
     await wrapper.get('[data-role="qst-back"]').trigger('click')
     await wrapper.get('[data-collection="beyond"]').trigger('click')
     expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('13')
+  })
+
+  it('instantly scrolls a hidden selected pattern into view when its library opens', async () => {
+    const store = useConceptsStore()
+    store.selectedConcept = 'qst'
+    const animation = createDefaultQstAnimation({
+      concept: 'qst',
+      reference: 'beyond-100',
+    })
+    if (!animation) throw new Error('Expected a supported QST animation')
+
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      if (this instanceof HTMLElement && this.matches('[data-concepts-pane]')) {
+        return new DOMRect(0, 0, 320, 500)
+      }
+      if (this instanceof HTMLElement && this.dataset.patternReference === 'beyond-100') {
+        return new DOMRect(0, 700, 300, 180)
+      }
+      return new DOMRect(0, 0, 0, 0)
+    })
+
+    const wrapper = mount(ConceptsPane, { props: { animation, animationReady: true } })
+    await vi.waitFor(() =>
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'instant',
+        block: 'nearest',
+        inline: 'nearest',
+      }),
+    )
+    const initialCallCount = scrollIntoView.mock.calls.length
+
+    await wrapper.get('[data-role="qst-back"]').trigger('click')
+    await wrapper.get('[data-collection="beyond"]').trigger('click')
+    await vi.waitFor(() =>
+      expect(scrollIntoView.mock.calls.length).toBeGreaterThan(initialCallCount),
+    )
   })
 
   it('preserves shared controls when merged VTG receives an Eight Step animation', async () => {

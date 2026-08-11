@@ -1,5 +1,6 @@
 <template>
   <section
+    ref="paneElement"
     class="quarter-space-tech-pane"
     aria-labelledby="quarter-space-tech-title"
     data-role="qst-pane"
@@ -110,6 +111,14 @@
         </div>
       </header>
 
+      <div class="qst-pagination-top" data-role="qst-pagination-top">
+        <QstPagination
+          :page-count="selectedCollection.pages.length"
+          :page-index="pageIndex"
+          @change="changePage"
+        />
+      </div>
+
       <QstCatalogPage
         :key="catalogPageKey"
         :page="currentPage"
@@ -118,38 +127,12 @@
         @select="selectPattern"
       />
 
-      <nav class="qst-pagination" aria-label="Quarter Space Tech library pages">
-        <button
-          type="button"
-          aria-label="Previous page"
-          data-role="qst-page-previous"
-          :disabled="pageIndex === 0"
-          @click="changePage(pageIndex - 1)"
-        >
-          <BaseIcon :path="mdiChevronLeft" :size="20" />
-        </button>
-        <button
-          v-for="pageNumber in selectedCollection.pages.length"
-          :key="pageNumber"
-          type="button"
-          :aria-label="`Page ${pageNumber}`"
-          :aria-current="pageNumber - 1 === pageIndex ? 'page' : undefined"
-          :data-page="pageNumber"
-          data-role="qst-page"
-          @click="changePage(pageNumber - 1)"
-        >
-          {{ pageNumber }}
-        </button>
-        <button
-          type="button"
-          aria-label="Next page"
-          data-role="qst-page-next"
-          :disabled="pageIndex === selectedCollection.pages.length - 1"
-          @click="changePage(pageIndex + 1)"
-        >
-          <BaseIcon :path="mdiChevronRight" :size="20" />
-        </button>
-      </nav>
+      <QstPagination
+        data-role="qst-pagination-bottom"
+        :page-count="selectedCollection.pages.length"
+        :page-index="pageIndex"
+        @change="changePage"
+      />
     </div>
 
     <ConceptAnimationControls v-if="selectedCollection" :animation="animation" role-prefix="qst" />
@@ -157,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import { mdiArrowLeft, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
+import { mdiArrowLeft } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
@@ -166,6 +149,7 @@ import PatternTransformControls from '@/features/concepts/components/PatternTran
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import QstCatalogPage from '@/features/quarter-space-tech/components/QstCatalogPage.vue'
+import QstPagination from '@/features/quarter-space-tech/components/QstPagination.vue'
 import {
   getQstCollectionPatternCount,
   qstCollections,
@@ -221,6 +205,7 @@ const {
 const selectedCollection = shallowRef<QstCollectionDefinition>()
 const selectedPattern = shallowRef<QstPatternDefinition>()
 const pageIndex = ref(0)
+const paneElement = ref<HTMLElement>()
 const pageIndexByCollection = reactive<Record<QstCollectionKey, number>>({
   breaks: 0,
   advanced: 0,
@@ -292,6 +277,7 @@ const openCollection = (collection: QstCollectionDefinition) => {
       : Math.min(pageIndexByCollection[collection.key], collection.pages.length - 1)
   pageIndex.value = nextPageIndex
   pageIndexByCollection[collection.key] = nextPageIndex
+  void scrollSelectedPatternIntoView()
 }
 
 const closeCollection = () => {
@@ -360,6 +346,31 @@ const findPatternLocation = (reference: QstPatternSelection['reference']) => {
   return undefined
 }
 
+const scrollSelectedPatternIntoView = async () => {
+  const reference = selectedPattern.value?.reference
+  if (!reference) return
+
+  await nextTick()
+  if (selectedPattern.value?.reference !== reference) return
+
+  const card = paneElement.value?.querySelector<HTMLElement>(
+    `[data-pattern-reference="${reference}"]`,
+  )
+  const viewport = paneElement.value?.closest<HTMLElement>('[data-concepts-pane]')
+  if (!card || !viewport) return
+
+  const cardRect = card.getBoundingClientRect()
+  const viewportRect = viewport.getBoundingClientRect()
+  const isFullyVisible =
+    cardRect.top >= viewportRect.top &&
+    cardRect.bottom <= viewportRect.bottom &&
+    cardRect.left >= viewportRect.left &&
+    cardRect.right <= viewportRect.right
+  if (isFullyVisible) return
+
+  card.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' })
+}
+
 const matchPattern = async (request: Parameters<PatternMatchingClient['matchQst']>[0]) => {
   if (props.patternMatcher) return props.patternMatcher.matchQst(request)
 
@@ -402,6 +413,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
       selectedPattern.value = location.pattern
       pageIndex.value = location.pageIndex
       pageIndexByCollection[location.collection.key] = location.pageIndex
+      void scrollSelectedPatternIntoView()
     }
     swapProps.value = result.match.swapProps
     reversePlane.value = result.match.reversePlane
@@ -700,45 +712,14 @@ defineExpose({
   line-height: 1.4;
 }
 
-.qst-pagination {
-  display: flex;
-  max-inline-size: 100%;
-  padding: var(--space-2);
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: var(--space-1);
+.qst-pagination-top {
+  display: none;
 }
 
-.qst-pagination button {
-  display: grid;
-  min-inline-size: 2rem;
-  min-block-size: 2rem;
-  padding: 0.25rem;
-  color: var(--color-text);
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 700;
-  cursor: pointer;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  place-items: center;
-}
-
-.qst-pagination button[aria-current='page'] {
-  color: var(--color-on-action-primary);
-  background: var(--color-action-primary);
-  border-color: var(--color-action-primary);
-}
-
-.qst-pagination button:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
-
-.qst-pagination button:focus-visible {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: 2px;
+@container concept-pane (max-width: 52rem) {
+  .qst-pagination-top {
+    display: block;
+  }
 }
 
 .qst-more {
