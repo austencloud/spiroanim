@@ -88,6 +88,10 @@ part of the pattern signature, so a distance mismatch does not by itself stop a 
 indexes derive shifted and doubled variants incrementally from each base pattern and are built only
 for the active concept unless fallback matching is required.
 
+When several control combinations produce the same authored pattern, matching tries every Starting
+Beat position before changing the current Swap, 180-degree, or Qtr mode. The lowest Starting Beat is
+used only to break a tie between candidates that preserve the same current transform controls.
+
 Pattern recovery runs in the shared, lazily created Concepts pattern-matching worker. The worker
 stays alive while VTG or Eight Step is selected, preserving generated candidate indexes across
 animation changes and concept switches. VTG requests include the merged QTR fallback. Selecting a

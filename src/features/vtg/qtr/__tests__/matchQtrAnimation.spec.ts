@@ -150,7 +150,7 @@ describe('Qtr animation matching', () => {
     })
   })
 
-  it('prioritizes lower Trans beats before the current transforms', () => {
+  it('tries every Trans beat before changing the current transforms', () => {
     for (const selection of [
       {
         reference: '2-2',
@@ -178,17 +178,19 @@ describe('Qtr animation matching', () => {
       }
       const animation = createQtrAnimation({ ...selection, transitionBeats: 5 })
       const matches = findQtrPatternMatches(animation)
-      const lowestBeat = Math.min(...matches.map((match) => match.beat ?? 1))
-      const lowestBeatMatches = matches.filter((match) => (match.beat ?? 1) === lowestBeat)
       const preferenceDifference = (match: (typeof matches)[number]) =>
         Number(match.quarters !== preferences.quarters) +
         Number(match.swapProps !== preferences.swapProps) +
         Number(match.reversePlane !== preferences.reversePlane)
-      const lowestPreferenceDifference = Math.min(...lowestBeatMatches.map(preferenceDifference))
+      const lowestPreferenceDifference = Math.min(...matches.map(preferenceDifference))
+      const preferredMatches = matches.filter(
+        (match) => preferenceDifference(match) === lowestPreferenceDifference,
+      )
+      const lowestPreferredBeat = Math.min(...preferredMatches.map((match) => match.beat ?? 1))
       const match = findQtrPatternMatch(animation, preferences)
 
-      expect(match?.beat ?? 1).toBe(lowestBeat)
       expect(match ? preferenceDifference(match) : undefined).toBe(lowestPreferenceDifference)
+      expect(match?.beat ?? 1).toBe(lowestPreferredBeat)
     }
   })
 

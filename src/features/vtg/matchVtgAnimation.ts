@@ -147,23 +147,24 @@ const preferenceDifferenceCount = (
   Number(match.reversePlane !== preferences.reversePlane)
 
 /**
- * Canonicalizes equivalent patterns to the lowest starting beat, then uses the
- * current non-playback controls to disambiguate the remaining candidates.
+ * Tries every starting beat before changing the current non-playback controls.
+ * Equivalent candidates that retain those controls are canonicalized to the
+ * lowest starting beat only as a tie-breaker.
  */
 export const findVtgPatternMatch = (
   animation: RootDataFinal,
   preferences?: VtgPatternMatchPreferences,
 ): VtgPatternMatch | undefined =>
   [...findVtgPatternMatches(animation)].sort((first, second) => {
-    const beatDifference = startingBeat(first) - startingBeat(second)
-    if (beatDifference !== 0) return beatDifference
-
     if (preferences) {
       const preferenceDifference =
         preferenceDifferenceCount(first, preferences) -
         preferenceDifferenceCount(second, preferences)
       if (preferenceDifference !== 0) return preferenceDifference
     }
+
+    const beatDifference = startingBeat(first) - startingBeat(second)
+    if (beatDifference !== 0) return beatDifference
 
     return playbackTransformationCount(first) - playbackTransformationCount(second)
   })[0]

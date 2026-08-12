@@ -151,15 +151,15 @@ export const findQtrPatternMatch = (
   preferences?: QtrPatternMatchPreferences,
 ): QtrPatternMatch | undefined =>
   [...findQtrPatternMatches(animation)].sort((first, second) => {
-    const beatDifference = startingBeat(first) - startingBeat(second)
-    if (beatDifference !== 0) return beatDifference
-
     if (preferences) {
       const preferenceDifference =
         preferenceDifferenceCount(first, preferences) -
         preferenceDifferenceCount(second, preferences)
       if (preferenceDifference !== 0) return preferenceDifference
     }
+
+    const beatDifference = startingBeat(first) - startingBeat(second)
+    if (beatDifference !== 0) return beatDifference
 
     return playbackTransformationCount(first) - playbackTransformationCount(second)
   })[0]
