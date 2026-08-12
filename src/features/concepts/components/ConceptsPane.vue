@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import EightStepPane from '@/features/eight-step/components/EightStepPane.vue'
-import { usePatternMatchingWorker } from '@/features/concepts/composables/usePatternMatchingWorker'
+import { usePatternMatchingClient } from '@/features/concepts/composables/usePatternMatchingWorker'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import KineticAlphabetPane from '@/features/kinetic-alphabet/components/KineticAlphabetPane.vue'
@@ -57,7 +57,7 @@ const emit = defineEmits<{
 }>()
 
 const { selectedConcept } = storeToRefs(useConceptsStore())
-const patternMatcher = usePatternMatchingWorker(selectedConcept)
+const patternMatcher = usePatternMatchingClient()
 </script>
 
 <style scoped>

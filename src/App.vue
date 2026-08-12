@@ -7,7 +7,14 @@
 import { defineAsyncComponent } from 'vue'
 import { RouterView } from 'vue-router'
 
+import {
+  patternMatchingClientKey,
+  usePatternMatchingWorker,
+} from '@/features/concepts/composables/usePatternMatchingWorker'
 import { loadMobileDevTools } from '@/services/mobileDevTools'
+
+const patternMatcher = usePatternMatchingWorker()
+provide(patternMatchingClientKey, patternMatcher)
 
 const PwaUpdatePrompt = import.meta.env.SSR
   ? null

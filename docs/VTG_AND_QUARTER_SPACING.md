@@ -92,12 +92,13 @@ When several control combinations produce the same authored pattern, matching tr
 Beat position before changing the current Swap, 180-degree, or Qtr mode. The lowest Starting Beat is
 used only to break a tie between candidates that preserve the same current transform controls.
 
-Pattern recovery runs in the shared, lazily created Concepts pattern-matching worker. The worker
-stays alive while VTG or Eight Step is selected, preserving generated candidate indexes across
-animation changes and concept switches. VTG requests include the merged QTR fallback. Selecting a
-concept without matching support or unmounting the Concepts pane terminates the worker. Responses
-are versioned by the requesting pane so an older result cannot overwrite newer animation data or a
-user interaction.
+Pattern recovery runs in the shared, lazily created application-level pattern-matching worker. The
+worker remains available for 30 seconds after its last request settles, preserving generated
+candidate indexes across nearby animation changes, Concepts pane remounts, and switches between VTG,
+Eight Step, and QST. A new request resets that idle period, and the worker is never terminated while
+a request is pending. VTG requests include the merged QTR fallback. TKA does not use this worker.
+Responses are versioned by the requesting pane so an older result cannot overwrite newer animation
+data or a user interaction.
 
 ## Starting beat, QTR, Double, and 45-degree transitions
 
