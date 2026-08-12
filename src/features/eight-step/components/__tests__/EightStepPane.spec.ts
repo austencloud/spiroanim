@@ -285,7 +285,7 @@ describe('EightStepPane', () => {
     ).toEqual({ girth: 2, timeline: false })
   })
 
-  it('refreshes row previews for resize, Swap, Flip, and Scale only', async () => {
+  it('refreshes row previews for resize, Swap, 180°, and Scale only', async () => {
     const wrapper = mount(EightStepPane)
     await settlePreviewRendering()
     reportAllPreviewDimensions(72, 68)

@@ -22,18 +22,20 @@ zero values using the same sparse-frame rules as the other Concepts. Antipodal A
 canonicalized to `180` so they remain within the query format's `0-360` range.
 
 When an existing animation matches QST geometry, the shared pattern matcher restores its Swap,
-Flip, BPM, Scale, rendering, and prop-visibility controls. The pane opens the matching Breaks,
+180°, BPM, Scale, rendering, and prop-visibility controls. The pane opens the matching Breaks,
 Advanced, or Beyond page and highlights the detected pattern without replacing the loaded
-animation. Equivalent transformed geometry is resolved in favor of the current Swap and Flip
+animation. Equivalent transformed geometry is resolved in favor of the current Swap and 180°
 controls.
 
-In the Advanced and Beyond libraries, patterns that are exact prop-swapped counterparts share one
-catalog slot. With Swap off the slot shows the first pattern in catalog order; with Swap on it shows
-the second. Patterns without a swapped counterpart remain visible in both states. The visible
-patterns are repaginated eight per page, with shorter pages at intentional section boundaries when
-needed. In Beyond, Part 3 starts on page 3, leaving six Part 2 patterns on page 2, and Part 4 starts
-on page 4. Part 11 also starts on its own page. Breaks retains its original pages and shows every
-pattern regardless of Swap.
+Patterns that are exact prop-swapped counterparts share one catalog slot. With Swap off the slot
+shows the first pattern in catalog order; with Swap on it shows the second. Patterns without a
+swapped counterpart remain visible in both states. The visible patterns are repaginated eight per
+page, with shorter pages at intentional section boundaries when needed. In Beyond, Part 3 starts on
+page 3, leaving six Part 2 patterns on page 2, and Part 4 starts on page 4. Part 11 also starts on its
+own page.
+
+Within an open library, the Swap, 180°, and Reset controls appear directly below the library header
+and above the top pagination.
 
 The QST analyzer compiles each animation and identifies its endpoints as one of six positions:
 Top, Left, Front, Right, Bottom, or Back. This derived position sequence drives the diagrams and

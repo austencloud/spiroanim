@@ -15,7 +15,7 @@ The authoritative implementations are:
 - `src/features/vtg/math/` for VTG building, matching, and relationship classification.
 - `src/features/vtg/qtr/` for the VTG-owned QTR transforms, matching, labels, and frame-derived
   headers, with the shared QTR contracts in `src/features/vtg/types.ts`.
-- The shared Concepts store for QTR mode, Speed Ratio, Swap, and Flip state.
+- The shared Concepts store for QTR mode, Speed Ratio, Swap, and 180° state.
 - `src/math/animation/subdivideAnimationPlayback.ts` for frame subdivision that preserves the
   visible path while changing the authored playback rate.
 
@@ -25,7 +25,7 @@ The Concepts pane does not use `PropertyPanel`, `DynamicVal`, or `useProperties.
 Its VTG and Eight Step panels use the same native player and transform controls. VTG sends a
 `VtgPatternSelection` to the VTG builder when QTR is disabled and a `QtrPatternSelection` to the Qtr
 builder when QTR is enabled. Eight Step sends an `EightStepPatternSelection` to its builder. QTR,
-Speed Ratio, Swap, Flip, and the player controls are held in the shared Concepts store so their
+Speed Ratio, Swap, 180°, and the player controls are held in the shared Concepts store so their
 applicable values remain unchanged when switching panels. Persisted selections from the retired
 Quarter Spacing panel migrate to VTG with QTR enabled. Legacy Quarter Spacing routes do the same and
 then canonicalize to the VTG route.
@@ -147,7 +147,7 @@ selections. Box rotates each prop's first-frame `arc` by 45 degrees: plane 0 use
 180 uses `-45` so both planes rotate in the same spatial direction. The original first continuation
 arc is made explicit so sparse-frame inheritance cannot carry the Box adjustment into later frames.
 
-Flip selects the effective plane before the Box direction is calculated, Swap exchanges the
+The 180° control selects the effective plane before the Box direction is calculated, Swap exchanges the
 complete transformed tracks afterward, and Quarter Spacing applies its Qtr arc offsets after the
 shared VTG shape transform. Previews and compiled-geometry matching include the selected shape.
 
@@ -183,7 +183,7 @@ This distinction matters for unequal speed ratios: advancing both tracks by one 
 their instantaneous Together/Split checkpoint because their relative phase advances at the
 difference between their rates. That checkpoint change does not change the semantic catalog
 pattern. Changes to these playback controls still rerun semantic classification so this invariant
-remains validated in the reactive UI. Shape, Speed Ratio, Anti, Swap, Flip, and the Qtr mode remain part of
+remains validated in the reactive UI. Shape, Speed Ratio, Anti, Swap, 180°, and the Qtr mode remain part of
 the relationship input because they define the pattern itself rather than only its playback origin
 or subdivision.
 
@@ -200,7 +200,7 @@ local phase orientations are `-1`, `-1`, `-1`, and `+1`, whose product is anothe
 that local-frame correction gives `(-1) * (-1) = +1`, or Same. This matches the rendered motion:
 the props are quarter-spaced and spin in the same direction, so the prop portion is `QS`, not `QO`.
 The established `6-3` classification remains the same across the supported speed ratios, Qtr modes,
-Swap states, and Flip states.
+Swap states, and 180° states.
 
 ## QTR headers
 
@@ -217,17 +217,17 @@ uses VTG's Orange color set, matching the generated animation's prop colors.
 In QTR mode, each left-header prop diagram is recalculated from the first compiled frame of
 the first cell in that row (`1-1` through `1-6`). The closest cardinal direction of `pos` selects
 top, right, bottom, or left. The sign of `pos dot rot` selects out or in. Placements reuse the exact
-bounds demonstrated by left rule 2 for left/right and top rule 2 for top/bottom. Swap and Flip
+bounds demonstrated by left rule 2 for left/right and top rule 2 for top/bottom. Swap and 180°
 participate in this calculation; controls that do not change first-frame geometry do not.
 
 The top-header prop diagrams are not displayed in QTR mode.
 
-Flip mirrors each left header from left to right. Its title block, divider, and regular prop
-placements move together, including which end of a prop is rendered as the head. Flipped
+The 180° control mirrors each left header from left to right. Its title block, divider, and regular
+prop placements move together, including which end of a prop is rendered as the head. Rotated
 left-header titles are right-aligned against the right edge. Header numbers remain in their normal
-bottom-right position. Top headers keep their normal layout when Flip is enabled. Quarter
+bottom-right position. Top headers keep their normal layout when 180° is enabled. Quarter
 Spacing header props are not mirrored a second time because their positions already come from
-compiled frames that include the Flip transform; the surrounding title layout still mirrors
+compiled frames that include the 180-degree transform; the surrounding title layout still mirrors
 normally.
 
 ## Regression coverage
@@ -237,7 +237,7 @@ Changes in this area should cover the applicable behavior:
 - BPM, Scale, Thick, Spacing, and derived Distance boundaries.
 - One undo step per continuous slider gesture.
 - Player-only Paths, Hands, and Arms settings remaining separate from thumbnails.
-- Pattern building, matching, Swap, Flip, Diamond/Box, fixed-shape cells, starting-beat shifts,
+- Pattern building, matching, Swap, 180°, Diamond/Box, fixed-shape cells, starting-beat shifts,
   Double subdivision, reciprocal QTR/VTG transitions, speed ratios, and both Qtr modes.
 - Relationship classifications derived from compiled geometry, including the `6-3` `QO/QS`
   reference.

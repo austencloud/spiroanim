@@ -78,12 +78,34 @@ describe('QST pattern catalog', () => {
     }
   })
 
-  it('uses Swap to paginate one member of each Advanced and Beyond pair', () => {
+  it('uses Swap to paginate one member of every QST pair', () => {
     const [breaks, advanced, beyond] = qstCollections
     if (!breaks || !advanced || !beyond) throw new Error('Missing QST collections')
 
-    expect(getQstCatalogPages(breaks, false)).toBe(breaks.pages)
-    expect(getQstCatalogPages(breaks, true)).toBe(breaks.pages)
+    const breaksFirstPages = getQstCatalogPages(breaks, false)
+    const breaksSecondPages = getQstCatalogPages(breaks, true)
+    expect(breaksFirstPages.map(({ patterns }) => patterns.length)).toEqual([8, 8, 8, 6])
+    expect(breaksSecondPages.map(({ patterns }) => patterns.length)).toEqual([8, 8, 8, 6])
+    expect(breaksFirstPages[0]?.patterns.map(({ reference }) => reference)).toEqual([
+      'breaks-1',
+      'breaks-2',
+      'breaks-5',
+      'breaks-6',
+      'breaks-9',
+      'breaks-11',
+      'breaks-13',
+      'breaks-15',
+    ])
+    expect(breaksSecondPages[0]?.patterns.map(({ reference }) => reference)).toEqual([
+      'breaks-3',
+      'breaks-4',
+      'breaks-7',
+      'breaks-8',
+      'breaks-10',
+      'breaks-12',
+      'breaks-14',
+      'breaks-16',
+    ])
 
     const advancedFirstPages = getQstCatalogPages(advanced, false)
     const advancedSecondPages = getQstCatalogPages(advanced, true)
@@ -144,7 +166,7 @@ describe('QST pattern catalog', () => {
     })
   })
 
-  it('keeps every pattern closed after Flip and Swap transforms', () => {
+  it('keeps every pattern closed after 180-degree and Swap transforms', () => {
     for (const pattern of qstPatternDefinitions) {
       for (const swapProps of [false, true]) {
         for (const reversePlane of [false, true]) {

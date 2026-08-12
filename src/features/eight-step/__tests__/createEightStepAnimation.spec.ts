@@ -179,7 +179,7 @@ describe('createEightStepAnimation', () => {
             (sum, coordinate, index) => sum + coordinate * secondFrame.pos[index]!,
             0,
           )
-          expect(dot, `column ${column}, Flip ${reversePlane}, frame ${frameIndex}`).toBeCloseTo(
+          expect(dot, `column ${column}, 180° ${reversePlane}, frame ${frameIndex}`).toBeCloseTo(
             0,
             7,
           )
@@ -234,7 +234,7 @@ describe('createEightStepAnimation', () => {
       for (const swapProps of [false, true]) {
         for (const reversePlane of [false, true]) {
           for (const shape of ['diamond', 'box'] as const) {
-            const label = `${definition.reference}, Swap ${swapProps}, Flip ${reversePlane}, ${shape}`
+            const label = `${definition.reference}, Swap ${swapProps}, 180° ${reversePlane}, ${shape}`
             const animation = createDefaultEightStepAnimation({
               concept: '8stp',
               reference: definition.reference,

@@ -2,12 +2,17 @@
   <fieldset class="concept-pattern-options vtg-pattern-options">
     <legend class="concept-controls__visually-hidden">Pattern options</legend>
     <label>
-      <input v-model="reversePlane" type="checkbox" :data-role="`${rolePrefix}-reverse`" />
-      <span>Flip</span>
-    </label>
-    <label>
       <input v-model="swapProps" type="checkbox" :data-role="`${rolePrefix}-swap`" />
       <span>Swap</span>
+    </label>
+    <label title="Rotate motion plane 180 degrees">
+      <input
+        v-model="reversePlane"
+        type="checkbox"
+        aria-label="Rotate motion plane 180 degrees"
+        :data-role="`${rolePrefix}-reverse`"
+      />
+      <span aria-hidden="true">180°</span>
     </label>
     <button type="button" :data-role="`${rolePrefix}-reset`" @click="emit('reset')">Reset</button>
   </fieldset>

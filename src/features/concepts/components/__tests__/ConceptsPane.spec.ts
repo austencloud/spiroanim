@@ -216,9 +216,21 @@ describe('ConceptsPane', () => {
     expect(wrapper.get('[data-role="qst-catalog-page"]').attributes('style')).toContain(
       '--qst-page-card-beats: 4',
     )
-    expect(wrapper.findAll('[data-role="qst-page"]')).toHaveLength(14)
+    expect(wrapper.findAll('[data-role="qst-page"]')).toHaveLength(8)
     expect(wrapper.find('[data-role="qst-pagination-top"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="qst-pagination-bottom"]').exists()).toBe(true)
+    expect(
+      wrapper
+        .get('[data-role="qst-library"]')
+        .findAll(':scope > [data-role]')
+        .map((element) => element.attributes('data-role')),
+    ).toEqual([
+      'qst-library-header',
+      'qst-transform-controls',
+      'qst-pagination-top',
+      'qst-catalog-page',
+      'qst-pagination-bottom',
+    ])
 
     await wrapper.get('[data-role="qst-page"][data-page="3"]').trigger('click')
     await wrapper.get('[data-role="qst-back"]').trigger('click')
@@ -271,14 +283,23 @@ describe('ConceptsPane', () => {
     await wrapper.get<HTMLInputElement>('[data-role="qst-swap"]').setValue(false)
     await wrapper.get('[data-role="qst-back"]').trigger('click')
     await wrapper.get('[data-collection="breaks"]').trigger('click')
+    await wrapper.get('[data-role="qst-page"][data-page="2"]').trigger('click')
     await wrapper.get('[data-pattern-reference="breaks-17"] button').trigger('click')
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
       { concept: 'qst', reference: 'breaks-17' },
     ])
+    await wrapper.get<HTMLInputElement>('[data-role="qst-swap"]').setValue(true)
+    expect(wrapper.get('[data-pattern-reference="breaks-19"]').classes()).toContain(
+      'qst-pattern-card--selected',
+    )
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { concept: 'qst', reference: 'breaks-17', swapProps: true },
+    ])
+    await wrapper.get<HTMLInputElement>('[data-role="qst-swap"]').setValue(false)
     await wrapper.get('[data-role="qst-page"][data-page="4"]').trigger('click')
     await wrapper.get('[data-role="qst-back"]').trigger('click')
     await wrapper.get('[data-collection="breaks"]').trigger('click')
-    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('3')
+    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('2')
   })
 
   it('opens the matching QST library page and highlights the loaded pattern', async () => {

@@ -10,10 +10,6 @@
       Quarter Space Tech
     </h1>
 
-    <div v-if="selectedCollection" class="qst-top-options">
-      <PatternTransformControls role-prefix="qst" @reset="resetPatternControls" />
-    </div>
-
     <div v-if="!selectedCollection" class="qst-landing" data-role="qst-collection-chooser">
       <header class="qst-landing__intro">
         <span class="qst-landing__eyebrow">Six positions. Infinite connections.</span>
@@ -136,7 +132,7 @@
     </div>
 
     <div v-else class="qst-library" data-role="qst-library">
-      <header class="qst-library__header">
+      <header class="qst-library__header" data-role="qst-library-header">
         <button
           type="button"
           class="qst-library__back"
@@ -152,6 +148,10 @@
           <p>{{ selectedCollection.description }}</p>
         </div>
       </header>
+
+      <div class="qst-top-options" data-role="qst-transform-controls">
+        <PatternTransformControls role-prefix="qst" @reset="resetPatternControls" />
+      </div>
 
       <div class="qst-pagination-top" data-role="qst-pagination-top">
         <QstPagination
@@ -276,7 +276,7 @@ const currentPage = computed(() => {
 
 const selectedDisplayPattern = computed(() => {
   if (!selectedCollection.value || !selectedPattern.value) return undefined
-  return getQstDisplayPattern(selectedCollection.value, selectedPattern.value, swapProps.value)
+  return getQstDisplayPattern(selectedPattern.value, swapProps.value)
 })
 
 const getPropColor = (propIndex: 0 | 1) => {
@@ -299,9 +299,7 @@ const catalogPageKey = computed(
 )
 
 const createSelection = (pattern: QstPatternDefinition): QstPatternSelection => {
-  const selectedDefinition = selectedCollection.value
-    ? getQstCanonicalPattern(selectedCollection.value, pattern)
-    : pattern
+  const selectedDefinition = selectedCollection.value ? getQstCanonicalPattern(pattern) : pattern
   const selection: QstPatternSelection = {
     concept: 'qst',
     reference: selectedDefinition.reference,
@@ -326,7 +324,7 @@ const openCollection = (collection: QstCollectionDefinition) => {
   selectedCollection.value = collection
   const pages = getQstCatalogPages(collection, swapProps.value)
   const displayPattern = selectedPattern.value
-    ? getQstDisplayPattern(collection, selectedPattern.value, swapProps.value)
+    ? getQstDisplayPattern(selectedPattern.value, swapProps.value)
     : undefined
   const selectedPatternPageIndex = displayPattern
     ? pages.findIndex((page) =>
@@ -356,9 +354,7 @@ const changePage = (nextPageIndex: number) => {
 }
 
 const selectPattern = (pattern: QstPatternDefinition) => {
-  const selectedDefinition = selectedCollection.value
-    ? getQstCanonicalPattern(selectedCollection.value, pattern)
-    : pattern
+  const selectedDefinition = selectedCollection.value ? getQstCanonicalPattern(pattern) : pattern
   selectedPattern.value = selectedDefinition
   emitPatternSelection(selectedDefinition)
 }
@@ -474,17 +470,9 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   if (result.status === 'matched') {
     const location = findPatternLocation(result.match.reference)
     if (location) {
-      const normalized = normalizeQstPairedSelection(
-        location.collection,
-        location.pattern,
-        result.match.swapProps,
-      )
+      const normalized = normalizeQstPairedSelection(location.pattern, result.match.swapProps)
       const pages = getQstCatalogPages(location.collection, normalized.swapProps)
-      const displayPattern = getQstDisplayPattern(
-        location.collection,
-        normalized.pattern,
-        normalized.swapProps,
-      )
+      const displayPattern = getQstDisplayPattern(normalized.pattern, normalized.swapProps)
       const matchedPageIndex = pages.findIndex((page) =>
         page.patterns.some((pattern) => pattern.reference === displayPattern.reference),
       )
@@ -566,7 +554,7 @@ defineExpose({
 .qst-top-options {
   display: flex;
   min-width: var(--size-concept-content-min-width);
-  padding: 0 var(--space-2) var(--space-1);
+  padding: var(--space-2) var(--space-2) 0;
   justify-content: center;
 }
 

@@ -71,7 +71,7 @@ describe('VTG animation matching', () => {
     }
   })
 
-  it('returns an observable Swap, Flip, ratio, Anti, BPM, and Scale combination', () => {
+  it('returns an observable Swap, 180-degree, ratio, Anti, BPM, and Scale combination', () => {
     const selection = {
       reference: '5-6',
       speedRatio: '1:3',

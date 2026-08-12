@@ -24,7 +24,7 @@ details.
 - [`VTG_AND_QUARTER_SPACING.md`](./VTG_AND_QUARTER_SPACING.md) - VTG and integrated QTR controls,
   builders, transforms, matching, relationship classification, and headers.
 - [`EIGHT_STEP.md`](./EIGHT_STEP.md) - Eight Step source pages, per-cell frame derivation, curve
-  families, Swap/Flip behavior, matching, and compiled-geometry validation.
+  families, Swap/180° behavior, matching, and compiled-geometry validation.
 - [`QUARTER_SPACE_TECH.md`](./QUARTER_SPACE_TECH.md) - QST catalog data, position analysis,
   responsive diagrams, line splitting, pagination, and worker-rendered thumbnails.
 

@@ -366,7 +366,7 @@ describe('VtgPane', () => {
     ])
   })
 
-  it('offers Swap and Flip checkboxes that reapply the current pattern', async () => {
+  it('offers Swap and 180-degree checkboxes that reapply the current pattern', async () => {
     const wrapper = mount(VtgPane)
     const swap = wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]')
     const reverse = wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]')
@@ -374,12 +374,13 @@ describe('VtgPane', () => {
     expect(swap.element.checked).toBe(false)
     expect(reverse.element.checked).toBe(false)
     expect(swap.element.nextElementSibling?.textContent).toBe('Swap')
-    expect(reverse.element.nextElementSibling?.textContent).toBe('Flip')
+    expect(reverse.attributes('aria-label')).toBe('Rotate motion plane 180 degrees')
+    expect(reverse.element.nextElementSibling?.textContent).toBe('180°')
     expect(
       wrapper
         .findAll('.vtg-top-options .concept-pattern-options > label span')
         .map((option) => option.text()),
-    ).toEqual(['Flip', 'Swap'])
+    ).toEqual(['Swap', '180°'])
 
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
     await swap.setValue(true)
@@ -1350,7 +1351,7 @@ describe('VtgPane', () => {
     ])
   })
 
-  it('does not mirror frame-derived Quarters props a second time when Flip is enabled', async () => {
+  it('does not mirror frame-derived Quarters props a second time when 180° is enabled', async () => {
     const wrapper = await mountVtgPane(true)
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)

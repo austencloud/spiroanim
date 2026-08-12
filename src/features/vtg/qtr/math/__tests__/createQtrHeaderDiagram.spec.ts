@@ -65,7 +65,7 @@ describe('Quarters side-header prop states', () => {
     expect(getStates(row)).toEqual(expected)
   })
 
-  it('recalculates from the active Swap and Flip forms', () => {
+  it('recalculates from the active Swap and 180-degree forms', () => {
     expect(getStates(5, { swapProps: true })).toEqual([
       { position: 'left', facing: 'in' },
       { position: 'top', facing: 'out' },

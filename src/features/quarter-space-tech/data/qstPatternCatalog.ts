@@ -86,8 +86,6 @@ export const getQstPatternSwapPair = (
   reference: QstPatternReference,
 ): QstPatternSwapPair | undefined => qstSwapPairByReference.get(reference)
 
-const usesSwapPairPagination = (collection: QstCollectionDefinition) => collection.key !== 'breaks'
-
 const paginateQstPatterns = (
   patterns: readonly QstPatternDefinition[],
 ): readonly QstCatalogPage[] =>
@@ -99,8 +97,6 @@ export const getQstCatalogPages = (
   collection: QstCollectionDefinition,
   swapProps: boolean,
 ): readonly QstCatalogPage[] => {
-  if (!usesSwapPairPagination(collection)) return collection.pages
-
   const visiblePatterns = getCollectionPatterns(collection).filter((pattern) => {
     const pair = getQstPatternSwapPair(pattern.reference)
     if (!pair) return true
@@ -128,31 +124,21 @@ export const getQstCatalogPages = (
   return paginateQstPatterns(visiblePatterns)
 }
 
-export const getQstCanonicalPattern = (
-  collection: QstCollectionDefinition,
-  pattern: QstPatternDefinition,
-): QstPatternDefinition =>
-  usesSwapPairPagination(collection)
-    ? (getQstPatternSwapPair(pattern.reference)?.first ?? pattern)
-    : pattern
+export const getQstCanonicalPattern = (pattern: QstPatternDefinition): QstPatternDefinition =>
+  getQstPatternSwapPair(pattern.reference)?.first ?? pattern
 
 export const getQstDisplayPattern = (
-  collection: QstCollectionDefinition,
   pattern: QstPatternDefinition,
   swapProps: boolean,
 ): QstPatternDefinition => {
-  if (!usesSwapPairPagination(collection)) return pattern
   const pair = getQstPatternSwapPair(pattern.reference)
   return pair ? (swapProps ? pair.second : pair.first) : pattern
 }
 
 export const normalizeQstPairedSelection = (
-  collection: QstCollectionDefinition,
   pattern: QstPatternDefinition,
   swapProps: boolean,
 ): { pattern: QstPatternDefinition; swapProps: boolean } => {
-  if (!usesSwapPairPagination(collection)) return { pattern, swapProps }
-
   const pair = getQstPatternSwapPair(pattern.reference)
   if (!pair) return { pattern, swapProps }
   return {

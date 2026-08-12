@@ -12,7 +12,8 @@ The primary implementations are:
 
 - `src/features/eight-step/data/eightStepPatternDefinitions.ts`: source-page handpaths, curve-family
   rules, frame solving, sparse-frame compaction, and generation of all 72 cell definitions.
-- `src/features/eight-step/data/eightStepPatternCatalog.ts`: Flip, Swap, Scale, BPM, and Diamond/Box
+- `src/features/eight-step/data/eightStepPatternCatalog.ts`: 180-degree rotation, Swap, Scale, BPM,
+  and Diamond/Box
   transformations.
 - `src/features/eight-step/createEightStepAnimation.ts`: prop defaults, current-animation merging,
   final animation creation, and preview animation creation.
@@ -129,25 +130,26 @@ The second row letter selects the Orange continual track:
 Rows therefore change the prop-rotation family applied to a page's handpaths; columns change the
 underlying Green/Orange handpaths. All 72 combinations are generated separately.
 
-## Flip and Swap
+## Swap and 180-degree rotation
 
-The controls are displayed in the order Flip, Swap, Reset.
+The controls are displayed in the order Swap, 180°, Reset. The compact `180°` label means
+"Rotate motion plane 180 degrees."
 
-Flip selects the corrected companion-page handpaths stored from Gage's source data. Gage's original
+The 180° control selects the corrected companion-page handpaths stored from Gage's source data. Gage's original
 second-half document placed its four base sheets at pages 9, 10, 11, and 12. Eight Step corrects
 that ordering to base pages 9, 11, 13, and 15, with their opposites at 10, 12, 14, and 16:
 
 - Pages 1/2, 3/4, 5/6, and 7/8 mirror both handpaths left-to-right.
 - Pages 9/10, 11/12, 13/14, and 15/16 mirror both handpaths left-to-right.
 
-All 16 corrected handpath pages are stored as authoritative runtime data. Flip reads the companion
+All 16 corrected handpath pages are stored as authoritative runtime data. The 180° control reads the companion
 page and regenerates its complete props, planes, and axes; complete encoded animations are not
 duplicated or stored.
 
 Swap exchanges the two complete source animation tracks before the standard player prop defaults
 are applied. The animation, initial state, and any Box adjustment travel together. Green and Orange
 remain player prop slots, so Swap also changes which source track receives each slot's defaults.
-Flip and Swap are independent operations. In particular, a paired-page Green track is not obtained
+The 180° control and Swap are independent operations. In particular, a paired-page Green track is not obtained
 by substituting the source-page Orange track.
 
 ## Diamond and Box
@@ -163,8 +165,8 @@ spatial directions. This keeps flipped Quarter Aligned and Quarter Opposed props
 It does not modify `turns`. The original first continuation arc is made explicit when Box is built
 so sparse-frame inheritance cannot accidentally carry the adjustment into later frames.
 
-The Box transformation occurs after the source/paired handpath has been chosen by Flip and before the
-tracks are exchanged by Swap. It applies to all row families and both props. Selecting Box refreshes
+The Box transformation occurs after the source/paired handpath has been chosen by the 180° control
+and before the tracks are exchanged by Swap. It applies to all row families and both props. Selecting Box refreshes
 the row previews and can be recovered by compiled-geometry matching. While Box is selected, a note
 below the controls explains that the mode is experimental, its patterns have not been validated,
 and Difficult / Impossible Wall-Plane highlighting is disabled.
@@ -208,7 +210,7 @@ modification.
 
 Eight Step reuses the shared Concepts controls and store used by VTG and Quarter Spacing:
 
-- Flip and Swap;
+- Swap and 180°;
 - BPM, Scale, Thick, and persisted Spacing;
 - Paths, Hands, and Arms;
 - checked-by-default Left and Right prop visibility controls; and
@@ -223,7 +225,7 @@ remain page-scroll gestures and restore any touch-down value change.
 
 Changing concepts does not reset these shared settings. A setting remains available even when the
 currently displayed animation does not correspond to an active cell in the newly opened concept.
-Swap and Flip are persisted with the selected concept; the remaining player settings are shared for
+Swap and the 180° control are persisted with the selected concept; the remaining player settings are shared for
 the current application session. Diamond/Box uses the shared Concepts control, while each concept
 keeps its local shape choice and applies the transform through its own pattern builder.
 
@@ -237,7 +239,7 @@ frames and the corresponding player distance is updated. BPM is clamped to the s
 Spacing alternates precise horizontal Motion placement between the props and is not recovered from
 loaded pattern geometry.
 
-When an existing animation is supplied, the pane attempts to recover its cell, Flip, Swap, Shape,
+When an existing animation is supplied, the pane attempts to recover its cell, Swap, 180° state, Shape,
 BPM, and Scale from geometry. Thick, Paths, Hands, Arms, and the per-prop Left/Right visibility state
 are read directly from the animation. If the geometry is not an Eight Step candidate, no cell is
 shown as active and the shared controls are not forcibly reset.
@@ -255,7 +257,7 @@ setup, sequential request queue, stale-render cancellation, blob URL cleanup, an
 refresh. A resize observer watches the nine first-column cells and requests appropriately sized
 previews when their rendered dimensions change.
 
-Swap, Flip, Scale, Diamond/Box, and source-cell size affect thumbnail geometry and refresh all nine
+Swap, 180°, Scale, Diamond/Box, and source-cell size affect thumbnail geometry and refresh all nine
 previews. BPM affects timing only. Thick, Paths, Hands, and Arms are player presentation controls,
 so they intentionally do not invalidate these still images.
 
@@ -267,7 +269,7 @@ encodes its sparse frames. Default and inherited fields are omitted, which keeps
 shorter than fully expanded 72-pattern data while decoding to the same compiled playback.
 
 To recover the UI state, matching compiles the active animation and the generated candidates for
-all 72 cells, both Flip states, both Swap states, and both shape modes. Its geometry signature uses
+all 72 cells, both 180° states, both Swap states, and both shape modes. Its geometry signature uses
 every frame's `turns`, `arc`, and normalized `plane` for both props. BPM and Scale are recovered
 separately. Thick, Paths, Hands, and Arms do not participate in the geometry signature.
 
@@ -290,9 +292,9 @@ The regression suite validates:
 - all 13 compiled cardinal positions and all 12 incoming position axes for every source track;
 - closed first/final prop orientation;
 - the capping and continual curve-family turn sequences;
-- all eight generated Flip results against the supplied paired-page handpath table;
+- all eight generated 180-degree results against the supplied paired-page handpath table;
 - Box's 45-degree initial arcs without altering continuation arcs or `turns`;
-- Swap/Flip/Box composition, matching, hydration, and full player application;
+- Swap/180°/Box composition, matching, hydration, and full player application;
 - paired top-header, exact row-header, row/column cell highlighting, active-prop header colors,
   marked borders, and tooltips;
 - shared controls, reset behavior, and selection emission;

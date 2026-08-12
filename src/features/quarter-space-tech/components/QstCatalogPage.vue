@@ -272,13 +272,13 @@ onBeforeUnmount(() => previewObserver?.disconnect())
 
 .qst-pattern-line__tiles {
   --qst-line-beats: 4;
-  --qst-line-gap: clamp(0.15rem, 0.8vw, var(--space-2));
+  --qst-line-gap: clamp(0.075rem, 0.4vw, var(--space-1));
 
   display: grid;
   min-inline-size: 0;
   flex: 1 1 auto;
   grid-template-columns: repeat(var(--qst-line-beats), minmax(0, 3.5rem));
-  justify-content: space-evenly;
+  justify-content: center;
   gap: var(--qst-line-gap);
 }
 

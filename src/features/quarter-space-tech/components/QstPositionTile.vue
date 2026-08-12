@@ -204,7 +204,7 @@ const ariaLabel = computed(
 .qst-position-tile__transition {
   position: absolute;
   z-index: 2;
-  inset-inline-end: 0;
+  inset-inline-start: calc(66.6667% + 0.125rem);
   inset-block-end: 0;
   min-inline-size: 1.35rem;
   padding: 0.05rem 0.18rem;

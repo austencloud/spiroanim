@@ -303,7 +303,7 @@ const flipPageBySource: Readonly<Record<EightStepSourcePage, EightStepFlipPage>>
   15: 16,
 }
 
-/** Builds Flip from Gage's corrected companion page rather than transforming the source page. */
+/** Builds the 180-degree variant from Gage's corrected companion page rather than transforming the source page. */
 export const createFlippedEightStepProps = (
   definition: EightStepPatternDefinition,
 ): readonly [PropReadable, PropReadable] => {
