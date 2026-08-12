@@ -216,7 +216,7 @@ describe('ConceptsPane', () => {
     expect(wrapper.get('[data-role="qst-catalog-page"]').attributes('style')).toContain(
       '--qst-page-card-beats: 4',
     )
-    expect(wrapper.findAll('[data-role="qst-page"]')).toHaveLength(8)
+    expect(wrapper.findAll('[data-role="qst-page"]')).toHaveLength(10)
     expect(wrapper.find('[data-role="qst-pagination-top"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="qst-pagination-bottom"]').exists()).toBe(true)
     expect(

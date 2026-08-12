@@ -84,8 +84,8 @@ describe('QST pattern catalog', () => {
 
     const breaksFirstPages = getQstCatalogPages(breaks, false)
     const breaksSecondPages = getQstCatalogPages(breaks, true)
-    expect(breaksFirstPages.map(({ patterns }) => patterns.length)).toEqual([8, 8, 8, 6])
-    expect(breaksSecondPages.map(({ patterns }) => patterns.length)).toEqual([8, 8, 8, 6])
+    expect(breaksFirstPages.map(({ patterns }) => patterns.length)).toEqual([8, 8, 6, 4, 4])
+    expect(breaksSecondPages.map(({ patterns }) => patterns.length)).toEqual([8, 8, 6, 4, 4])
     expect(breaksFirstPages[0]?.patterns.map(({ reference }) => reference)).toEqual([
       'breaks-1',
       'breaks-2',
@@ -106,6 +106,14 @@ describe('QST pattern catalog', () => {
       'breaks-14',
       'breaks-16',
     ])
+    expect(breaksFirstPages[2]?.patterns.at(-1)?.caption).toMatch(/^Part 5:/)
+    expect(breaksSecondPages[2]?.patterns.at(-1)?.caption).toMatch(/^Part 5:/)
+    expect(breaksFirstPages[3]?.patterns[0]?.caption).toMatch(/^Part 6:/)
+    expect(breaksSecondPages[3]?.patterns[0]?.caption).toMatch(/^Part 6:/)
+    expect(breaksFirstPages[3]?.patterns.at(-1)?.caption).toMatch(/^Part 6:/)
+    expect(breaksSecondPages[3]?.patterns.at(-1)?.caption).toMatch(/^Part 6:/)
+    expect(breaksFirstPages[4]?.patterns[0]?.caption).toMatch(/^Part 7:/)
+    expect(breaksSecondPages[4]?.patterns[0]?.caption).toMatch(/^Part 7:/)
 
     const advancedFirstPages = getQstCatalogPages(advanced, false)
     const advancedSecondPages = getQstCatalogPages(advanced, true)

@@ -32,7 +32,7 @@ shows the first pattern in catalog order; with Swap on it shows the second. Patt
 swapped counterpart remain visible in both states. The visible patterns are repaginated eight per
 page, with shorter pages at intentional section boundaries when needed. In Beyond, Part 3 starts on
 page 3, leaving six Part 2 patterns on page 2, and Part 4 starts on page 4. Part 11 also starts on its
-own page.
+own page. In Breaks, Parts 6 and 7 each begin on their own page.
 
 Within an open library, the Swap, 180°, and Reset controls appear directly below the library header
 and above the top pagination.
