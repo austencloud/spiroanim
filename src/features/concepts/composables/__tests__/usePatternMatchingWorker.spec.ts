@@ -2,7 +2,7 @@ import { createApp, defineComponent, h } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  patternMatchingClientKey,
+  patternMatchingWorkerKey,
   usePatternMatchingClient,
   usePatternMatchingWorker,
 } from '@/features/concepts/composables/usePatternMatchingWorker'
@@ -76,7 +76,7 @@ describe('usePatternMatchingWorker', () => {
     const app = createApp(
       defineComponent({
         setup() {
-          client = usePatternMatchingWorker()
+          client = usePatternMatchingWorker().client
           return () => h('div')
         },
       }),
@@ -128,20 +128,21 @@ describe('usePatternMatchingWorker', () => {
     expect(FakeWorker.instances[1]!.terminated).toBe(true)
   })
 
-  it('keeps the provided worker when its Concepts consumer unmounts and remounts', async () => {
+  it('keeps the provided worker while a matching consumer is active', async () => {
     const showConsumer = ref(true)
+    const consumerActive = ref(true)
     const clients: PatternMatchingClient[] = []
     const Consumer = defineComponent({
       setup() {
-        clients.push(usePatternMatchingClient())
+        clients.push(usePatternMatchingClient(consumerActive))
         return () => h('div')
       },
     })
     const app = createApp(
       defineComponent({
         setup() {
-          const client = usePatternMatchingWorker()
-          provide(patternMatchingClientKey, client)
+          const controller = usePatternMatchingWorker()
+          provide(patternMatchingWorkerKey, controller)
           return () => (showConsumer.value ? h(Consumer) : h('div'))
         },
       }),
@@ -157,6 +158,18 @@ describe('usePatternMatchingWorker', () => {
     } as const
 
     await firstClient.matchVtg(request)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(FakeWorker.instances[0]!.terminated).toBe(false)
+
+    consumerActive.value = false
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(29_000)
+    expect(FakeWorker.instances[0]!.terminated).toBe(false)
+    consumerActive.value = true
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(FakeWorker.instances[0]!.terminated).toBe(false)
+
     showConsumer.value = false
     await nextTick()
     expect(FakeWorker.instances[0]!.terminated).toBe(false)
@@ -169,6 +182,8 @@ describe('usePatternMatchingWorker', () => {
     await secondClient.matchVtg(request)
     expect(FakeWorker.instances).toHaveLength(1)
 
+    showConsumer.value = false
+    await nextTick()
     await vi.advanceTimersByTimeAsync(30_000)
     expect(FakeWorker.instances[0]!.terminated).toBe(true)
 
@@ -180,7 +195,7 @@ describe('usePatternMatchingWorker', () => {
     const app = createApp(
       defineComponent({
         setup() {
-          client = usePatternMatchingWorker()
+          client = usePatternMatchingWorker().client
           return () => h('div')
         },
       }),
@@ -213,7 +228,7 @@ describe('usePatternMatchingWorker', () => {
     const app = createApp(
       defineComponent({
         setup() {
-          client = usePatternMatchingWorker()
+          client = usePatternMatchingWorker().client
           return () => h('div')
         },
       }),

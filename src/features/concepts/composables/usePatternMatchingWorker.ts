@@ -14,8 +14,13 @@ import type {
 
 const patternMatchingWorkerIdleMs = 30_000
 
-export const patternMatchingClientKey: InjectionKey<PatternMatchingClient> =
-  Symbol('patternMatchingClient')
+interface PatternMatchingWorkerController {
+  client: PatternMatchingClient
+  acquire: () => () => void
+}
+
+export const patternMatchingWorkerKey: InjectionKey<PatternMatchingWorkerController> =
+  Symbol('patternMatchingWorker')
 
 const matchVtgWithoutWorker = async (
   request: VtgPatternMatchRequest,
@@ -41,11 +46,12 @@ const matchQstWithoutWorker = async (
   return matchQstPatternRequest(request)
 }
 
-export const usePatternMatchingWorker = (): PatternMatchingClient => {
+export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
   let worker: Worker | undefined
   let channel: ReturnType<typeof createMessageChannel<PatternMatchingBridgeMap>> | undefined
   let idleTimer: ReturnType<typeof setTimeout> | undefined
   let activeRequests = 0
+  let activeConsumers = 0
   let disposed = false
 
   const clearIdleTimer = () => {
@@ -76,7 +82,7 @@ export const usePatternMatchingWorker = (): PatternMatchingClient => {
 
   const scheduleStop = () => {
     clearIdleTimer()
-    if (disposed || activeRequests > 0 || worker === undefined) return
+    if (disposed || activeRequests > 0 || activeConsumers > 0 || worker === undefined) return
 
     idleTimer = setTimeout(stop, patternMatchingWorkerIdleMs)
   }
@@ -116,13 +122,46 @@ export const usePatternMatchingWorker = (): PatternMatchingClient => {
       () => matchQstWithoutWorker(request),
     )
 
+  const acquire = () => {
+    if (disposed) return () => undefined
+
+    activeConsumers += 1
+    clearIdleTimer()
+    let released = false
+
+    return () => {
+      if (released) return
+
+      released = true
+      activeConsumers -= 1
+      if (activeConsumers === 0) scheduleStop()
+    }
+  }
+
   onBeforeUnmount(() => {
     disposed = true
     stop()
   })
 
-  return { matchVtg, matchEightStep, matchQst }
+  return {
+    client: { matchVtg, matchEightStep, matchQst },
+    acquire,
+  }
 }
 
-export const usePatternMatchingClient = (): PatternMatchingClient =>
-  inject(patternMatchingClientKey) ?? usePatternMatchingWorker()
+export const usePatternMatchingClient = (active: Readonly<Ref<boolean>>): PatternMatchingClient => {
+  const controller = inject(patternMatchingWorkerKey) ?? usePatternMatchingWorker()
+  let release: (() => void) | undefined
+
+  watchImmediate(active, (isActive) => {
+    if (isActive) {
+      release ??= controller.acquire()
+    } else {
+      release?.()
+      release = undefined
+    }
+  })
+
+  onBeforeUnmount(() => release?.())
+  return controller.client
+}

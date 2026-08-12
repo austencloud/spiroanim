@@ -57,7 +57,8 @@ const emit = defineEmits<{
 }>()
 
 const { selectedConcept } = storeToRefs(useConceptsStore())
-const patternMatcher = usePatternMatchingClient()
+const usesPatternMatching = computed(() => selectedConcept.value !== 'tka')
+const patternMatcher = usePatternMatchingClient(usesPatternMatching)
 </script>
 
 <style scoped>

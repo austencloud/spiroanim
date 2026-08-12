@@ -278,11 +278,11 @@ candidate in deterministic generation order. An animation emitted by the current
 recognized directly to avoid a needless hydration loop.
 
 Recovery runs in the same lazily created application-level pattern-matching worker used by VTG/QTR.
-Eight Step matching code and its candidate index load only when requested. The worker remains
-available for 30 seconds after its last request settles so its candidate cache can be reused across
-nearby animation changes, Concepts pane remounts, and concept switches. A new request resets the idle
-period, and pending requests are never interrupted by idle cleanup. The pane ignores stale
-asynchronous responses after a newer animation or local interaction.
+Eight Step matching code and its candidate index load only when requested. Once created, the worker
+remains available while a mounted Concepts pane has VTG, Eight Step, or QST selected. Hiding Concepts
+or selecting TKA starts a 30-second idle period; returning to a matching concept cancels the pending
+shutdown, and pending requests are never interrupted. The pane ignores stale asynchronous responses
+after a newer animation or local interaction.
 
 ## Regression validation
 

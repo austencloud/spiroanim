@@ -93,12 +93,12 @@ Beat position before changing the current Swap, 180-degree, or Qtr mode. The low
 used only to break a tie between candidates that preserve the same current transform controls.
 
 Pattern recovery runs in the shared, lazily created application-level pattern-matching worker. The
-worker remains available for 30 seconds after its last request settles, preserving generated
-candidate indexes across nearby animation changes, Concepts pane remounts, and switches between VTG,
-Eight Step, and QST. A new request resets that idle period, and the worker is never terminated while
-a request is pending. VTG requests include the merged QTR fallback. TKA does not use this worker.
-Responses are versioned by the requesting pane so an older result cannot overwrite newer animation
-data or a user interaction.
+worker remains available for as long as a mounted Concepts pane has VTG, Eight Step, or QST selected,
+preserving generated candidate indexes across animation changes. Hiding the Concepts pane or
+selecting TKA starts a 30-second idle period. Returning to a matching concept during that period
+cancels the pending shutdown, and a worker request is never interrupted. VTG requests include the
+merged QTR fallback. TKA does not use this worker. Responses are versioned by the requesting pane so
+an older result cannot overwrite newer animation data or a user interaction.
 
 ## Starting beat, QTR, Double, and 45-degree transitions
 
