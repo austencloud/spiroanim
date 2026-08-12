@@ -1025,12 +1025,12 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('3-4')
   })
 
-  it('hydrates equivalent 2-2 Trans patterns at their lower beat positions', async () => {
+  it('hydrates equivalent 2-2 Trans patterns without changing Swap for a lower beat', async () => {
     const store = useConceptsStore()
 
     for (const example of [
-      { authoredBeat: 3, authoredSwap: false, detectedBeat: 1, detectedSwap: true },
-      { authoredBeat: 4, authoredSwap: true, detectedBeat: 2, detectedSwap: false },
+      { authoredBeat: 3, authoredSwap: false },
+      { authoredBeat: 4, authoredSwap: true },
     ] as const) {
       store.swapProps = example.authoredSwap
       store.reversePlane = false
@@ -1047,17 +1047,17 @@ describe('VtgPane', () => {
       const wrapper = mount(VtgPane, { props: { animation } })
       await vi.waitFor(() => {
         expect(
-          wrapper.get<HTMLInputElement>(`[data-role="vtg-beat-${example.detectedBeat}"]`).element
+          wrapper.get<HTMLInputElement>(`[data-role="vtg-beat-${example.authoredBeat}"]`).element
             .checked,
         ).toBe(true)
         expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(
-          example.detectedSwap,
+          example.authoredSwap,
         )
       })
 
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(false)
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(
-        example.detectedSwap,
+        example.authoredSwap,
       )
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(false)
       expect(wrapper.get('[data-role="vtg-transition"]').attributes('aria-pressed')).toBe('true')

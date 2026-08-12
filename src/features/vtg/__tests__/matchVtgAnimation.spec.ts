@@ -169,7 +169,7 @@ describe('VTG animation matching', () => {
     expect(mismatches).toEqual([])
   })
 
-  it('prioritizes lower 2-2 Trans beats before the current transforms', () => {
+  it('tries every 2-2 Trans beat before changing the current transforms', () => {
     for (const swapProps of booleanOptions) {
       for (const reversePlane of booleanOptions) {
         for (const beat of [3, 4] as const) {
@@ -183,20 +183,20 @@ describe('VTG animation matching', () => {
           } as const satisfies VtgPatternSelection
           const animation = createAnimation({ ...selection, transitionBeats: 5 })
           const matches = findVtgPatternMatches(animation)
-          const lowestBeat = Math.min(...matches.map((match) => match.beat ?? 1))
-          const lowestBeatMatches = matches.filter((match) => (match.beat ?? 1) === lowestBeat)
           const preferenceDifference = (match: VtgPatternMatch) =>
             Number(match.swapProps !== swapProps) + Number(match.reversePlane !== reversePlane)
-          const lowestPreferenceDifference = Math.min(
-            ...lowestBeatMatches.map(preferenceDifference),
+          const lowestPreferenceDifference = Math.min(...matches.map(preferenceDifference))
+          const preferredMatches = matches.filter(
+            (match) => preferenceDifference(match) === lowestPreferenceDifference,
           )
+          const lowestPreferredBeat = Math.min(...preferredMatches.map((match) => match.beat ?? 1))
           const match = findVtgPatternMatch(animation, {
             swapProps,
             reversePlane,
           })
 
-          expect(match?.beat ?? 1).toBe(lowestBeat)
           expect(match ? preferenceDifference(match) : undefined).toBe(lowestPreferenceDifference)
+          expect(match?.beat ?? 1).toBe(lowestPreferredBeat)
         }
       }
     }

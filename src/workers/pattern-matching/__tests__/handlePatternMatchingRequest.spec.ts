@@ -29,7 +29,7 @@ describe('handlePatternMatchingRequest', () => {
     ).resolves.toMatchObject({
       status: 'matched',
       source: 'vtg',
-      match: { reference: '2-2', swapProps: true, transition: true },
+      match: { reference: '2-2', beat: 3, swapProps: false, transition: true },
     })
     await expect(
       matchVtgPatternRequest({
