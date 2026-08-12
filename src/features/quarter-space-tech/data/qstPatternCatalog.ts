@@ -59,7 +59,10 @@ export const qstPatternDefinitions: readonly QstPatternDefinition[] =
   qstCollections.flatMap(getCollectionPatterns)
 
 const qstPatternsPerPage = 8
-const beyondPageStartParts = [3, 4, 11] as const
+const pageStartPartsByCollection = {
+  breaks: [6, 7],
+  beyond: [3, 4, 11],
+} as const
 
 const patternByProps = new Map(
   qstPatternDefinitions.map((pattern) => [JSON.stringify(pattern.props), pattern] as const),
@@ -103,9 +106,14 @@ export const getQstCatalogPages = (
     return pattern === (swapProps ? pair.second : pair.first)
   })
 
-  if (collection.key === 'beyond') {
+  const pageStartParts =
+    collection.key === 'breaks' || collection.key === 'beyond'
+      ? pageStartPartsByCollection[collection.key]
+      : undefined
+
+  if (pageStartParts) {
     const sectionStartIndexes = [0]
-    for (const part of beyondPageStartParts) {
+    for (const part of pageStartParts) {
       const sectionStartIndex = visiblePatterns.findIndex(({ caption }) =>
         [`Part ${part}:`, `Part ${part} `].some((captionPrefix) =>
           caption.startsWith(captionPrefix),
