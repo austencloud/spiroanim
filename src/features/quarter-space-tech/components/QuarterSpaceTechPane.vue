@@ -155,7 +155,7 @@
 
       <div class="qst-pagination-top" data-role="qst-pagination-top">
         <QstPagination
-          :page-count="selectedCollection.pages.length"
+          :page-count="catalogPages.length"
           :page-index="pageIndex"
           @change="changePage"
         />
@@ -164,14 +164,14 @@
       <QstCatalogPage
         :key="catalogPageKey"
         :page="currentPage"
-        :selected-reference="selectedPattern?.reference"
+        :selected-reference="selectedDisplayPattern?.reference"
         :selection-for="createSelection"
         @select="selectPattern"
       />
 
       <QstPagination
         data-role="qst-pagination-bottom"
-        :page-count="selectedCollection.pages.length"
+        :page-count="catalogPages.length"
         :page-index="pageIndex"
         @change="changePage"
       />
@@ -193,7 +193,11 @@ import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import QstCatalogPage from '@/features/quarter-space-tech/components/QstCatalogPage.vue'
 import QstPagination from '@/features/quarter-space-tech/components/QstPagination.vue'
 import {
+  getQstCanonicalPattern,
+  getQstCatalogPages,
   getQstCollectionPatternCount,
+  getQstDisplayPattern,
+  normalizeQstPairedSelection,
   qstCollections,
 } from '@/features/quarter-space-tech/data/qstPatternCatalog'
 import type {
@@ -260,10 +264,19 @@ let lastEmittedSelection: QstPatternSelection | undefined
 let componentMounted = false
 let initialAnimationHandled = false
 
+const catalogPages = computed(() =>
+  selectedCollection.value ? getQstCatalogPages(selectedCollection.value, swapProps.value) : [],
+)
+
 const currentPage = computed(() => {
-  const page = selectedCollection.value?.pages[pageIndex.value]
+  const page = catalogPages.value[pageIndex.value]
   if (!page) throw new Error('Quarter Space Tech collection page is unavailable')
   return page
+})
+
+const selectedDisplayPattern = computed(() => {
+  if (!selectedCollection.value || !selectedPattern.value) return undefined
+  return getQstDisplayPattern(selectedCollection.value, selectedPattern.value, swapProps.value)
 })
 
 const getPropColor = (propIndex: 0 | 1) => {
@@ -286,9 +299,12 @@ const catalogPageKey = computed(
 )
 
 const createSelection = (pattern: QstPatternDefinition): QstPatternSelection => {
+  const selectedDefinition = selectedCollection.value
+    ? getQstCanonicalPattern(selectedCollection.value, pattern)
+    : pattern
   const selection: QstPatternSelection = {
     concept: 'qst',
-    reference: pattern.reference,
+    reference: selectedDefinition.reference,
   }
 
   if (swapProps.value) selection.swapProps = true
@@ -308,15 +324,19 @@ const createSelection = (pattern: QstPatternDefinition): QstPatternSelection => 
 
 const openCollection = (collection: QstCollectionDefinition) => {
   selectedCollection.value = collection
-  const selectedPatternPageIndex = selectedPattern.value
-    ? collection.pages.findIndex((page) =>
-        page.patterns.some((pattern) => pattern.reference === selectedPattern.value?.reference),
+  const pages = getQstCatalogPages(collection, swapProps.value)
+  const displayPattern = selectedPattern.value
+    ? getQstDisplayPattern(collection, selectedPattern.value, swapProps.value)
+    : undefined
+  const selectedPatternPageIndex = displayPattern
+    ? pages.findIndex((page) =>
+        page.patterns.some((pattern) => pattern.reference === displayPattern.reference),
       )
     : -1
   const nextPageIndex =
     selectedPatternPageIndex >= 0
       ? selectedPatternPageIndex
-      : Math.min(pageIndexByCollection[collection.key], collection.pages.length - 1)
+      : Math.min(pageIndexByCollection[collection.key], pages.length - 1)
   pageIndex.value = nextPageIndex
   pageIndexByCollection[collection.key] = nextPageIndex
   void scrollSelectedPatternIntoView()
@@ -327,7 +347,7 @@ const closeCollection = () => {
 }
 
 const changePage = (nextPageIndex: number) => {
-  const pageCount = selectedCollection.value?.pages.length ?? 0
+  const pageCount = catalogPages.value.length
   if (nextPageIndex < 0 || nextPageIndex >= pageCount) return
   pageIndex.value = nextPageIndex
   if (selectedCollection.value) {
@@ -336,8 +356,11 @@ const changePage = (nextPageIndex: number) => {
 }
 
 const selectPattern = (pattern: QstPatternDefinition) => {
-  selectedPattern.value = pattern
-  emitPatternSelection(pattern)
+  const selectedDefinition = selectedCollection.value
+    ? getQstCanonicalPattern(selectedCollection.value, pattern)
+    : pattern
+  selectedPattern.value = selectedDefinition
+  emitPatternSelection(selectedDefinition)
 }
 
 const emitPatternSelection = (pattern: QstPatternDefinition) => {
@@ -379,9 +402,9 @@ watch(
 
 const findPatternLocation = (reference: QstPatternSelection['reference']) => {
   for (const collection of qstCollections) {
-    for (const [matchedPageIndex, page] of collection.pages.entries()) {
+    for (const page of collection.pages) {
       const pattern = page.patterns.find((candidate) => candidate.reference === reference)
-      if (pattern) return { collection, pageIndex: matchedPageIndex, pattern }
+      if (pattern) return { collection, pattern }
     }
   }
 
@@ -389,11 +412,11 @@ const findPatternLocation = (reference: QstPatternSelection['reference']) => {
 }
 
 const scrollSelectedPatternIntoView = async () => {
-  const reference = selectedPattern.value?.reference
+  const reference = selectedDisplayPattern.value?.reference
   if (!reference) return
 
   await nextTick()
-  if (selectedPattern.value?.reference !== reference) return
+  if (selectedDisplayPattern.value?.reference !== reference) return
 
   const card = paneElement.value?.querySelector<HTMLElement>(
     `[data-pattern-reference="${reference}"]`,
@@ -451,13 +474,29 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   if (result.status === 'matched') {
     const location = findPatternLocation(result.match.reference)
     if (location) {
+      const normalized = normalizeQstPairedSelection(
+        location.collection,
+        location.pattern,
+        result.match.swapProps,
+      )
+      const pages = getQstCatalogPages(location.collection, normalized.swapProps)
+      const displayPattern = getQstDisplayPattern(
+        location.collection,
+        normalized.pattern,
+        normalized.swapProps,
+      )
+      const matchedPageIndex = pages.findIndex((page) =>
+        page.patterns.some((pattern) => pattern.reference === displayPattern.reference),
+      )
       selectedCollection.value = location.collection
-      selectedPattern.value = location.pattern
-      pageIndex.value = location.pageIndex
-      pageIndexByCollection[location.collection.key] = location.pageIndex
+      selectedPattern.value = normalized.pattern
+      pageIndex.value = Math.max(0, matchedPageIndex)
+      pageIndexByCollection[location.collection.key] = pageIndex.value
+      swapProps.value = normalized.swapProps
       void scrollSelectedPatternIntoView()
+    } else {
+      swapProps.value = result.match.swapProps
     }
-    swapProps.value = result.match.swapProps
     reversePlane.value = result.match.reversePlane
     bpm.value = result.match.bpm
     scale.value = result.match.scale

@@ -48,6 +48,11 @@ export interface QstPatternDefinition {
   reference: QstPatternReference
 }
 
+export interface QstPatternSwapPair {
+  first: QstPatternDefinition
+  second: QstPatternDefinition
+}
+
 export interface QstCatalogPage {
   patterns: readonly QstPatternDefinition[]
 }

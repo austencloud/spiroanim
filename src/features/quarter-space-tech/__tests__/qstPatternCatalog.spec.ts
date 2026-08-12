@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 import {
+  getQstCatalogPages,
   getQstCollectionPatternCount,
+  getQstPatternSwapPair,
   qstCollections,
   qstPatternDefinitions,
 } from '@/features/quarter-space-tech/data/qstPatternCatalog'
@@ -74,6 +76,72 @@ describe('QST pattern catalog', () => {
         }
       }
     }
+  })
+
+  it('uses Swap to paginate one member of each Advanced and Beyond pair', () => {
+    const [breaks, advanced, beyond] = qstCollections
+    if (!breaks || !advanced || !beyond) throw new Error('Missing QST collections')
+
+    expect(getQstCatalogPages(breaks, false)).toBe(breaks.pages)
+    expect(getQstCatalogPages(breaks, true)).toBe(breaks.pages)
+
+    const advancedFirstPages = getQstCatalogPages(advanced, false)
+    const advancedSecondPages = getQstCatalogPages(advanced, true)
+    expect(advancedFirstPages).toHaveLength(4)
+    expect(advancedSecondPages).toHaveLength(4)
+    expect(advancedFirstPages.every(({ patterns }) => patterns.length === 8)).toBe(true)
+    expect(advancedSecondPages.every(({ patterns }) => patterns.length === 8)).toBe(true)
+    expect(advancedFirstPages[0]?.patterns.map(({ reference }) => reference)).toEqual([
+      'advanced-1',
+      'advanced-3',
+      'advanced-5',
+      'advanced-7',
+      'advanced-9',
+      'advanced-11',
+      'advanced-13',
+      'advanced-15',
+    ])
+    expect(advancedSecondPages[0]?.patterns.map(({ reference }) => reference)).toEqual([
+      'advanced-2',
+      'advanced-4',
+      'advanced-6',
+      'advanced-8',
+      'advanced-10',
+      'advanced-12',
+      'advanced-14',
+      'advanced-16',
+    ])
+
+    const beyondFirstPages = getQstCatalogPages(beyond, false)
+    const beyondSecondPages = getQstCatalogPages(beyond, true)
+    expect(beyondFirstPages.map(({ patterns }) => patterns.length)).toEqual([
+      8, 6, 4, 8, 8, 8, 8, 4, 8, 8,
+    ])
+    expect(beyondSecondPages.map(({ patterns }) => patterns.length)).toEqual([
+      8, 6, 4, 8, 8, 8, 8, 4, 8, 8,
+    ])
+    expect(beyondFirstPages[1]?.patterns.at(-1)?.caption).toMatch(/^Part 2:/)
+    expect(beyondFirstPages[2]?.patterns[0]?.caption).toMatch(/^Part 3:/)
+    expect(beyondFirstPages[2]?.patterns.at(-1)?.caption).toMatch(/^Part 3:/)
+    expect(beyondFirstPages[3]?.patterns[0]?.caption).toMatch(/^Part 4:/)
+    expect(beyondSecondPages[1]?.patterns.at(-1)?.caption).toMatch(/^Part 2:/)
+    expect(beyondSecondPages[2]?.patterns[0]?.caption).toMatch(/^Part 3:/)
+    expect(beyondSecondPages[2]?.patterns.at(-1)?.caption).toMatch(/^Part 3:/)
+    expect(beyondSecondPages[3]?.patterns[0]?.caption).toMatch(/^Part 4:/)
+    expect(beyondFirstPages[7]?.patterns.at(-1)?.caption).toMatch(/^Part 10:/)
+    expect(beyondFirstPages[8]?.patterns[0]?.caption).toMatch(/^Part 11(?: |:)/)
+    expect(beyondSecondPages[7]?.patterns.at(-1)?.caption).toMatch(/^Part 10:/)
+    expect(beyondSecondPages[8]?.patterns[0]?.caption).toMatch(/^Part 11(?: |:)/)
+    expect(
+      beyondFirstPages.flatMap(({ patterns }) => patterns).map(({ reference }) => reference),
+    ).toContain('beyond-1')
+    expect(
+      beyondSecondPages.flatMap(({ patterns }) => patterns).map(({ reference }) => reference),
+    ).toContain('beyond-1')
+    expect(getQstPatternSwapPair('beyond-105')).toMatchObject({
+      first: { reference: 'beyond-105' },
+      second: { reference: 'beyond-108' },
+    })
   })
 
   it('keeps every pattern closed after Flip and Swap transforms', () => {

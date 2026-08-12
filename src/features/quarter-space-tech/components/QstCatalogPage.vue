@@ -1,11 +1,10 @@
 <template>
-  <div ref="pageElement" class="qst-catalog-page" data-role="qst-catalog-page">
+  <div ref="pageElement" class="qst-catalog-page" :style="pageStyle" data-role="qst-catalog-page">
     <article
       v-for="(entry, patternIndex) in entries"
       :key="entry.pattern.reference"
       class="qst-pattern-card"
       :class="{ 'qst-pattern-card--selected': entry.pattern.reference === selectedReference }"
-      :style="{ '--qst-card-beats': entry.maxBeats }"
       :data-pattern-reference="entry.pattern.reference"
       data-role="qst-pattern-card"
     >
@@ -16,7 +15,7 @@
         :aria-pressed="entry.pattern.reference === selectedReference"
         @click="emit('select', entry.pattern)"
       />
-      <h3>{{ entry.pattern.caption }}</h3>
+      <QstPatternTitle :caption="entry.pattern.caption" />
 
       <div
         v-for="line in entry.lines"
@@ -48,6 +47,7 @@
 
 <script setup lang="ts">
 import QstPositionTile from '@/features/quarter-space-tech/components/QstPositionTile.vue'
+import QstPatternTitle from '@/features/quarter-space-tech/components/QstPatternTitle.vue'
 import { useConceptPreviewRenderer } from '@/features/concepts/composables/useConceptPreviewRenderer'
 import {
   createDefaultQstAnimation,
@@ -85,6 +85,10 @@ const entries = computed(() =>
     }
   }),
 )
+
+const pageStyle = computed(() => ({
+  '--qst-page-card-beats': Math.max(...entries.value.map(({ maxBeats }) => maxBeats)),
+}))
 
 const references = props.page.patterns.flatMap((pattern): QstLineReference[] => {
   const animation = createDefaultQstAnimation(props.selectionFor(pattern))
@@ -152,21 +156,23 @@ onBeforeUnmount(() => previewObserver?.disconnect())
 
 <style scoped>
 .qst-catalog-page {
-  display: flex;
+  --qst-page-card-beats: 4;
+
+  display: grid;
   min-inline-size: var(--size-concept-content-min-width);
   padding: var(--space-2);
-  flex-wrap: wrap;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, calc(5rem + var(--qst-page-card-beats) * 2.75rem)), 1fr)
+  );
   align-items: stretch;
   gap: var(--space-2);
 }
 
 .qst-pattern-card {
-  --qst-card-beats: 4;
-
   position: relative;
   display: grid;
-  flex: 1 1 calc(5rem + var(--qst-card-beats) * 2.75rem);
-  min-inline-size: min(100%, calc(5rem + var(--qst-card-beats) * 2.75rem));
+  min-inline-size: 0;
   padding: var(--space-3);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -207,13 +213,6 @@ onBeforeUnmount(() => previewObserver?.disconnect())
 .qst-pattern-card__select:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: -4px;
-}
-
-.qst-pattern-card h3 {
-  margin: 0;
-  color: var(--color-text);
-  font-size: 0.94rem;
-  line-height: 1.25;
 }
 
 .qst-pattern-card__number {

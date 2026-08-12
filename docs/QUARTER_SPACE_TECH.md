@@ -27,6 +27,14 @@ Advanced, or Beyond page and highlights the detected pattern without replacing t
 animation. Equivalent transformed geometry is resolved in favor of the current Swap and Flip
 controls.
 
+In the Advanced and Beyond libraries, patterns that are exact prop-swapped counterparts share one
+catalog slot. With Swap off the slot shows the first pattern in catalog order; with Swap on it shows
+the second. Patterns without a swapped counterpart remain visible in both states. The visible
+patterns are repaginated eight per page, with shorter pages at intentional section boundaries when
+needed. In Beyond, Part 3 starts on page 3, leaving six Part 2 patterns on page 2, and Part 4 starts
+on page 4. Part 11 also starts on its own page. Breaks retains its original pages and shows every
+pattern regardless of Swap.
+
 The QST analyzer compiles each animation and identifies its endpoints as one of six positions:
 Top, Left, Front, Right, Bottom, or Back. This derived position sequence drives the diagrams and
 line thumbnails. Front and Back intentionally share the center diagram cell; Back receives the
@@ -36,7 +44,9 @@ hollow-center treatment.
 
 Detailed position tiles are semantic DOM and CSS. Shared-position fill orientation is determined
 from the following beat, matching the legacy QST tile rules. Transition abbreviations are also
-derived from compiled animation data.
+derived from compiled animation data. Pattern-card titles remain on one line and shrink only when
+their available width is too narrow for the full caption. Cards use equal-width responsive columns,
+so an incomplete wrapped row retains the same card width as the rows above it.
 
 Thumbnails are generated at runtime by the shared animation worker. No QST image assets are stored
 or served. Diagram prop colors are read from the active animation colors, with the standard concept

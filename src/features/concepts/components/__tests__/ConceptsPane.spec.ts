@@ -213,6 +213,9 @@ describe('ConceptsPane', () => {
     expect(wrapper.find('[data-role="qst-reset"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="qst-paths"]').exists()).toBe(true)
     expect(wrapper.findAll('[data-role="qst-pattern-card"]')).toHaveLength(8)
+    expect(wrapper.get('[data-role="qst-catalog-page"]').attributes('style')).toContain(
+      '--qst-page-card-beats: 4',
+    )
     expect(wrapper.findAll('[data-role="qst-page"]')).toHaveLength(14)
     expect(wrapper.find('[data-role="qst-pagination-top"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="qst-pagination-bottom"]').exists()).toBe(true)
@@ -220,6 +223,7 @@ describe('ConceptsPane', () => {
     await wrapper.get('[data-role="qst-page"][data-page="3"]').trigger('click')
     await wrapper.get('[data-role="qst-back"]').trigger('click')
     await wrapper.get('[data-collection="advanced"]').trigger('click')
+    expect(wrapper.findAll('[data-role="qst-page"]')).toHaveLength(8)
     await wrapper.get('[data-role="qst-page"][data-page="2"]').trigger('click')
     await wrapper.get('[data-role="qst-back"]').trigger('click')
     await wrapper.get('[data-collection="breaks"]').trigger('click')
@@ -227,6 +231,44 @@ describe('ConceptsPane', () => {
     await wrapper.get('[data-role="qst-back"]').trigger('click')
     await wrapper.get('[data-collection="advanced"]').trigger('click')
     expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('2')
+    await wrapper.get('[data-role="qst-page"][data-page="1"]').trigger('click')
+    expect(
+      wrapper
+        .findAll('[data-role="qst-pattern-card"]')
+        .map((card) => card.attributes('data-pattern-reference')),
+    ).toEqual([
+      'advanced-1',
+      'advanced-3',
+      'advanced-5',
+      'advanced-7',
+      'advanced-9',
+      'advanced-11',
+      'advanced-13',
+      'advanced-15',
+    ])
+    await wrapper.get('[data-pattern-reference="advanced-1"] button').trigger('click')
+    await wrapper.get<HTMLInputElement>('[data-role="qst-swap"]').setValue(true)
+    expect(
+      wrapper
+        .findAll('[data-role="qst-pattern-card"]')
+        .map((card) => card.attributes('data-pattern-reference')),
+    ).toEqual([
+      'advanced-2',
+      'advanced-4',
+      'advanced-6',
+      'advanced-8',
+      'advanced-10',
+      'advanced-12',
+      'advanced-14',
+      'advanced-16',
+    ])
+    expect(wrapper.get('[data-pattern-reference="advanced-2"]').classes()).toContain(
+      'qst-pattern-card--selected',
+    )
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { concept: 'qst', reference: 'advanced-1', swapProps: true },
+    ])
+    await wrapper.get<HTMLInputElement>('[data-role="qst-swap"]').setValue(false)
     await wrapper.get('[data-role="qst-back"]').trigger('click')
     await wrapper.get('[data-collection="breaks"]').trigger('click')
     await wrapper.get('[data-pattern-reference="breaks-17"] button').trigger('click')
@@ -262,7 +304,7 @@ describe('ConceptsPane', () => {
     await vi.waitFor(() => expect(wrapper.find('[data-role="qst-library"]').exists()).toBe(true))
 
     expect(wrapper.get('[data-role="qst-library"]').text()).toContain('Quarter Space Beyond')
-    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('13')
+    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('10')
     const selectedPattern = wrapper.get('[data-pattern-reference="beyond-100"]')
     expect(selectedPattern.classes()).toContain('qst-pattern-card--selected')
     expect(selectedPattern.get('button').attributes('aria-pressed')).toBe('true')
@@ -277,10 +319,10 @@ describe('ConceptsPane', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="qst-right"]').element.checked).toBe(false)
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
 
-    await wrapper.get('[data-role="qst-page"][data-page="14"]').trigger('click')
+    await wrapper.get('[data-role="qst-page"][data-page="8"]').trigger('click')
     await wrapper.get('[data-role="qst-back"]').trigger('click')
     await wrapper.get('[data-collection="beyond"]').trigger('click')
-    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('13')
+    expect(wrapper.get('[data-role="qst-page"][aria-current="page"]').text()).toBe('10')
   })
 
   it('instantly scrolls a hidden selected pattern into view when its library opens', async () => {
