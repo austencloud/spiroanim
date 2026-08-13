@@ -6,6 +6,8 @@ import {
 } from '@/features/vtg/createVtgAnimation'
 import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
+import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 
 const normalizeArc = (arc: number): number => ((arc % 360) + 360) % 360
 const propIndices = [0, 1] as const
@@ -39,11 +41,9 @@ const shiftPropArc = (
 const getQtrArcAmounts = (
   animation: RootDataFinal,
   quarterMode: QtrMode,
-  swapProps: boolean,
 ): readonly [number, number] => {
   const amounts = propIndices.map((outputIndex) => {
-    const originalIndex = swapProps ? propIndices[1 - outputIndex]! : outputIndex
-    const firstQuarterAmount = firstQuarterArcAmounts[originalIndex]
+    const firstQuarterAmount = firstQuarterArcAmounts[outputIndex]
     if (quarterMode === 1) return firstQuarterAmount
 
     const plane = normalizeArc(animation.props[outputIndex]?.anim[0]?.plane ?? 0)
@@ -56,10 +56,9 @@ const getQtrArcAmounts = (
 const transformQtrAnimation = (
   animation: RootDataFinal,
   quarterMode: QtrMode,
-  swapProps: boolean,
   direction: 1 | -1,
 ): RootDataFinal => {
-  const amounts = getQtrArcAmounts(animation, quarterMode, swapProps)
+  const amounts = getQtrArcAmounts(animation, quarterMode)
   return shiftPropArc(shiftPropArc(animation, 0, direction * amounts[0]), 1, direction * amounts[1])
 }
 
@@ -67,41 +66,73 @@ export const removeQtrArcs = (
   animation: RootDataFinal,
   quarterMode: QtrMode,
   swapProps: boolean,
-): RootDataFinal => transformQtrAnimation(animation, quarterMode, swapProps, -1)
+): RootDataFinal => {
+  const semantic = swapProps
+    ? applyPatternFinalTransforms(animation, { swapProps: true })
+    : animation
+  const transformed = transformQtrAnimation(semantic, quarterMode, -1)
+  return swapProps ? applyPatternFinalTransforms(transformed, { swapProps: true }) : transformed
+}
+
+const withoutFinalTransforms = ({
+  swapProps: _swapProps,
+  reversePlane: _reversePlane,
+  ...selection
+}: QtrPatternSelection): QtrPatternSelection => selection
+
+// Qtr #2 remains accepted for legacy callers, while the current UI always emits Qtr #1 and uses
+// the shared 180 control to select the alternate face-on orientation.
+const getSelectedQtrMode = (selection: QtrPatternSelection): QtrMode => {
+  const appliesBoxShape = selection.shape === 'box' && !vtgFixedShapeCells.has(selection.reference)
+  return selection.reversePlane && !appliesBoxShape ? 2 : selection.quarters
+}
+
+const applyQtrFinalTransforms = (
+  animation: RootDataFinal,
+  selection: QtrPatternSelection,
+): RootDataFinal => applyPatternFinalTransforms(animation, selection)
+
+/** Builds the concept-specific QTR state before playback and shared final transforms. */
+export const createDefaultQtrBaseAnimation = (
+  selection: QtrPatternSelection,
+): RootDataFinal | undefined => {
+  const animation = createDefaultVtgAnimation({
+    ...withoutFinalTransforms(selection),
+    beat: 1,
+    double: false,
+    transition: false,
+  })
+
+  return animation ? transformQtrAnimation(animation, getSelectedQtrMode(selection), 1) : undefined
+}
 
 export const createQtrAnimation = (
   current: RootDataFinal,
   selection: QtrPatternSelection,
 ): RootDataFinal | undefined => {
   const animation = createVtgAnimation(current, {
-    ...selection,
+    ...withoutFinalTransforms(selection),
     beat: 1,
     double: false,
     transition: false,
   })
   if (!animation) return undefined
 
-  return applyVtgPlaybackControls(
-    transformQtrAnimation(animation, selection.quarters, selection.swapProps === true, 1),
+  const completed = applyVtgPlaybackControls(
+    transformQtrAnimation(animation, getSelectedQtrMode(selection), 1),
     selection,
   )
+  return completed ? applyQtrFinalTransforms(completed, selection) : undefined
 }
 
 export const createDefaultQtrAnimation = (
   selection: QtrPatternSelection,
 ): RootDataFinal | undefined => {
-  const animation = createDefaultVtgAnimation({
-    ...selection,
-    beat: 1,
-    double: false,
-    transition: false,
-  })
-  if (!animation) return undefined
+  const base = createDefaultQtrBaseAnimation(selection)
+  if (!base) return undefined
 
-  return applyVtgPlaybackControls(
-    transformQtrAnimation(animation, selection.quarters, selection.swapProps === true, 1),
-    selection,
-  )
+  const completed = applyVtgPlaybackControls(base, selection)
+  return completed ? applyQtrFinalTransforms(completed, selection) : undefined
 }
 
 export const createQtrPreviewAnimation = (

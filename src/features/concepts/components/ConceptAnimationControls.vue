@@ -6,26 +6,71 @@
       class="concept-pattern-options concept-render-options vtg-pattern-options vtg-render-options"
     >
       <legend class="concept-controls__visually-hidden">Rendered features</legend>
-      <label>
-        <input v-model="paths" type="checkbox" :data-role="`${rolePrefix}-paths`" />
-        <span>Paths</span>
-      </label>
-      <label>
-        <input v-model="hands" type="checkbox" :data-role="`${rolePrefix}-hands`" />
-        <span>Hands</span>
-      </label>
-      <label>
-        <input v-model="arms" type="checkbox" :data-role="`${rolePrefix}-arms`" />
-        <span>Arms</span>
-      </label>
-      <label>
-        <input v-model="leftPropVisible" type="checkbox" :data-role="`${rolePrefix}-left`" />
-        <span>Left</span>
-      </label>
-      <label>
-        <input v-model="rightPropVisible" type="checkbox" :data-role="`${rolePrefix}-right`" />
-        <span>Right</span>
-      </label>
+      <AppTooltip text="Show the complete prop motion paths">
+        <template #activator="{ props: activatorProps }">
+          <label v-bind="activatorProps">
+            <input
+              v-model="paths"
+              type="checkbox"
+              aria-label="Show the complete prop motion paths"
+              :data-role="`${rolePrefix}-paths`"
+            />
+            <span>Paths</span>
+          </label>
+        </template>
+      </AppTooltip>
+      <AppTooltip text="Show the hand motion paths">
+        <template #activator="{ props: activatorProps }">
+          <label v-bind="activatorProps">
+            <input
+              v-model="hands"
+              type="checkbox"
+              aria-label="Show the hand motion paths"
+              :data-role="`${rolePrefix}-hands`"
+            />
+            <span>Hands</span>
+          </label>
+        </template>
+      </AppTooltip>
+      <AppTooltip text="Show the performer's arms">
+        <template #activator="{ props: activatorProps }">
+          <label v-bind="activatorProps">
+            <input
+              v-model="arms"
+              type="checkbox"
+              aria-label="Show the performer's arms"
+              :data-role="`${rolePrefix}-arms`"
+            />
+            <span>Arms</span>
+          </label>
+        </template>
+      </AppTooltip>
+      <AppTooltip text="Show the left prop">
+        <template #activator="{ props: activatorProps }">
+          <label v-bind="activatorProps">
+            <input
+              v-model="leftPropVisible"
+              type="checkbox"
+              aria-label="Show the left prop"
+              :data-role="`${rolePrefix}-left`"
+            />
+            <span>Left</span>
+          </label>
+        </template>
+      </AppTooltip>
+      <AppTooltip text="Show the right prop">
+        <template #activator="{ props: activatorProps }">
+          <label v-bind="activatorProps">
+            <input
+              v-model="rightPropVisible"
+              type="checkbox"
+              aria-label="Show the right prop"
+              :data-role="`${rolePrefix}-right`"
+            />
+            <span>Right</span>
+          </label>
+        </template>
+      </AppTooltip>
       <slot name="after-controls" />
     </fieldset>
   </div>
@@ -120,6 +165,7 @@
 
 <script setup lang="ts">
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import AppTooltip from '@/components/AppTooltip.vue'
 import {
   vtgBpmControl,
   vtgScaleControl,
@@ -284,7 +330,7 @@ onBeforeUnmount(endSliderHistory)
   opacity: 0;
 }
 
-.concept-pattern-options span {
+.concept-pattern-options label > span {
   display: grid;
   padding: var(--space-2);
   color: var(--color-text);
@@ -332,7 +378,7 @@ onBeforeUnmount(endSliderHistory)
   min-width: 0;
 }
 
-.concept-render-options span {
+.concept-render-options label > span {
   padding-block: var(--space-1);
   padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
   font-size: clamp(0.625rem, 3cqi, 0.875rem);

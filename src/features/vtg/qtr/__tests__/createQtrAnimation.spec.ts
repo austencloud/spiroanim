@@ -1,6 +1,7 @@
 import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
+import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { createQtrAnimation as createQtrAnimationForSelection } from '@/features/vtg/qtr/createQtrAnimation'
 import type { QtrPatternSelection } from '@/features/vtg/types'
 import { createVtgAnimation as createVtgAnimationForSelection } from '@/features/vtg/createVtgAnimation'
@@ -67,6 +68,47 @@ describe('createQtrAnimation', () => {
     expect(swapped?.props[1]?.anim).toEqual(quarter?.props[0]?.anim)
   })
 
+  it('uses 180 to select Qtr #2 and reverse its completed motion planes before Swap', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      quarters: 1,
+      beat: 3,
+      double: true,
+    } as const satisfies QtrPatternSelection
+    const secondQuarter = createQtrAnimation(createCurrentAnimation(), {
+      ...selection,
+      quarters: 2,
+    })
+    const transformed = createQtrAnimation(createCurrentAnimation(), {
+      ...selection,
+      swapProps: true,
+      reversePlane: true,
+    })
+    if (!secondQuarter) throw new Error('Expected a completed Qtr animation')
+
+    expect(transformed).toEqual(
+      applyPatternFinalTransforms(secondQuarter, { swapProps: true, reversePlane: true }),
+    )
+  })
+
+  it('keeps QTR Box on its base orientation and only reverses the completed motion planes', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      quarters: 1,
+      shape: 'box',
+    } as const satisfies QtrPatternSelection
+    const base = createQtrAnimation(createCurrentAnimation(), selection)
+    const reversed = createQtrAnimation(createCurrentAnimation(), {
+      ...selection,
+      reversePlane: true,
+    })
+    if (!base) throw new Error('Expected a completed Qtr animation')
+
+    expect(reversed).toEqual(applyPatternFinalTransforms(base, { reversePlane: true }))
+  })
+
   it.each(['1-1', '2-2', '5-5', '6-6'] as const)(
     'rotates every compiled Qtr #1 path by 90 degrees for Qtr #2 at %s',
     (reference) => {
@@ -118,16 +160,23 @@ describe('createQtrAnimation', () => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:3',
-      quarters: 2,
+      quarters: 1,
       swapProps: true,
       reversePlane: true,
       shape: 'box',
     } as const satisfies QtrPatternSelection
-    const completed = createQtrAnimation(createCurrentAnimation(), selection)
+    const completed = createQtrAnimation(createCurrentAnimation(), {
+      ...selection,
+      swapProps: false,
+      reversePlane: false,
+    })
     const shifted = createQtrAnimation(createCurrentAnimation(), { ...selection, beat })
     if (!completed) throw new Error('Expected a completed Qtr animation')
 
-    expect(shifted).toEqual(shiftVtgStartingBeat(completed, beat))
+    const semanticShift = shiftVtgStartingBeat(completed, beat)
+    expect(shifted).toEqual(
+      semanticShift ? applyPatternFinalTransforms(semanticShift, selection) : undefined,
+    )
   })
 
   it('ignores the reciprocal transition at 1:1 while preserving Double', () => {

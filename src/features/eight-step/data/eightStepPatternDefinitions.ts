@@ -6,11 +6,9 @@ import type {
   EightStepCellReference,
   EightStepColumn,
   EightStepCurveFamily,
-  EightStepFlipPage,
   EightStepPage,
   EightStepPatternDefinition,
   EightStepRow,
-  EightStepSourcePage,
   EightStepToken,
 } from '@/features/eight-step/types'
 import { vtgBaseFrameSettings } from '@/features/vtg/data/vtgPlayerSettings'
@@ -291,26 +289,3 @@ export const getEightStepPatternDefinition = (
   reference: EightStepCellReference,
 ): EightStepPatternDefinition | undefined =>
   eightStepPatternDefinitions.find((definition) => definition.reference === reference)
-
-const flipPageBySource: Readonly<Record<EightStepSourcePage, EightStepFlipPage>> = {
-  1: 2,
-  3: 4,
-  5: 6,
-  7: 8,
-  9: 10,
-  11: 12,
-  13: 14,
-  15: 16,
-}
-
-/** Builds the 180-degree variant from Gage's corrected companion page rather than transforming the source page. */
-export const createFlippedEightStepProps = (
-  definition: EightStepPatternDefinition,
-): readonly [PropReadable, PropReadable] => {
-  const handpaths = eightStepHandpathsByPage[flipPageBySource[definition.page]]
-
-  return [
-    createPropDefinition(handpaths.green, getPatternLetter(definition.row, 0), true),
-    createPropDefinition(handpaths.orange, getPatternLetter(definition.row, 1), false),
-  ]
-}

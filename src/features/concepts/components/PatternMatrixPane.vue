@@ -16,49 +16,55 @@
       <fieldset class="vtg-speed-ratio">
         <legend class="vtg-pane__visually-hidden">Speed ratio</legend>
         <div class="vtg-radio-options">
-          <label v-for="ratio in speedRatios" :key="ratio">
-            <input v-model="speedRatio" type="radio" name="vtg-speed-ratio" :value="ratio" />
-            <span>{{ ratio }}</span>
-          </label>
+          <AppTooltip
+            v-for="ratio in speedRatios"
+            :key="ratio"
+            :text="`Use the ${ratio} speed ratio`"
+          >
+            <template #activator="{ props: activatorProps }">
+              <label v-bind="activatorProps">
+                <input
+                  v-model="speedRatio"
+                  type="radio"
+                  name="vtg-speed-ratio"
+                  :value="ratio"
+                  :aria-label="`Use the ${ratio} speed ratio`"
+                />
+                <span>{{ ratio }}</span>
+              </label>
+            </template>
+          </AppTooltip>
         </div>
       </fieldset>
 
-      <fieldset v-if="isQtr" class="vtg-radio-options vtg-quarter-options">
-        <legend class="vtg-pane__visually-hidden">Quarters</legend>
-        <label>
-          <input
-            v-model="quarterMode"
-            type="radio"
-            name="vtg-quarters"
-            :value="1"
-            data-role="vtg-quarters"
-          />
-          <span>Qtr #1</span>
-        </label>
-        <label>
-          <input
-            v-model="quarterMode"
-            type="radio"
-            name="vtg-quarters"
-            :value="2"
-            data-role="vtg-quarters-2"
-          />
-          <span>Qtr #2</span>
-        </label>
-      </fieldset>
-
-      <PatternTransformControls @reset="resetPatternControls" />
+      <PatternTransformControls
+        :reverse-label="isQtr ? 'Flip' : '180°'"
+        :reverse-description="
+          isQtr
+            ? shape === 'box'
+              ? 'Flip QTR direction'
+              : 'Flip QTR orientation and direction'
+            : 'Rotate motion plane 180 degrees'
+        "
+        @reset="resetPatternControls"
+      />
     </div>
 
     <div class="vtg-board">
-      <button
-        type="button"
-        class="vtg-shuffle"
-        aria-label="Shuffle VTG rules"
-        @click="selectRandomTile"
-      >
-        <BaseIcon :path="mdiShuffleVariant" size="42%" />
-      </button>
+      <AppTooltip class="vtg-shuffle-tooltip" text="Select a random VTG pattern">
+        <template #activator="{ props: activatorProps }">
+          <button
+            v-bind="activatorProps"
+            type="button"
+            class="vtg-shuffle"
+            aria-label="Shuffle VTG rules"
+            data-role="vtg-shuffle"
+            @click="selectRandomTile"
+          >
+            <BaseIcon :path="mdiShuffleVariant" size="42%" />
+          </button>
+        </template>
+      </AppTooltip>
 
       <div class="vtg-column-headers" data-role="vtg-column-headers">
         <VtgRuleCard
@@ -126,20 +132,28 @@
               >
                 {{ tile.label }}
               </button>
-              <button
+              <AppTooltip
                 v-if="tile.reference === selectedCellReference && isSpinToggleCell(tile.reference)"
-                type="button"
-                class="vtg-tile__spin-toggle"
-                :class="{
-                  'vtg-tile__spin-toggle--bottom': isBottomSpinToggleCell(tile.reference),
-                }"
-                :aria-label="`Use ${isAnti ? 'Spin' : 'Anti'} pattern for cell ${tile.reference}`"
-                :aria-pressed="isAnti"
-                data-role="vtg-spin-toggle"
-                @click.stop="toggleSpinDirection(tile)"
+                class="vtg-spin-toggle-tooltip"
+                :text="`Use the ${isAnti ? 'Spin' : 'Anti'} variant for this cell`"
               >
-                {{ isAnti ? 'Anti' : 'Spin' }}
-              </button>
+                <template #activator="{ props: controlActivatorProps }">
+                  <button
+                    v-bind="controlActivatorProps"
+                    type="button"
+                    class="vtg-tile__spin-toggle"
+                    :class="{
+                      'vtg-tile__spin-toggle--bottom': isBottomSpinToggleCell(tile.reference),
+                    }"
+                    :aria-label="`Use ${isAnti ? 'Spin' : 'Anti'} pattern for cell ${tile.reference}`"
+                    :aria-pressed="isAnti"
+                    data-role="vtg-spin-toggle"
+                    @click.stop="toggleSpinDirection(tile)"
+                  >
+                    {{ isAnti ? 'Anti' : 'Spin' }}
+                  </button>
+                </template>
+              </AppTooltip>
             </template>
             <template #html>
               <span class="vtg-tile-tooltip__text">{{ getTileDescription(tile) }}</span>
@@ -188,14 +202,25 @@
         </PatternPlaybackControls>
       </template>
       <template #after-controls>
-        <label v-if="transition && transitionAvailable" class="vtg-transition-beats">
-          <span class="vtg-pane__visually-hidden">45 degree transition beats</span>
-          <select v-model.number="transitionBeats" data-role="vtg-transition-beats">
-            <option v-for="option in vtgTransitionBeats" :key="option" :value="option">
-              {{ option }}
-            </option>
-          </select>
-        </label>
+        <AppTooltip
+          v-if="transition && transitionAvailable"
+          text="Choose the beat on which the 45-degree transition occurs"
+        >
+          <template #activator="{ props: activatorProps }">
+            <label v-bind="activatorProps" class="vtg-transition-beats">
+              <span class="vtg-pane__visually-hidden">45 degree transition beats</span>
+              <select
+                v-model.number="transitionBeats"
+                aria-label="Choose the beat on which the 45-degree transition occurs"
+                data-role="vtg-transition-beats"
+              >
+                <option v-for="option in vtgTransitionBeats" :key="option" :value="option">
+                  {{ option }}
+                </option>
+              </select>
+            </label>
+          </template>
+        </AppTooltip>
       </template>
     </ConceptAnimationControls>
   </section>
@@ -205,6 +230,7 @@
 import { mdiShuffleVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import AppTooltip from '@/components/AppTooltip.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
@@ -231,7 +257,6 @@ import {
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import type {
-  QtrMode,
   QtrPatternSelection,
   VtgCellAddress,
   VtgBeat,
@@ -311,8 +336,7 @@ const double = ref(false)
 const transition = ref(false)
 const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
 const transitionAvailable = computed(() => supportsVtgQtrTransition(speedRatio.value))
-const quarterMode = ref<QtrMode>(1)
-const activeQuarterMode = computed<QtrMode | false>(() => (isQtr.value ? quarterMode.value : false))
+const activeQtrMode = computed<1 | false>(() => (isQtr.value ? 1 : false))
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
   const colorSet = COLSET[COLORS.indexOf(color)]
   if (!colorSet) throw new Error(`Missing VTG prop color set for ${color}`)
@@ -366,7 +390,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       ...(transition.value && transitionAvailable.value ? { transition: true } : undefined),
     }
     const selection: VtgPatternSelection | QtrPatternSelection = isQtr.value
-      ? { ...baseSelection, quarters: quarterMode.value }
+      ? { ...baseSelection, quarters: 1 }
       : baseSelection
 
     return { ...address, ...describePatternSelectionRelationships(selection) }
@@ -421,7 +445,7 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (!leftPropVisible.value) baseSelection.left = false
   if (!rightPropVisible.value) baseSelection.right = false
   const selection: ConceptPatternSelection = isQtr.value
-    ? { ...baseSelection, quarters: quarterMode.value }
+    ? { ...baseSelection, quarters: 1 }
     : baseSelection
   lastEmittedSelection = selection
   emit('patternSelect', selection)
@@ -488,7 +512,6 @@ const resetPatternControls = async () => {
   beat.value = 1
   double.value = false
   transition.value = false
-  quarterMode.value = 1
   await nextTick()
   suppressPatternEmit = false
   if (tile !== undefined) emitPatternSelection(tile)
@@ -513,7 +536,7 @@ watch(
     arms,
     leftPropVisible,
     rightPropVisible,
-    activeQuarterMode,
+    activeQtrMode,
   ],
   () => {
     if (suppressPatternEmit) return
@@ -541,7 +564,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   const matchPreferences = {
     swapProps: swapProps.value,
     reversePlane: reversePlane.value,
-    quarters: quarterMode.value,
+    quarters: 1 as const,
   }
 
   let result
@@ -562,7 +585,6 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   if (result.status === 'unchanged') return
 
   const match = result.status === 'matched' ? result.match : undefined
-  const qtrMatch = result.status === 'matched' && result.source === 'qtr' ? result.match : undefined
   suppressPatternEmit = true
 
   if (match) {
@@ -586,7 +608,6 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     leftPropVisible.value = isPatternPropVisible(animation.props[0])
     rightPropVisible.value = isPatternPropVisible(animation.props[1])
     isQtr.value = result.status === 'matched' && result.source === 'qtr'
-    if (qtrMatch) quarterMode.value = qtrMatch.quarters
   } else {
     selectedCell.value = undefined
     isQtr.value = false
@@ -596,7 +617,6 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     double.value = false
     transition.value = false
     transitionBeats.value = vtgDefaultTransitionBeats
-    quarterMode.value = 1
   }
 
   // Suppression only protects the control writes above through their watcher flush. A newer
@@ -618,7 +638,6 @@ const selectInitialRandomPattern = () => {
   double.value = false
   transition.value = false
   transitionBeats.value = vtgDefaultTransitionBeats
-  quarterMode.value = 1
   selectRandomTile()
 
   void nextTick(() => {
@@ -792,9 +811,10 @@ const sideRules: readonly VtgRuleSpec[] = [
 
 const quarterDiagramOptions = computed(() => ({
   speedRatio: speedRatio.value,
-  quarters: quarterMode.value,
+  quarters: 1 as const,
   swapProps: swapProps.value,
   reversePlane: reversePlane.value,
+  ...(shape.value === 'box' ? { shape: shape.value } : undefined),
 }))
 
 const displayedSideRules = computed<readonly VtgRuleSpec[]>(() => {
@@ -826,7 +846,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   double,
   scale,
   spacing,
-  quarters: activeQuarterMode,
+  quarters: activeQtrMode,
 })
 
 let blankObserver: ResizeObserver | undefined
@@ -891,7 +911,6 @@ defineExpose({
   arms,
   leftPropVisible,
   rightPropVisible,
-  quarterMode,
   previewUrls,
 })
 </script>
@@ -942,7 +961,7 @@ defineExpose({
   opacity: 0;
 }
 
-.vtg-radio-options span {
+.vtg-radio-options label > span {
   display: grid;
   padding: var(--space-2);
   color: var(--color-text);
@@ -1190,6 +1209,29 @@ defineExpose({
   border-radius: 0.75cqi;
   box-shadow: 0 0.4cqi 0.9cqi color-mix(in srgb, var(--vtg-color-preview) 22%, transparent);
   place-items: center;
+}
+
+.vtg-shuffle-tooltip {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.vtg-shuffle-tooltip > .vtg-shuffle {
+  width: 100%;
+  height: 100%;
+}
+
+.vtg-spin-toggle-tooltip.tooltip-root {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.vtg-spin-toggle-tooltip > .vtg-tile__spin-toggle {
+  pointer-events: auto;
 }
 
 .vtg-column-headers {

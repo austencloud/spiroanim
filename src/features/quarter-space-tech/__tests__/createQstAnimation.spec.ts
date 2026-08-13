@@ -12,6 +12,7 @@ import { analyzeQstPositionPairs } from '@/features/quarter-space-tech/math/anal
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv6'
+import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 
 describe('createQstAnimation', () => {
   it('creates the expected first Breaks position sequence', () => {
@@ -64,6 +65,26 @@ describe('createQstAnimation', () => {
       rootCompile(original).props[0]?.anim,
     )
     expect(original.props.every(({ anim }) => anim[0]?.scale === 8)).toBe(true)
+  })
+
+  it('applies Swap and 180 only after the QST pattern is complete', () => {
+    const selection = {
+      concept: 'qst',
+      reference: 'advanced-1',
+      scale: 1.2,
+      spacing: 6,
+    } as const
+    const semantic = createDefaultQstAnimation(selection)
+    const transformed = createDefaultQstAnimation({
+      ...selection,
+      swapProps: true,
+      reversePlane: true,
+    })
+    if (!semantic) throw new Error('Expected a QST animation')
+
+    expect(transformed).toEqual(
+      applyPatternFinalTransforms(semantic, { swapProps: true, reversePlane: true }),
+    )
   })
 
   it('preserves the active playback speed when BPM rebuilds the pattern', () => {

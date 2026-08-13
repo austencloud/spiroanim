@@ -225,7 +225,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-tile"][aria-describedby]')).toHaveLength(36)
 
     await exampleCell.trigger('mouseenter')
-    vi.runAllTimers()
+    vi.advanceTimersByTime(0)
     await nextTick()
 
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
@@ -264,7 +264,7 @@ describe('VtgPane', () => {
     expect(columnRule.attributes('aria-describedby')).toBeTruthy()
 
     await sideRule.trigger('mouseenter')
-    vi.runAllTimers()
+    vi.advanceTimersByTime(0)
     await nextTick()
 
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
@@ -282,7 +282,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-tile"][aria-describedby]')).toHaveLength(36)
 
     await exampleCell.trigger('mouseenter')
-    vi.runAllTimers()
+    vi.advanceTimersByTime(0)
     await nextTick()
 
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
@@ -378,7 +378,7 @@ describe('VtgPane', () => {
     expect(reverse.element.nextElementSibling?.textContent).toBe('180°')
     expect(
       wrapper
-        .findAll('.vtg-top-options .concept-pattern-options > label span')
+        .findAll('.vtg-top-options .concept-pattern-options label span')
         .map((option) => option.text()),
     ).toEqual(['Swap', '180°'])
 
@@ -391,6 +391,34 @@ describe('VtgPane', () => {
       [{ reference: '2-6', speedRatio: '1:3', swapProps: true }],
       [{ reference: '2-6', speedRatio: '1:3', swapProps: true, reversePlane: true }],
     ])
+  })
+
+  it('provides tooltips for pattern, playback, and rendering controls', () => {
+    const wrapper = mount(VtgPane)
+
+    expect(wrapper.get('input[value="1:3"]').attributes('aria-label')).toBe(
+      'Use the 1:3 speed ratio',
+    )
+    expect(wrapper.get('[data-role="vtg-swap"]').attributes('aria-label')).toBe(
+      'Exchange the completed left and right animation tracks',
+    )
+    expect(wrapper.get('[data-role="vtg-reset"]').attributes('aria-describedby')).toBeTruthy()
+    expect(wrapper.get('[data-role="vtg-reset"]').attributes('title')).toBeUndefined()
+    expect(wrapper.get('[data-role="vtg-shape-diamond"]').attributes('aria-label')).toBe(
+      'Use the Diamond pattern orientation',
+    )
+    expect(wrapper.get('[data-role="vtg-qtr"]').attributes('aria-label')).toBe(
+      'Use Quarter Spacing relationships',
+    )
+    expect(wrapper.get('[data-role="vtg-beat-3"]').attributes('aria-label')).toBe('Start on beat 3')
+    expect(wrapper.get('[data-role="vtg-paths"]').attributes('aria-label')).toBe(
+      'Show the complete prop motion paths',
+    )
+    expect(wrapper.get('[data-role="vtg-left"]').attributes('aria-label')).toBe(
+      'Show the left prop',
+    )
+    expect(wrapper.get('[data-role="vtg-shuffle"]').attributes('aria-describedby')).toBeTruthy()
+    expect(wrapper.get('[data-role="vtg-shuffle"]').attributes('title')).toBeUndefined()
   })
 
   it('offers Diamond and Box modes that reapply VTG and Qtr patterns', async () => {
@@ -599,6 +627,10 @@ describe('VtgPane', () => {
     const selector = wrapper.get<HTMLSelectElement>('[data-role="vtg-transition-beats"]')
     const right = wrapper.get<HTMLInputElement>('[data-role="vtg-right"]')
     expect(selector.element.value).toBe('3')
+    expect(selector.attributes('aria-label')).toBe(
+      'Choose the beat on which the 45-degree transition occurs',
+    )
+    expect(selector.element.closest('label')?.getAttribute('aria-describedby')).toBeTruthy()
     expect(selector.findAll('option').map((option) => option.text())).toEqual([
       '6',
       '5',
@@ -642,67 +674,27 @@ describe('VtgPane', () => {
     })
   })
 
-  it('offers mutually exclusive Quarters radio options that reapply the current pattern', async () => {
+  it('uses Flip to select the alternate QTR orientation without quarter radios', async () => {
     const wrapper = await mountVtgPane(true)
-    const quarters = wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]')
-    const quarters2 = wrapper.get<HTMLInputElement>('[data-role="vtg-quarters-2"]')
+    const reverse = wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]')
 
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
-    expect(quarters.element.checked).toBe(true)
-    expect(quarters.element.type).toBe('radio')
-    expect(quarters.element.name).toBe('vtg-quarters')
-    expect(quarters.element.nextElementSibling?.textContent).toBe('Qtr #1')
-    expect(quarters2.element.checked).toBe(false)
-    expect(quarters2.element.type).toBe('radio')
-    expect(quarters2.element.name).toBe('vtg-quarters')
-    expect(quarters2.element.nextElementSibling?.textContent).toBe('Qtr #2')
-    expect(wrapper.get('.vtg-quarter-options legend').text()).toBe('Quarters')
-    expect(wrapper.findAll('.vtg-quarter-options label')).toHaveLength(2)
+    expect(wrapper.find('[data-role="vtg-quarters"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-quarters-2"]').exists()).toBe(false)
     expect(wrapper.findAll('.vtg-top-options .vtg-pattern-options label')).toHaveLength(2)
-    expect(wrapper.get('.vtg-top-options').find('.vtg-pattern-options').exists()).toBe(true)
-    expect(
-      wrapper
-        .get('.vtg-quarter-options')
-        .element.compareDocumentPosition(
-          wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element,
-        ) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+    expect(reverse.attributes('aria-label')).toBe('Flip QTR orientation and direction')
+    expect(reverse.element.nextElementSibling?.textContent).toBe('Flip')
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-shape-box"]').setValue()
+    expect(reverse.attributes('aria-label')).toBe('Flip QTR direction')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-shape-diamond"]').setValue()
 
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
-    await quarters.trigger('click')
-    await quarters2.setValue()
+    await reverse.setValue(true)
 
     expect(wrapper.emitted('patternSelect')).toEqual([
       [{ reference: '2-6', speedRatio: '1:3', quarters: 1 }],
-      [{ reference: '2-6', speedRatio: '1:3', swapProps: true, quarters: 1 }],
-      [{ reference: '2-6', speedRatio: '1:3', swapProps: true, quarters: 2 }],
-    ])
-  })
-
-  it('always keeps one Quarters radio selected for pointer and keyboard-generated clicks', async () => {
-    const wrapper = await mountVtgPane(true)
-    const quarters = wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]')
-    const quarters2 = wrapper.get<HTMLInputElement>('[data-role="vtg-quarters-2"]')
-
-    await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
-    quarters.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
-    await nextTick()
-
-    expect(quarters.element.checked).toBe(true)
-
-    quarters.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }))
-    await nextTick()
-
-    expect(quarters.element.checked).toBe(true)
-
-    await quarters2.setValue()
-
-    expect(quarters.element.checked).toBe(false)
-    expect(quarters2.element.checked).toBe(true)
-    expect(wrapper.emitted('patternSelect')).toEqual([
-      [{ reference: '2-6', speedRatio: '1:3', quarters: 1 }],
-      [{ reference: '2-6', speedRatio: '1:3', quarters: 2 }],
+      [{ reference: '2-6', speedRatio: '1:3', reversePlane: true, quarters: 1 }],
     ])
   })
 
@@ -724,7 +716,7 @@ describe('VtgPane', () => {
 
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
-    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-quarters"]').element.checked).toBe(true)
+    expect(wrapper.find('[data-role="vtg-quarters"]').exists()).toBe(false)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-spacing"]').element.value).toBe('9')
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
@@ -1351,7 +1343,7 @@ describe('VtgPane', () => {
     ])
   })
 
-  it('does not mirror frame-derived Quarters props a second time when 180° is enabled', async () => {
+  it('does not mirror frame-derived QTR props a second time when 180° is enabled', async () => {
     const wrapper = await mountVtgPane(true)
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
@@ -1361,10 +1353,10 @@ describe('VtgPane', () => {
     )
     const firstSideProps = firstSideRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
     expect(firstSideRule.classes()).toContain('vtg-rule-card--reversed')
-    expect(firstSideProps[0]?.classes()).toContain('vtg-rule-card__prop--vertical')
-    expect(firstSideProps[0]?.attributes('style')).toContain('inset-block-start: 4%')
-    expect(firstSideProps[1]?.classes()).toContain('vtg-rule-card__prop--horizontal')
-    expect(firstSideProps[1]?.attributes('style')).toContain('inset-inline-start: 4%')
+    expect(firstSideProps[0]?.classes()).toContain('vtg-rule-card__prop--horizontal')
+    expect(firstSideProps[0]?.attributes('style')).toContain('inset-inline-start: 4%')
+    expect(firstSideProps[1]?.classes()).toContain('vtg-rule-card__prop--vertical')
+    expect(firstSideProps[1]?.attributes('style')).toContain('inset-block-start: 59%')
   })
 
   it('places the top TOG IN props after the divider', () => {

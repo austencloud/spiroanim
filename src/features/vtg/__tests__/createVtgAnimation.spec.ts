@@ -11,6 +11,7 @@ import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { reverseAngle } from '@/math/animation/AngleFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { FRAMESTARTS } from '@/math/animation/PlayerFunc'
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
@@ -194,34 +195,42 @@ describe('createVtgAnimation', () => {
     ).toEqual(createVtgAnimationForSelection(createCurrentAnimation(), selection))
   })
 
-  it('rotates only the initial prop arcs by 45 degrees in Box mode', () => {
-    for (const reversePlane of [false, true]) {
-      const baseSelection = {
-        reference: '5-1',
-        speedRatio: '1:3',
-        reversePlane,
-      } as const satisfies VtgPatternSelection
-      const diamond = createVtgAnimationForSelection(createCurrentAnimation(), baseSelection)
-      const box = createVtgAnimationForSelection(createCurrentAnimation(), {
-        ...baseSelection,
-        shape: 'box',
-      })
-      if (!diamond || !box) throw new Error('Expected Diamond and Box VTG animations')
+  it('rotates only the initial prop arcs by 45 degrees before the final 180 transform', () => {
+    const baseSelection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+    } as const satisfies VtgPatternSelection
+    const diamond = createVtgAnimationForSelection(createCurrentAnimation(), baseSelection)
+    const box = createVtgAnimationForSelection(createCurrentAnimation(), {
+      ...baseSelection,
+      shape: 'box',
+    })
+    const reversedBox = createVtgAnimationForSelection(createCurrentAnimation(), {
+      ...baseSelection,
+      shape: 'box',
+      reversePlane: true,
+    })
+    if (!diamond || !box || !reversedBox) throw new Error('Expected Diamond and Box VTG animations')
 
-      const diamondCompiled = rootCompile(diamond)
-      const boxCompiled = rootCompile(box)
+    const diamondCompiled = rootCompile(diamond)
+    const boxCompiled = rootCompile(box)
 
-      expect(boxCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
-        diamondCompiled.props.map((prop) => {
-          const firstFrame = prop.anim[0]!
-          const delta = Math.abs(firstFrame.plane) === 180 ? -45 : 45
-          return (firstFrame.arc + delta + 360) % 360
-        }),
-      )
-      expect(boxCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
-        diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
-      )
-    }
+    expect(boxCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
+      diamondCompiled.props.map((prop) => {
+        const firstFrame = prop.anim[0]!
+        const delta = Math.abs(firstFrame.plane) === 180 ? -45 : 45
+        return (firstFrame.arc + delta + 360) % 360
+      }),
+    )
+    expect(boxCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
+      diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
+    )
+    expect(reversedBox.props.map((prop) => prop.anim[0]?.arc)).toEqual(
+      box.props.map((prop) => prop.anim[0]?.arc),
+    )
+    expect(reversedBox.props.map((prop) => prop.anim[0]?.plane)).toEqual(
+      box.props.map((prop) => reverseAngle(prop.anim[0]?.plane ?? 0)),
+    )
   })
 
   it('keeps the eight fixed-shape cells unchanged in Box mode', () => {
@@ -495,7 +504,7 @@ describe('createVtgAnimation', () => {
     expect(swapped?.props[1]?.anim).toEqual(original?.props[0]?.anim)
   })
 
-  it('reverses the effective Plane in both VTG base frames', () => {
+  it('leaves final Swap and 180 transforms out of the VTG pattern catalog', () => {
     const original = buildVtgPattern({
       reference: '2-6',
       speedRatio: '1:1',
@@ -507,17 +516,20 @@ describe('createVtgAnimation', () => {
     })
 
     expect(original?.props.map((prop) => prop.anim[0]?.plane)).toEqual([180, undefined])
-    expect(reversed?.props.map((prop) => prop.anim[0]?.plane)).toEqual([0, 180])
-    expect(reversed?.props.map((prop) => prop.anim[1])).toEqual(
-      original?.props.map((prop) => prop.anim[1]),
-    )
+    expect(reversed).toEqual(original)
 
-    const reversedImplicitPlanes = buildVtgPattern({
+    const baseAnimation = createDefaultVtgAnimation({
+      reference: '5-2',
+      speedRatio: '1:1',
+    })
+    const reversedAnimation = createDefaultVtgAnimation({
       reference: '5-2',
       speedRatio: '1:1',
       reversePlane: true,
     })
-    expect(reversedImplicitPlanes?.props.map((prop) => prop.anim[0]?.plane)).toEqual([180, 180])
+    expect(reversedAnimation?.props.map((prop) => prop.anim[0]?.plane)).toEqual(
+      baseAnimation?.props.map((prop) => reverseAngle(prop.anim[0]?.plane ?? 0)),
+    )
   })
 
   it('caps BPM and Scale while mapping Scale to Distance', () => {

@@ -1,20 +1,22 @@
-import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
+import {
+  createDefaultQtrAnimation,
+  createDefaultQtrBaseAnimation,
+} from '@/features/vtg/qtr/createQtrAnimation'
+import { applyVtgPlaybackControls } from '@/features/vtg/createVtgAnimation'
+import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import type {
   QtrPatternMatch,
   QtrPatternMatchPreferences,
   QtrPatternSelection,
 } from '@/features/vtg/types'
 import {
+  createFinalTransformedVtgAnimationSignature,
   createVtgAnimationSignature,
   getVtgAnimationScale,
 } from '@/features/vtg/math/createVtgAnimationSignature'
-import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import type { VtgCellReference, VtgRuleNumber } from '@/features/vtg/types'
-import { qtrModes, supportsVtgQtrTransition, vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
-import {
-  doubleAnimationPlayback,
-  doublePlaybackMultiplier,
-} from '@/math/animation/subdivideAnimationPlayback'
+import { supportsVtgQtrTransition, vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import { analyzeAlternatingPatternPlayback } from '@/math/animation/alternatePatternPlayback'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
@@ -32,10 +34,9 @@ const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCell
 
 const addCandidate = (
   candidates: Map<string, QtrCandidateMatch[]>,
-  animation: RootDataFinal,
+  signature: string | undefined,
   candidate: QtrCandidateMatch,
 ) => {
-  const signature = createVtgAnimationSignature(animation)
   if (!signature) return
 
   const matches = candidates.get(signature) ?? []
@@ -46,54 +47,92 @@ const addCandidate = (
 const buildCandidateCache = () => {
   const candidates = new Map<string, QtrCandidateMatch[]>()
 
-  for (const quarters of qtrModes) {
-    for (const column of ruleNumbers) {
-      for (const row of ruleNumbers) {
-        const reference = createCellReference(column, row)
-        const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
+  for (const column of ruleNumbers) {
+    for (const row of ruleNumbers) {
+      const reference = createCellReference(column, row)
+      const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
+      const shapeOptions = vtgFixedShapeCells.has(reference)
+        ? (['diamond'] as const)
+        : patternShapes
 
-        for (const speedRatio of vtgSpeedRatios) {
-          for (const isAnti of antiOptions) {
-            for (const shape of patternShapes) {
-              for (const swapProps of booleanOptions) {
-                for (const reversePlane of booleanOptions) {
-                  const selection: QtrPatternSelection = {
+      for (const speedRatio of vtgSpeedRatios) {
+        for (const isAnti of antiOptions) {
+          for (const shape of shapeOptions) {
+            const baseAnimations = new Map<boolean, RootDataFinal | undefined>()
+            const playbackAnimations = new Map<
+              boolean,
+              Map<
+                QtrPatternSelection['beat'],
+                readonly [RootDataFinal | undefined, RootDataFinal | undefined]
+              >
+            >()
+
+            for (const swapProps of booleanOptions) {
+              for (const reversePlane of booleanOptions) {
+                const selection: QtrPatternSelection = {
+                  reference,
+                  speedRatio,
+                  quarters: 1,
+                  isAnti,
+                  swapProps,
+                  reversePlane,
+                  ...(shape === 'box' ? { shape } : undefined),
+                }
+                // Box keeps QTR #1 for both final-plane states, so its playback bases are shared.
+                const baseKey = shape === 'box' ? false : reversePlane
+                let baseAnimation = baseAnimations.get(baseKey)
+                if (!baseAnimations.has(baseKey)) {
+                  baseAnimation = createDefaultQtrBaseAnimation(selection)
+                  baseAnimations.set(baseKey, baseAnimation)
+                }
+                if (!baseAnimation) continue
+
+                let reversePlaybackAnimations = playbackAnimations.get(baseKey)
+                if (!reversePlaybackAnimations) {
+                  reversePlaybackAnimations = new Map()
+                  playbackAnimations.set(baseKey, reversePlaybackAnimations)
+                }
+
+                for (const beat of vtgBeats) {
+                  const candidate: QtrCandidateMatch = {
                     reference,
                     speedRatio,
-                    quarters,
+                    quarters: 1,
                     isAnti,
                     swapProps,
                     reversePlane,
+                    ...(beat === 1 ? undefined : { beat }),
                     ...(shape === 'box' ? { shape } : undefined),
                   }
-                  let shifted = createDefaultQtrAnimation(selection)
-                  if (!shifted) continue
-
-                  for (const beat of vtgBeats) {
-                    if (beat > 1) {
-                      shifted = shiftVtgStartingBeat(shifted, 2)
-                      if (!shifted) break
-                    }
-
-                    const candidate: QtrCandidateMatch = {
-                      reference,
-                      speedRatio,
-                      quarters,
-                      isAnti,
-                      swapProps,
-                      reversePlane,
-                      ...(beat === 1 ? undefined : { beat }),
-                      ...(shape === 'box' ? { shape } : undefined),
-                    }
-                    addCandidate(candidates, shifted, candidate)
-
-                    const doubled = doubleAnimationPlayback(shifted)
-                    if (doubled) {
-                      addCandidate(candidates, doubled, {
-                        ...candidate,
+                  let playback = reversePlaybackAnimations.get(beat)
+                  if (!playback) {
+                    playback = [
+                      applyVtgPlaybackControls(baseAnimation, { speedRatio, beat }),
+                      applyVtgPlaybackControls(baseAnimation, {
+                        speedRatio,
+                        beat,
                         double: true,
-                      })
-                    }
+                      }),
+                    ]
+                    reversePlaybackAnimations.set(beat, playback)
+                  }
+
+                  const [animation, doubled] = playback
+                  if (!animation) continue
+
+                  const finalTransforms = { swapProps, reversePlane }
+                  addCandidate(
+                    candidates,
+                    createFinalTransformedVtgAnimationSignature(animation, finalTransforms),
+                    candidate,
+                  )
+
+                  if (doubled) {
+                    addCandidate(
+                      candidates,
+                      createFinalTransformedVtgAnimationSignature(doubled, finalTransforms),
+                      { ...candidate, double: true },
+                    )
                   }
                 }
               }
@@ -142,7 +181,6 @@ const preferenceDifferenceCount = (
   match: QtrPatternMatch,
   preferences: QtrPatternMatchPreferences,
 ) =>
-  Number(match.quarters !== preferences.quarters) +
   Number(match.swapProps !== preferences.swapProps) +
   Number(match.reversePlane !== preferences.reversePlane)
 

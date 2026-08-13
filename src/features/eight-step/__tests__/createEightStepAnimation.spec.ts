@@ -12,6 +12,7 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import { decodeReadable } from '@/services/animation/AnimReadableFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv6'
+import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 
 const current = rootFinal(
   decodeReadable({
@@ -80,6 +81,25 @@ describe('createEightStepAnimation', () => {
     expect(transformed?.props.every(({ anim }) => anim[0]?.scale === 12)).toBe(true)
     expect(rootCompile(transformed!).camera[0]!.orbit.offset).toEqual([0, 0, -23])
     expect(transformed?.props[0]?.anim).not.toEqual(base?.props[1]?.anim)
+  })
+
+  it('applies Swap and 180 only after Box is complete', () => {
+    const selection = {
+      concept: '8stp',
+      reference: '5-II',
+      shape: 'box',
+    } as const
+    const semantic = createDefaultEightStepAnimation(selection)
+    const transformed = createDefaultEightStepAnimation({
+      ...selection,
+      swapProps: true,
+      reversePlane: true,
+    })
+    if (!semantic) throw new Error('Expected an Eight Step animation')
+
+    expect(transformed).toEqual(
+      applyPatternFinalTransforms(semantic, { swapProps: true, reversePlane: true }),
+    )
   })
 
   it('preserves the active playback speed when BPM rebuilds the pattern', () => {

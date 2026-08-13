@@ -1,9 +1,11 @@
 import { mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import QstPagination from '@/features/quarter-space-tech/components/QstPagination.vue'
 
 describe('QstPagination', () => {
+  beforeEach(() => setActivePinia(createPinia()))
   afterEach(() => vi.restoreAllMocks())
 
   it('renders the current page and emits requested page changes', async () => {

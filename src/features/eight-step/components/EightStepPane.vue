@@ -15,31 +15,45 @@
     </div>
 
     <div class="eight-step-board" :style="headColorStyle" data-role="eight-step-board">
-      <button
-        type="button"
-        class="eight-step-shuffle"
-        aria-label="Shuffle Eight Step patterns"
-        data-role="eight-step-shuffle"
-        @click="selectRandomCell"
-      >
-        <BaseIcon :path="mdiShuffleVariant" size="42%" />
-      </button>
+      <AppTooltip class="eight-step-shuffle-tooltip" text="Select a random Eight Step pattern">
+        <template #activator="{ props: activatorProps }">
+          <button
+            v-bind="activatorProps"
+            type="button"
+            class="eight-step-shuffle"
+            aria-label="Shuffle Eight Step patterns"
+            data-role="eight-step-shuffle"
+            @click="selectRandomCell"
+          >
+            <BaseIcon :path="mdiShuffleVariant" size="42%" />
+          </button>
+        </template>
+      </AppTooltip>
 
-      <button
+      <AppTooltip
         v-for="group in columnGroups"
         :key="group.label"
-        class="eight-step-column-header"
-        :class="{
-          'eight-step-header--accent': isColumnGroupHighlighted(group),
-        }"
+        class="eight-step-column-tooltip"
+        :text="`Select the ${group.label} column group`"
         :style="{ gridColumn: `${group.columns[0] + 1} / span 2` }"
-        :aria-label="`${group.label}, columns ${group.columns.join(' and ')}`"
-        :aria-pressed="isColumnGroupHighlighted(group)"
-        data-role="eight-step-column-header"
-        @click="selectColumnGroup(group)"
       >
-        {{ group.label }}
-      </button>
+        <template #activator="{ props: activatorProps }">
+          <button
+            v-bind="activatorProps"
+            class="eight-step-column-header"
+            :class="{
+              'eight-step-header--accent': isColumnGroupHighlighted(group),
+            }"
+            :style="{ gridColumn: `${group.columns[0] + 1} / span 2` }"
+            :aria-label="`${group.label}, columns ${group.columns.join(' and ')}`"
+            :aria-pressed="isColumnGroupHighlighted(group)"
+            data-role="eight-step-column-header"
+            @click="selectColumnGroup(group)"
+          >
+            {{ group.label }}
+          </button>
+        </template>
+      </AppTooltip>
 
       <BaseTooltip
         v-for="(row, rowIndex) in eightStepRows"
@@ -174,6 +188,7 @@ import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
+import AppTooltip from '@/components/AppTooltip.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
@@ -773,6 +788,27 @@ defineExpose({
   border: 0;
   border-radius: 0.75cqi;
   place-items: center;
+}
+
+.eight-step-shuffle-tooltip {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.eight-step-shuffle-tooltip > .eight-step-shuffle,
+.eight-step-column-tooltip > .eight-step-column-header {
+  width: 100%;
+  height: 100%;
+}
+
+.eight-step-column-tooltip {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  grid-row: 1;
 }
 
 .eight-step-column-header,

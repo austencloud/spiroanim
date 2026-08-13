@@ -134,14 +134,14 @@ describe('EightStepPane', () => {
     expect(cells.every((cell) => cell.attributes('aria-describedby'))).toBe(true)
 
     await wrapper.get('[data-role="eight-step-row-header"][aria-label="AA"]').trigger('mouseenter')
-    vi.runAllTimers()
+    vi.advanceTimersByTime(0)
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe('Anti vs Anti')
 
     await wrapper.get('[data-role="eight-step-row-header"][aria-label="AA"]').trigger('mouseleave')
     await nextTick()
     await wrapper.get('[data-cell-reference="1-AA"]').trigger('mouseenter')
-    vi.runAllTimers()
+    vi.advanceTimersByTime(0)
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
       'Opposite\nAnti vs Anti',
