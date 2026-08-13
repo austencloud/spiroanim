@@ -404,8 +404,8 @@ describe('VtgPane', () => {
     )
     expect(wrapper.get('[data-role="vtg-reset"]').attributes('aria-describedby')).toBeTruthy()
     expect(wrapper.get('[data-role="vtg-reset"]').attributes('title')).toBeUndefined()
-    expect(wrapper.get('[data-role="vtg-shape-diamond"]').attributes('aria-label')).toBe(
-      'Use the Diamond pattern orientation',
+    expect(wrapper.get('[data-role="vtg-tilted"]').attributes('aria-label')).toBe(
+      'Use the tilted pattern orientation',
     )
     expect(wrapper.get('[data-role="vtg-qtr"]').attributes('aria-label')).toBe(
       'Use Quarter Spacing relationships',
@@ -421,20 +421,18 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="vtg-shuffle"]').attributes('title')).toBeUndefined()
   })
 
-  it('offers Diamond and Box modes that reapply VTG and Qtr patterns', async () => {
+  it('offers a Tilted checkbox that reapplies VTG and Qtr patterns', async () => {
     for (const qtrEnabled of [false, true]) {
       const quarters = qtrEnabled ? 1 : undefined
       const wrapper = await mountVtgPane(qtrEnabled)
-      const diamond = wrapper.get<HTMLInputElement>('[data-role="vtg-shape-diamond"]')
-      const box = wrapper.get<HTMLInputElement>('[data-role="vtg-shape-box"]')
+      const tilted = wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]')
 
-      expect(diamond.element.checked).toBe(true)
-      expect(box.element.checked).toBe(false)
-      expect(diamond.element.name).toBe('vtg-shape')
-      expect(wrapper.get('[data-role="vtg-shape-controls"]').text()).toBe('DiamondBox')
+      expect(tilted.element.type).toBe('checkbox')
+      expect(tilted.element.checked).toBe(false)
+      expect(wrapper.get('[data-role="vtg-shape-controls"]').text()).toBe('Tilted')
 
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
-      await box.setValue()
+      await tilted.setValue(true)
 
       expect(wrapper.emitted('patternSelect')).toEqual([
         [
@@ -685,9 +683,9 @@ describe('VtgPane', () => {
     expect(reverse.attributes('aria-label')).toBe('Flip QTR orientation and direction')
     expect(reverse.element.nextElementSibling?.textContent).toBe('Flip')
 
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-shape-box"]').setValue()
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]').setValue(true)
     expect(reverse.attributes('aria-label')).toBe('Flip QTR direction')
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-shape-diamond"]').setValue()
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]').setValue(false)
 
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
     await reverse.setValue(true)
@@ -828,14 +826,13 @@ describe('VtgPane', () => {
       expect(options.classes()).toContain('vtg-pattern-options')
       const playbackControls = wrapper.get(`[data-role="${concept}-playback-controls"]`).element
       const buttonRows = wrapper.get('.concept-button-rows').element
-      const diamond = wrapper.get<HTMLInputElement>('[data-role="vtg-shape-diamond"]').element
-      const box = wrapper.get<HTMLInputElement>('[data-role="vtg-shape-box"]').element
+      const tilted = wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]').element
       const qtr = wrapper.get<HTMLInputElement>(`[data-role="${concept}-qtr"]`).element
       const firstBeat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat-1"]`).element
       expect(
-        diamond.compareDocumentPosition(firstBeat) & Node.DOCUMENT_POSITION_FOLLOWING,
+        tilted.compareDocumentPosition(firstBeat) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy()
-      expect(box.compareDocumentPosition(qtr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(tilted.compareDocumentPosition(qtr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(qtr.compareDocumentPosition(firstBeat) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(
         playbackControls.compareDocumentPosition(options.element) &

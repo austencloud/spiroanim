@@ -124,7 +124,7 @@
     </div>
 
     <ConceptAnimationControls :animation="animation" role-prefix="eight-step">
-      <template #after-controls>
+      <template #before-render-controls>
         <PatternShapeControls v-model:shape="shape" role-prefix="eight-step" />
       </template>
     </ConceptAnimationControls>

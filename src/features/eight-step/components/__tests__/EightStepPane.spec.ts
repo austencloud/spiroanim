@@ -313,7 +313,7 @@ describe('EightStepPane', () => {
       wrapper.get<HTMLInputElement>('[data-role="eight-step-scale"]').setValue(1.1),
     )
     await expectNineMorePreviews(() =>
-      wrapper.get<HTMLInputElement>('[data-role="eight-step-shape-box"]').setValue(),
+      wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]').setValue(true),
     )
 
     const beforeRenderingControls = countWorkerMessages('data')
@@ -326,15 +326,13 @@ describe('EightStepPane', () => {
     await expectNineMorePreviews(() => reportAllPreviewDimensions(80, 76))
   })
 
-  it('offers Diamond and Box modes and warns about unvalidated Box patterns', async () => {
+  it('offers a leftmost Tilted checkbox and warns about unvalidated tilted patterns', async () => {
     const wrapper = mount(EightStepPane)
-    const diamond = wrapper.get<HTMLInputElement>('[data-role="eight-step-shape-diamond"]')
-    const box = wrapper.get<HTMLInputElement>('[data-role="eight-step-shape-box"]')
+    const tilted = wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]')
 
-    expect(diamond.element.checked).toBe(true)
-    expect(box.element.checked).toBe(false)
-    expect(diamond.element.name).toBe('eight-step-shape')
-    expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('DiamondBox')
+    expect(tilted.element.type).toBe('checkbox')
+    expect(tilted.element.checked).toBe(false)
+    expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('Tilted')
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="eight-step-diamond-note"]').text()).toBe(
       'Patterns highlighted in yellow, or red when selected, may be difficult or impossible to perform in Wall-Plane without significant modification.',
@@ -345,14 +343,17 @@ describe('EightStepPane', () => {
     expect(
       renderControls.compareDocumentPosition(sliderControls) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
+    expect(shapeControls.parentElement).toBe(renderControls)
     expect(
-      renderControls.compareDocumentPosition(shapeControls) & Node.DOCUMENT_POSITION_FOLLOWING,
+      shapeControls.compareDocumentPosition(
+        wrapper.get<HTMLInputElement>('[data-role="eight-step-paths"]').element,
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
     await wrapper.get('[data-cell-reference="1-AI"]').trigger('click')
-    await box.setValue()
+    await tilted.setValue(true)
 
-    expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('DiamondBox')
+    expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('Tilted')
     expect(wrapper.findAll('.eight-step-cell--marked')).toHaveLength(0)
     expect(wrapper.get('[data-role="eight-step-box-note"]').text()).toBe(
       'Box mode is experimental, and its patterns have not been validated. Difficult / Impossible highlighting for patterns performed in Wall-Plane is disabled.',
@@ -367,7 +368,7 @@ describe('EightStepPane', () => {
     ])
 
     await wrapper.get('[data-role="eight-step-reset"]').trigger('click')
-    expect(diamond.element.checked).toBe(true)
+    expect(tilted.element.checked).toBe(false)
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(true)
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
@@ -375,7 +376,7 @@ describe('EightStepPane', () => {
     ])
   })
 
-  it('controls left and right prop visibility between Arms and Diamond', async () => {
+  it('controls left and right prop visibility after Tilted and Arms', async () => {
     const wrapper = mount(EightStepPane)
     const left = wrapper.get<HTMLInputElement>('[data-role="eight-step-left"]')
     const right = wrapper.get<HTMLInputElement>('[data-role="eight-step-right"]')
@@ -385,7 +386,7 @@ describe('EightStepPane', () => {
     expect(right.element.checked).toBe(true)
     expect(
       Array.from(options?.querySelectorAll('label span') ?? []).map((option) => option.textContent),
-    ).toEqual(['Paths', 'Hands', 'Arms', 'Left', 'Right', 'Diamond', 'Box'])
+    ).toEqual(['Tilted', 'Paths', 'Hands', 'Arms', 'Left', 'Right'])
 
     await wrapper.get('[data-cell-reference="1-AA"]').trigger('click')
     await right.setValue(false)
@@ -621,9 +622,9 @@ describe('EightStepPane', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="eight-step-scale"]').element.value).toBe(
       '1.1',
     )
-    expect(
-      wrapper.get<HTMLInputElement>('[data-role="eight-step-shape-box"]').element.checked,
-    ).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]').element.checked).toBe(
+      true,
+    )
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 

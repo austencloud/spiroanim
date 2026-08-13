@@ -6,6 +6,7 @@
       class="concept-pattern-options concept-render-options vtg-pattern-options vtg-render-options"
     >
       <legend class="concept-controls__visually-hidden">Rendered features</legend>
+      <slot name="before-render-controls" />
       <AppTooltip text="Show the complete prop motion paths">
         <template #activator="{ props: activatorProps }">
           <label v-bind="activatorProps">
