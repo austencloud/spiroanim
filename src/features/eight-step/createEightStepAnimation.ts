@@ -70,7 +70,13 @@ export const createEightStepAnimation = (
     depth: pattern.depth ?? current.depth,
   }
 
-  return applyPatternFinalTransforms(animation, selection)
+  // Eight Step definitions name the first relationship first, but performers expect that
+  // relationship on prop 2. Invert the shared Swap transform here so the expected assignment is
+  // the concept default while the application-wide Swap control keeps its normal meaning.
+  return applyPatternFinalTransforms(animation, {
+    ...selection,
+    swapProps: !selection.swapProps,
+  })
 }
 
 export const createDefaultEightStepAnimation = (

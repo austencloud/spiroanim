@@ -36,6 +36,23 @@ const current = rootFinal(
 )
 
 describe('createEightStepAnimation', () => {
+  it('assigns each authored relationship to the opposite prop by default', () => {
+    const defaultAssignment = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '1-AA',
+    })
+    const swappedAssignment = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '1-AA',
+      swapProps: true,
+    })
+
+    expect(defaultAssignment).toBeDefined()
+    expect(swappedAssignment).toBeDefined()
+    expect(defaultAssignment?.props[0]?.anim).toEqual(swappedAssignment?.props[1]?.anim)
+    expect(defaultAssignment?.props[1]?.anim).toEqual(swappedAssignment?.props[0]?.anim)
+  })
+
   it('builds a closed two-prop animation while preserving unrelated player settings', () => {
     const animation = createEightStepAnimation(current, {
       concept: '8stp',

@@ -332,7 +332,7 @@ const cells: readonly EightStepCell[] = eightStepPatternDefinitions.map((definit
 }))
 
 const getPropColor = (propIndex: 0 | 1, colorPart: 0 | 1 | 2) => {
-  const sourcePropIndex = swapProps.value ? (propIndex === 0 ? 1 : 0) : propIndex
+  const sourcePropIndex = swapProps.value ? propIndex : propIndex === 0 ? 1 : 0
   const fallbackSettings = vtgPropSettings[sourcePropIndex]
   if (!fallbackSettings)
     throw new Error(`Missing Eight Step defaults for prop ${sourcePropIndex + 1}`)

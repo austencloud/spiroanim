@@ -433,16 +433,16 @@ describe('EightStepPane', () => {
     const wrapper = mount(EightStepPane)
 
     expect(wrapper.get('[data-role="eight-step-board"]').attributes('style')).toContain(
-      '--eight-step-first-head: rgb(255,165,0)',
+      '--eight-step-first-head: rgb(0,255,0)',
     )
     expect(wrapper.get('[data-role="eight-step-board"]').attributes('style')).toContain(
-      '--eight-step-first-tether: rgb(85,26,0)',
+      '--eight-step-first-tether: rgb(0,85,0)',
     )
     expect(wrapper.get('[data-role="eight-step-board"]').attributes('style')).toContain(
-      '--eight-step-second-head: rgb(0,255,0)',
+      '--eight-step-second-head: rgb(255,165,0)',
     )
     expect(wrapper.get('[data-role="eight-step-board"]').attributes('style')).toContain(
-      '--eight-step-second-tether: rgb(0,85,0)',
+      '--eight-step-second-tether: rgb(85,26,0)',
     )
 
     await wrapper.get('[data-cell-reference="2-AE"]').trigger('click')
@@ -502,16 +502,16 @@ describe('EightStepPane', () => {
     )
   })
 
-  it('swaps both prop color roles when Swap is enabled', async () => {
+  it('restores both original prop color roles when Swap is enabled', async () => {
     const wrapper = mount(EightStepPane)
 
     await wrapper.get<HTMLInputElement>('[data-role="eight-step-swap"]').setValue(true)
 
     const boardStyle = wrapper.get('[data-role="eight-step-board"]').attributes('style')
-    expect(boardStyle).toContain('--eight-step-first-head: rgb(0,255,0)')
-    expect(boardStyle).toContain('--eight-step-first-tether: rgb(0,85,0)')
-    expect(boardStyle).toContain('--eight-step-second-head: rgb(255,165,0)')
-    expect(boardStyle).toContain('--eight-step-second-tether: rgb(85,26,0)')
+    expect(boardStyle).toContain('--eight-step-first-head: rgb(255,165,0)')
+    expect(boardStyle).toContain('--eight-step-first-tether: rgb(85,26,0)')
+    expect(boardStyle).toContain('--eight-step-second-head: rgb(0,255,0)')
+    expect(boardStyle).toContain('--eight-step-second-tether: rgb(0,85,0)')
   })
 
   it('uses and resets the shared concept controls', async () => {
