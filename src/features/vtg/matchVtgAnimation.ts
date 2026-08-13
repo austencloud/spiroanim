@@ -3,7 +3,6 @@ import {
   createVtgAnimationSignature,
   getVtgAnimationScale,
 } from '@/features/vtg/math/createVtgAnimationSignature'
-import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import type {
   VtgCellReference,
   VtgPatternMatch,
@@ -13,10 +12,7 @@ import type {
 } from '@/features/vtg/types'
 import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import { supportsVtgQtrTransition } from '@/features/vtg/types'
-import {
-  doubleAnimationPlayback,
-  doublePlaybackMultiplier,
-} from '@/math/animation/subdivideAnimationPlayback'
+import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import { analyzeAlternatingPatternPlayback } from '@/math/animation/alternatePatternPlayback'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
@@ -66,15 +62,7 @@ const buildCandidateCache = () => {
                   reversePlane,
                   ...(shape === 'box' ? { shape } : undefined),
                 }
-                let shifted = createDefaultVtgAnimation(selection)
-                if (!shifted) continue
-
                 for (const beat of vtgBeats) {
-                  if (beat > 1) {
-                    shifted = shiftVtgStartingBeat(shifted, 2)
-                    if (!shifted) break
-                  }
-
                   const candidate: VtgCandidateMatch = {
                     reference,
                     speedRatio,
@@ -84,9 +72,18 @@ const buildCandidateCache = () => {
                     ...(beat === 1 ? undefined : { beat }),
                     ...(shape === 'box' ? { shape } : undefined),
                   }
-                  addCandidate(candidates, shifted, candidate)
+                  const animation = createDefaultVtgAnimation({
+                    ...selection,
+                    ...(beat === 1 ? undefined : { beat }),
+                  })
+                  if (!animation) continue
+                  addCandidate(candidates, animation, candidate)
 
-                  const doubled = doubleAnimationPlayback(shifted)
+                  const doubled = createDefaultVtgAnimation({
+                    ...selection,
+                    ...(beat === 1 ? undefined : { beat }),
+                    double: true,
+                  })
                   if (doubled) {
                     addCandidate(candidates, doubled, {
                       ...candidate,

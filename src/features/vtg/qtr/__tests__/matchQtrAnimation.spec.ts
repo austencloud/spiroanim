@@ -50,23 +50,25 @@ describe('Qtr animation matching', () => {
     })
   })
 
-  it('recognizes both Qtr modes with and without Swap', () => {
+  it('recognizes both Qtr modes across the final Swap and 180 transforms', () => {
     for (const quarters of [1, 2] as const) {
       for (const swapProps of booleanOptions) {
-        const selection = {
-          reference: '2-1',
-          speedRatio: '1:3',
-          swapProps,
-          quarters,
-        } as const satisfies QtrPatternSelection
+        for (const reversePlane of booleanOptions) {
+          const selection = {
+            reference: '2-1',
+            speedRatio: '1:3',
+            swapProps,
+            reversePlane,
+            quarters,
+          } as const satisfies QtrPatternSelection
 
-        expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
-          ...selection,
-          isAnti: false,
-          reversePlane: false,
-          bpm: 60,
-          scale: 0.8,
-        })
+          expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
+            ...selection,
+            isAnti: false,
+            bpm: 60,
+            scale: 0.8,
+          })
+        }
       }
     }
   })

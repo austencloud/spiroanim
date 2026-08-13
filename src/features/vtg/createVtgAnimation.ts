@@ -12,6 +12,7 @@ import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlay
 import { alternatePatternPlayback } from '@/math/animation/alternatePatternPlayback'
 import { applyPatternPropVisibility } from '@/features/concepts/patternPropVisibility'
 import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
+import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 
 const vtgFrameCount = 5
 
@@ -101,7 +102,8 @@ export const createVtgAnimation = (
     depth: pattern.depth ?? current.depth,
   }
 
-  return applyVtgPlaybackControls(animation, selection)
+  const completed = applyVtgPlaybackControls(animation, selection)
+  return completed ? applyPatternFinalTransforms(completed, selection) : undefined
 }
 
 /**

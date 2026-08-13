@@ -11,6 +11,7 @@ import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { applyPatternPropVisibility } from '@/features/concepts/patternPropVisibility'
 import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
+import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 
 const addPropDefaults = (pattern: EightStepReadableAnimation): EightStepReadableAnimation => ({
   ...pattern,
@@ -60,7 +61,7 @@ export const createEightStepAnimation = (
   }
   const decoded = decodeReadable(mergeWithCurrentAnimation(current, pattern))
 
-  return {
+  const animation = {
     ...rootFinal(decoded),
     camera: [createDefaultCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
     speed: current.speed,
@@ -68,6 +69,8 @@ export const createEightStepAnimation = (
     turns: pattern.turns ?? current.turns,
     depth: pattern.depth ?? current.depth,
   }
+
+  return applyPatternFinalTransforms(animation, selection)
 }
 
 export const createDefaultEightStepAnimation = (

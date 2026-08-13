@@ -21,6 +21,11 @@ Before playback and URL serialization, QST frames remove repeated inherited valu
 zero values using the same sparse-frame rules as the other Concepts. Antipodal Arc values are
 canonicalized to `180` so they remain within the query format's `0-360` range.
 
+QST applies the shared 180° and Swap controls only after the selected catalog pattern and its numeric,
+spacing, visibility, and rendering settings are complete. The 180° transform rotates each completed
+animation track; Swap then exchanges those tracks while keeping the Green and Orange prop slots and
+their settings fixed. Matching generates candidates through this same final transform stage.
+
 When an existing animation matches QST geometry, the shared pattern matcher restores its Swap,
 180°, BPM, Scale, rendering, and prop-visibility controls. The pane opens the matching Breaks,
 Advanced, or Beyond page and highlights the detected pattern without replacing the loaded

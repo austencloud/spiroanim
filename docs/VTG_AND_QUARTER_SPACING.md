@@ -152,9 +152,10 @@ selections. Box rotates each prop's first-frame `arc` by 45 degrees: plane 0 use
 180 uses `-45` so both planes rotate in the same spatial direction. The original first continuation
 arc is made explicit so sparse-frame inheritance cannot carry the Box adjustment into later frames.
 
-The 180° control selects the effective plane before the Box direction is calculated, Swap exchanges the
-complete transformed tracks afterward, and Quarter Spacing applies its Qtr arc offsets after the
-shared VTG shape transform. Previews and compiled-geometry matching include the selected shape.
+Box is calculated from the authored VTG planes. Quarter Spacing then applies its Qtr arc offsets,
+followed by Starting Beat, Double, and the reciprocal transition when selected. The shared 180° and
+Swap controls are applied only to that completed result. Previews and compiled-geometry matching use
+the same final transform order.
 
 Cells `1-1`, `1-2`, `2-1`, `2-2`, `3-3`, `3-4`, `4-3`, and `4-4` have an intentional fixed shape in
 their source patterns. Diamond and Box therefore produce identical animation data for those cells
@@ -167,8 +168,8 @@ adds 90 degrees to the original first animation track's first-frame arc. `Qtr #2
 complete Qtr #1 pattern another 90 degrees using first-frame arc adjustments. Plane 0 receives +90
 degrees and plane 180 receives -90 degrees so both planes rotate in the same spatial direction
 without changing their paths. Arc adjustments wrap within 0-359 degrees. Qtr #1 is the default;
-selecting an active radio again cannot clear it, and Reset returns to Qtr #1. With Swap, the
-adjustments move with their original tracks.
+selecting an active radio again cannot clear it, and Reset returns to Qtr #1. The Qtr adjustments
+remain on their authored tracks until final-stage Swap exchanges the completed tracks.
 
 QTR previews and matching apply the Qtr transform around the shared VTG pattern builder and matcher
 so selected cells and shared options can be recovered when toggling QTR or loading animation data.

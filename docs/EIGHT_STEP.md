@@ -135,22 +135,22 @@ underlying Green/Orange handpaths. All 72 combinations are generated separately.
 The controls are displayed in the order Swap, 180°, Reset. The compact `180°` label means
 "Rotate motion plane 180 degrees."
 
-The 180° control selects the corrected companion-page handpaths stored from Gage's source data. Gage's original
-second-half document placed its four base sheets at pages 9, 10, 11, and 12. Eight Step corrects
-that ordering to base pages 9, 11, 13, and 15, with their opposites at 10, 12, 14, and 16:
+Gage's corrected companion-page handpaths remain the authoritative reference for the 180° results.
+His original second-half document placed its four base sheets at pages 9, 10, 11, and 12. Eight Step
+corrects that ordering to base pages 9, 11, 13, and 15, with their opposites at 10, 12, 14, and 16:
 
 - Pages 1/2, 3/4, 5/6, and 7/8 mirror both handpaths left-to-right.
 - Pages 9/10, 11/12, 13/14, and 15/16 mirror both handpaths left-to-right.
 
-All 16 corrected handpath pages are stored as authoritative runtime data. The 180° control reads the companion
-page and regenerates its complete props, planes, and axes; complete encoded animations are not
-duplicated or stored.
+All 16 corrected handpath pages are stored as authoritative runtime data. After the selected pattern,
+shape, and player behavior are complete, the shared 180° transform rotates the completed tracks. The
+compiled result is validated against the corresponding companion page; complete encoded animations
+are not duplicated or stored.
 
-Swap exchanges the two complete source animation tracks before the standard player prop defaults
-are applied. The animation, initial state, and any Box adjustment travel together. Green and Orange
-remain player prop slots, so Swap also changes which source track receives each slot's defaults.
-The 180° control and Swap are independent operations. In particular, a paired-page Green track is not obtained
-by substituting the source-page Orange track.
+Swap exchanges the two completed animation tracks as the last pattern operation. Animation frames,
+the initial state, and any Box adjustment travel together, while Green and Orange remain fixed player
+prop slots with their own colors, visibility, spacing, and rendering settings. The 180° control and
+Swap are independent operations; 180° never substitutes the other source prop's track.
 
 ## Diamond and Box
 
@@ -165,9 +165,9 @@ spatial directions. This keeps flipped Quarter Aligned and Quarter Opposed props
 It does not modify `turns`. The original first continuation arc is made explicit when Box is built
 so sparse-frame inheritance cannot accidentally carry the adjustment into later frames.
 
-The Box transformation occurs after the source/paired handpath has been chosen by the 180° control
-and before the tracks are exchanged by Swap. It applies to all row families and both props. Selecting Box refreshes
-the row previews and can be recovered by compiled-geometry matching. While Box is selected, a note
+The Box transformation occurs before the shared final 180° and Swap transforms. It applies to all row
+families and both props. Selecting Box refreshes the row previews and can be recovered by
+compiled-geometry matching. While Box is selected, a note
 below the controls explains that the mode is experimental, its patterns have not been validated,
 and Difficult / Impossible Wall-Plane highlighting is disabled.
 

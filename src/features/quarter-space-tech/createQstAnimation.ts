@@ -1,5 +1,6 @@
 import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
 import { applyPatternPropVisibility } from '@/features/concepts/patternPropVisibility'
+import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { toConceptPreviewAnimation } from '@/features/concepts/data/toConceptPreviewAnimation'
 import { buildQstPattern } from '@/features/quarter-space-tech/data/qstPatternCatalog'
 import { analyzeQstPositionPairs } from '@/features/quarter-space-tech/math/analyzeQstAnimation'
@@ -72,7 +73,7 @@ export const createQstAnimation = (
   }
   const decoded = decodeReadable(mergeWithCurrentAnimation(current, pattern))
 
-  return {
+  const animation = {
     ...rootFinal(decoded),
     camera: [createQstCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
     speed: current.speed,
@@ -80,6 +81,8 @@ export const createQstAnimation = (
     turns: pattern.turns ?? current.turns,
     depth: pattern.depth ?? current.depth,
   }
+
+  return applyPatternFinalTransforms(animation, selection)
 }
 
 export const createDefaultQstAnimation = (

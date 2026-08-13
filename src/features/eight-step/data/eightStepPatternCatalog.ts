@@ -1,7 +1,4 @@
-import {
-  createFlippedEightStepProps,
-  getEightStepPatternDefinition,
-} from '@/features/eight-step/data/eightStepPatternDefinitions'
+import { getEightStepPatternDefinition } from '@/features/eight-step/data/eightStepPatternDefinitions'
 import type {
   EightStepPatternSelection,
   EightStepReadableAnimation,
@@ -19,11 +16,8 @@ export const buildEightStepPattern = (
 ): EightStepReadableAnimation | undefined => {
   const definition = getEightStepPatternDefinition(selection.reference)
   if (!definition) return undefined
-  const sourceProps = selection.reversePlane
-    ? createFlippedEightStepProps(definition)
-    : definition.props
 
-  const transformedProps = sourceProps.map((prop) => {
+  const transformedProps = definition.props.map((prop) => {
     const initialArc = prop.anim[0]?.arc ?? 0
     const initialPlane = prop.anim[0]?.plane ?? 0
     const boxArcDelta = Math.abs(initialPlane) === 180 ? -45 : 45
@@ -50,6 +44,6 @@ export const buildEightStepPattern = (
     ...vtgPlayerSettings,
     ...(selection.bpm !== undefined ? { bpm: clampVtgBpm(selection.bpm) } : undefined),
     distance: getVtgDistanceForScale(selection.scale ?? vtgScaleControl.default),
-    props: selection.swapProps ? transformedProps.reverse() : transformedProps,
+    props: transformedProps,
   }
 }

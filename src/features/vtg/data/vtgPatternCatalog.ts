@@ -5,7 +5,6 @@ import {
   toVtgInternalScale,
   vtgScaleControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
-import { reverseAngle } from '@/math/animation/AngleFunc'
 import type {
   VtgCellReference,
   VtgPatternDefinition,
@@ -39,25 +38,19 @@ export const buildVtgPattern = (
   const applyBoxShape = selection.shape === 'box' && !vtgFixedShapeCells.has(selection.reference)
 
   const transformedProps =
-    selection.reversePlane || selection.scale !== undefined || applyBoxShape
+    selection.scale !== undefined || applyBoxShape
       ? pattern.props.map((prop) => {
           const baseFrame = prop.anim[0]
           if (baseFrame === undefined) return prop
 
           const initialArc = baseFrame.arc ?? 0
-          const effectivePlane = selection.reversePlane
-            ? reverseAngle(baseFrame.plane ?? 0)
-            : (baseFrame.plane ?? 0)
-          const boxArcDelta = Math.abs(effectivePlane) === 180 ? -45 : 45
+          const boxArcDelta = Math.abs(baseFrame.plane ?? 0) === 180 ? -45 : 45
           const firstContinuationArc = prop.anim[1]?.arc ?? initialArc
 
           return {
             ...prop,
             anim: prop.anim.map((frame, frameIndex) => ({
               ...frame,
-              ...(frameIndex === 0 && selection.reversePlane
-                ? { plane: effectivePlane }
-                : undefined),
               ...(frameIndex === 0 && applyBoxShape
                 ? { arc: (initialArc + boxArcDelta + 360) % 360 }
                 : undefined),
@@ -74,6 +67,6 @@ export const buildVtgPattern = (
     ...pattern,
     ...(selection.bpm !== undefined ? { bpm: clampVtgBpm(selection.bpm) } : undefined),
     distance: getVtgDistanceForScale(selection.scale ?? vtgScaleControl.default),
-    props: selection.swapProps ? [...transformedProps].reverse() : transformedProps,
+    props: transformedProps,
   }
 }

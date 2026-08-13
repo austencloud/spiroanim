@@ -1,4 +1,3 @@
-import { reverseAngle } from '@/math/animation/AngleFunc'
 import {
   clampVtgBpm,
   getVtgDistanceForScale,
@@ -195,12 +194,6 @@ export const buildQstPattern = (
     const frames = prop.anim.map((frame, frameIndex) => ({
       ...frame,
       ...(frame.arc === undefined ? undefined : { arc: normalizeQstArc(frame.arc) }),
-      ...(selection.reversePlane && frameIndex === 0
-        ? {
-            ...(frame.plane === undefined ? undefined : { plane: reverseAngle(frame.plane) }),
-            ...(frame.axis === undefined ? undefined : { axis: reverseAngle(frame.axis) }),
-          }
-        : undefined),
       ...(frameIndex === 0 && selection.scale !== undefined
         ? { scale: toVtgInternalScale(selection.scale) }
         : undefined),
@@ -213,6 +206,6 @@ export const buildQstPattern = (
     ...vtgPlayerSettings,
     ...(selection.bpm === undefined ? undefined : { bpm: clampVtgBpm(selection.bpm) }),
     distance: getVtgDistanceForScale(selection.scale ?? vtgScaleControl.default),
-    props: selection.swapProps ? transformedProps.reverse() : transformedProps,
+    props: transformedProps,
   }
 }
