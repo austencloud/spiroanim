@@ -14,7 +14,7 @@ import { useBaseQS } from '@/services/query/createBaseQS'
 import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv5'
 
 describe('alternatePatternPlayback', () => {
-  it('reproduces the alternating 1:3 QTR/VTG transition sequence', () => {
+  it('transitions both props together four times by default', () => {
     const base = createDefaultQtrAnimation({
       reference: '1-1',
       speedRatio: '1:3',
@@ -26,13 +26,15 @@ describe('alternatePatternPlayback', () => {
     const animation = alternatePatternPlayback(base)
     if (!animation) throw new Error('Expected alternating animation')
 
-    expect(animation.props.map((prop) => prop.anim.length)).toEqual([25, 25])
-    expect(animation.props[0]!.anim[6]).toEqual({ turns: 90, plane: 180 })
-    expect(animation.props[1]!.anim[12]).toEqual({ turns: 90, plane: 180 })
-    expect(animation.props[0]!.anim[18]).toEqual({ turns: -180, plane: 180 })
-    expect(animation.props[1]!.anim[24]).toEqual({ turns: -180, plane: 180 })
-    expect(animation.props[1]!.anim[6]).toEqual({})
-    expect(animation.props[0]!.anim[12]).toEqual({})
+    expect(animation.props.map((prop) => prop.anim.length)).toEqual([33, 33])
+    expect(animation.props[0]!.anim[8]).toEqual({ turns: 90, plane: 180 })
+    expect(animation.props[1]!.anim[8]).toEqual({ turns: 90, plane: 180 })
+    expect(animation.props[0]!.anim[16]).toEqual({ turns: -180, plane: 180 })
+    expect(animation.props[1]!.anim[16]).toEqual({ turns: -180, plane: 180 })
+    expect(animation.props[0]!.anim[24]).toEqual({ turns: 90, plane: 180 })
+    expect(animation.props[1]!.anim[24]).toEqual({ turns: 90, plane: 180 })
+    expect(animation.props[0]!.anim[32]).toEqual({ turns: -180, plane: 180 })
+    expect(animation.props[1]!.anim[32]).toEqual({ turns: -180, plane: 180 })
   })
 
   it.each(vtgSpeedRatios)('derives valid alternating turns for %s', (speedRatio) => {
@@ -71,13 +73,40 @@ describe('alternatePatternPlayback', () => {
       if (!animation) throw new Error('Expected alternating animation')
 
       expect(animation.props.map((prop) => prop.anim.length)).toEqual([frameCount, frameCount])
-      for (const [changeIndex, frameIndex] of changeFrames.entries()) {
-        const propIndex = changeIndex % 2
-        expect(animation.props[propIndex]?.anim[frameIndex]).toMatchObject({ plane: 180 })
+      for (const frameIndex of changeFrames) {
+        expect(animation.props[0]?.anim[frameIndex]).toMatchObject({ plane: 180 })
+        expect(animation.props[1]?.anim[frameIndex]).toMatchObject({ plane: 180 })
       }
-      expect(analyzeAlternatingPatternPlayback(animation)).toEqual({ base, transitionBeats })
+      expect(analyzeAlternatingPatternPlayback(animation)).toEqual({
+        base,
+        transitionBeats,
+        transitionQuad: false,
+        transitionSecond: false,
+      })
     },
   )
+
+  it('uses Quad to alternate four changes starting with the selected prop', () => {
+    const base = createDefaultQtrAnimation({
+      reference: '1-1',
+      speedRatio: '1:3',
+      quarters: 1,
+      double: true,
+    })
+    if (!base) throw new Error('Expected doubled QTR animation')
+
+    const animation = alternatePatternPlayback(base, 3, 1, true)
+    if (!animation) throw new Error('Expected alternating animation')
+
+    expect(animation.props[0]!.anim[6]).toEqual({})
+    expect(animation.props[1]!.anim[6]).toMatchObject({ plane: 180 })
+    expect(analyzeAlternatingPatternPlayback(animation)).toEqual({
+      base,
+      transitionBeats: 3,
+      transitionQuad: true,
+      transitionSecond: true,
+    })
+  })
 
   it('recovers no base from an ordinary doubled cycle', () => {
     const base = createDefaultQtrAnimation({
@@ -116,6 +145,7 @@ describe('alternatePatternPlayback', () => {
       quarters: 1,
       transition: true,
       transitionBeats: 5,
+      transitionQuad: true,
     })
     if (!generated) throw new Error('Expected generated transition')
     expect(createVtgAnimationSignature(generated)).toBe(createVtgAnimationSignature(animation))

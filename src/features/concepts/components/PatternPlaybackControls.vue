@@ -66,6 +66,8 @@
         </button>
       </template>
     </AppTooltip>
+
+    <slot name="after-transition" />
   </fieldset>
 </template>
 

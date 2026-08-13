@@ -153,6 +153,8 @@ export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPat
       ...match,
       transition: true,
       transitionBeats: alternating.transitionBeats,
+      ...(alternating.transitionQuad ? { transitionQuad: true } : undefined),
+      ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
     }))
 }
 

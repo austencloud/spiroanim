@@ -41,6 +41,22 @@ describe('VTG animation matching', () => {
     })
   })
 
+  it('detects when the reciprocal transition starts with the second prop after Swap', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      swapProps: true,
+      transition: true,
+      transitionQuad: true,
+      transitionSecond: true,
+    } as const satisfies VtgPatternSelection
+
+    expect(findVtgPatternMatch(createAnimation(selection))).toMatchObject({
+      ...selection,
+      double: true,
+    })
+  })
+
   it('recognizes every generated transform among its supported matches', () => {
     for (const column of ruleNumbers) {
       for (const row of ruleNumbers) {

@@ -199,25 +199,59 @@
           <template #before-controls>
             <PatternShapeControls v-model:shape="shape" />
           </template>
+          <template #after-transition>
+            <AppTooltip
+              v-if="transition && transitionAvailable"
+              text="Choose the beat interval between 45-degree transitions"
+            >
+              <template #activator="{ props: activatorProps }">
+                <label v-bind="activatorProps" class="vtg-transition-beats">
+                  <span class="vtg-pane__visually-hidden">45 degree transition beats</span>
+                  <select
+                    v-model.number="transitionBeats"
+                    aria-label="Choose the beat interval between 45-degree transitions"
+                    data-role="vtg-transition-beats"
+                  >
+                    <option v-for="option in vtgTransitionBeats" :key="option" :value="option">
+                      {{ option }}
+                    </option>
+                  </select>
+                </label>
+              </template>
+            </AppTooltip>
+          </template>
         </PatternPlaybackControls>
       </template>
       <template #after-controls>
         <AppTooltip
           v-if="transition && transitionAvailable"
-          text="Choose the beat on which the 45-degree transition occurs"
+          text="Transition one prop at a time for four total changes"
         >
           <template #activator="{ props: activatorProps }">
-            <label v-bind="activatorProps" class="vtg-transition-beats">
-              <span class="vtg-pane__visually-hidden">45 degree transition beats</span>
-              <select
-                v-model.number="transitionBeats"
-                aria-label="Choose the beat on which the 45-degree transition occurs"
-                data-role="vtg-transition-beats"
-              >
-                <option v-for="option in vtgTransitionBeats" :key="option" :value="option">
-                  {{ option }}
-                </option>
-              </select>
+            <label v-bind="activatorProps" class="vtg-transition-option">
+              <input
+                v-model="transitionQuad"
+                type="checkbox"
+                aria-label="Transition one prop at a time for four total changes"
+                data-role="vtg-transition-quad"
+              />
+              <span>Quad</span>
+            </label>
+          </template>
+        </AppTooltip>
+        <AppTooltip
+          v-if="transition && transitionAvailable && transitionQuad"
+          text="Start the 45-degree transition with the second prop"
+        >
+          <template #activator="{ props: activatorProps }">
+            <label v-bind="activatorProps" class="vtg-transition-option">
+              <input
+                v-model="transitionSecond"
+                type="checkbox"
+                aria-label="Start the 45-degree transition with the second prop"
+                data-role="vtg-transition-second"
+              />
+              <span>Second</span>
             </label>
           </template>
         </AppTooltip>
@@ -335,6 +369,8 @@ const beat = ref<VtgBeat>(1)
 const double = ref(false)
 const transition = ref(false)
 const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
+const transitionQuad = ref(false)
+const transitionSecond = ref(false)
 const transitionAvailable = computed(() => supportsVtgQtrTransition(speedRatio.value))
 const activeQtrMode = computed<1 | false>(() => (isQtr.value ? 1 : false))
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
@@ -435,6 +471,17 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   ) {
     baseSelection.transitionBeats = transitionBeats.value
   }
+  if (transition.value && transitionAvailable.value && transitionQuad.value) {
+    baseSelection.transitionQuad = true
+  }
+  if (
+    transition.value &&
+    transitionAvailable.value &&
+    transitionQuad.value &&
+    transitionSecond.value
+  ) {
+    baseSelection.transitionSecond = true
+  }
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) baseSelection.scale = scale.value
   if (thick.value !== vtgThickControl.default) baseSelection.thick = thick.value
@@ -512,6 +559,8 @@ const resetPatternControls = async () => {
   beat.value = 1
   double.value = false
   transition.value = false
+  transitionQuad.value = false
+  transitionSecond.value = false
   await nextTick()
   suppressPatternEmit = false
   if (tile !== undefined) emitPatternSelection(tile)
@@ -527,6 +576,8 @@ watch(
     double,
     transition,
     transitionBeats,
+    transitionQuad,
+    transitionSecond,
     bpm,
     scale,
     thick,
@@ -599,6 +650,8 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     double.value = match.double ?? false
     transition.value = match.transition ?? false
     transitionBeats.value = match.transitionBeats ?? vtgDefaultTransitionBeats
+    transitionQuad.value = match.transitionQuad ?? false
+    transitionSecond.value = match.transitionSecond ?? false
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
@@ -617,6 +670,8 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     double.value = false
     transition.value = false
     transitionBeats.value = vtgDefaultTransitionBeats
+    transitionQuad.value = false
+    transitionSecond.value = false
   }
 
   // Suppression only protects the control writes above through their watcher flush. A newer
@@ -638,6 +693,8 @@ const selectInitialRandomPattern = () => {
   double.value = false
   transition.value = false
   transitionBeats.value = vtgDefaultTransitionBeats
+  transitionQuad.value = false
+  transitionSecond.value = false
   selectRandomTile()
 
   void nextTick(() => {
@@ -1008,6 +1065,43 @@ defineExpose({
 }
 
 .vtg-transition-beats select:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+.vtg-transition-option {
+  position: relative;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.vtg-transition-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.vtg-transition-option span {
+  display: grid;
+  padding-block: var(--space-1);
+  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
+  color: var(--color-text);
+  font-size: clamp(0.625rem, 3cqi, 0.875rem);
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.vtg-transition-option input:checked + span {
+  color: var(--color-on-action-primary);
+  background: var(--color-transition-mode-active);
+  border-color: var(--color-transition-mode-active-border);
+}
+
+.vtg-transition-option input:focus-visible + span {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }

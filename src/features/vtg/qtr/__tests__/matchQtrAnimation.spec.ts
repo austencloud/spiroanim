@@ -33,6 +33,23 @@ describe('Qtr animation matching', () => {
     })
   })
 
+  it('detects when the reciprocal transition starts with the second prop after Swap', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      quarters: 1,
+      swapProps: true,
+      transition: true,
+      transitionQuad: true,
+      transitionSecond: true,
+    } as const satisfies QtrPatternSelection
+
+    expect(findQtrPatternMatch(createQtrAnimation(selection))).toMatchObject({
+      ...selection,
+      double: true,
+    })
+  })
+
   it('recognizes the Qtr transform', () => {
     const selection = {
       reference: '3-4',

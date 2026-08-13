@@ -165,7 +165,12 @@ export const findQtrPatternMatches = (animation: RootDataFinal): readonly QtrPat
     .map((candidate) => ({
       ...candidate,
       ...(alternating
-        ? { transition: true, transitionBeats: alternating.transitionBeats }
+        ? {
+            transition: true,
+            transitionBeats: alternating.transitionBeats,
+            ...(alternating.transitionQuad ? { transitionQuad: true } : undefined),
+            ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
+          }
         : undefined),
       bpm: candidate.double ? animation.bpm / doublePlaybackMultiplier : animation.bpm,
       scale,

@@ -124,7 +124,11 @@ describe('eightStepPatternDefinitions', () => {
       reference: (typeof eightStepPatternDefinitions)[number]['reference'],
       propIndex: 0 | 1,
     ) => {
-      const animation = createDefaultEightStepAnimation({ concept: '8stp', reference })
+      const animation = createDefaultEightStepAnimation({
+        concept: '8stp',
+        reference,
+        swapProps: true,
+      })
       return animation
         ? rootCompile(animation)
             .props[propIndex]!.anim.slice(1, 4)
@@ -164,6 +168,7 @@ describe('eightStepPatternDefinitions', () => {
       const animation = createDefaultEightStepAnimation({
         concept: '8stp',
         reference: definition.reference,
+        swapProps: true,
       })
       expect(animation).toBeDefined()
       if (!animation) continue
@@ -206,6 +211,7 @@ describe('eightStepPatternDefinitions', () => {
       const animation = createDefaultEightStepAnimation({
         concept: '8stp',
         reference: definition.reference,
+        swapProps: true,
         reversePlane: true,
       })
       expect(animation).toBeDefined()

@@ -13,6 +13,8 @@ export const describePatternSelectionRelationships = (selection: MatrixPatternSe
     double: _double,
     transition: _transition,
     transitionBeats: _transitionBeats,
+    transitionQuad: _transitionQuad,
+    transitionSecond: _transitionSecond,
     ...semanticSelection
   } = selection
   const animation =
