@@ -7,6 +7,7 @@ import {
 import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
+import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 
 const normalizeArc = (arc: number): number => ((arc % 360) + 360) % 360
 const propIndices = [0, 1] as const
@@ -79,6 +80,32 @@ const withoutFinalTransforms = ({
   ...selection
 }: QtrPatternSelection): QtrPatternSelection => selection
 
+// Qtr #2 remains accepted for legacy callers, while the current UI always emits Qtr #1 and uses
+// the shared 180 control to select the alternate face-on orientation.
+const getSelectedQtrMode = (selection: QtrPatternSelection): QtrMode => {
+  const appliesBoxShape = selection.shape === 'box' && !vtgFixedShapeCells.has(selection.reference)
+  return selection.reversePlane && !appliesBoxShape ? 2 : selection.quarters
+}
+
+const applyQtrFinalTransforms = (
+  animation: RootDataFinal,
+  selection: QtrPatternSelection,
+): RootDataFinal => applyPatternFinalTransforms(animation, selection)
+
+/** Builds the concept-specific QTR state before playback and shared final transforms. */
+export const createDefaultQtrBaseAnimation = (
+  selection: QtrPatternSelection,
+): RootDataFinal | undefined => {
+  const animation = createDefaultVtgAnimation({
+    ...withoutFinalTransforms(selection),
+    beat: 1,
+    double: false,
+    transition: false,
+  })
+
+  return animation ? transformQtrAnimation(animation, getSelectedQtrMode(selection), 1) : undefined
+}
+
 export const createQtrAnimation = (
   current: RootDataFinal,
   selection: QtrPatternSelection,
@@ -92,28 +119,20 @@ export const createQtrAnimation = (
   if (!animation) return undefined
 
   const completed = applyVtgPlaybackControls(
-    transformQtrAnimation(animation, selection.quarters, 1),
+    transformQtrAnimation(animation, getSelectedQtrMode(selection), 1),
     selection,
   )
-  return completed ? applyPatternFinalTransforms(completed, selection) : undefined
+  return completed ? applyQtrFinalTransforms(completed, selection) : undefined
 }
 
 export const createDefaultQtrAnimation = (
   selection: QtrPatternSelection,
 ): RootDataFinal | undefined => {
-  const animation = createDefaultVtgAnimation({
-    ...withoutFinalTransforms(selection),
-    beat: 1,
-    double: false,
-    transition: false,
-  })
-  if (!animation) return undefined
+  const base = createDefaultQtrBaseAnimation(selection)
+  if (!base) return undefined
 
-  const completed = applyVtgPlaybackControls(
-    transformQtrAnimation(animation, selection.quarters, 1),
-    selection,
-  )
-  return completed ? applyPatternFinalTransforms(completed, selection) : undefined
+  const completed = applyVtgPlaybackControls(base, selection)
+  return completed ? applyQtrFinalTransforms(completed, selection) : undefined
 }
 
 export const createQtrPreviewAnimation = (

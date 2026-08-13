@@ -12,38 +12,53 @@
       class="qst-pagination__row"
       data-role="qst-pagination-row"
     >
-      <button
-        v-if="rowIndex === 0"
-        type="button"
-        aria-label="Previous page"
-        data-role="qst-page-previous"
-        :disabled="pageIndex === 0"
-        @click="emit('change', pageIndex - 1)"
-      >
-        <BaseIcon :path="mdiChevronLeft" :size="20" />
-      </button>
-      <button
+      <AppTooltip v-if="rowIndex === 0" text="Previous page">
+        <template #activator="{ props: activatorProps }">
+          <button
+            v-bind="activatorProps"
+            type="button"
+            aria-label="Previous page"
+            data-role="qst-page-previous"
+            :disabled="pageIndex === 0"
+            @click="emit('change', pageIndex - 1)"
+          >
+            <BaseIcon :path="mdiChevronLeft" :size="20" />
+          </button>
+        </template>
+      </AppTooltip>
+      <AppTooltip
         v-for="pageNumber in pageGroup"
         :key="pageNumber"
-        type="button"
-        :aria-label="`Page ${pageNumber}`"
-        :aria-current="pageNumber - 1 === pageIndex ? 'page' : undefined"
-        :data-page="pageNumber"
-        data-role="qst-page"
-        @click="emit('change', pageNumber - 1)"
+        :text="`Go to page ${pageNumber}`"
       >
-        {{ pageNumber }}
-      </button>
-      <button
-        v-if="rowIndex === pageGroups.length - 1"
-        type="button"
-        aria-label="Next page"
-        data-role="qst-page-next"
-        :disabled="pageIndex === pageCount - 1"
-        @click="emit('change', pageIndex + 1)"
-      >
-        <BaseIcon :path="mdiChevronRight" :size="20" />
-      </button>
+        <template #activator="{ props: activatorProps }">
+          <button
+            v-bind="activatorProps"
+            type="button"
+            :aria-label="`Page ${pageNumber}`"
+            :aria-current="pageNumber - 1 === pageIndex ? 'page' : undefined"
+            :data-page="pageNumber"
+            data-role="qst-page"
+            @click="emit('change', pageNumber - 1)"
+          >
+            {{ pageNumber }}
+          </button>
+        </template>
+      </AppTooltip>
+      <AppTooltip v-if="rowIndex === pageGroups.length - 1" text="Next page">
+        <template #activator="{ props: activatorProps }">
+          <button
+            v-bind="activatorProps"
+            type="button"
+            aria-label="Next page"
+            data-role="qst-page-next"
+            :disabled="pageIndex === pageCount - 1"
+            @click="emit('change', pageIndex + 1)"
+          >
+            <BaseIcon :path="mdiChevronRight" :size="20" />
+          </button>
+        </template>
+      </AppTooltip>
     </div>
   </nav>
 </template>
@@ -52,6 +67,7 @@
 import { mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import AppTooltip from '@/components/AppTooltip.vue'
 
 const props = defineProps<{
   pageCount: number

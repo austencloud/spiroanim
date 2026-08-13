@@ -1,31 +1,62 @@
 <template>
   <fieldset class="concept-pattern-options vtg-pattern-options">
     <legend class="concept-controls__visually-hidden">Pattern options</legend>
-    <label>
-      <input v-model="swapProps" type="checkbox" :data-role="`${rolePrefix}-swap`" />
-      <span>Swap</span>
-    </label>
-    <label title="Rotate motion plane 180 degrees">
-      <input
-        v-model="reversePlane"
-        type="checkbox"
-        aria-label="Rotate motion plane 180 degrees"
-        :data-role="`${rolePrefix}-reverse`"
-      />
-      <span aria-hidden="true">180°</span>
-    </label>
-    <button type="button" :data-role="`${rolePrefix}-reset`" @click="emit('reset')">Reset</button>
+    <AppTooltip text="Exchange the completed left and right animation tracks">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps">
+          <input
+            v-model="swapProps"
+            type="checkbox"
+            aria-label="Exchange the completed left and right animation tracks"
+            :data-role="`${rolePrefix}-swap`"
+          />
+          <span>Swap</span>
+        </label>
+      </template>
+    </AppTooltip>
+    <AppTooltip :text="reverseDescription">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps">
+          <input
+            v-model="reversePlane"
+            type="checkbox"
+            :aria-label="reverseDescription"
+            :data-role="`${rolePrefix}-reverse`"
+          />
+          <span aria-hidden="true">{{ reverseLabel }}</span>
+        </label>
+      </template>
+    </AppTooltip>
+    <AppTooltip text="Reset the pattern and its controls">
+      <template #activator="{ props: activatorProps }">
+        <button
+          v-bind="activatorProps"
+          type="button"
+          :data-role="`${rolePrefix}-reset`"
+          @click="emit('reset')"
+        >
+          Reset
+        </button>
+      </template>
+    </AppTooltip>
   </fieldset>
 </template>
 
 <script setup lang="ts">
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import AppTooltip from '@/components/AppTooltip.vue'
 
 withDefaults(
   defineProps<{
     rolePrefix?: string
+    reverseLabel?: string
+    reverseDescription?: string
   }>(),
-  { rolePrefix: 'vtg' },
+  {
+    rolePrefix: 'vtg',
+    reverseLabel: '180°',
+    reverseDescription: 'Rotate motion plane 180 degrees',
+  },
 )
 
 const emit = defineEmits<{
@@ -58,7 +89,7 @@ const { swapProps, reversePlane } = storeToRefs(useConceptsStore())
   opacity: 0;
 }
 
-.concept-pattern-options span,
+.concept-pattern-options label > span,
 .concept-pattern-options button {
   display: grid;
   padding: var(--space-2);

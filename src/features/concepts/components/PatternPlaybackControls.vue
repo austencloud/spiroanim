@@ -4,50 +4,73 @@
 
     <slot name="before-controls" />
 
-    <label class="pattern-playback-controls__qtr">
-      <input v-model="qtr" type="checkbox" :data-role="`${concept}-qtr`" />
-      <span>QTR</span>
-    </label>
+    <AppTooltip text="Use Quarter Spacing relationships">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps" class="pattern-playback-controls__qtr">
+          <input
+            v-model="qtr"
+            type="checkbox"
+            aria-label="Use Quarter Spacing relationships"
+            :data-role="`${concept}-qtr`"
+          />
+          <span>QTR</span>
+        </label>
+      </template>
+    </AppTooltip>
 
     <div class="pattern-playback-controls__beats" role="radiogroup" aria-label="Starting beat">
-      <label v-for="option in vtgBeats" :key="option">
-        <input
-          v-model="beat"
-          type="radio"
-          :name="`${concept}-beat`"
-          :value="option"
-          :data-role="`${concept}-beat-${option}`"
-        />
-        <span>{{ option }}</span>
-      </label>
+      <AppTooltip v-for="option in vtgBeats" :key="option" :text="`Start on beat ${option}`">
+        <template #activator="{ props: activatorProps }">
+          <label v-bind="activatorProps">
+            <input
+              v-model="beat"
+              type="radio"
+              :name="`${concept}-beat`"
+              :value="option"
+              :aria-label="`Start on beat ${option}`"
+              :data-role="`${concept}-beat-${option}`"
+            />
+            <span>{{ option }}</span>
+          </label>
+        </template>
+      </AppTooltip>
     </div>
 
-    <button
-      v-if="showDouble"
-      type="button"
-      :class="{ 'pattern-playback-controls__button--active': double }"
-      :aria-pressed="double"
-      :data-role="`${concept}-double`"
-      @click="toggleDouble"
-    >
-      Double
-    </button>
+    <AppTooltip v-if="showDouble" text="Subdivide every authored frame interval">
+      <template #activator="{ props: activatorProps }">
+        <button
+          v-bind="activatorProps"
+          type="button"
+          :class="{ 'pattern-playback-controls__button--active': double }"
+          :aria-pressed="double"
+          :data-role="`${concept}-double`"
+          @click="toggleDouble"
+        >
+          Double
+        </button>
+      </template>
+    </AppTooltip>
 
-    <button
-      v-if="transitionAvailable"
-      type="button"
-      class="pattern-playback-controls__transition"
-      :class="{ 'pattern-playback-controls__button--active': transition }"
-      :aria-pressed="transition"
-      :data-role="`${concept}-transition`"
-      @click="toggleTransition"
-    >
-      45° Trans'
-    </button>
+    <AppTooltip v-if="transitionAvailable" text="Apply the reciprocal 45-degree transition">
+      <template #activator="{ props: activatorProps }">
+        <button
+          v-bind="activatorProps"
+          type="button"
+          class="pattern-playback-controls__transition"
+          :class="{ 'pattern-playback-controls__button--active': transition }"
+          :aria-pressed="transition"
+          :data-role="`${concept}-transition`"
+          @click="toggleTransition"
+        >
+          45° Trans'
+        </button>
+      </template>
+    </AppTooltip>
   </fieldset>
 </template>
 
 <script setup lang="ts">
+import AppTooltip from '@/components/AppTooltip.vue'
 import { vtgBeats } from '@/features/vtg/types'
 import type { VtgBeat } from '@/features/vtg/types'
 
@@ -118,8 +141,8 @@ const toggleTransition = () => {
   opacity: 0;
 }
 
-.pattern-playback-controls__beats span,
-.pattern-playback-controls__qtr span,
+.pattern-playback-controls__beats label > span,
+.pattern-playback-controls__qtr > span,
 .pattern-playback-controls button {
   display: grid;
   min-width: 2rem;

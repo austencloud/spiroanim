@@ -50,25 +50,23 @@ describe('Qtr animation matching', () => {
     })
   })
 
-  it('recognizes both Qtr modes across the final Swap and 180 transforms', () => {
-    for (const quarters of [1, 2] as const) {
-      for (const swapProps of booleanOptions) {
-        for (const reversePlane of booleanOptions) {
-          const selection = {
-            reference: '2-1',
-            speedRatio: '1:3',
-            swapProps,
-            reversePlane,
-            quarters,
-          } as const satisfies QtrPatternSelection
+  it('recognizes both Qtr orientations across the final Swap transform', () => {
+    for (const swapProps of booleanOptions) {
+      for (const reversePlane of booleanOptions) {
+        const selection = {
+          reference: '2-1',
+          speedRatio: '1:3',
+          swapProps,
+          reversePlane,
+          quarters: 1,
+        } as const satisfies QtrPatternSelection
 
-          expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
-            ...selection,
-            isAnti: false,
-            bpm: 60,
-            scale: 0.8,
-          })
-        }
+        expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
+          ...selection,
+          isAnti: false,
+          bpm: 60,
+          scale: 0.8,
+        })
       }
     }
   })
@@ -80,7 +78,7 @@ describe('Qtr animation matching', () => {
       isAnti: true,
       swapProps: true,
       reversePlane: true,
-      quarters: 2,
+      quarters: 1,
       bpm: 101,
       scale: 1.2,
     } as const satisfies QtrPatternSelection
@@ -95,7 +93,8 @@ describe('Qtr animation matching', () => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:3',
-      quarters: 2,
+      quarters: 1,
+      reversePlane: true,
       shape: 'box',
     } as const satisfies QtrPatternSelection
 
@@ -103,7 +102,6 @@ describe('Qtr animation matching', () => {
       ...selection,
       isAnti: false,
       swapProps: false,
-      reversePlane: false,
       bpm: 60,
       scale: 0.8,
     })
@@ -113,7 +111,8 @@ describe('Qtr animation matching', () => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:3',
-      quarters: 2,
+      quarters: 1,
+      reversePlane: true,
       beat: 4,
       double: true,
       bpm: 79,
@@ -123,7 +122,6 @@ describe('Qtr animation matching', () => {
       ...selection,
       isAnti: false,
       swapProps: false,
-      reversePlane: false,
       scale: 0.8,
     })
   })
@@ -181,7 +179,6 @@ describe('Qtr animation matching', () => {
       const animation = createQtrAnimation({ ...selection, transitionBeats: 5 })
       const matches = findQtrPatternMatches(animation)
       const preferenceDifference = (match: (typeof matches)[number]) =>
-        Number(match.quarters !== preferences.quarters) +
         Number(match.swapProps !== preferences.swapProps) +
         Number(match.reversePlane !== preferences.reversePlane)
       const lowestPreferenceDifference = Math.min(...matches.map(preferenceDifference))
@@ -201,7 +198,8 @@ describe('Qtr animation matching', () => {
       const selection = {
         reference,
         speedRatio: '1:3',
-        quarters: 2,
+        quarters: 1,
+        reversePlane: true,
       } as const satisfies QtrPatternSelection
 
       expect(createQtrAnimation({ ...selection, shape: 'box' })).toEqual(

@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 
 import { getQtrSidePropStates } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import type { VtgRuleNumber } from '@/features/vtg/types'
+import type { PatternShape } from '@/types/PatternTypes'
 
 const getStates = (
   row: VtgRuleNumber,
   options: {
     swapProps?: boolean
     reversePlane?: boolean
+    shape?: PatternShape
   } = {},
 ) =>
   getQtrSidePropStates({
@@ -15,7 +17,15 @@ const getStates = (
     speedRatio: '1:3',
     swapProps: options.swapProps ?? false,
     reversePlane: options.reversePlane ?? false,
+    ...(options.shape === 'box' ? { shape: options.shape } : {}),
   })
+
+it('keeps an applied Box shape on its base orientation when 180 reverses its planes', () => {
+  expect(getStates(5, { shape: 'box', reversePlane: true })).toEqual([
+    { position: 'top', facing: 'out' },
+    { position: 'right', facing: 'in' },
+  ])
+})
 
 describe('Quarters side-header prop states', () => {
   it.each([
@@ -71,8 +81,8 @@ describe('Quarters side-header prop states', () => {
       { position: 'top', facing: 'out' },
     ])
     expect(getStates(1, { reversePlane: true })).toEqual([
-      { position: 'top', facing: 'out' },
       { position: 'left', facing: 'out' },
+      { position: 'bottom', facing: 'out' },
     ])
   })
 

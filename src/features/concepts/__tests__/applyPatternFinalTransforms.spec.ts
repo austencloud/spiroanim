@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
+import {
+  createFinalTransformedVtgAnimationSignature,
+  createVtgAnimationSignature,
+} from '@/features/vtg/math/createVtgAnimationSignature'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import type { RootData } from '@/types/AnimTypes'
 
@@ -55,5 +59,19 @@ describe('applyPatternFinalTransforms', () => {
       [{ arc: 90 }, { turns: 180 }],
       [{ arc: 45, plane: 180, axis: -90 }, { turns: -180 }],
     ])
+  })
+
+  it('can derive final-transform signatures without cloning the animation', () => {
+    const source = createAnimation()
+
+    for (const swapProps of [false, true]) {
+      for (const reversePlane of [false, true]) {
+        const transforms = { swapProps, reversePlane }
+
+        expect(createFinalTransformedVtgAnimationSignature(source, transforms)).toBe(
+          createVtgAnimationSignature(applyPatternFinalTransforms(source, transforms)),
+        )
+      }
+    }
   })
 })

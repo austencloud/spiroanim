@@ -17,25 +17,33 @@
       </header>
 
       <div class="qst-collection-grid">
-        <button
+        <AppTooltip
           v-for="(collection, index) in qstCollections"
           :key="collection.key"
-          type="button"
-          class="qst-collection-card"
-          :class="`qst-collection-card--${collection.key}`"
-          :data-collection="collection.key"
-          data-role="qst-collection"
-          @click="openCollection(collection)"
+          class="qst-collection-tooltip"
+          :text="`Open ${collection.title}`"
         >
-          <span class="qst-collection-card__index" aria-hidden="true">0{{ index + 1 }}</span>
-          <span class="qst-collection-card__level">{{ collection.level }}</span>
-          <strong>{{ collection.title }}</strong>
-          <span class="qst-collection-card__description">{{ collection.description }}</span>
-          <span class="qst-collection-card__footer">
-            {{ getQstCollectionPatternCount(collection) }} patterns
-            <span aria-hidden="true">-&gt;</span>
-          </span>
-        </button>
+          <template #activator="{ props: activatorProps }">
+            <button
+              v-bind="activatorProps"
+              type="button"
+              class="qst-collection-card"
+              :class="`qst-collection-card--${collection.key}`"
+              :data-collection="collection.key"
+              data-role="qst-collection"
+              @click="openCollection(collection)"
+            >
+              <span class="qst-collection-card__index" aria-hidden="true">0{{ index + 1 }}</span>
+              <span class="qst-collection-card__level">{{ collection.level }}</span>
+              <strong>{{ collection.title }}</strong>
+              <span class="qst-collection-card__description">{{ collection.description }}</span>
+              <span class="qst-collection-card__footer">
+                {{ getQstCollectionPatternCount(collection) }} patterns
+                <span aria-hidden="true">-&gt;</span>
+              </span>
+            </button>
+          </template>
+        </AppTooltip>
       </div>
 
       <aside class="qst-label-guide" data-role="qst-label-guide">
@@ -133,15 +141,20 @@
 
     <div v-else class="qst-library" data-role="qst-library">
       <header class="qst-library__header" data-role="qst-library-header">
-        <button
-          type="button"
-          class="qst-library__back"
-          data-role="qst-back"
-          @click="closeCollection"
-        >
-          <BaseIcon :path="mdiArrowLeft" :size="18" />
-          Libraries
-        </button>
+        <AppTooltip text="Return to the QST libraries">
+          <template #activator="{ props: activatorProps }">
+            <button
+              v-bind="activatorProps"
+              type="button"
+              class="qst-library__back"
+              data-role="qst-back"
+              @click="closeCollection"
+            >
+              <BaseIcon :path="mdiArrowLeft" :size="18" />
+              Libraries
+            </button>
+          </template>
+        </AppTooltip>
         <div>
           <span>{{ selectedCollection.level }}</span>
           <h2>{{ selectedCollection.title }}</h2>
@@ -187,6 +200,7 @@ import { mdiArrowLeft } from '@mdi/js'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
+import AppTooltip from '@/components/AppTooltip.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
@@ -702,6 +716,15 @@ defineExpose({
     transform var(--transition-fast),
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
+}
+
+.qst-collection-tooltip {
+  display: flex;
+  min-width: 0;
+}
+
+.qst-collection-tooltip > .qst-collection-card {
+  width: 100%;
 }
 
 .qst-collection-card--advanced {

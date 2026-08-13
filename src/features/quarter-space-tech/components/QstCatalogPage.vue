@@ -8,13 +8,18 @@
       :data-pattern-reference="entry.pattern.reference"
       data-role="qst-pattern-card"
     >
-      <button
-        type="button"
-        class="qst-pattern-card__select"
-        :aria-label="`Load ${entry.pattern.caption}`"
-        :aria-pressed="entry.pattern.reference === selectedReference"
-        @click="emit('select', entry.pattern)"
-      />
+      <AppTooltip class="qst-pattern-card__tooltip" :text="`Load ${entry.pattern.caption}`">
+        <template #activator="{ props: activatorProps }">
+          <button
+            v-bind="activatorProps"
+            type="button"
+            class="qst-pattern-card__select"
+            :aria-label="`Load ${entry.pattern.caption}`"
+            :aria-pressed="entry.pattern.reference === selectedReference"
+            @click="emit('select', entry.pattern)"
+          />
+        </template>
+      </AppTooltip>
       <QstPatternTitle :caption="entry.pattern.caption" />
 
       <div
@@ -46,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import AppTooltip from '@/components/AppTooltip.vue'
 import QstPositionTile from '@/features/quarter-space-tech/components/QstPositionTile.vue'
 import QstPatternTitle from '@/features/quarter-space-tech/components/QstPatternTitle.vue'
 import { useConceptPreviewRenderer } from '@/features/concepts/composables/useConceptPreviewRenderer'
@@ -208,6 +214,11 @@ onBeforeUnmount(() => previewObserver?.disconnect())
   background: transparent;
   border: 0;
   border-radius: inherit;
+}
+
+.qst-pattern-card__tooltip.tooltip-root {
+  position: absolute;
+  inset: 0;
 }
 
 .qst-pattern-card__select:focus-visible {

@@ -1,21 +1,27 @@
 <template>
   <section class="pattern-shape-controls" :data-role="`${rolePrefix}-shape-controls`">
     <div class="pattern-shape-controls__group" role="radiogroup" aria-label="Pattern shape">
-      <label v-for="option in patternShapes" :key="option">
-        <input
-          v-model="shape"
-          type="radio"
-          :name="`${rolePrefix}-shape`"
-          :value="option"
-          :data-role="`${rolePrefix}-shape-${option}`"
-        />
-        <span>{{ shapeLabels[option] }}</span>
-      </label>
+      <AppTooltip v-for="option in patternShapes" :key="option" :text="shapeDescriptions[option]">
+        <template #activator="{ props: activatorProps }">
+          <label v-bind="activatorProps">
+            <input
+              v-model="shape"
+              type="radio"
+              :name="`${rolePrefix}-shape`"
+              :value="option"
+              :aria-label="shapeDescriptions[option]"
+              :data-role="`${rolePrefix}-shape-${option}`"
+            />
+            <span>{{ shapeLabels[option] }}</span>
+          </label>
+        </template>
+      </AppTooltip>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import AppTooltip from '@/components/AppTooltip.vue'
 import { patternShapes } from '@/types/PatternTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 
@@ -26,6 +32,11 @@ const shape = defineModel<PatternShape>('shape', { required: true })
 const shapeLabels = {
   diamond: 'Diamond',
   box: 'Box',
+} as const satisfies Readonly<Record<PatternShape, string>>
+
+const shapeDescriptions = {
+  diamond: 'Use the Diamond pattern orientation',
+  box: 'Use the Box pattern orientation',
 } as const satisfies Readonly<Record<PatternShape, string>>
 </script>
 
@@ -51,7 +62,7 @@ const shapeLabels = {
   opacity: 0;
 }
 
-.pattern-shape-controls__group span {
+.pattern-shape-controls__group label > span {
   display: grid;
   padding-block: var(--space-1);
   padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));

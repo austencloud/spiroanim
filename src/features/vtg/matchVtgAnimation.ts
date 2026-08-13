@@ -1,5 +1,10 @@
-import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import {
+  applyVtgPlaybackControls,
+  createDefaultVtgAnimation,
+} from '@/features/vtg/createVtgAnimation'
+import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
+import {
+  createFinalTransformedVtgAnimationSignature,
   createVtgAnimationSignature,
   getVtgAnimationScale,
 } from '@/features/vtg/math/createVtgAnimationSignature'
@@ -30,10 +35,9 @@ const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCell
 
 const addCandidate = (
   candidates: Map<string, VtgCandidateMatch[]>,
-  animation: RootDataFinal,
+  signature: string | undefined,
   candidate: VtgCandidateMatch,
 ) => {
-  const signature = createVtgAnimationSignature(animation)
   if (!signature) return
 
   const matches = candidates.get(signature) ?? []
@@ -48,20 +52,29 @@ const buildCandidateCache = () => {
     for (const row of ruleNumbers) {
       const reference = createCellReference(column, row)
       const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
+      const shapeOptions = vtgFixedShapeCells.has(reference)
+        ? (['diamond'] as const)
+        : patternShapes
 
       for (const speedRatio of vtgSpeedRatios) {
         for (const isAnti of antiOptions) {
-          for (const shape of patternShapes) {
+          for (const shape of shapeOptions) {
+            const baseSelection: VtgPatternSelection = {
+              reference,
+              speedRatio,
+              isAnti,
+              ...(shape === 'box' ? { shape } : undefined),
+            }
+            const baseAnimation = createDefaultVtgAnimation(baseSelection)
+            if (!baseAnimation) continue
+
+            const playbackAnimations = new Map<
+              VtgPatternSelection['beat'],
+              readonly [RootDataFinal | undefined, RootDataFinal | undefined]
+            >()
+
             for (const swapProps of booleanOptions) {
               for (const reversePlane of booleanOptions) {
-                const selection: VtgPatternSelection = {
-                  reference,
-                  speedRatio,
-                  isAnti,
-                  swapProps,
-                  reversePlane,
-                  ...(shape === 'box' ? { shape } : undefined),
-                }
                 for (const beat of vtgBeats) {
                   const candidate: VtgCandidateMatch = {
                     reference,
@@ -72,23 +85,35 @@ const buildCandidateCache = () => {
                     ...(beat === 1 ? undefined : { beat }),
                     ...(shape === 'box' ? { shape } : undefined),
                   }
-                  const animation = createDefaultVtgAnimation({
-                    ...selection,
-                    ...(beat === 1 ? undefined : { beat }),
-                  })
-                  if (!animation) continue
-                  addCandidate(candidates, animation, candidate)
+                  let playback = playbackAnimations.get(beat)
+                  if (!playback) {
+                    playback = [
+                      applyVtgPlaybackControls(baseAnimation, { speedRatio, beat }),
+                      applyVtgPlaybackControls(baseAnimation, {
+                        speedRatio,
+                        beat,
+                        double: true,
+                      }),
+                    ]
+                    playbackAnimations.set(beat, playback)
+                  }
 
-                  const doubled = createDefaultVtgAnimation({
-                    ...selection,
-                    ...(beat === 1 ? undefined : { beat }),
-                    double: true,
-                  })
+                  const [animation, doubled] = playback
+                  if (!animation) continue
+
+                  const finalTransforms = { swapProps, reversePlane }
+                  addCandidate(
+                    candidates,
+                    createFinalTransformedVtgAnimationSignature(animation, finalTransforms),
+                    candidate,
+                  )
+
                   if (doubled) {
-                    addCandidate(candidates, doubled, {
-                      ...candidate,
-                      double: true,
-                    })
+                    addCandidate(
+                      candidates,
+                      createFinalTransformedVtgAnimationSignature(doubled, finalTransforms),
+                      { ...candidate, double: true },
+                    )
                   }
                 }
               }

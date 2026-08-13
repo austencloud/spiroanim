@@ -44,19 +44,20 @@ describe('handlePatternMatchingRequest', () => {
     const animation = createDefaultQtrAnimation({
       reference: '3-4',
       speedRatio: '1:5',
-      quarters: 2,
+      quarters: 1,
+      reversePlane: true,
     })
     if (!animation) throw new Error('Expected a supported QTR animation')
 
     await expect(
       matchVtgPatternRequest({
         animation,
-        preferences: { swapProps: false, reversePlane: false, quarters: 2 },
+        preferences: { swapProps: false, reversePlane: true, quarters: 1 },
       }),
     ).resolves.toMatchObject({
       status: 'matched',
       source: 'qtr',
-      match: { reference: '3-4', speedRatio: '1:5', quarters: 2 },
+      match: { reference: '3-4', speedRatio: '1:5', quarters: 1, reversePlane: true },
     })
   })
 

@@ -110,8 +110,9 @@ Spacing applies this shift to the completed QTR animation, after its quarter-arc
 control changes only the cycle's starting point rather than which source frame receives the QTR
 adjustment. The responsive row is ordered Diamond, Box, QTR, beats `1` through `4`, and the
 `45° Trans'` button. QTR switches the matrix labels, cell descriptions, previews, generated
-selection, matching behavior, and headers as one mode change. The `Qtr #1` and `Qtr #2` radios
-appear above the matrix only while QTR is enabled.
+selection, matching behavior, headers, and the meaning of the shared transform control as one mode
+change. The control is labeled `180°` in VTG and `Flip` in QTR. QTR has no separate
+quarter-orientation radios.
 
 The Double control is currently hidden but retained for future experiments. Double subdivision
 subdivides every authored frame interval in two and doubles the stored animation BPM. The added
@@ -152,10 +153,13 @@ selections. Box rotates each prop's first-frame `arc` by 45 degrees: plane 0 use
 180 uses `-45` so both planes rotate in the same spatial direction. The original first continuation
 arc is made explicit so sparse-frame inheritance cannot carry the Box adjustment into later frames.
 
-Box is calculated from the authored VTG planes. Quarter Spacing then applies its Qtr arc offsets,
-followed by Starting Beat, Double, and the reciprocal transition when selected. The shared 180° and
-Swap controls are applied only to that completed result. Previews and compiled-geometry matching use
-the same final transform order.
+Box is calculated from the authored VTG planes. Quarter Spacing then applies its QTR orientation,
+followed by Starting Beat, Double, and the reciprocal transition when selected. Swap exchanges the
+completed tracks. Outside QTR, `180°` reverses the completed pattern's initial motion planes. In QTR
+Diamond, it first selects the alternate QTR orientation and then applies that plane reversal,
+producing the alternate face-on presentation with the opposite travel direction. QTR Box is already
+90-degree symmetric, so `180°` keeps the base QTR orientation and applies only the plane reversal.
+Previews and compiled-geometry matching use the same order.
 
 Cells `1-1`, `1-2`, `2-1`, `2-2`, `3-3`, `3-4`, `4-3`, and `4-4` have an intentional fixed shape in
 their source patterns. Diamond and Box therefore produce identical animation data for those cells
@@ -163,13 +167,18 @@ in both VTG and Quarter Spacing.
 
 ## Quarter Spacing transforms
 
-Quarter Spacing provides two mutually exclusive transforms and always has one selected. `Qtr #1`
-adds 90 degrees to the original first animation track's first-frame arc. `Qtr #2` rotates the
-complete Qtr #1 pattern another 90 degrees using first-frame arc adjustments. Plane 0 receives +90
-degrees and plane 180 receives -90 degrees so both planes rotate in the same spatial direction
-without changing their paths. Arc adjustments wrap within 0-359 degrees. Qtr #1 is the default;
-selecting an active radio again cannot clear it, and Reset returns to Qtr #1. The Qtr adjustments
-remain on their authored tracks until final-stage Swap exchanges the completed tracks.
+Quarter Spacing uses the former Qtr #1 transform as its base: it adds 90 degrees to the original
+first animation track's first-frame arc. In QTR Diamond, the shared `180°` checkbox selects the former
+Qtr #2 orientation by rotating the complete base QTR pattern another 90 degrees through equivalent
+first-frame arc adjustments. Plane 0 receives +90 degrees and plane 180 receives -90 degrees so both
+planes rotate in the same spatial direction without turning the presentation edge-on to the camera.
+After playback transforms, the checkbox also applies the normal plane reversal so the alternate
+orientation travels in the opposite direction. Because QTR Box hand paths are invariant under that
+90-degree presentation rotation, Box skips the alternate-orientation step and applies only the normal
+plane reversal. Arc adjustments wrap within 0-359 degrees. Reset clears `180°` and therefore returns
+to the base orientation. QTR selections retain an internal quarter-mode discriminator fixed at `1`
+for compatibility with existing selection and worker contracts. The QTR adjustments remain on their
+authored tracks until final-stage plane reversal and Swap are applied.
 
 QTR previews and matching apply the Qtr transform around the shared VTG pattern builder and matcher
 so selected cells and shared options can be recovered when toggling QTR or loading animation data.
@@ -200,7 +209,7 @@ compares the ending rotation axes and then corrects that sign with the orientati
 starting hand phase, starting prop phase, ending hand phase, and ending prop phase.
 
 Cell `6-3` is the worked reference for this distinction. Its VTG relationship is `SO/TS`; Quarter
-Spacing changes the timing to produce `QO/QS`. In the default 1:3 Qtr #1 pattern, the ending prop
+Spacing changes the timing to produce `QO/QS`. In the default 1:3 base QTR pattern, the ending prop
 rotation axes are approximately `+Z` and `-Z`, which yields a raw Opposite sign (`-1`). The four
 local phase orientations are `-1`, `-1`, `-1`, and `+1`, whose product is another `-1`. Applying
 that local-frame correction gives `(-1) * (-1) = +1`, or Same. This matches the rendered motion:

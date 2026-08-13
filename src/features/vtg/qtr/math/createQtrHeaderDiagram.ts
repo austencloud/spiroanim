@@ -11,6 +11,7 @@ import type {
 } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { AnimDataCompiled } from '@/types/AnimTypes'
+import type { PatternShape } from '@/types/PatternTypes'
 
 export type QtrCardinalPosition = 'top' | 'right' | 'bottom' | 'left'
 export type QtrFacing = 'in' | 'out'
@@ -26,6 +27,7 @@ export interface QtrSideDiagramOptions {
   quarters?: QtrMode
   swapProps: boolean
   reversePlane: boolean
+  shape?: PatternShape
 }
 
 interface QtrReferenceFrameOptions {
@@ -34,6 +36,7 @@ interface QtrReferenceFrameOptions {
   quarters?: QtrMode
   swapProps: boolean
   reversePlane: boolean
+  shape?: PatternShape
 }
 
 export const vtgPropBounds = {
@@ -79,6 +82,7 @@ const getVtgQuarterReferencePropStates = ({
   quarters = 1,
   swapProps,
   reversePlane,
+  shape,
 }: QtrReferenceFrameOptions): readonly [QtrPropState, QtrPropState] => {
   const animation = createDefaultQtrAnimation({
     reference,
@@ -86,6 +90,7 @@ const getVtgQuarterReferencePropStates = ({
     quarters,
     ...(swapProps ? { swapProps: true } : {}),
     ...(reversePlane ? { reversePlane: true } : {}),
+    ...(shape === 'box' ? { shape } : {}),
   })
   if (!animation)
     throw new Error(`Missing Quarters reference pattern ${reference} at ${speedRatio}`)
