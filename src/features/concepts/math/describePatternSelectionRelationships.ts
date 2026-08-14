@@ -6,11 +6,10 @@ import { describePatternRelationships } from '@/features/concepts/math/describeP
 
 type MatrixPatternSelection = VtgPatternSelection | QtrPatternSelection
 
-/** Classifies pattern semantics without playback-only Beat, Double, and transition transforms. */
+/** Classifies pattern semantics without playback-only Beat and transition transforms. */
 export const describePatternSelectionRelationships = (selection: MatrixPatternSelection) => {
   const {
     beat: _beat,
-    double: _double,
     transition: _transition,
     transitionBeats: _transitionBeats,
     transitionQuad: _transitionQuad,

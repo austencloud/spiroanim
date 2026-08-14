@@ -2,7 +2,6 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
@@ -502,7 +501,7 @@ describe('VtgPane', () => {
     }
   })
 
-  it('offers starting-beat and reciprocal transition controls while keeping Double hidden', async () => {
+  it('offers starting-beat and reciprocal transition controls', async () => {
     const concept = 'vtg'
     for (const qtrEnabled of [false, true]) {
       const quarters = qtrEnabled ? 1 : undefined
@@ -514,7 +513,6 @@ describe('VtgPane', () => {
       expect(firstBeat.element.checked).toBe(true)
       expect(thirdBeat.element.checked).toBe(false)
       expect(firstBeat.element.name).toBe(`${concept}-beat`)
-      expect(wrapper.find(`[data-role="${concept}-double"]`).exists()).toBe(false)
       expect(transition.text()).toBe("45° Trans'")
       expect(transition.attributes('aria-pressed')).toBe('false')
 
@@ -548,7 +546,6 @@ describe('VtgPane', () => {
             reference: '5-1',
             speedRatio: '1:3',
             beat: 3,
-            double: true,
             transition: true,
             ...(quarters === undefined ? {} : { quarters }),
           },
@@ -569,49 +566,24 @@ describe('VtgPane', () => {
     }
   })
 
-  it('temporarily hides the transition at 1:1 and restores its local preference', async () => {
+  it('hides the reciprocal transition at 1:1', async () => {
     const concept = 'vtg'
     for (const qtrEnabled of [false, true]) {
-      const quarters = qtrEnabled ? 1 : undefined
       const wrapper = await mountVtgPane(qtrEnabled)
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
-      await wrapper.get(`[data-role="${concept}-transition"]`).trigger('click')
 
       const oneToOne = wrapper.get<HTMLInputElement>('input[value="1:1"]')
       await oneToOne.setValue()
 
       expect(oneToOne.element.checked).toBe(true)
-      expect(wrapper.getComponent(PatternPlaybackControls).props('transitionAvailable')).toBe(false)
       expect(wrapper.find(`[data-role="${concept}-transition"]`).exists()).toBe(false)
-      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-        {
-          reference: '5-1',
-          speedRatio: '1:1',
-          double: true,
-          ...(quarters === undefined ? {} : { quarters }),
-        },
-      ])
+      expect(wrapper.find(`[data-role="${concept}-double"]`).exists()).toBe(false)
 
       await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
-
-      const restored = wrapper.get(`[data-role="${concept}-transition"]`)
-      expect(restored.attributes('aria-pressed')).toBe('true')
-      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-        {
-          reference: '5-1',
-          speedRatio: '1:5',
-          double: true,
-          transition: true,
-          ...(quarters === undefined ? {} : { quarters }),
-        },
-      ])
+      expect(wrapper.find(`[data-role="${concept}-double"]`).exists()).toBe(false)
+      expect(wrapper.find(`[data-role="${concept}-transition"]`).exists()).toBe(true)
 
       wrapper.unmount()
-      const remounted = await mountVtgPane(qtrEnabled)
-      expect(remounted.get(`[data-role="${concept}-transition"]`).attributes('aria-pressed')).toBe(
-        'false',
-      )
-      remounted.unmount()
     }
   })
 
@@ -666,7 +638,6 @@ describe('VtgPane', () => {
       {
         reference: '5-1',
         speedRatio: '1:3',
-        double: true,
         transition: true,
         transitionBeats: 3,
         transitionQuad: true,
@@ -1387,6 +1358,20 @@ describe('VtgPane', () => {
     expect(firstSideProps[0]?.attributes('style')).toContain('inset-inline-start: 4%')
     expect(firstSideProps[1]?.classes()).toContain('vtg-rule-card__prop--vertical')
     expect(firstSideProps[1]?.attributes('style')).toContain('inset-block-start: 59%')
+  })
+
+  it('bases QTR left-header positions on the non-Tilted patterns', async () => {
+    const wrapper = await mountVtgPane(true)
+    const getSidePropLayout = () =>
+      wrapper.findAll('[data-role="vtg-sidebar"] [data-role="vtg-prop"]').map((prop) => ({
+        classes: prop.classes(),
+        style: prop.attributes('style'),
+      }))
+    const nonTiltedLayout = getSidePropLayout()
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]').setValue(true)
+
+    expect(getSidePropLayout()).toEqual(nonTiltedLayout)
   })
 
   it('places the top TOG IN props after the divider', () => {

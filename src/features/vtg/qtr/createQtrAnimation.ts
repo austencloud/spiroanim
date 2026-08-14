@@ -99,7 +99,6 @@ export const createDefaultQtrBaseAnimation = (
   const animation = createDefaultVtgAnimation({
     ...withoutFinalTransforms(selection),
     beat: 1,
-    double: false,
     transition: false,
   })
 
@@ -113,7 +112,6 @@ export const createQtrAnimation = (
   const animation = createVtgAnimation(current, {
     ...withoutFinalTransforms(selection),
     beat: 1,
-    double: false,
     transition: false,
   })
   if (!animation) return undefined

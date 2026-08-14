@@ -372,9 +372,7 @@ const isCellHighlighted = (cell: EightStepPatternDefinition) =>
 const isMarkedCell = (cell: EightStepPatternDefinition) => markedCellReferences.has(cell.reference)
 
 const isMarkedCellVisible = (cell: EightStepPatternDefinition) =>
-  shape.value === 'diamond' &&
-  isMarkedCell(cell) &&
-  (!isCellHighlighted(cell) || cell.reference === selectedCell.value?.reference)
+  shape.value === 'diamond' && isMarkedCell(cell)
 
 const isColumnGroupHighlighted = (group: EightStepColumnGroup) =>
   selectedCell.value !== undefined &&

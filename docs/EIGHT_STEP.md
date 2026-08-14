@@ -200,11 +200,11 @@ In Diamond mode, these cells carry the additional dark-yellow marked border:
 | 1, 2, 7, 8 | AE, AI         |
 | 3, 4, 5, 6 | EE, EI, IE, II |
 
-When a marked cell is selected, its dark-yellow border becomes red instead of white. Box mode
-suppresses both the yellow and red marked-cell treatment; its selected cells use the ordinary white
-selection border. In Diamond mode, the note beneath the controls explains that yellow patterns, or
-red when selected, may be difficult or impossible to perform in Wall-Plane without significant
-modification.
+Marked borders remain visible when their cells are part of the highlighted row or column. When a
+marked cell is selected, its dark-yellow border becomes red instead of white. Box mode suppresses
+both the yellow and red marked-cell treatment; its selected cells use the ordinary white selection
+border. In Diamond mode, the note beneath the controls explains that yellow patterns, or red when
+selected, may be difficult or impossible to perform in Wall-Plane without significant modification.
 
 ## Shared controls and lifecycle
 

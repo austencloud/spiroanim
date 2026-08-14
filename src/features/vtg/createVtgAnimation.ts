@@ -55,7 +55,6 @@ export const applyVtgPlaybackControls = (
     VtgPatternSelection,
     | 'speedRatio'
     | 'beat'
-    | 'double'
     | 'transition'
     | 'transitionBeats'
     | 'transitionQuad'
@@ -65,10 +64,10 @@ export const applyVtgPlaybackControls = (
 ): RootDataFinal | undefined => {
   const shifted = shiftVtgStartingBeat(animation, selection.beat ?? 1)
   const transition = selection.transition === true && supportsVtgQtrTransition(selection.speedRatio)
-  if (!shifted || (!selection.double && !transition)) return shifted
+  if (!shifted || !transition) return shifted
 
-  const doubled = doubleAnimationPlayback(shifted)
-  if (!doubled || !transition) return doubled
+  const subdivided = doubleAnimationPlayback(shifted)
+  if (!subdivided) return undefined
 
   const selectedPropIndex = selection.transitionQuad && selection.transitionSecond ? 1 : 0
   const playbackPropIndex = selection.swapProps
@@ -77,7 +76,7 @@ export const applyVtgPlaybackControls = (
       : 0
     : selectedPropIndex
   return alternatePatternPlayback(
-    doubled,
+    subdivided,
     selection.transitionBeats ?? vtgDefaultTransitionBeats,
     playbackPropIndex,
     selection.transitionQuad,

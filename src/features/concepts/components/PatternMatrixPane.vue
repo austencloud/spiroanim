@@ -191,7 +191,6 @@
         <PatternPlaybackControls
           v-model:beat="beat"
           v-model:qtr="isQtr"
-          v-model:double="double"
           v-model:transition="transition"
           concept="vtg"
           :transition-available="transitionAvailable"
@@ -366,7 +365,6 @@ const {
 const isAnti = ref(false)
 const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
-const double = ref(false)
 const transition = ref(false)
 const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
 const transitionQuad = ref(false)
@@ -422,7 +420,6 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       ...(reversePlane.value ? { reversePlane: true } : undefined),
       ...(shape.value === 'box' ? { shape: shape.value } : undefined),
       ...(beat.value === 1 ? undefined : { beat: beat.value }),
-      ...(double.value ? { double: true } : undefined),
       ...(transition.value && transitionAvailable.value ? { transition: true } : undefined),
     }
     const selection: VtgPatternSelection | QtrPatternSelection = isQtr.value
@@ -462,7 +459,6 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (reversePlane.value) baseSelection.reversePlane = true
   if (shape.value === 'box') baseSelection.shape = shape.value
   if (beat.value !== 1) baseSelection.beat = beat.value
-  if (double.value) baseSelection.double = true
   if (transition.value && transitionAvailable.value) baseSelection.transition = true
   if (
     transition.value &&
@@ -557,7 +553,6 @@ const resetPatternControls = async () => {
   isAnti.value = false
   shape.value = 'diamond'
   beat.value = 1
-  double.value = false
   transition.value = false
   transitionQuad.value = false
   transitionSecond.value = false
@@ -573,7 +568,6 @@ watch(
     reversePlane,
     shape,
     beat,
-    double,
     transition,
     transitionBeats,
     transitionQuad,
@@ -647,7 +641,6 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     reversePlane.value = match.reversePlane
     shape.value = match.shape ?? 'diamond'
     beat.value = match.beat ?? 1
-    double.value = match.double ?? false
     transition.value = match.transition ?? false
     transitionBeats.value = match.transitionBeats ?? vtgDefaultTransitionBeats
     transitionQuad.value = match.transitionQuad ?? false
@@ -667,7 +660,6 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     isAnti.value = false
     shape.value = 'diamond'
     beat.value = 1
-    double.value = false
     transition.value = false
     transitionBeats.value = vtgDefaultTransitionBeats
     transitionQuad.value = false
@@ -690,7 +682,6 @@ const selectInitialRandomPattern = () => {
   isAnti.value = false
   shape.value = 'diamond'
   beat.value = 1
-  double.value = false
   transition.value = false
   transitionBeats.value = vtgDefaultTransitionBeats
   transitionQuad.value = false
@@ -871,7 +862,6 @@ const quarterDiagramOptions = computed(() => ({
   quarters: 1 as const,
   swapProps: swapProps.value,
   reversePlane: reversePlane.value,
-  ...(shape.value === 'box' ? { shape: shape.value } : undefined),
 }))
 
 const displayedSideRules = computed<readonly VtgRuleSpec[]>(() => {
@@ -900,7 +890,6 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   reversePlane,
   shape,
   beat,
-  double,
   scale,
   spacing,
   quarters: activeQtrMode,
@@ -956,7 +945,6 @@ defineExpose({
   reversePlane,
   shape,
   beat,
-  double,
   transition,
   transitionAvailable,
   bpm,

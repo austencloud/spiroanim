@@ -13,7 +13,6 @@ import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/fea
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { reverseAngle } from '@/math/animation/AngleFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
-import { FRAMESTARTS } from '@/math/animation/PlayerFunc'
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import type { RootData, RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
@@ -60,7 +59,7 @@ const expectVectorClose = (actual: readonly number[], expected: readonly number[
 }
 
 describe('createVtgAnimation', () => {
-  it('keeps every removable doubled VTG continuation frame empty', () => {
+  it('keeps every removable transition-subdivision continuation frame empty', () => {
     const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
     const booleanOptions = [false, true] as const
     const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
@@ -69,7 +68,7 @@ describe('createVtgAnimation', () => {
       for (const row of ruleNumbers) {
         const reference = `${column}-${row}` as VtgCellReference
         const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
-        for (const speedRatio of vtgSpeedRatios) {
+        for (const speedRatio of vtgSpeedRatios.filter((ratio) => ratio !== '1:1')) {
           for (const isAnti of antiOptions) {
             for (const shape of patternShapes) {
               for (const beat of vtgBeats) {
@@ -83,14 +82,13 @@ describe('createVtgAnimation', () => {
                       beat,
                       swapProps,
                       reversePlane,
-                      double: true,
+                      transition: true,
                     })
                     if (!animation) continue
 
                     for (const prop of animation.props) {
                       expect(prop.anim[4]).toEqual({})
                       expect(prop.anim[6]).toEqual({})
-                      expect(prop.anim[8]).toEqual({})
                     }
                   }
                 }
@@ -136,55 +134,47 @@ describe('createVtgAnimation', () => {
     }
   })
 
-  it('doubles BPM and subdivides every interval without changing playback', () => {
+  it('subdivides the base playback internally when applying the transition', () => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:3',
       bpm: 87,
     } as const satisfies VtgPatternSelection
     const original = createVtgAnimationForSelection(createCurrentAnimation(), selection)
-    const doubled = createVtgAnimationForSelection(createCurrentAnimation(), {
+    const transitioned = createVtgAnimationForSelection(createCurrentAnimation(), {
       ...selection,
-      double: true,
+      transition: true,
     })
-    if (!original || !doubled) throw new Error('Expected normal and doubled VTG animations')
+    if (!original || !transitioned) throw new Error('Expected normal and transitioned animations')
 
     const originalCompiled = rootCompile(original)
-    const doubledCompiled = rootCompile(doubled)
+    const transitionedCompiled = rootCompile(transitioned)
 
-    expect(doubled.bpm).toBe(original.bpm * doublePlaybackMultiplier)
-    expect(doubled.props[0]!.anim).toHaveLength(
-      (original.props[0]!.anim.length - 1) * doublePlaybackMultiplier + 1,
-    )
-    expect(doubled.props[0]!.anim[2]).toEqual({})
-    for (const frame of doubled.props[0]!.anim.slice(1)) {
+    expect(transitioned.bpm).toBe(original.bpm * doublePlaybackMultiplier)
+    expect(transitioned.props[0]!.anim[2]).toEqual({})
+    for (const frame of transitioned.props[0]!.anim.slice(1)) {
       expect(frame).not.toHaveProperty('beats')
       expect(frame).not.toHaveProperty('scale')
       expect(frame).not.toHaveProperty('depth')
       expect(frame).not.toHaveProperty('type')
       expect(frame).not.toHaveProperty('adjust')
     }
-    expect(FRAMESTARTS(doubledCompiled.props[0]!.anim, doubled.bpm).at(-1)).toBe(
-      FRAMESTARTS(originalCompiled.props[0]!.anim, original.bpm).at(-1),
-    )
-
     for (const [propIndex, originalProp] of originalCompiled.props.entries()) {
-      const doubledFrames = doubledCompiled.props[propIndex]!.anim
-      for (const [frameIndex, originalFrame] of originalProp.anim.entries()) {
-        const doubledFrame = doubledFrames[frameIndex * doublePlaybackMultiplier]!
-        expectVectorClose(doubledFrame.pos, originalFrame.pos)
-        expectVectorClose(doubledFrame.rot, originalFrame.rot)
-        expect(doubledFrame.scale).toBe(originalFrame.scale)
-        expect(doubledFrame.depth).toBe(originalFrame.depth)
+      const transitionedFrames = transitionedCompiled.props[propIndex]!.anim
+      for (const [frameIndex, originalFrame] of originalProp.anim.slice(0, -1).entries()) {
+        const transitionedFrame = transitionedFrames[frameIndex * doublePlaybackMultiplier]!
+        expectVectorClose(transitionedFrame.pos, originalFrame.pos)
+        expectVectorClose(transitionedFrame.rot, originalFrame.rot)
+        expect(transitionedFrame.scale).toBe(originalFrame.scale)
+        expect(transitionedFrame.depth).toBe(originalFrame.depth)
       }
     }
   })
 
-  it('ignores the reciprocal transition at 1:1 while preserving Double', () => {
+  it('ignores the reciprocal transition at 1:1 without subdividing playback', () => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:1',
-      double: true,
     } as const satisfies VtgPatternSelection
 
     expect(

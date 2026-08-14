@@ -39,7 +39,6 @@ export interface VtgPatternSelection
   reversePlane?: boolean
   shape?: PatternShape
   beat?: VtgBeat
-  double?: boolean
   transition?: boolean
   transitionBeats?: VtgTransitionBeats
   transitionQuad?: boolean
@@ -60,7 +59,6 @@ export interface VtgPatternMatch {
   reversePlane: boolean
   shape?: PatternShape
   beat?: VtgBeat
-  double?: boolean
   transition?: boolean
   transitionBeats?: VtgTransitionBeats
   transitionQuad?: boolean

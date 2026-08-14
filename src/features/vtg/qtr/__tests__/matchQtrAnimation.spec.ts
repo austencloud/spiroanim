@@ -29,7 +29,6 @@ describe('Qtr animation matching', () => {
 
     expect(findQtrPatternMatch(createQtrAnimation(selection))).toMatchObject({
       ...selection,
-      double: true,
     })
   })
 
@@ -46,7 +45,6 @@ describe('Qtr animation matching', () => {
 
     expect(findQtrPatternMatch(createQtrAnimation(selection))).toMatchObject({
       ...selection,
-      double: true,
     })
   })
 
@@ -124,26 +122,7 @@ describe('Qtr animation matching', () => {
     })
   })
 
-  it('recovers Shift and Double after the Qtr transform', () => {
-    const selection = {
-      reference: '5-1',
-      speedRatio: '1:3',
-      quarters: 1,
-      reversePlane: true,
-      beat: 4,
-      double: true,
-      bpm: 79,
-    } as const satisfies QtrPatternSelection
-
-    expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
-      ...selection,
-      isAnti: false,
-      swapProps: false,
-      scale: 0.8,
-    })
-  })
-
-  it('recovers the VTG transition by matching only its doubled base cycle', () => {
+  it('recovers the VTG transition by matching its internally subdivided base cycle', () => {
     const selection = {
       reference: '1-1',
       speedRatio: '1:3',
@@ -157,7 +136,6 @@ describe('Qtr animation matching', () => {
       findQtrPatternMatches(createQtrAnimation({ ...selection, transitionBeats: 5 })),
     ).toContainEqual({
       ...selection,
-      double: true,
       transitionBeats: 5,
       isAnti: false,
       swapProps: false,

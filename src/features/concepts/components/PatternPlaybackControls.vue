@@ -36,21 +36,6 @@
       </AppTooltip>
     </div>
 
-    <AppTooltip v-if="showDouble" text="Subdivide every authored frame interval">
-      <template #activator="{ props: activatorProps }">
-        <button
-          v-bind="activatorProps"
-          type="button"
-          :class="{ 'pattern-playback-controls__button--active': double }"
-          :aria-pressed="double"
-          :data-role="`${concept}-double`"
-          @click="toggleDouble"
-        >
-          Double
-        </button>
-      </template>
-    </AppTooltip>
-
     <AppTooltip v-if="transitionAvailable" text="Apply the reciprocal 45-degree transition">
       <template #activator="{ props: activatorProps }">
         <button
@@ -79,30 +64,19 @@ import type { VtgBeat } from '@/features/vtg/types'
 withDefaults(
   defineProps<{
     concept: 'vtg' | 'qtr'
-    showDouble?: boolean
     transitionAvailable?: boolean
   }>(),
   {
-    showDouble: false,
     transitionAvailable: true,
   },
 )
 
 const beat = defineModel<VtgBeat>('beat', { required: true })
 const qtr = defineModel<boolean>('qtr', { required: true })
-const double = defineModel<boolean>('double', { required: true })
 const transition = defineModel<boolean>('transition', { required: true })
 
-const toggleDouble = () => {
-  const nextDouble = !double.value
-  double.value = nextDouble
-  if (!nextDouble) transition.value = false
-}
-
 const toggleTransition = () => {
-  const nextTransition = !transition.value
-  transition.value = nextTransition
-  double.value = nextTransition
+  transition.value = !transition.value
 }
 </script>
 

@@ -429,7 +429,7 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[aria-label="AA"]').attributes('aria-pressed')).toBe('true')
   })
 
-  it('highlights a paired top header and the exact selected row', async () => {
+  it('highlights the selected headers without hiding marked cells in the row or column', async () => {
     const wrapper = mount(EightStepPane)
 
     expect(wrapper.get('[data-role="eight-step-board"]').attributes('style')).toContain(
@@ -458,7 +458,7 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[data-cell-reference="2-AE"]').classes()).toEqual(
       expect.arrayContaining(['eight-step-cell--marked', 'eight-step-cell--selected']),
     )
-    expect(wrapper.get('[data-cell-reference="1-AE"]').classes()).not.toContain(
+    expect(wrapper.get('[data-cell-reference="1-AE"]').classes()).toContain(
       'eight-step-cell--marked',
     )
   })

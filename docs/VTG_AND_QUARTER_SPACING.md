@@ -100,7 +100,7 @@ cancels the pending shutdown, and a worker request is never interrupted. VTG req
 merged QTR fallback. TKA does not use this worker. Responses are versioned by the requesting pane so
 an older result cannot overwrite newer animation data or a user interaction.
 
-## Starting beat, QTR, Double, and 45-degree transitions
+## Starting beat, QTR, and 45-degree transitions
 
 VTG exposes Starting Beat radios `1` through `4` at the bottom of the Concepts pane. Beat `1` is the
 default. Each following value applies one additional closed-cycle frame shift
@@ -114,19 +114,18 @@ selection, matching behavior, headers, and the meaning of the shared transform c
 change. The control is labeled `180°` in VTG and `Flip` in QTR. QTR has no separate
 quarter-orientation radios.
 
-The Double control is currently hidden but retained for future experiments. Double subdivision
-subdivides every authored frame interval in two and doubles the stored animation BPM. The added
-frame is the midpoint of the interval: incremental turns and arcs are
+The reciprocal transition internally subdivides every authored frame interval in two and doubles
+the stored animation BPM before adding its relationship changes. The added frame is the midpoint of
+the interval: incremental turns and arcs are
 halved, while scale, depth, and adjustment values are interpolated. The BPM control continues to
-show the user's undoubled value, and matching maps the stored BPM back to that displayed value.
+show the user's original value, and matching maps the stored BPM back to that displayed value.
 Because both rate and frame count change by the same multiplier, total duration, interval endpoints,
 and visible motion remain unchanged. Subdivision derives its output from the animation's actual
 frame tracks and does not assume a fixed pattern length. Added frames remain sparse: inherited
 animation values and zero-angle defaults are omitted unless a frame must explicitly change them.
 
-The reciprocal transition toggle is labeled `45° Trans'`. Enabling it also enables Double, and
-disabling it turns Double off. Starting from the
-doubled closed cycle, the transform inserts one
+The reciprocal transition toggle is labeled `45° Trans'`. Starting from the internally subdivided
+closed cycle, the transform inserts one
 doubled beat before each relationship change, changes alternating prop tracks, and plays one full
 derived cycle between changes. For a change frame, Plane is 180 and Turns is derived as
 `-turns - 2 * arc`. This reverses the local rotation axis while preserving the compiled prop
@@ -134,13 +133,10 @@ rotation at the handoff. The process visits each prop twice, returning both trac
 turn values before the animation loops into its original doubled cycle. Cycle and transition sizes
 come from the animation and subdivision multiplier rather than fixed frame counts.
 
-The transition is temporarily unavailable at 1:1. Its button is hidden and the builder ignores the
-transition flag at that ratio. The pane retains the local, non-persisted toggle preference while the
-user remains on the pane, so switching back to 1:3 or 1:5 reapplies it automatically. Resetting or
-remounting the pane clears that preference normally.
+The transition is unavailable at 1:1, and the builder ignores the transition flag at that ratio.
 
 Matching does not precompute the extended transition animations. Their derived frame-count shape is
-used to recover the doubled base cycle, which is matched through the existing Double index; the
+used to recover the internally subdivided base cycle; the
 remaining extended frames are treated as the transition produced by this control. Both the in-memory
 form and the URL form with trailing inherited frames omitted are recognized.
 
@@ -154,7 +150,7 @@ selections. Box rotates each prop's first-frame `arc` by 45 degrees: plane 0 use
 arc is made explicit so sparse-frame inheritance cannot carry the Box adjustment into later frames.
 
 Box is calculated from the authored VTG planes. Quarter Spacing then applies its QTR orientation,
-followed by Starting Beat, Double, and the reciprocal transition when selected. Swap exchanges the
+followed by Starting Beat and the reciprocal transition when selected. Swap exchanges the
 completed tracks. Outside QTR, `180°` reverses the completed pattern's initial motion planes. In QTR
 Diamond, it first selects the alternate QTR orientation and then applies that plane reversal,
 producing the alternate face-on presentation with the opposite travel direction. QTR Box is already
@@ -192,7 +188,7 @@ antiparallel timing is Split (`S`), and orthogonal timing is Quarter (`Q`); dire
 (`S`) or Opposite (`O`). The generated tooltip expands those letters as
 `Hands: Timing / Direction` and `Props: Timing / Direction`.
 
-Beat, Double, and the QTR/VTG transition are playback-only controls and are removed before
+Beat and the QTR/VTG transition are playback-only controls and are removed before
 relationship classification.
 This distinction matters for unequal speed ratios: advancing both tracks by one beat can change
 their instantaneous Together/Split checkpoint because their relative phase advances at the
@@ -233,7 +229,8 @@ In QTR mode, each left-header prop diagram is recalculated from the first compil
 the first cell in that row (`1-1` through `1-6`). The closest cardinal direction of `pos` selects
 top, right, bottom, or left. The sign of `pos dot rot` selects out or in. Placements reuse the exact
 bounds demonstrated by left rule 2 for left/right and top rule 2 for top/bottom. Swap and 180°
-participate in this calculation; controls that do not change first-frame geometry do not.
+participate in this calculation. Tilted does not: header positions always derive from the
+corresponding non-Tilted pattern.
 
 The top-header prop diagrams are not displayed in QTR mode.
 
@@ -253,7 +250,7 @@ Changes in this area should cover the applicable behavior:
 - One undo step per continuous slider gesture.
 - Player-only Paths, Hands, and Arms settings remaining separate from thumbnails.
 - Pattern building, matching, Swap, 180°, Diamond/Box, fixed-shape cells, starting-beat shifts,
-  Double subdivision, reciprocal QTR/VTG transitions, speed ratios, and both Qtr modes.
+  Internal transition subdivision, reciprocal QTR/VTG transitions, speed ratios, and both Qtr modes.
 - Relationship classifications derived from compiled geometry, including the `6-3` `QO/QS`
   reference.
 - Header labels, tooltip availability, dividers, colors, and prop placement.

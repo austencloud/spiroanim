@@ -74,7 +74,6 @@ describe('createQtrAnimation', () => {
       speedRatio: '1:3',
       quarters: 1,
       beat: 3,
-      double: true,
     } as const satisfies QtrPatternSelection
     const secondQuarter = createQtrAnimation(createCurrentAnimation(), {
       ...selection,
@@ -179,12 +178,11 @@ describe('createQtrAnimation', () => {
     )
   })
 
-  it('ignores the reciprocal transition at 1:1 while preserving Double', () => {
+  it('ignores the reciprocal transition at 1:1 without subdividing playback', () => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:1',
       quarters: 1,
-      double: true,
     } as const satisfies QtrPatternSelection
 
     expect(

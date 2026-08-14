@@ -4,22 +4,28 @@ import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { findQtrPatternMatch } from '@/features/vtg/qtr/matchQtrAnimation'
 import { createVtgAnimationSignature } from '@/features/vtg/math/createVtgAnimationSignature'
+import type { QtrPatternSelection } from '@/features/vtg/types'
 import { vtgSpeedRatios } from '@/features/vtg/types'
 import {
   analyzeAlternatingPatternPlayback,
   alternatePatternPlayback,
   getAlternatingPatternBase,
 } from '@/math/animation/alternatePatternPlayback'
+import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv5'
 
 describe('alternatePatternPlayback', () => {
+  const createSubdividedQtrAnimation = (selection: QtrPatternSelection) => {
+    const animation = createDefaultQtrAnimation(selection)
+    return animation ? doubleAnimationPlayback(animation) : undefined
+  }
+
   it('transitions both props together four times by default', () => {
-    const base = createDefaultQtrAnimation({
+    const base = createSubdividedQtrAnimation({
       reference: '1-1',
       speedRatio: '1:3',
       quarters: 1,
-      double: true,
     })
     if (!base) throw new Error('Expected doubled QTR animation')
 
@@ -38,11 +44,10 @@ describe('alternatePatternPlayback', () => {
   })
 
   it.each(vtgSpeedRatios)('derives valid alternating turns for %s', (speedRatio) => {
-    const base = createDefaultQtrAnimation({
+    const base = createSubdividedQtrAnimation({
       reference: '1-1',
       speedRatio,
       quarters: 1,
-      double: true,
     })
     if (!base) throw new Error(`Expected doubled ${speedRatio} QTR animation`)
 
@@ -61,11 +66,10 @@ describe('alternatePatternPlayback', () => {
   ] as const)(
     'places reciprocal changes every $transitionBeats beats',
     ({ transitionBeats, frameCount, changeFrames }) => {
-      const base = createDefaultQtrAnimation({
+      const base = createSubdividedQtrAnimation({
         reference: '1-1',
         speedRatio: '1:3',
         quarters: 1,
-        double: true,
       })
       if (!base) throw new Error('Expected doubled QTR animation')
 
@@ -87,11 +91,10 @@ describe('alternatePatternPlayback', () => {
   )
 
   it('uses Quad to alternate four changes starting with the selected prop', () => {
-    const base = createDefaultQtrAnimation({
+    const base = createSubdividedQtrAnimation({
       reference: '1-1',
       speedRatio: '1:3',
       quarters: 1,
-      double: true,
     })
     if (!base) throw new Error('Expected doubled QTR animation')
 
@@ -109,11 +112,10 @@ describe('alternatePatternPlayback', () => {
   })
 
   it('recovers no base from an ordinary doubled cycle', () => {
-    const base = createDefaultQtrAnimation({
+    const base = createSubdividedQtrAnimation({
       reference: '1-1',
       speedRatio: '1:3',
       quarters: 1,
-      double: true,
     })
     if (!base) throw new Error('Expected doubled QTR animation')
 
@@ -135,7 +137,6 @@ describe('alternatePatternPlayback', () => {
       reference: '1-1',
       speedRatio: '1:3',
       quarters: 1,
-      double: true,
       transition: true,
     })
 
