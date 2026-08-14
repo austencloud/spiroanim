@@ -24,28 +24,6 @@ const buildPattern = (reference: VtgCellReference, speedRatio: VtgSpeedRatio, is
 const createReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
   `${column}-${row}`
 
-const getExpectedOneToFiveTurns = (
-  column: VtgRuleNumber,
-  row: VtgRuleNumber,
-  isAnti: boolean,
-): readonly [number, number] => {
-  const oldColumn = row
-  const oldRow = column
-  let turns: readonly [number, number]
-
-  if (oldRow >= 5) {
-    turns = oldColumn >= 5 ? (isAnti ? [-540, -540] : [360, 360]) : [360, -540]
-  } else if (oldColumn <= 2) {
-    turns = oldRow <= 2 ? [360, 360] : [-540, -540]
-  } else if (oldColumn <= 4) {
-    turns = oldRow <= 2 ? [-540, -540] : [360, 360]
-  } else {
-    turns = oldRow <= 2 ? [360, -540] : [-540, 360]
-  }
-
-  return turns
-}
-
 describe('VTG row patterns', () => {
   it.each(vtgSpeedRatios)('shares each row starting frame across its %s columns', (speedRatio) => {
     for (const row of ruleNumbers) {
@@ -83,36 +61,37 @@ describe('VTG row patterns', () => {
     },
   )
 
-  it('uses the inferred 1:5 turn branches while preserving continuation geometry', () => {
+  it('derives every ratio from 1:3 turns while preserving all other frame data', () => {
     for (const column of ruleNumbers) {
       for (const row of ruleNumbers) {
         const reference = createReference(column, row)
 
         for (const isAnti of [false, true]) {
-          const oneToOne = buildPattern(reference, '1:1', isAnti)
-          const oneToFive = buildPattern(reference, '1:5', isAnti)
-          if (oneToOne === undefined || oneToFive === undefined) {
+          const base = buildPattern(reference, '1:3', isAnti)
+          if (base === undefined) {
             throw new Error(`Missing VTG ratio pattern for ${reference}`)
           }
 
-          const actualTurns: number[] = []
-          for (const propIndex of [0, 1] as const) {
-            const oneToOneFrame = oneToOne.props[propIndex]?.anim[1]
-            const oneToFiveFrame = oneToFive.props[propIndex]?.anim[1]
-            if (oneToOneFrame === undefined || oneToFiveFrame === undefined) {
-              throw new Error(`Missing VTG continuation frame for ${reference}`)
+          for (const speedRatio of vtgSpeedRatios) {
+            const denominator = Number(speedRatio.slice(2))
+            const pattern = buildPattern(reference, speedRatio, isAnti)
+            if (pattern === undefined) throw new Error(`Missing VTG pattern for ${reference}`)
+
+            for (const propIndex of [0, 1] as const) {
+              const baseFrame = base.props[propIndex]?.anim[1]
+              const frame = pattern.props[propIndex]?.anim[1]
+              if (baseFrame === undefined || frame === undefined) {
+                throw new Error(`Missing VTG continuation frame for ${reference}`)
+              }
+
+              const { turns: baseFrameTurns, ...baseShape } = baseFrame
+              const { turns: frameTurns, ...shape } = frame
+              const baseTurns = baseFrameTurns ?? base.props[propIndex]?.anim[0]?.turns ?? 0
+              const turns = frameTurns ?? pattern.props[propIndex]?.anim[0]?.turns ?? 0
+              expect(shape).toEqual(baseShape)
+              expect(turns).toBe(((baseTurns + 90) * denominator) / 3 - 90)
             }
-
-            const { turns: _oneToOneTurns, ...oneToOneShape } = oneToOneFrame
-            const { turns: oneToFiveTurns = 0, ...oneToFiveShape } = oneToFiveFrame
-
-            expect(oneToFiveShape).toEqual(oneToOneShape)
-            actualTurns.push(oneToFiveTurns)
           }
-
-          expect(actualTurns, `${reference} anti=${isAnti}`).toEqual(
-            getExpectedOneToFiveTurns(column, row, isAnti),
-          )
         }
       }
     }

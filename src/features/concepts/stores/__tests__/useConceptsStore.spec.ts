@@ -129,6 +129,15 @@ describe('useConceptsStore', () => {
     app.unmount()
   })
 
+  it.each(['1:2', '1:4'] as const)('hydrates the supported %s speed ratio', (speedRatio) => {
+    localStorage.setItem('sa-concepts', JSON.stringify({ speedRatio }))
+
+    const { app, store } = mountStore()
+
+    expect(store.speedRatio).toBe(speedRatio)
+    app.unmount()
+  })
+
   it('hydrates Eight Step as the selected concept', () => {
     localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: '8stp' }))
 

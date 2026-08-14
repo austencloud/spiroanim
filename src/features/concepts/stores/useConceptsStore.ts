@@ -7,7 +7,7 @@ import {
   vtgSpacingControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
-import { vtgDefaultSpeedRatio } from '@/features/vtg/types'
+import { vtgDefaultSpeedRatio, vtgSpeedRatios } from '@/features/vtg/types'
 import type { VtgSpeedRatio } from '@/features/vtg/types'
 
 export const useConceptsStore = defineStore(
@@ -73,7 +73,7 @@ export const useConceptsStore = defineStore(
         if (!conceptKeys.some((concept) => concept === store.selectedConcept)) {
           store.selectedConcept = 'vtg'
         }
-        if (!['1:1', '1:3', '1:5'].includes(store.speedRatio)) {
+        if (!vtgSpeedRatios.includes(store.speedRatio)) {
           store.speedRatio = vtgDefaultSpeedRatio
         }
         if (

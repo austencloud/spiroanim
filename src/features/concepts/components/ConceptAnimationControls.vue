@@ -2,6 +2,8 @@
   <div class="concept-button-rows">
     <slot name="before-controls" />
 
+    <slot name="between-controls" />
+
     <fieldset
       class="concept-pattern-options concept-render-options vtg-pattern-options vtg-render-options"
     >

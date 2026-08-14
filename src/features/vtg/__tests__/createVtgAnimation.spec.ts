@@ -558,11 +558,11 @@ describe('createVtgAnimation', () => {
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
       { arc: 90, scale: 8 },
-      { arc: 90, turns: 360 },
+      { arc: 90, turns: -540 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { arc: 90, turns: 180, scale: 8 },
-      { plane: 180, arc: 90, turns: -540 },
+      { plane: 180, arc: 90, turns: 360 },
     ])
   })
 

@@ -8,14 +8,16 @@ import {
   createVtgAnimationSignature,
   getVtgAnimationScale,
 } from '@/features/vtg/math/createVtgAnimationSignature'
+import { inferVtgSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
 import type {
   VtgCellReference,
   VtgPatternMatch,
   VtgPatternMatchPreferences,
   VtgPatternSelection,
   VtgRuleNumber,
+  VtgSpeedRatio,
 } from '@/features/vtg/types'
-import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { vtgBeats } from '@/features/vtg/types'
 import { supportsVtgQtrTransition } from '@/features/vtg/types'
 import {
   doubleAnimationPlayback,
@@ -31,7 +33,7 @@ const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5
 
 type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale'> & { subdivided?: boolean }
 
-let candidateCache: ReadonlyMap<string, readonly VtgCandidateMatch[]> | undefined
+const candidateCaches = new Map<VtgSpeedRatio, ReadonlyMap<string, readonly VtgCandidateMatch[]>>()
 
 const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
   `${column}-${row}`
@@ -48,7 +50,7 @@ const addCandidate = (
   candidates.set(signature, matches)
 }
 
-const buildCandidateCache = () => {
+const buildCandidateCache = (speedRatio: VtgSpeedRatio) => {
   const candidates = new Map<string, VtgCandidateMatch[]>()
 
   for (const column of ruleNumbers) {
@@ -59,54 +61,52 @@ const buildCandidateCache = () => {
         ? (['diamond'] as const)
         : patternShapes
 
-      for (const speedRatio of vtgSpeedRatios) {
-        for (const isAnti of antiOptions) {
-          for (const shape of shapeOptions) {
-            const baseSelection: VtgPatternSelection = {
-              reference,
-              speedRatio,
-              isAnti,
-              ...(shape === 'box' ? { shape } : undefined),
-            }
-            const baseAnimation = createDefaultVtgAnimation(baseSelection)
-            if (!baseAnimation) continue
+      for (const isAnti of antiOptions) {
+        for (const shape of shapeOptions) {
+          const baseSelection: VtgPatternSelection = {
+            reference,
+            speedRatio,
+            isAnti,
+            ...(shape === 'box' ? { shape } : undefined),
+          }
+          const baseAnimation = createDefaultVtgAnimation(baseSelection)
+          if (!baseAnimation) continue
 
-            const playbackAnimations = new Map<VtgPatternSelection['beat'], RootDataFinal>()
+          const playbackAnimations = new Map<VtgPatternSelection['beat'], RootDataFinal>()
 
-            for (const swapProps of booleanOptions) {
-              for (const reversePlane of booleanOptions) {
-                for (const beat of vtgBeats) {
-                  const candidate: VtgCandidateMatch = {
-                    reference,
-                    speedRatio,
-                    isAnti,
-                    swapProps,
-                    reversePlane,
-                    ...(beat === 1 ? undefined : { beat }),
-                    ...(shape === 'box' ? { shape } : undefined),
-                  }
-                  let playback = playbackAnimations.get(beat)
-                  if (!playback) {
-                    playback = applyVtgPlaybackControls(baseAnimation, { speedRatio, beat })
-                    if (!playback) continue
-                    playbackAnimations.set(beat, playback)
-                  }
+          for (const swapProps of booleanOptions) {
+            for (const reversePlane of booleanOptions) {
+              for (const beat of vtgBeats) {
+                const candidate: VtgCandidateMatch = {
+                  reference,
+                  speedRatio,
+                  isAnti,
+                  swapProps,
+                  reversePlane,
+                  ...(beat === 1 ? undefined : { beat }),
+                  ...(shape === 'box' ? { shape } : undefined),
+                }
+                let playback = playbackAnimations.get(beat)
+                if (!playback) {
+                  playback = applyVtgPlaybackControls(baseAnimation, { speedRatio, beat })
+                  if (!playback) continue
+                  playbackAnimations.set(beat, playback)
+                }
 
-                  const finalTransforms = { swapProps, reversePlane }
+                const finalTransforms = { swapProps, reversePlane }
+                addCandidate(
+                  candidates,
+                  createFinalTransformedVtgAnimationSignature(playback, finalTransforms),
+                  candidate,
+                )
+
+                const subdivided = doubleAnimationPlayback(playback)
+                if (subdivided) {
                   addCandidate(
                     candidates,
-                    createFinalTransformedVtgAnimationSignature(playback, finalTransforms),
-                    candidate,
+                    createFinalTransformedVtgAnimationSignature(subdivided, finalTransforms),
+                    { ...candidate, subdivided: true },
                   )
-
-                  const subdivided = doubleAnimationPlayback(playback)
-                  if (subdivided) {
-                    addCandidate(
-                      candidates,
-                      createFinalTransformedVtgAnimationSignature(subdivided, finalTransforms),
-                      { ...candidate, subdivided: true },
-                    )
-                  }
                 }
               }
             }
@@ -116,7 +116,7 @@ const buildCandidateCache = () => {
     }
   }
 
-  candidateCache = candidates
+  candidateCaches.set(speedRatio, candidates)
   return candidates
 }
 
@@ -126,10 +126,13 @@ const findBaseVtgCandidateMatches = (
   const scale = getVtgAnimationScale(animation)
   if (scale === undefined) return []
 
+  const speedRatio = inferVtgSpeedRatio(animation)
+  if (speedRatio === undefined) return []
+
   const signature = createVtgAnimationSignature(animation)
   if (!signature) return []
 
-  const candidates = candidateCache ?? buildCandidateCache()
+  const candidates = candidateCaches.get(speedRatio) ?? buildCandidateCache(speedRatio)
   return (candidates.get(signature) ?? []).map((candidate) => ({
     ...candidate,
     bpm: candidate.subdivided ? animation.bpm / doublePlaybackMultiplier : animation.bpm,

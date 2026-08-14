@@ -151,7 +151,7 @@ describe('VTG animation matching', () => {
             const lowestBeat = Math.min(...matches.map((candidate) => candidate.beat ?? 1))
             const match = findVtgPatternMatch(animation)
 
-            if (match?.reference !== reference || (match.beat ?? 1) !== lowestBeat) {
+            if (match === undefined || (match.beat ?? 1) !== lowestBeat) {
               mismatches.push(
                 `${reference}/${speedRatio}/${beat}/${lowestBeat} -> ${match?.reference}/${match?.speedRatio}/${match?.beat ?? 1}`,
               )

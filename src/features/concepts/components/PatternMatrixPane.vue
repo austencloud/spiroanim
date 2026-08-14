@@ -188,72 +188,20 @@
 
     <ConceptAnimationControls :animation="animation">
       <template #before-controls>
-        <PatternPlaybackControls
-          v-model:beat="beat"
-          v-model:qtr="isQtr"
-          v-model:transition="transition"
-          concept="vtg"
-          :transition-available="transitionAvailable"
-        >
+        <PatternPlaybackControls v-model:beat="beat" v-model:qtr="isQtr" concept="vtg">
           <template #before-controls>
             <PatternShapeControls v-model:shape="shape" />
           </template>
-          <template #after-transition>
-            <AppTooltip
-              v-if="transition && transitionAvailable"
-              text="Choose the beat interval between 45-degree transitions"
-            >
-              <template #activator="{ props: activatorProps }">
-                <label v-bind="activatorProps" class="vtg-transition-beats">
-                  <span class="vtg-pane__visually-hidden">45 degree transition beats</span>
-                  <select
-                    v-model.number="transitionBeats"
-                    aria-label="Choose the beat interval between 45-degree transitions"
-                    data-role="vtg-transition-beats"
-                  >
-                    <option v-for="option in vtgTransitionBeats" :key="option" :value="option">
-                      {{ option }}
-                    </option>
-                  </select>
-                </label>
-              </template>
-            </AppTooltip>
-          </template>
         </PatternPlaybackControls>
       </template>
-      <template #after-controls>
-        <AppTooltip
-          v-if="transition && transitionAvailable"
-          text="Transition one prop at a time for four total changes"
-        >
-          <template #activator="{ props: activatorProps }">
-            <label v-bind="activatorProps" class="vtg-transition-option">
-              <input
-                v-model="transitionQuad"
-                type="checkbox"
-                aria-label="Transition one prop at a time for four total changes"
-                data-role="vtg-transition-quad"
-              />
-              <span>Quad</span>
-            </label>
-          </template>
-        </AppTooltip>
-        <AppTooltip
-          v-if="transition && transitionAvailable && transitionQuad"
-          text="Start the 45-degree transition with the second prop"
-        >
-          <template #activator="{ props: activatorProps }">
-            <label v-bind="activatorProps" class="vtg-transition-option">
-              <input
-                v-model="transitionSecond"
-                type="checkbox"
-                aria-label="Start the 45-degree transition with the second prop"
-                data-role="vtg-transition-second"
-              />
-              <span>Second</span>
-            </label>
-          </template>
-        </AppTooltip>
+      <template #between-controls>
+        <PatternTransitionControls
+          v-model:transition="transition"
+          v-model:beats="transitionBeats"
+          v-model:quad="transitionQuad"
+          v-model:second="transitionSecond"
+          :available="transitionAvailable"
+        />
       </template>
     </ConceptAnimationControls>
   </section>
@@ -269,6 +217,7 @@ import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
 import PatternShapeControls from '@/features/concepts/components/PatternShapeControls.vue'
+import PatternTransitionControls from '@/features/concepts/components/PatternTransitionControls.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
@@ -306,7 +255,6 @@ import {
   supportsVtgQtrTransition,
   vtgDefaultTransitionBeats,
   vtgSpeedRatios,
-  vtgTransitionBeats,
 } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
@@ -1030,66 +978,6 @@ defineExpose({
 }
 
 .vtg-radio-options input:focus-visible + span {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: 2px;
-}
-
-.vtg-transition-beats {
-  display: grid;
-  min-width: 0;
-}
-
-.vtg-transition-beats select {
-  min-width: 2.75rem;
-  padding-block: var(--space-1);
-  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
-  color: var(--color-on-action-primary);
-  font: inherit;
-  font-size: clamp(0.625rem, 3cqi, 0.875rem);
-  font-weight: 700;
-  background: var(--color-transition-mode-active);
-  border: 1px solid var(--color-transition-mode-active-border);
-  border-radius: var(--radius-sm);
-}
-
-.vtg-transition-beats select:focus-visible {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: 2px;
-}
-
-.vtg-transition-option {
-  position: relative;
-  min-width: 0;
-  cursor: pointer;
-}
-
-.vtg-transition-option input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-}
-
-.vtg-transition-option span {
-  display: grid;
-  padding-block: var(--space-1);
-  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
-  color: var(--color-text);
-  font-size: clamp(0.625rem, 3cqi, 0.875rem);
-  font-weight: 700;
-  white-space: nowrap;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-}
-
-.vtg-transition-option input:checked + span {
-  color: var(--color-on-action-primary);
-  background: var(--color-transition-mode-active);
-  border-color: var(--color-transition-mode-active-border);
-}
-
-.vtg-transition-option input:focus-visible + span {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }

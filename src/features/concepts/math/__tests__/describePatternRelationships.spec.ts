@@ -103,12 +103,19 @@ describe('describePatternRelationships', () => {
     for (const row of ruleNumbers) {
       for (const column of ruleNumbers) {
         const reference: VtgCellReference = `${column}-${row}`
-        const expectedLabel = expectedLabelsByRow[row][column - 1]
-        if (!expectedLabel) throw new Error(`Missing expected label for ${reference}`)
+        const establishedLabel = expectedLabelsByRow[row][column - 1]
+        if (!establishedLabel) throw new Error(`Missing expected label for ${reference}`)
         const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
 
         for (const speedRatio of vtgSpeedRatios) {
           for (const isAnti of antiOptions) {
+            const baseAnimation = createDefaultVtgAnimation({ reference, speedRatio, isAnti })
+            if (!baseAnimation) throw new Error(`Missing VTG animation for ${reference}`)
+            const expectedLabel =
+              Number(speedRatio.slice(2)) % 2 === 0
+                ? describePatternRelationships(baseAnimation).label
+                : establishedLabel
+
             for (const swapProps of booleanOptions) {
               for (const reversePlane of booleanOptions) {
                 const animation = createDefaultVtgAnimation({
@@ -136,13 +143,24 @@ describe('describePatternRelationships', () => {
     for (const row of ruleNumbers) {
       for (const column of ruleNumbers) {
         const reference: VtgCellReference = `${column}-${row}`
-        const baseLabel = expectedLabelsByRow[row][column - 1]
-        if (!baseLabel) throw new Error(`Missing expected label for ${reference}`)
-        const expectedLabel = quarterLabel(baseLabel)
+        const establishedLabel = expectedLabelsByRow[row][column - 1]
+        if (!establishedLabel) throw new Error(`Missing expected label for ${reference}`)
         const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
 
         for (const speedRatio of vtgSpeedRatios) {
           for (const isAnti of antiOptions) {
+            const baseAnimation = createDefaultQtrAnimation({
+              reference,
+              speedRatio,
+              isAnti,
+              quarters: 1,
+            })
+            if (!baseAnimation) throw new Error(`Missing Qtr animation for ${reference}`)
+            const expectedLabel =
+              Number(speedRatio.slice(2)) % 2 === 0
+                ? describePatternRelationships(baseAnimation).label
+                : quarterLabel(establishedLabel)
+
             for (const swapProps of booleanOptions) {
               for (const reversePlane of booleanOptions) {
                 for (const quarters of qtrModes) {

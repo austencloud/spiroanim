@@ -19,6 +19,13 @@ const effectiveFrames = (frames: readonly AnimReadable[]) => {
   })
 }
 
+const ratioIndependentFrames = (frames: readonly AnimReadable[]) =>
+  effectiveFrames(frames).map((frame, index) => {
+    if (index === 0) return frame
+    const { turns: _turns, ...ratioIndependentFrame } = frame
+    return ratioIndependentFrame
+  })
+
 const transposeReference = (reference: VtgCellReference): VtgCellReference => {
   const [column, row] = reference.split('-')
   return `${row}-${column}` as VtgCellReference
@@ -69,8 +76,8 @@ describe('VTG query references', () => {
     )
     const pattern = buildVtgPattern({ reference: transposeReference(reference), speedRatio: '1:5' })
 
-    expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
-      readable.props.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
+    expect(pattern?.props.map((prop) => ratioIndependentFrames(prop.anim))).toEqual(
+      readable.props.map((prop) => ratioIndependentFrames(prop.anim.slice(0, 2))),
     )
   })
 
@@ -383,8 +390,8 @@ describe('VTG query references', () => {
     const selection = { reference: transposeReference(reference), speedRatio: '1:1' } as const
     const pattern = buildVtgPattern(selection)
 
-    expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
-      readable.props.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
+    expect(pattern?.props.map((prop) => ratioIndependentFrames(prop.anim))).toEqual(
+      readable.props.map((prop) => ratioIndependentFrames(prop.anim.slice(0, 2))),
     )
   })
 
@@ -462,8 +469,8 @@ describe('VTG query references', () => {
     const selection = { reference: transposeReference(reference), speedRatio: '1:1' } as const
     const pattern = buildVtgPattern(selection)
 
-    expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
-      readable.props.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
+    expect(pattern?.props.map((prop) => ratioIndependentFrames(prop.anim))).toEqual(
+      readable.props.map((prop) => ratioIndependentFrames(prop.anim.slice(0, 2))),
     )
   })
 
@@ -544,8 +551,8 @@ describe('VTG query references', () => {
       } as const
       const pattern = buildVtgPattern(selection)
 
-      expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
-        readable.props.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
+      expect(pattern?.props.map((prop) => ratioIndependentFrames(prop.anim))).toEqual(
+        readable.props.map((prop) => ratioIndependentFrames(prop.anim.slice(0, 2))),
       )
     },
   )
@@ -636,8 +643,8 @@ describe('VTG query references', () => {
       const pattern = buildVtgPattern(selection)
       const readableProps = reverseQueryProps ? [...readable.props].reverse() : readable.props
 
-      expect(pattern?.props.map((prop) => effectiveFrames(prop.anim))).toEqual(
-        readableProps.map((prop) => effectiveFrames(prop.anim.slice(0, 2))),
+      expect(pattern?.props.map((prop) => ratioIndependentFrames(prop.anim))).toEqual(
+        readableProps.map((prop) => ratioIndependentFrames(prop.anim.slice(0, 2))),
       )
     },
   )

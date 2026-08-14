@@ -35,24 +35,6 @@
         </template>
       </AppTooltip>
     </div>
-
-    <AppTooltip v-if="transitionAvailable" text="Apply the reciprocal 45-degree transition">
-      <template #activator="{ props: activatorProps }">
-        <button
-          v-bind="activatorProps"
-          type="button"
-          class="pattern-playback-controls__transition"
-          :class="{ 'pattern-playback-controls__button--active': transition }"
-          :aria-pressed="transition"
-          :data-role="`${concept}-transition`"
-          @click="toggleTransition"
-        >
-          45° Trans'
-        </button>
-      </template>
-    </AppTooltip>
-
-    <slot name="after-transition" />
   </fieldset>
 </template>
 
@@ -61,23 +43,10 @@ import AppTooltip from '@/components/AppTooltip.vue'
 import { vtgBeats } from '@/features/vtg/types'
 import type { VtgBeat } from '@/features/vtg/types'
 
-withDefaults(
-  defineProps<{
-    concept: 'vtg' | 'qtr'
-    transitionAvailable?: boolean
-  }>(),
-  {
-    transitionAvailable: true,
-  },
-)
+defineProps<{ concept: 'vtg' | 'qtr' }>()
 
 const beat = defineModel<VtgBeat>('beat', { required: true })
 const qtr = defineModel<boolean>('qtr', { required: true })
-const transition = defineModel<boolean>('transition', { required: true })
-
-const toggleTransition = () => {
-  transition.value = !transition.value
-}
 </script>
 
 <style scoped>
@@ -118,8 +87,7 @@ const toggleTransition = () => {
 }
 
 .pattern-playback-controls__beats label > span,
-.pattern-playback-controls__qtr > span,
-.pattern-playback-controls button {
+.pattern-playback-controls__qtr > span {
   display: grid;
   min-width: 2rem;
   padding-block: var(--space-1);
@@ -140,8 +108,7 @@ const toggleTransition = () => {
     border-color var(--transition-fast);
 }
 
-.pattern-playback-controls__beats input:checked + span,
-.pattern-playback-controls .pattern-playback-controls__button--active {
+.pattern-playback-controls__beats input:checked + span {
   color: var(--color-on-action-primary);
   background: var(--color-action-primary);
   border-color: var(--color-action-primary);
@@ -153,16 +120,8 @@ const toggleTransition = () => {
   border-color: var(--color-pattern-mode-active-border);
 }
 
-.pattern-playback-controls
-  .pattern-playback-controls__transition.pattern-playback-controls__button--active {
-  color: var(--color-on-action-primary);
-  background: var(--color-transition-mode-active);
-  border-color: var(--color-transition-mode-active-border);
-}
-
 .pattern-playback-controls__beats input:focus-visible + span,
-.pattern-playback-controls__qtr input:focus-visible + span,
-.pattern-playback-controls button:focus-visible {
+.pattern-playback-controls__qtr input:focus-visible + span {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }

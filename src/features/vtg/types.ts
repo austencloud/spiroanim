@@ -20,7 +20,7 @@ export interface VtgCellAddress {
   row: VtgRuleNumber
 }
 
-export const vtgSpeedRatios = ['1:1', '1:3', '1:5'] as const
+export const vtgSpeedRatios = ['1:1', '1:2', '1:3', '1:4', '1:5'] as const
 export type VtgSpeedRatio = (typeof vtgSpeedRatios)[number]
 export const supportsVtgQtrTransition = (speedRatio: VtgSpeedRatio) => speedRatio !== '1:1'
 export const vtgDefaultSpeedRatio = '1:3' satisfies VtgSpeedRatio
