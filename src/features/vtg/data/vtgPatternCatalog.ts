@@ -28,6 +28,12 @@ export const vtgFixedShapeCells: ReadonlySet<VtgCellReference> = new Set([
   '4-4',
 ])
 
+/** The paired ratios intentionally allow Tilted to transform the otherwise fixed-shape cells. */
+export const hasFixedVtgPatternShape = (
+  reference: VtgCellReference,
+  speedRatio: VtgPatternSelection['speedRatio'],
+): boolean => vtgFixedShapeCells.has(reference) && speedRatio !== '1:2' && speedRatio !== '1:4'
+
 export const buildVtgPattern = (
   selection: VtgPatternSelection,
 ): VtgReadableAnimation | undefined => {
@@ -35,7 +41,8 @@ export const buildVtgPattern = (
   const pattern = buildPattern?.(selection.isAnti === true)
   if (pattern === undefined) return undefined
 
-  const applyBoxShape = selection.shape === 'box' && !vtgFixedShapeCells.has(selection.reference)
+  const applyBoxShape =
+    selection.shape === 'box' && !hasFixedVtgPatternShape(selection.reference, selection.speedRatio)
 
   const transformedProps =
     selection.scale !== undefined || applyBoxShape

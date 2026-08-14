@@ -34,13 +34,15 @@ export const vtgBeats = [1, 2, 3, 4] as const
 export type VtgBeat = (typeof vtgBeats)[number]
 export const vtgTransitionBeats = [6, 5, 4, 3, 2] as const
 export type VtgTransitionBeats = (typeof vtgTransitionBeats)[number]
-export const vtgPatternOrientations = [0, 90] as const
+export const vtgPatternOrientations = [0, 90, -90] as const
 export type VtgPatternOrientation = (typeof vtgPatternOrientations)[number]
+export const vtgDefaultPatternOrientation = -90 satisfies VtgPatternOrientation
 export const supportsVtgPatternOrientation = (speedRatio: VtgSpeedRatio) =>
   speedRatio === '1:2' || speedRatio === '1:4'
 export const getDefaultVtgPatternOrientation = (
   speedRatio: VtgSpeedRatio,
-): VtgPatternOrientation => (supportsVtgPatternOrientation(speedRatio) ? 90 : 0)
+): VtgPatternOrientation =>
+  supportsVtgPatternOrientation(speedRatio) ? vtgDefaultPatternOrientation : 0
 export const vtgDefaultTransitionBeats = 4 satisfies VtgTransitionBeats
 
 export interface VtgPatternSelection

@@ -28,16 +28,18 @@ const createAnimation = (selection: VtgPatternSelection) => {
 
 describe('VTG animation matching', () => {
   it.each(['1:2', '1:4'] as const)(
-    'recognizes the initial arc orientation after a beat shift at %s',
+    'recognizes both initial arc rotations after a beat shift at %s',
     (speedRatio) => {
-      const selection = {
-        reference: '5-1',
-        speedRatio,
-        orientation: 90,
-        beat: 3,
-      } as const satisfies VtgPatternSelection
+      for (const orientation of [90, -90] as const) {
+        const selection = {
+          reference: '5-1',
+          speedRatio,
+          orientation,
+          beat: 3,
+        } as const satisfies VtgPatternSelection
 
-      expect(findVtgPatternMatch(createAnimation(selection))).toMatchObject(selection)
+        expect(findVtgPatternMatch(createAnimation(selection))).toMatchObject(selection)
+      }
     },
   )
 
@@ -129,6 +131,26 @@ describe('VTG animation matching', () => {
       isAnti: false,
     })
   })
+
+  it.each(['1:2', '1:4'] as const)(
+    'recovers Tilted for an otherwise fixed-shape cell at %s',
+    (speedRatio) => {
+      const selection = {
+        reference: '1-1',
+        speedRatio,
+        shape: 'box',
+      } as const satisfies VtgPatternSelection
+
+      expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual({
+        ...selection,
+        isAnti: false,
+        swapProps: false,
+        reversePlane: false,
+        bpm: 60,
+        scale: 0.8,
+      })
+    },
+  )
 
   it('recovers the QTR transition by matching its internally subdivided base cycle', () => {
     const selection = {

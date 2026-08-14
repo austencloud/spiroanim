@@ -12,7 +12,7 @@ const normalizeAngle = (value: number): number => ((value % 360) + 360) % 360
 const shiftInitialArc = (frame: AnimData, angle: number): AnimData => ({
   ...frame,
   arc: normalizeAngle(
-    (frame.arc ?? 0) + (normalizeAngle(frame.plane ?? 0) === 180 ? angle : -angle),
+    (frame.arc ?? 0) + (normalizeAngle(frame.plane ?? 0) === 180 ? -angle : angle),
   ),
 })
 

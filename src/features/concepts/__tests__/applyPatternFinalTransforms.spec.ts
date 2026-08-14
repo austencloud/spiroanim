@@ -81,8 +81,13 @@ describe('applyPatternFinalTransforms', () => {
   it('shifts the stored arcs for pattern rotation without changing other frame values', () => {
     const source = createAnimation()
     const transformed = applyPatternInitialArcRotation(source, 90)
+    const negative = applyPatternInitialArcRotation(source, -90)
 
     expect(transformed.props.map(({ anim }) => anim)).toEqual([
+      [{ arc: 180 }, { turns: 180 }],
+      [{ arc: 315, plane: 180, axis: -90 }, { turns: -180 }],
+    ])
+    expect(negative.props.map(({ anim }) => anim)).toEqual([
       [{ arc: 0 }, { turns: 180 }],
       [{ arc: 135, plane: 180, axis: -90 }, { turns: -180 }],
     ])
@@ -97,8 +102,8 @@ describe('applyPatternFinalTransforms', () => {
 
     const transformed = applyPatternInitialArcRotation(source, 90)
 
-    expect(transformed.props[0]?.anim.map(({ arc }) => arc)).toEqual([0, 270])
-    expect(transformed.props[1]?.anim.map(({ arc }) => arc)).toEqual([135, 45])
+    expect(transformed.props[0]?.anim.map(({ arc }) => arc)).toEqual([180, 270])
+    expect(transformed.props[1]?.anim.map(({ arc }) => arc)).toEqual([315, 45])
   })
 
   it('keeps arc orientation independent from the 180-degree plane transform', () => {
@@ -108,8 +113,8 @@ describe('applyPatternFinalTransforms', () => {
     const transformed = applyPatternFinalTransforms(oriented, transforms)
 
     expect(transformed.props.map(({ anim }) => anim)).toEqual([
-      [{ arc: 0, plane: 180 }, { turns: 180 }],
-      [{ arc: 135, plane: 0, axis: 90 }, { turns: -180 }],
+      [{ arc: 180, plane: 180 }, { turns: 180 }],
+      [{ arc: 315, plane: 0, axis: 90 }, { turns: -180 }],
     ])
     expect(createFinalTransformedVtgAnimationSignature(oriented, transforms)).toBe(
       createVtgAnimationSignature(transformed),

@@ -427,24 +427,39 @@ describe('VtgPane', () => {
   })
 
   it.each(['1:2', '1:4'] as const)(
-    'defaults Rotate on at %s and emits the unrotated option when unchecked',
+    'defaults rotation to -90 degrees at %s and emits all selector options',
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
       await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
       await nextTick()
 
-      const rotate = wrapper.get<HTMLInputElement>('[data-role="vtg-orientation"]')
-      expect(rotate.element.type).toBe('checkbox')
-      expect(rotate.element.checked).toBe(true)
+      const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+      expect(rotate.element.value).toBe('-90')
+      expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°', '90°', '-90°'])
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-        { reference: '5-1', speedRatio, orientation: 90 },
+        { reference: '5-1', speedRatio, orientation: -90 },
       ])
 
-      await rotate.setValue(false)
+      await rotate.setValue('0')
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([{ reference: '5-1', speedRatio }])
     },
   )
+
+  it('remembers Rotate while switching between supported ratios', async () => {
+    const wrapper = mount(VtgPane)
+    await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+
+    const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+    await rotate.setValue('0')
+    await wrapper.get<HTMLInputElement>('input[value="1:4"]').setValue()
+
+    expect(rotate.element.value).toBe('0')
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { reference: '5-1', speedRatio: '1:4' },
+    ])
+  })
 
   it('offers a Tilted checkbox that reapplies VTG and Qtr patterns', async () => {
     for (const qtrEnabled of [false, true]) {
@@ -1387,39 +1402,95 @@ describe('VtgPane', () => {
     expect(sideSplitRule.findAll('.vtg-rule-card__prop-handle')).toHaveLength(4)
   })
 
-  it('flips left header elements without mirroring top headers', async () => {
+  it('swaps the top and left header layouts while Rotate is enabled', async () => {
     const wrapper = mount(VtgPane)
+    const columnRule = () => wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 5"]')
+    const sideRule = () => wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
 
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
+    expect(columnRule().classes()).toContain('vtg-rule-card--vertical')
+    expect(sideRule().classes()).toContain('vtg-rule-card--horizontal')
+
+    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+
+    expect(columnRule().classes()).toContain('vtg-rule-card--horizontal')
+    expect(sideRule().classes()).toContain('vtg-rule-card--vertical')
+
+    await wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').setValue('0')
+
+    expect(columnRule().classes()).toContain('vtg-rule-card--vertical')
+    expect(sideRule().classes()).toContain('vtg-rule-card--horizontal')
+  })
+
+  it('uses the -90-degree option to flip rotated left header elements vertically', async () => {
+    const wrapper = mount(VtgPane)
+    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
 
     const sideSplitRule = wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
     const sideSplitProps = sideSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+    expect(sideSplitRule.classes()).toContain('vtg-rule-card--vertical')
     expect(sideSplitRule.classes()).toContain('vtg-rule-card--reversed')
     expect(
-      sideSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetInlineStart,
+      sideSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
     ).toBe('3%')
-    expect(sideSplitProps.map(({ element }) => element.style.insetInlineStart)).toEqual([
+    expect(sideSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
       '59%',
       '15%',
     ])
-    expect(sideSplitProps[0]?.find('[data-role="vtg-prop-end"]').classes()).toContain(
-      'vtg-rule-card__prop-handle--large',
-    )
-    expect(sideSplitProps[1]?.find('[data-role="vtg-prop-start"]').classes()).toContain(
-      'vtg-rule-card__prop-handle--large',
-    )
 
     const columnSplitRule = wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 5"]')
     const columnSplitProps = columnSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+    expect(columnSplitRule.classes()).toContain('vtg-rule-card--horizontal')
     expect(columnSplitRule.classes()).not.toContain('vtg-rule-card--reversed')
     expect(
-      columnSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
+      columnSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetInlineStart,
     ).toBe('97%')
-    expect(columnSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
+    expect(columnSplitProps.map(({ element }) => element.style.insetInlineStart)).toEqual([
       '4%',
       '48%',
     ])
   })
+
+  it.each(['1:1', '1:2', '1:3', '1:4', '1:5'] as const)(
+    'uses 180 degrees to flip horizontal left headers at %s when rotation is zero',
+    async (speedRatio) => {
+      const wrapper = mount(VtgPane)
+      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      if (speedRatio === '1:2' || speedRatio === '1:4') {
+        await wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').setValue('0')
+      }
+
+      await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
+
+      const sideSplitRule = wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
+      const sideSplitProps = sideSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+      expect(sideSplitRule.classes()).toContain('vtg-rule-card--horizontal')
+      expect(sideSplitRule.classes()).toContain('vtg-rule-card--reversed')
+      expect(
+        sideSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetInlineStart,
+      ).toBe('3%')
+      expect(sideSplitProps.map(({ element }) => element.style.insetInlineStart)).toEqual([
+        '59%',
+        '15%',
+      ])
+      expect(sideSplitProps[0]?.find('[data-role="vtg-prop-end"]').classes()).toContain(
+        'vtg-rule-card__prop-handle--large',
+      )
+      expect(sideSplitProps[1]?.find('[data-role="vtg-prop-start"]').classes()).toContain(
+        'vtg-rule-card__prop-handle--large',
+      )
+
+      const columnSplitRule = wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 5"]')
+      const columnSplitProps = columnSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+      expect(columnSplitRule.classes()).not.toContain('vtg-rule-card--reversed')
+      expect(
+        columnSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
+      ).toBe('97%')
+      expect(columnSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
+        '4%',
+        '48%',
+      ])
+    },
+  )
 
   it('does not mirror frame-derived QTR props a second time when 180° is enabled', async () => {
     const wrapper = await mountVtgPane(true)
@@ -1564,7 +1635,7 @@ describe('VtgPane', () => {
         ?.props.map((prop) => prop.anim[0]?.arc),
     ).toEqual([180, 180])
 
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-orientation"]').setValue(false)
+    await wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').setValue('0')
     await nextTick()
     await nextTick()
     reportAllBlankDimensions(72, 68)

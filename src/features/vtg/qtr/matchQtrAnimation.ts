@@ -3,7 +3,7 @@ import {
   createDefaultQtrBaseAnimation,
 } from '@/features/vtg/qtr/createQtrAnimation'
 import { applyVtgPlaybackControls } from '@/features/vtg/createVtgAnimation'
-import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
+import { hasFixedVtgPatternShape } from '@/features/vtg/data/vtgPatternCatalog'
 import type {
   QtrPatternMatch,
   QtrPatternMatchPreferences,
@@ -63,7 +63,7 @@ const buildCandidateCache = (speedRatio: VtgSpeedRatio) => {
     for (const row of ruleNumbers) {
       const reference = createCellReference(column, row)
       const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
-      const shapeOptions = vtgFixedShapeCells.has(reference)
+      const shapeOptions = hasFixedVtgPatternShape(reference, speedRatio)
         ? (['diamond'] as const)
         : patternShapes
 

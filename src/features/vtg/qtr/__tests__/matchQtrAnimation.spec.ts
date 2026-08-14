@@ -19,17 +19,19 @@ const createQtrAnimation = (selection: QtrPatternSelection) => {
 
 describe('Qtr animation matching', () => {
   it.each(['1:2', '1:4'] as const)(
-    'recognizes the initial arc orientation after a beat shift at %s',
+    'recognizes both initial arc rotations after a beat shift at %s',
     (speedRatio) => {
-      const selection = {
-        reference: '5-1',
-        speedRatio,
-        quarters: 1,
-        orientation: 90,
-        beat: 3,
-      } as const satisfies QtrPatternSelection
+      for (const orientation of [90, -90] as const) {
+        const selection = {
+          reference: '5-1',
+          speedRatio,
+          quarters: 1,
+          orientation,
+          beat: 3,
+        } as const satisfies QtrPatternSelection
 
-      expect(findQtrPatternMatch(createQtrAnimation(selection))).toMatchObject(selection)
+        expect(findQtrPatternMatch(createQtrAnimation(selection))).toMatchObject(selection)
+      }
     },
   )
 
@@ -79,6 +81,27 @@ describe('Qtr animation matching', () => {
       scale: 0.8,
     })
   })
+
+  it.each(['1:2', '1:4'] as const)(
+    'recovers Tilted for an otherwise fixed-shape Qtr cell at %s',
+    (speedRatio) => {
+      const selection = {
+        reference: '1-1',
+        speedRatio,
+        quarters: 1,
+        shape: 'box',
+      } as const satisfies QtrPatternSelection
+
+      expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
+        ...selection,
+        isAnti: false,
+        swapProps: false,
+        reversePlane: false,
+        bpm: 60,
+        scale: 0.8,
+      })
+    },
+  )
 
   it('recognizes both Qtr orientations across the final Swap transform', () => {
     for (const swapProps of booleanOptions) {

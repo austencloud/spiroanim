@@ -255,6 +255,30 @@ describe('createVtgAnimation', () => {
     }
   })
 
+  it.each(['1:2', '1:4'] as const)(
+    'applies Tilted to every otherwise fixed-shape cell at %s',
+    (speedRatio) => {
+      for (const reference of vtgFixedShapeCells) {
+        const selection = { reference, speedRatio } as const satisfies VtgPatternSelection
+        const diamond = createVtgAnimationForSelection(createCurrentAnimation(), selection)
+        const tilted = createVtgAnimationForSelection(createCurrentAnimation(), {
+          ...selection,
+          shape: 'box',
+        })
+        if (!diamond || !tilted) throw new Error(`Expected VTG animations for ${reference}`)
+
+        expect(tilted.props.map((prop) => prop.anim[0]?.arc)).toEqual(
+          diamond.props.map((prop) => {
+            const firstFrame = prop.anim[0]
+            if (!firstFrame) return undefined
+            const delta = Math.abs(firstFrame.plane ?? 0) === 180 ? -45 : 45
+            return ((firstFrame.arc ?? 0) + delta + 360) % 360
+          }),
+        )
+      }
+    },
+  )
+
   it('applies Thick to main player data without changing preview thickness', () => {
     const selection = {
       reference: '1-6',

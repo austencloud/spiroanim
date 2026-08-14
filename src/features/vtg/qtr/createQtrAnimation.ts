@@ -7,7 +7,7 @@ import {
 import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
-import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
+import { hasFixedVtgPatternShape } from '@/features/vtg/data/vtgPatternCatalog'
 
 const normalizeArc = (arc: number): number => ((arc % 360) + 360) % 360
 const propIndices = [0, 1] as const
@@ -83,7 +83,8 @@ const withoutFinalTransforms = ({
 // Qtr #2 remains accepted for legacy callers, while the current UI always emits Qtr #1 and uses
 // the shared 180 control to select the alternate face-on orientation.
 const getSelectedQtrMode = (selection: QtrPatternSelection): QtrMode => {
-  const appliesBoxShape = selection.shape === 'box' && !vtgFixedShapeCells.has(selection.reference)
+  const appliesBoxShape =
+    selection.shape === 'box' && !hasFixedVtgPatternShape(selection.reference, selection.speedRatio)
   return selection.reversePlane && !appliesBoxShape ? 2 : selection.quarters
 }
 

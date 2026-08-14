@@ -75,7 +75,7 @@
           :number="rule.number"
           :diagram="rule.diagram"
           :description="rule.description"
-          orientation="vertical"
+          :orientation="columnHeaderOrientation"
           :accent="rule.number === selectedCell?.column"
           :show-divider="!isQtr"
           :show-props="!isQtr"
@@ -94,12 +94,12 @@
           :number="rule.number"
           :diagram="rule.diagram"
           :description="rule.description"
-          orientation="horizontal"
+          :orientation="sideHeaderOrientation"
           :accent="rule.number === selectedCell?.row"
           :show-divider="!isQtr"
           :prop-colors="isQtr ? vtgHeaderPropColors : undefined"
           :tooltip-disabled="isQtr"
-          :reversed="reversePlane"
+          :reversed="sideHeaderReversed"
           :mirror-props="!isQtr"
           @select="selectRow(rule.number)"
         />
@@ -268,9 +268,9 @@ import type {
   VtgTransitionBeats,
 } from '@/features/vtg/types'
 import {
-  getDefaultVtgPatternOrientation,
   supportsVtgPatternOrientation,
   supportsVtgQtrTransition,
+  vtgDefaultPatternOrientation,
   vtgDefaultTransitionBeats,
   vtgSpeedRatios,
 } from '@/features/vtg/types'
@@ -333,7 +333,7 @@ const {
 const isAnti = ref(false)
 const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
-const orientation = ref<VtgPatternOrientation>(getDefaultVtgPatternOrientation(speedRatio.value))
+const orientation = ref<VtgPatternOrientation>(vtgDefaultPatternOrientation)
 const transition = ref(false)
 const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
 const transitionQuad = ref(false)
@@ -342,6 +342,19 @@ const transitionAvailable = computed(() => supportsVtgQtrTransition(speedRatio.v
 const usesPairedPreviewLayout = computed(
   () => speedRatio.value === '1:2' || speedRatio.value === '1:4',
 )
+const usesRotatedHeaderLayout = computed(
+  () => supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0,
+)
+const columnHeaderOrientation = computed(() =>
+  usesRotatedHeaderLayout.value ? 'horizontal' : 'vertical',
+)
+const sideHeaderOrientation = computed(() =>
+  usesRotatedHeaderLayout.value ? 'vertical' : 'horizontal',
+)
+const sideHeaderReversed = computed(() => {
+  if (usesRotatedHeaderLayout.value) return orientation.value === -90
+  return reversePlane.value
+})
 const activeQtrMode = computed<1 | false>(() => (isQtr.value ? 1 : false))
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
   const colorSet = COLSET[COLORS.indexOf(color)]
@@ -540,16 +553,11 @@ const resetPatternControls = async () => {
   transition.value = false
   transitionQuad.value = false
   transitionSecond.value = false
-  orientation.value = 0
+  orientation.value = vtgDefaultPatternOrientation
   await nextTick()
   suppressPatternEmit = false
   if (tile !== undefined) emitPatternSelection(tile)
 }
-
-watch(speedRatio, (value) => {
-  if (suppressPatternEmit) return
-  orientation.value = getDefaultVtgPatternOrientation(value)
-})
 
 watch(
   [
@@ -638,9 +646,9 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     transitionBeats.value = match.transitionBeats ?? vtgDefaultTransitionBeats
     transitionQuad.value = match.transitionQuad ?? false
     transitionSecond.value = match.transitionSecond ?? false
-    orientation.value = supportsVtgPatternOrientation(match.speedRatio)
-      ? (match.orientation ?? 0)
-      : 0
+    if (supportsVtgPatternOrientation(match.speedRatio)) {
+      orientation.value = match.orientation ?? 0
+    }
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
@@ -668,7 +676,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     transitionBeats.value = vtgDefaultTransitionBeats
     transitionQuad.value = false
     transitionSecond.value = false
-    orientation.value = 0
+    orientation.value = vtgDefaultPatternOrientation
   }
 
   // Suppression only protects the control writes above through their watcher flush. A newer
@@ -691,7 +699,7 @@ const selectInitialRandomPattern = () => {
   transitionBeats.value = vtgDefaultTransitionBeats
   transitionQuad.value = false
   transitionSecond.value = false
-  orientation.value = 0
+  orientation.value = vtgDefaultPatternOrientation
   selectRandomTile()
 
   void nextTick(() => {

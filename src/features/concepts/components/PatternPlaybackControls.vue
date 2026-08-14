@@ -39,13 +39,16 @@
     <AppTooltip v-if="showOrientation" text="Rotate the entire pattern from its starting position">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps" class="pattern-playback-controls__orientation">
-          <input
-            v-model="rotated"
-            type="checkbox"
-            aria-label="Rotate the pattern"
+          <span class="pattern-playback-controls__visually-hidden">Pattern rotation</span>
+          <select
+            v-model.number="orientation"
+            aria-label="Rotate the pattern from its starting position"
             :data-role="`${concept}-orientation`"
-          />
-          <span>Rotate</span>
+          >
+            <option v-for="option in vtgPatternOrientations" :key="option" :value="option">
+              {{ option }}°
+            </option>
+          </select>
         </label>
       </template>
     </AppTooltip>
@@ -54,7 +57,7 @@
 
 <script setup lang="ts">
 import AppTooltip from '@/components/AppTooltip.vue'
-import { vtgBeats } from '@/features/vtg/types'
+import { vtgBeats, vtgPatternOrientations } from '@/features/vtg/types'
 import type { VtgBeat, VtgPatternOrientation } from '@/features/vtg/types'
 
 defineProps<{ concept: 'vtg' | 'qtr'; showOrientation?: boolean }>()
@@ -62,12 +65,6 @@ defineProps<{ concept: 'vtg' | 'qtr'; showOrientation?: boolean }>()
 const beat = defineModel<VtgBeat>('beat', { required: true })
 const qtr = defineModel<boolean>('qtr', { required: true })
 const orientation = defineModel<VtgPatternOrientation>('orientation', { default: 0 })
-const rotated = computed({
-  get: () => orientation.value === 90,
-  set: (value: boolean) => {
-    orientation.value = value ? 90 : 0
-  },
-})
 </script>
 
 <style scoped>
@@ -93,16 +90,14 @@ const rotated = computed({
 }
 
 .pattern-playback-controls__beats label,
-.pattern-playback-controls__qtr,
-.pattern-playback-controls__orientation {
+.pattern-playback-controls__qtr {
   position: relative;
   min-width: 0;
   cursor: pointer;
 }
 
 .pattern-playback-controls__beats input,
-.pattern-playback-controls__qtr input,
-.pattern-playback-controls__orientation input {
+.pattern-playback-controls__qtr input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -111,13 +106,13 @@ const rotated = computed({
 
 .pattern-playback-controls__beats label > span,
 .pattern-playback-controls__qtr > span,
-.pattern-playback-controls__orientation > span {
+.pattern-playback-controls__orientation select {
   display: grid;
   min-width: 2rem;
   padding-block: var(--space-1);
   padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
   color: var(--color-text);
-  font-family: inherit;
+  font: inherit;
   font-size: clamp(0.625rem, 3cqi, 0.875rem);
   font-weight: 700;
   white-space: nowrap;
@@ -139,7 +134,7 @@ const rotated = computed({
 }
 
 .pattern-playback-controls__qtr input:checked + span,
-.pattern-playback-controls__orientation input:checked + span {
+.pattern-playback-controls__orientation select {
   color: var(--color-on-action-primary);
   background: var(--color-pattern-mode-active);
   border-color: var(--color-pattern-mode-active-border);
@@ -147,7 +142,7 @@ const rotated = computed({
 
 .pattern-playback-controls__beats input:focus-visible + span,
 .pattern-playback-controls__qtr input:focus-visible + span,
-.pattern-playback-controls__orientation input:focus-visible + span {
+.pattern-playback-controls__orientation select:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }
