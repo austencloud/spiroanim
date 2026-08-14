@@ -1,6 +1,7 @@
 import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
 import { applyPatternPropVisibility } from '@/features/concepts/patternPropVisibility'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
+import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 import { toConceptPreviewAnimation } from '@/features/concepts/data/toConceptPreviewAnimation'
 import { buildQstPattern } from '@/features/quarter-space-tech/data/qstPatternCatalog'
 import { analyzeQstPositionPairs } from '@/features/quarter-space-tech/math/analyzeQstAnimation'
@@ -82,7 +83,7 @@ export const createQstAnimation = (
     depth: pattern.depth ?? current.depth,
   }
 
-  return applyPatternFinalTransforms(animation, selection)
+  return applyPatternPropColors(applyPatternFinalTransforms(animation, selection), selection)
 }
 
 export const createDefaultQstAnimation = (

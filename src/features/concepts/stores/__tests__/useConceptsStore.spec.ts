@@ -47,6 +47,9 @@ describe('useConceptsStore', () => {
     expect(store.arms).toBe(true)
     expect(store.leftPropVisible).toBe(true)
     expect(store.rightPropVisible).toBe(true)
+    expect(store.leftPropColor).toBe('Cyan')
+    expect(store.rightPropColor).toBe('Green')
+    expect(store.customizeExpanded).toBe(false)
     app.unmount()
   })
 
@@ -64,6 +67,8 @@ describe('useConceptsStore', () => {
     store.arms = false
     store.leftPropVisible = false
     store.rightPropVisible = false
+    store.leftPropColor = 'Blue'
+    store.rightPropColor = 'Magenta'
 
     store.resetPatternControls()
 
@@ -80,6 +85,8 @@ describe('useConceptsStore', () => {
       arms: store.arms,
       leftPropVisible: store.leftPropVisible,
       rightPropVisible: store.rightPropVisible,
+      leftPropColor: store.leftPropColor,
+      rightPropColor: store.rightPropColor,
     }).toEqual({
       speedRatio: '1:3',
       swapProps: false,
@@ -93,7 +100,18 @@ describe('useConceptsStore', () => {
       arms: true,
       leftPropVisible: true,
       rightPropVisible: true,
+      leftPropColor: 'Cyan',
+      rightPropColor: 'Green',
     })
+    app.unmount()
+  })
+
+  it('persists whether Customize is expanded', () => {
+    localStorage.setItem('sa-concepts', JSON.stringify({ customizeExpanded: true }))
+
+    const { app, store } = mountStore()
+
+    expect(store.customizeExpanded).toBe(true)
     app.unmount()
   })
 

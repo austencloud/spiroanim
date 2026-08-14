@@ -203,6 +203,7 @@ import ConceptAnimationControls from '@/features/concepts/components/ConceptAnim
 import AppTooltip from '@/components/AppTooltip.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
+import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import QstCatalogPage from '@/features/quarter-space-tech/components/QstCatalogPage.vue'
 import QstPagination from '@/features/quarter-space-tech/components/QstPagination.vue'
@@ -260,6 +261,8 @@ const {
   arms,
   leftPropVisible,
   rightPropVisible,
+  leftPropColor,
+  rightPropColor,
 } = storeToRefs(conceptsStore)
 
 const selectedCollection = shallowRef<QstCollectionDefinition>()
@@ -309,7 +312,7 @@ const propColorStyle = computed(() => ({
 
 const catalogPageKey = computed(
   () =>
-    `${selectedCollection.value?.key}-${pageIndex.value}-${swapProps.value}-${reversePlane.value}-${scale.value}-${spacing.value}-${leftPropVisible.value}-${rightPropVisible.value}`,
+    `${selectedCollection.value?.key}-${pageIndex.value}-${swapProps.value}-${reversePlane.value}-${scale.value}-${spacing.value}-${leftPropVisible.value}-${rightPropVisible.value}-${leftPropColor.value}-${rightPropColor.value}`,
 )
 
 const createSelection = (pattern: QstPatternDefinition): QstPatternSelection => {
@@ -330,6 +333,12 @@ const createSelection = (pattern: QstPatternDefinition): QstPatternSelection => 
   if (arms.value !== vtgPlayerSettings.arms) selection.arms = arms.value
   if (!leftPropVisible.value) selection.left = false
   if (!rightPropVisible.value) selection.right = false
+  if (
+    leftPropColor.value !== defaultPatternPropColors[0] ||
+    rightPropColor.value !== defaultPatternPropColors[1]
+  ) {
+    selection.propColors = [leftPropColor.value, rightPropColor.value]
+  }
 
   return selection
 }
@@ -402,6 +411,8 @@ watch(
     arms,
     leftPropVisible,
     rightPropVisible,
+    leftPropColor,
+    rightPropColor,
   ],
   () => {
     if (!suppressPatternEmit && selectedPattern.value) {
@@ -508,6 +519,14 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     arms.value = animation.arms
     leftPropVisible.value = isPatternPropVisible(animation.props[0])
     rightPropVisible.value = isPatternPropVisible(animation.props[1])
+    leftPropColor.value =
+      animation.props[0]?.color === undefined
+        ? defaultPatternPropColors[0]
+        : COLORS[animation.props[0].color]
+    rightPropColor.value =
+      animation.props[1]?.color === undefined
+        ? defaultPatternPropColors[1]
+        : COLORS[animation.props[1].color]
   } else {
     selectedCollection.value = undefined
     selectedPattern.value = undefined

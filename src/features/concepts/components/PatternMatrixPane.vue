@@ -121,6 +121,8 @@
                 :class="{
                   'vtg-tile--highlighted': isTileHighlighted(tile),
                   'vtg-tile--selected': tile.reference === selectedCellReference,
+                  'vtg-tile--paired-left': usesPairedPreviewLayout && tile.column % 2 === 1,
+                  'vtg-tile--paired-right': usesPairedPreviewLayout && tile.column % 2 === 0,
                 }"
                 :aria-label="`${tile.label}, cell ${tile.reference}`"
                 :aria-pressed="tile.reference === selectedCellReference"
@@ -130,7 +132,7 @@
                 data-role="vtg-tile"
                 @click="selectTile(tile)"
               >
-                {{ tile.label }}
+                <span class="vtg-tile__label">{{ tile.label }}</span>
               </button>
               <AppTooltip
                 v-if="tile.reference === selectedCellReference && isSpinToggleCell(tile.reference)"
@@ -144,6 +146,10 @@
                     class="vtg-tile__spin-toggle"
                     :class="{
                       'vtg-tile__spin-toggle--bottom': isBottomSpinToggleCell(tile.reference),
+                      'vtg-tile__spin-toggle--paired-left':
+                        usesPairedPreviewLayout && tile.column % 2 === 1,
+                      'vtg-tile__spin-toggle--paired-right':
+                        usesPairedPreviewLayout && tile.column % 2 === 0,
                     }"
                     :aria-label="`Use ${isAnti ? 'Spin' : 'Anti'} pattern for cell ${tile.reference}`"
                     :aria-pressed="isAnti"
@@ -163,23 +169,24 @@
 
         <div class="vtg-blank-grid">
           <div
-            v-for="(dimensions, index) in blankDimensions"
-            :key="`blank-${index}`"
+            v-for="preview in displayedPreviews"
+            :key="`blank-${preview.reference}`"
             class="vtg-blank"
-            :class="`vtg-blank--${index + 1}`"
+            :class="{ 'vtg-blank--paired': usesPairedPreviewLayout }"
+            :style="preview.style"
             data-role="vtg-blank"
-            :data-blank-index="index"
-            :data-width="dimensions.width"
-            :data-height="dimensions.height"
+            :data-blank-index="preview.rendererIndex"
+            :data-width="blankDimensions[preview.rendererIndex]?.width"
+            :data-height="blankDimensions[preview.rendererIndex]?.height"
             aria-hidden="true"
           >
             <img
-              v-if="previewUrls[index]"
-              :src="previewUrls[index]"
+              v-if="previewUrls[preview.rendererIndex]"
+              :src="previewUrls[preview.rendererIndex]"
               alt=""
               class="vtg-blank__preview"
               data-role="vtg-preview"
-              :data-preview-reference="patternPreviewReferences[index]"
+              :data-preview-reference="preview.reference"
             />
           </div>
         </div>
@@ -188,7 +195,13 @@
 
     <ConceptAnimationControls :animation="animation">
       <template #before-controls>
-        <PatternPlaybackControls v-model:beat="beat" v-model:qtr="isQtr" concept="vtg">
+        <PatternPlaybackControls
+          v-model:beat="beat"
+          v-model:qtr="isQtr"
+          v-model:orientation="orientation"
+          concept="vtg"
+          :show-orientation="supportsVtgPatternOrientation(speedRatio)"
+        >
           <template #before-controls>
             <PatternShapeControls v-model:shape="shape" />
           </template>
@@ -221,12 +234,14 @@ import PatternTransitionControls from '@/features/concepts/components/PatternTra
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
+import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/vtg/qtr/data/qtrLabels'
 import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import {
+  pairedPatternPreviewReferences,
   patternPreviewReferences,
   usePatternPreviews,
 } from '@/features/concepts/composables/usePatternPreviews'
@@ -249,9 +264,12 @@ import type {
   VtgRuleNumber,
   VtgRuleSpec,
   VtgPatternSelection,
+  VtgPatternOrientation,
   VtgTransitionBeats,
 } from '@/features/vtg/types'
 import {
+  getDefaultVtgPatternOrientation,
+  supportsVtgPatternOrientation,
   supportsVtgQtrTransition,
   vtgDefaultTransitionBeats,
   vtgSpeedRatios,
@@ -308,16 +326,22 @@ const {
   arms,
   leftPropVisible,
   rightPropVisible,
+  leftPropColor,
+  rightPropColor,
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
 const isAnti = ref(false)
 const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
+const orientation = ref<VtgPatternOrientation>(getDefaultVtgPatternOrientation(speedRatio.value))
 const transition = ref(false)
 const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
 const transitionQuad = ref(false)
 const transitionSecond = ref(false)
 const transitionAvailable = computed(() => supportsVtgQtrTransition(speedRatio.value))
+const usesPairedPreviewLayout = computed(
+  () => speedRatio.value === '1:2' || speedRatio.value === '1:4',
+)
 const activeQtrMode = computed<1 | false>(() => (isQtr.value ? 1 : false))
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
   const colorSet = COLSET[COLORS.indexOf(color)]
@@ -369,6 +393,9 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       ...(shape.value === 'box' ? { shape: shape.value } : undefined),
       ...(beat.value === 1 ? undefined : { beat: beat.value }),
       ...(transition.value && transitionAvailable.value ? { transition: true } : undefined),
+      ...(supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0
+        ? { orientation: orientation.value }
+        : undefined),
     }
     const selection: VtgPatternSelection | QtrPatternSelection = isQtr.value
       ? { ...baseSelection, quarters: 1 }
@@ -426,6 +453,9 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   ) {
     baseSelection.transitionSecond = true
   }
+  if (supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0) {
+    baseSelection.orientation = orientation.value
+  }
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) baseSelection.scale = scale.value
   if (thick.value !== vtgThickControl.default) baseSelection.thick = thick.value
@@ -435,6 +465,12 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (arms.value !== vtgPlayerSettings.arms) baseSelection.arms = arms.value
   if (!leftPropVisible.value) baseSelection.left = false
   if (!rightPropVisible.value) baseSelection.right = false
+  if (
+    leftPropColor.value !== defaultPatternPropColors[0] ||
+    rightPropColor.value !== defaultPatternPropColors[1]
+  ) {
+    baseSelection.propColors = [leftPropColor.value, rightPropColor.value]
+  }
   const selection: ConceptPatternSelection = isQtr.value
     ? { ...baseSelection, quarters: 1 }
     : baseSelection
@@ -504,10 +540,16 @@ const resetPatternControls = async () => {
   transition.value = false
   transitionQuad.value = false
   transitionSecond.value = false
+  orientation.value = 0
   await nextTick()
   suppressPatternEmit = false
   if (tile !== undefined) emitPatternSelection(tile)
 }
+
+watch(speedRatio, (value) => {
+  if (suppressPatternEmit) return
+  orientation.value = getDefaultVtgPatternOrientation(value)
+})
 
 watch(
   [
@@ -520,6 +562,7 @@ watch(
     transitionBeats,
     transitionQuad,
     transitionSecond,
+    orientation,
     bpm,
     scale,
     thick,
@@ -529,6 +572,8 @@ watch(
     arms,
     leftPropVisible,
     rightPropVisible,
+    leftPropColor,
+    rightPropColor,
     activeQtrMode,
   ],
   () => {
@@ -593,6 +638,9 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     transitionBeats.value = match.transitionBeats ?? vtgDefaultTransitionBeats
     transitionQuad.value = match.transitionQuad ?? false
     transitionSecond.value = match.transitionSecond ?? false
+    orientation.value = supportsVtgPatternOrientation(match.speedRatio)
+      ? (match.orientation ?? 0)
+      : 0
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
@@ -601,6 +649,14 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     arms.value = animation.arms
     leftPropVisible.value = isPatternPropVisible(animation.props[0])
     rightPropVisible.value = isPatternPropVisible(animation.props[1])
+    leftPropColor.value =
+      animation.props[0]?.color === undefined
+        ? defaultPatternPropColors[0]
+        : COLORS[animation.props[0].color]
+    rightPropColor.value =
+      animation.props[1]?.color === undefined
+        ? defaultPatternPropColors[1]
+        : COLORS[animation.props[1].color]
     isQtr.value = result.status === 'matched' && result.source === 'qtr'
   } else {
     selectedCell.value = undefined
@@ -612,6 +668,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     transitionBeats.value = vtgDefaultTransitionBeats
     transitionQuad.value = false
     transitionSecond.value = false
+    orientation.value = 0
   }
 
   // Suppression only protects the control writes above through their watcher flush. A newer
@@ -634,6 +691,7 @@ const selectInitialRandomPattern = () => {
   transitionBeats.value = vtgDefaultTransitionBeats
   transitionQuad.value = false
   transitionSecond.value = false
+  orientation.value = 0
   selectRandomTile()
 
   void nextTick(() => {
@@ -828,8 +886,28 @@ const paneElement = ref<HTMLElement>()
 const blankWidth = ref(0)
 const blankHeight = ref(0)
 const blankDimensions = reactive<BlankDimensions[]>(
-  Array.from({ length: 9 }, () => ({ width: 0, height: 0 })),
+  pairedPatternPreviewReferences.map(() => ({ width: 0, height: 0 })),
 )
+const displayedPreviews = computed(() => {
+  const references = usesPairedPreviewLayout.value
+    ? pairedPatternPreviewReferences
+    : patternPreviewReferences
+
+  return references.map((reference) => {
+    const [columnText, rowText] = reference.split('-')
+    const column = Number(columnText)
+    const row = Number(rowText)
+    const rendererIndex = pairedPatternPreviewReferences.indexOf(reference)
+
+    return {
+      reference,
+      rendererIndex,
+      style: usesPairedPreviewLayout.value
+        ? { gridColumn: `${column} / span 2`, gridRow: `${row}` }
+        : { gridColumn: `${column + 1}`, gridRow: `${row + 1}` },
+    }
+  })
+})
 const { previewUrls, requestPreviews } = usePatternPreviews({
   dimensions: blankDimensions,
   speedRatio,
@@ -841,11 +919,22 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   scale,
   spacing,
   quarters: activeQtrMode,
+  leftPropColor,
+  rightPropColor,
+  orientation,
+  pairedLayout: usesPairedPreviewLayout,
 })
 
 let blankObserver: ResizeObserver | undefined
 
 const roundDimension = (value: number) => Math.round(value * 100) / 100
+const observeDisplayedPreviews = () => {
+  paneElement.value
+    ?.querySelectorAll<HTMLElement>('[data-role="vtg-blank"]')
+    .forEach((element) => blankObserver?.observe(element))
+}
+
+watch(usesPairedPreviewLayout, () => void nextTick(observeDisplayedPreviews))
 
 onMounted(() => {
   componentMounted = true
@@ -870,9 +959,7 @@ onMounted(() => {
   })
   blankObserver = observer
 
-  paneElement.value
-    ?.querySelectorAll<HTMLElement>('[data-role="vtg-blank"]')
-    .forEach((element) => observer.observe(element))
+  observeDisplayedPreviews()
 })
 
 onBeforeUnmount(() => {
@@ -1094,6 +1181,22 @@ defineExpose({
   inset-block-end: max(0.2rem, 0.6cqi);
 }
 
+.vtg-tile__spin-toggle--paired-left,
+.vtg-tile__spin-toggle--paired-right {
+  inset-block-start: auto;
+  inset-block-end: max(0.2rem, 0.6cqi);
+  transform: none;
+}
+
+.vtg-tile__spin-toggle--paired-left {
+  inset-inline-start: max(0.2rem, 0.6cqi);
+}
+
+.vtg-tile__spin-toggle--paired-right {
+  inset-inline-start: auto;
+  inset-inline-end: max(0.2rem, 0.6cqi);
+}
+
 .vtg-tile__spin-toggle:focus-visible {
   outline: max(2px, 0.2cqi) solid var(--vtg-color-rule-text);
   outline-offset: max(1px, 0.1cqi);
@@ -1123,47 +1226,45 @@ defineExpose({
   transform: translate(-50%, calc(-50% - 0.33cqi));
 }
 
+.vtg-blank--paired {
+  width: 39%;
+  align-self: center;
+  justify-self: center;
+  transform: none;
+}
+
+.vtg-tile--paired-left,
+.vtg-tile--paired-right {
+  padding-inline: max(0.4rem, 1cqi);
+  align-items: center;
+}
+
+.vtg-tile--paired-left {
+  justify-items: start;
+}
+
+.vtg-tile--paired-right {
+  justify-items: end;
+}
+
+.vtg-tile--paired-left .vtg-tile__label {
+  transform: rotate(-90deg);
+}
+
+.vtg-tile--paired-right .vtg-tile__label {
+  transform: rotate(90deg);
+}
+
+.vtg-tile--paired-left .vtg-tile__label,
+.vtg-tile--paired-right .vtg-tile__label {
+  white-space: nowrap;
+}
+
 .vtg-blank__preview {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-
-.vtg-blank--1,
-.vtg-blank--4,
-.vtg-blank--7 {
-  grid-column: 2;
-}
-
-.vtg-blank--2,
-.vtg-blank--5,
-.vtg-blank--8 {
-  grid-column: 4;
-}
-
-.vtg-blank--3,
-.vtg-blank--6,
-.vtg-blank--9 {
-  grid-column: 6;
-}
-
-.vtg-blank--1,
-.vtg-blank--2,
-.vtg-blank--3 {
-  grid-row: 2;
-}
-
-.vtg-blank--4,
-.vtg-blank--5,
-.vtg-blank--6 {
-  grid-row: 4;
-}
-
-.vtg-blank--7,
-.vtg-blank--8,
-.vtg-blank--9 {
-  grid-row: 6;
 }
 
 .vtg-shuffle {

@@ -9,6 +9,7 @@ import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import type { VtgCellReference, VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
+import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import type { RootData, RootDataFinal } from '@/types/AnimTypes'
 
 const transposeSelection = <Selection extends VtgPatternSelection>(
@@ -178,15 +179,22 @@ describe('createQtrAnimation', () => {
     )
   })
 
-  it('ignores the reciprocal transition at 1:1 without subdividing playback', () => {
-    const selection = {
-      reference: '5-1',
-      speedRatio: '1:1',
-      quarters: 1,
-    } as const satisfies QtrPatternSelection
+  it.each(['1:1', '1:2'] as const)(
+    'enables the reciprocal transition at %s during development',
+    (speedRatio) => {
+      const selection = {
+        reference: '5-1',
+        speedRatio,
+        quarters: 1,
+      } as const satisfies QtrPatternSelection
 
-    expect(
-      createQtrAnimation(createCurrentAnimation(), { ...selection, transition: true }),
-    ).toEqual(createQtrAnimation(createCurrentAnimation(), selection))
-  })
+      const original = createQtrAnimation(createCurrentAnimation(), selection)
+      const transitioned = createQtrAnimation(createCurrentAnimation(), {
+        ...selection,
+        transition: true,
+      })
+
+      expect(transitioned?.bpm).toBe((original?.bpm ?? 0) * doublePlaybackMultiplier)
+    },
+  )
 })

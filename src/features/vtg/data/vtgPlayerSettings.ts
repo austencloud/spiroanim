@@ -79,7 +79,7 @@ export const vtgBaseFrameSettings = {
   scale: toVtgInternalScale(vtgScaleControl.default),
 } satisfies AnimReadable
 
-export const vtgPropSettings = [{ color: 'Orange' }, { color: 'Green' }] satisfies readonly Omit<
+export const vtgPropSettings = [{ color: 'Cyan' }, { color: 'Green' }] satisfies readonly Omit<
   PropReadable,
   'anim'
 >[]

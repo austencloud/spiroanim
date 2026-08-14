@@ -37,6 +37,29 @@ const quarterLabel = (label: VtgPatternLabel): VtgPatternLabel => {
 }
 
 describe('describePatternRelationships', () => {
+  it('keeps matrix labels canonical across every speed ratio', () => {
+    for (const row of ruleNumbers) {
+      for (const column of ruleNumbers) {
+        const reference: VtgCellReference = `${column}-${row}`
+        const expected = expectedLabelsByRow[row][column - 1]
+        if (!expected) throw new Error(`Missing expected label for ${reference}`)
+
+        for (const speedRatio of vtgSpeedRatios) {
+          expect(describePatternSelectionRelationships({ reference, speedRatio }).label).toBe(
+            expected,
+          )
+          expect(
+            describePatternSelectionRelationships({
+              reference,
+              speedRatio,
+              quarters: 1,
+            }).label,
+          ).toBe(quarterLabel(expected))
+        }
+      }
+    }
+  })
+
   it('keeps every VTG relationship invariant across playback-only controls', () => {
     const mismatches: string[] = []
 

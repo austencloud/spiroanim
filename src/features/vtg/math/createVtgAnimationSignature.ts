@@ -1,5 +1,5 @@
-import { reverseAngle } from '@/math/animation/AngleFunc'
 import type { AnimData, RootDataFinal } from '@/types/AnimTypes'
+import { reverseAngle } from '@/math/animation/AngleFunc'
 
 const normalizePlane = (angle: number | undefined) => {
   if (angle === undefined) return null
@@ -24,7 +24,10 @@ export const createVtgAnimationSignature = (animation: RootDataFinal): string | 
 /** Produces the same signature as applying shared final transforms without cloning the animation. */
 export const createFinalTransformedVtgAnimationSignature = (
   animation: RootDataFinal,
-  transforms: { swapProps: boolean; reversePlane: boolean },
+  transforms: {
+    swapProps: boolean
+    reversePlane: boolean
+  },
 ): string | undefined => {
   if (animation.props.length !== 2) return undefined
 
@@ -33,7 +36,7 @@ export const createFinalTransformedVtgAnimationSignature = (
       const sourceIndex = transforms.swapProps ? 1 - outputIndex : outputIndex
       const source = animation.props[sourceIndex]
       return source?.anim.map((frame, frameIndex) =>
-        frameSignature(frame, transforms.reversePlane && frameIndex === 0),
+        frameSignature(frame, frameIndex === 0 && transforms.reversePlane),
       )
     }),
   )

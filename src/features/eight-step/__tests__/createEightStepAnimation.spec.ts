@@ -65,7 +65,7 @@ describe('createEightStepAnimation', () => {
       aspectx: vtgPlayerSettings.aspectx,
       aspecty: vtgPlayerSettings.aspecty,
       smooth: current.smooth,
-      props: [{ color: 6 }, { color: 1 }],
+      props: [{ color: 4 }, { color: 1 }],
     })
     expect(animation?.props.map(({ anim }) => anim.length)).toEqual([13, 13])
   })
@@ -94,7 +94,7 @@ describe('createEightStepAnimation', () => {
       hands: true,
       arms: false,
     })
-    expect(transformed?.props.map(({ color }) => color)).toEqual([6, 1])
+    expect(transformed?.props.map(({ color }) => color)).toEqual([4, 1])
     expect(transformed?.props.every(({ anim }) => anim[0]?.scale === 12)).toBe(true)
     expect(rootCompile(transformed!).camera[0]!.orbit.offset).toEqual([0, 0, -23])
     expect(transformed?.props[0]?.anim).not.toEqual(base?.props[1]?.anim)

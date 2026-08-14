@@ -9,6 +9,10 @@ import {
 } from '@/features/vtg/data/vtgPlayerSettings'
 import { vtgDefaultSpeedRatio, vtgSpeedRatios } from '@/features/vtg/types'
 import type { VtgSpeedRatio } from '@/features/vtg/types'
+import {
+  defaultPatternPropColors,
+  type PatternPropColor,
+} from '@/features/concepts/patternPropColors'
 
 export const useConceptsStore = defineStore(
   'sa-concepts',
@@ -27,6 +31,9 @@ export const useConceptsStore = defineStore(
     const arms = ref<boolean>(vtgPlayerSettings.arms)
     const leftPropVisible = ref(true)
     const rightPropVisible = ref(true)
+    const customizeExpanded = ref(false)
+    const leftPropColor = ref<PatternPropColor>(defaultPatternPropColors[0])
+    const rightPropColor = ref<PatternPropColor>(defaultPatternPropColors[1])
 
     const resetPatternControls = () => {
       speedRatio.value = vtgDefaultSpeedRatio
@@ -41,6 +48,8 @@ export const useConceptsStore = defineStore(
       arms.value = vtgPlayerSettings.arms
       leftPropVisible.value = true
       rightPropVisible.value = true
+      leftPropColor.value = defaultPatternPropColors[0]
+      rightPropColor.value = defaultPatternPropColors[1]
     }
 
     return {
@@ -58,12 +67,23 @@ export const useConceptsStore = defineStore(
       arms,
       leftPropVisible,
       rightPropVisible,
+      customizeExpanded,
+      leftPropColor,
+      rightPropColor,
       resetPatternControls,
     }
   },
   {
     persist: {
-      pick: ['selectedConcept', 'qtrEnabled', 'speedRatio', 'swapProps', 'reversePlane', 'spacing'],
+      pick: [
+        'selectedConcept',
+        'qtrEnabled',
+        'speedRatio',
+        'swapProps',
+        'reversePlane',
+        'spacing',
+        'customizeExpanded',
+      ],
       afterHydrate: ({ store }) => {
         const hydratedConcept: string = store.selectedConcept
         if (hydratedConcept === 'qtr') {
@@ -83,6 +103,7 @@ export const useConceptsStore = defineStore(
         ) {
           store.spacing = vtgSpacingControl.default
         }
+        if (typeof store.customizeExpanded !== 'boolean') store.customizeExpanded = false
       },
     },
   },

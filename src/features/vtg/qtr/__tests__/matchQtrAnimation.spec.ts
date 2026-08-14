@@ -18,6 +18,21 @@ const createQtrAnimation = (selection: QtrPatternSelection) => {
 }
 
 describe('Qtr animation matching', () => {
+  it.each(['1:2', '1:4'] as const)(
+    'recognizes the initial arc orientation after a beat shift at %s',
+    (speedRatio) => {
+      const selection = {
+        reference: '5-1',
+        speedRatio,
+        quarters: 1,
+        orientation: 90,
+        beat: 3,
+      } as const satisfies QtrPatternSelection
+
+      expect(findQtrPatternMatch(createQtrAnimation(selection))).toMatchObject(selection)
+    },
+  )
+
   it.each(vtgTransitionBeats)('detects the %s-beat reciprocal transition', (transitionBeats) => {
     const selection = {
       reference: '5-1',

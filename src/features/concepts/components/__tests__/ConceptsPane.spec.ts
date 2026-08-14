@@ -48,6 +48,11 @@ describe('ConceptsPane', () => {
       'The Kinetic Alphabet',
     ])
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
+    const vtgCustomize = wrapper.get<HTMLDetailsElement>('[data-role="vtg-customize"]')
+    expect(vtgCustomize.element.open).toBe(false)
+
+    await wrapper.get('[data-role="vtg-customize-toggle"]').trigger('click')
+    expect(vtgCustomize.element.open).toBe(true)
 
     await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
 
@@ -110,6 +115,10 @@ describe('ConceptsPane', () => {
 
     await selector.setValue('8stp')
 
+    expect(wrapper.get<HTMLDetailsElement>('[data-role="eight-step-customize"]').element.open).toBe(
+      true,
+    )
+
     expect(wrapper.get<HTMLInputElement>('[data-role="eight-step-swap"]').element.checked).toBe(
       true,
     )
@@ -152,6 +161,23 @@ describe('ConceptsPane', () => {
     )
     expect(wrapper.findAll('[data-role="eight-step-cell"]')).toHaveLength(72)
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
+  })
+
+  it('emits Left and Right prop colors from Customize by prop slot', async () => {
+    const wrapper = mount(ConceptsPane)
+
+    await wrapper.get('[data-role="vtg-customize-toggle"]').trigger('click')
+    await wrapper.get<HTMLSelectElement>('[data-role="vtg-left-color"]').setValue('Blue')
+    await wrapper.get<HTMLSelectElement>('[data-role="vtg-right-color"]').setValue('Magenta')
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
+
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      {
+        reference: '1-1',
+        speedRatio: '1:3',
+        propColors: ['Blue', 'Magenta'],
+      },
+    ])
   })
 
   it('shows The Kinetic Alphabet placeholder last without selecting a pattern', async () => {

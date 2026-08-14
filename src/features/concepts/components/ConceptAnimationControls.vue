@@ -3,167 +3,197 @@
     <slot name="before-controls" />
 
     <slot name="between-controls" />
-
-    <fieldset
-      class="concept-pattern-options concept-render-options vtg-pattern-options vtg-render-options"
-    >
-      <legend class="concept-controls__visually-hidden">Rendered features</legend>
-      <slot name="before-render-controls" />
-      <AppTooltip text="Show the complete prop motion paths">
-        <template #activator="{ props: activatorProps }">
-          <label v-bind="activatorProps">
-            <input
-              v-model="paths"
-              type="checkbox"
-              aria-label="Show the complete prop motion paths"
-              :data-role="`${rolePrefix}-paths`"
-            />
-            <span>Paths</span>
-          </label>
-        </template>
-      </AppTooltip>
-      <AppTooltip text="Show the hand motion paths">
-        <template #activator="{ props: activatorProps }">
-          <label v-bind="activatorProps">
-            <input
-              v-model="hands"
-              type="checkbox"
-              aria-label="Show the hand motion paths"
-              :data-role="`${rolePrefix}-hands`"
-            />
-            <span>Hands</span>
-          </label>
-        </template>
-      </AppTooltip>
-      <AppTooltip text="Show the performer's arms">
-        <template #activator="{ props: activatorProps }">
-          <label v-bind="activatorProps">
-            <input
-              v-model="arms"
-              type="checkbox"
-              aria-label="Show the performer's arms"
-              :data-role="`${rolePrefix}-arms`"
-            />
-            <span>Arms</span>
-          </label>
-        </template>
-      </AppTooltip>
-      <AppTooltip text="Show the left prop">
-        <template #activator="{ props: activatorProps }">
-          <label v-bind="activatorProps">
-            <input
-              v-model="leftPropVisible"
-              type="checkbox"
-              aria-label="Show the left prop"
-              :data-role="`${rolePrefix}-left`"
-            />
-            <span>Left</span>
-          </label>
-        </template>
-      </AppTooltip>
-      <AppTooltip text="Show the right prop">
-        <template #activator="{ props: activatorProps }">
-          <label v-bind="activatorProps">
-            <input
-              v-model="rightPropVisible"
-              type="checkbox"
-              aria-label="Show the right prop"
-              :data-role="`${rolePrefix}-right`"
-            />
-            <span>Right</span>
-          </label>
-        </template>
-      </AppTooltip>
-      <slot name="after-controls" />
-    </fieldset>
   </div>
 
-  <fieldset
-    class="concept-slider-controls vtg-slider-controls"
-    :class="{ 'concept-slider-controls--touch': protectTouchScrolling }"
+  <details
+    class="concept-customize"
+    :data-role="`${rolePrefix}-customize`"
+    :open="customizeExpanded"
   >
-    <legend class="concept-controls__visually-hidden">Animation settings</legend>
-    <label>
-      <span class="concept-slider-controls__label vtg-slider-controls__label">
-        <span>Scale</span>
-        <output>{{ scale.toFixed(1) }}</output>
-      </span>
-      <input
-        v-model.number="scale"
-        type="range"
-        :min="vtgScaleControl.min"
-        :max="vtgScaleControl.max"
-        :step="vtgScaleControl.step"
-        :data-role="`${rolePrefix}-scale`"
-        @pointerdown="beginPointerSliderHistory"
-        @pointerup="endPointerSliderHistory"
-        @pointercancel="cancelPointerSliderHistory"
-        @keydown="beginSliderHistory"
-        @keyup="endSliderHistory"
-        @blur="endSliderHistory"
-      />
-    </label>
-    <label>
-      <span class="concept-slider-controls__label vtg-slider-controls__label">
-        <span>Thick</span>
-        <output>{{ thick }}</output>
-      </span>
-      <input
-        v-model.number="thick"
-        type="range"
-        :min="vtgThickControl.min"
-        :max="vtgThickControl.max"
-        :step="vtgThickControl.step"
-        :data-role="`${rolePrefix}-thick`"
-        @pointerdown="beginPointerSliderHistory"
-        @pointerup="endPointerSliderHistory"
-        @pointercancel="cancelPointerSliderHistory"
-        @keydown="beginSliderHistory"
-        @keyup="endSliderHistory"
-        @blur="endSliderHistory"
-      />
-    </label>
-    <label>
-      <span class="concept-slider-controls__label vtg-slider-controls__label">
-        <span>Spacing</span>
-        <output>{{ spacing }}</output>
-      </span>
-      <input
-        v-model.number="spacing"
-        type="range"
-        :min="vtgSpacingControl.min"
-        :max="vtgSpacingControl.max"
-        :step="vtgSpacingControl.step"
-        :data-role="`${rolePrefix}-spacing`"
-        @pointerdown="beginPointerSliderHistory"
-        @pointerup="endPointerSliderHistory"
-        @pointercancel="cancelPointerSliderHistory"
-        @keydown="beginSliderHistory"
-        @keyup="endSliderHistory"
-        @blur="endSliderHistory"
-      />
-    </label>
-    <label>
-      <span class="concept-slider-controls__label vtg-slider-controls__label">
-        <span>BPM</span>
-        <output>{{ bpm }}</output>
-      </span>
-      <input
-        v-model.number="bpm"
-        type="range"
-        :min="vtgBpmControl.min"
-        :max="vtgBpmControl.max"
-        :step="vtgBpmControl.step"
-        :data-role="`${rolePrefix}-bpm`"
-        @pointerdown="beginPointerSliderHistory"
-        @pointerup="endPointerSliderHistory"
-        @pointercancel="cancelPointerSliderHistory"
-        @keydown="beginSliderHistory"
-        @keyup="endSliderHistory"
-        @blur="endSliderHistory"
-      />
-    </label>
-  </fieldset>
+    <summary
+      :data-role="`${rolePrefix}-customize-toggle`"
+      @click.prevent="customizeExpanded = !customizeExpanded"
+    >
+      CUSTOMIZE...
+    </summary>
+    <div class="concept-customize__content">
+      <fieldset
+        class="concept-pattern-options concept-render-options vtg-pattern-options vtg-render-options"
+      >
+        <legend class="concept-controls__visually-hidden">Rendered features</legend>
+        <slot name="before-render-controls" />
+        <AppTooltip text="Show the complete prop motion paths">
+          <template #activator="{ props: activatorProps }">
+            <label v-bind="activatorProps">
+              <input
+                v-model="paths"
+                type="checkbox"
+                aria-label="Show the complete prop motion paths"
+                :data-role="`${rolePrefix}-paths`"
+              />
+              <span>Paths</span>
+            </label>
+          </template>
+        </AppTooltip>
+        <AppTooltip text="Show the hand motion paths">
+          <template #activator="{ props: activatorProps }">
+            <label v-bind="activatorProps">
+              <input
+                v-model="hands"
+                type="checkbox"
+                aria-label="Show the hand motion paths"
+                :data-role="`${rolePrefix}-hands`"
+              />
+              <span>Hands</span>
+            </label>
+          </template>
+        </AppTooltip>
+        <AppTooltip text="Show the performer's arms">
+          <template #activator="{ props: activatorProps }">
+            <label v-bind="activatorProps">
+              <input
+                v-model="arms"
+                type="checkbox"
+                aria-label="Show the performer's arms"
+                :data-role="`${rolePrefix}-arms`"
+              />
+              <span>Arms</span>
+            </label>
+          </template>
+        </AppTooltip>
+        <AppTooltip text="Show the left prop">
+          <template #activator="{ props: activatorProps }">
+            <label v-bind="activatorProps">
+              <input
+                v-model="leftPropVisible"
+                type="checkbox"
+                aria-label="Show the left prop"
+                :data-role="`${rolePrefix}-left`"
+              />
+              <span>Left</span>
+            </label>
+          </template>
+        </AppTooltip>
+        <AppTooltip text="Show the right prop">
+          <template #activator="{ props: activatorProps }">
+            <label v-bind="activatorProps">
+              <input
+                v-model="rightPropVisible"
+                type="checkbox"
+                aria-label="Show the right prop"
+                :data-role="`${rolePrefix}-right`"
+              />
+              <span>Right</span>
+            </label>
+          </template>
+        </AppTooltip>
+        <slot name="after-controls" />
+      </fieldset>
+
+      <fieldset
+        class="concept-slider-controls vtg-slider-controls"
+        :class="{ 'concept-slider-controls--touch': protectTouchScrolling }"
+      >
+        <legend class="concept-controls__visually-hidden">Animation settings</legend>
+        <label>
+          <span class="concept-slider-controls__label vtg-slider-controls__label">
+            <span>Scale</span>
+            <output>{{ scale.toFixed(1) }}</output>
+          </span>
+          <input
+            v-model.number="scale"
+            type="range"
+            :min="vtgScaleControl.min"
+            :max="vtgScaleControl.max"
+            :step="vtgScaleControl.step"
+            :data-role="`${rolePrefix}-scale`"
+            @pointerdown="beginPointerSliderHistory"
+            @pointerup="endPointerSliderHistory"
+            @pointercancel="cancelPointerSliderHistory"
+            @keydown="beginSliderHistory"
+            @keyup="endSliderHistory"
+            @blur="endSliderHistory"
+          />
+        </label>
+        <label>
+          <span class="concept-slider-controls__label vtg-slider-controls__label">
+            <span>Thick</span>
+            <output>{{ thick }}</output>
+          </span>
+          <input
+            v-model.number="thick"
+            type="range"
+            :min="vtgThickControl.min"
+            :max="vtgThickControl.max"
+            :step="vtgThickControl.step"
+            :data-role="`${rolePrefix}-thick`"
+            @pointerdown="beginPointerSliderHistory"
+            @pointerup="endPointerSliderHistory"
+            @pointercancel="cancelPointerSliderHistory"
+            @keydown="beginSliderHistory"
+            @keyup="endSliderHistory"
+            @blur="endSliderHistory"
+          />
+        </label>
+        <label>
+          <span class="concept-slider-controls__label vtg-slider-controls__label">
+            <span>Spacing</span>
+            <output>{{ spacing }}</output>
+          </span>
+          <input
+            v-model.number="spacing"
+            type="range"
+            :min="vtgSpacingControl.min"
+            :max="vtgSpacingControl.max"
+            :step="vtgSpacingControl.step"
+            :data-role="`${rolePrefix}-spacing`"
+            @pointerdown="beginPointerSliderHistory"
+            @pointerup="endPointerSliderHistory"
+            @pointercancel="cancelPointerSliderHistory"
+            @keydown="beginSliderHistory"
+            @keyup="endSliderHistory"
+            @blur="endSliderHistory"
+          />
+        </label>
+        <label>
+          <span class="concept-slider-controls__label vtg-slider-controls__label">
+            <span>BPM</span>
+            <output>{{ bpm }}</output>
+          </span>
+          <input
+            v-model.number="bpm"
+            type="range"
+            :min="vtgBpmControl.min"
+            :max="vtgBpmControl.max"
+            :step="vtgBpmControl.step"
+            :data-role="`${rolePrefix}-bpm`"
+            @pointerdown="beginPointerSliderHistory"
+            @pointerup="endPointerSliderHistory"
+            @pointercancel="cancelPointerSliderHistory"
+            @keydown="beginSliderHistory"
+            @keyup="endSliderHistory"
+            @blur="endSliderHistory"
+          />
+        </label>
+      </fieldset>
+
+      <fieldset class="concept-color-controls">
+        <legend class="concept-controls__visually-hidden">Prop colors</legend>
+        <label>
+          <span>Left</span>
+          <select v-model="leftPropColor" :data-role="`${rolePrefix}-left-color`">
+            <option v-for="color in propColors" :key="color" :value="color">{{ color }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Right</span>
+          <select v-model="rightPropColor" :data-role="`${rolePrefix}-right-color`">
+            <option v-for="color in propColors" :key="color" :value="color">{{ color }}</option>
+          </select>
+        </label>
+      </fieldset>
+    </div>
+  </details>
 </template>
 
 <script setup lang="ts">
@@ -178,6 +208,7 @@ import {
 import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { isTouchDevice } from '@/utils/device'
+import { COLORS } from '@/domain/animation/AnimStruct'
 
 const props = withDefaults(
   defineProps<{
@@ -187,8 +218,21 @@ const props = withDefaults(
   { rolePrefix: 'vtg' },
 )
 
-const { bpm, scale, thick, spacing, paths, hands, arms, leftPropVisible, rightPropVisible } =
-  storeToRefs(useConceptsStore())
+const {
+  bpm,
+  scale,
+  thick,
+  spacing,
+  paths,
+  hands,
+  arms,
+  leftPropVisible,
+  rightPropVisible,
+  customizeExpanded,
+  leftPropColor,
+  rightPropColor,
+} = storeToRefs(useConceptsStore())
+const propColors = COLORS
 
 watch(
   [leftPropVisible, rightPropVisible],
@@ -264,15 +308,99 @@ onBeforeUnmount(endSliderHistory)
 </script>
 
 <style scoped>
+.concept-customize {
+  box-sizing: border-box;
+  width: min(100%, 45rem);
+  min-width: var(--size-concept-content-min-width);
+  margin: var(--space-1) auto 0;
+  overflow: hidden;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.concept-customize summary {
+  display: flex;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-action-primary);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  list-style: none;
+  background: color-mix(in srgb, var(--color-action-primary) 7%, var(--color-surface));
+  align-items: center;
+  justify-content: space-between;
+  transition: background var(--transition-fast);
+}
+
+.concept-customize summary::-webkit-details-marker {
+  display: none;
+}
+
+.concept-customize summary::after {
+  content: '+';
+  font-size: 1rem;
+}
+
+.concept-customize[open] summary::after {
+  content: '-';
+}
+
+.concept-customize[open] summary {
+  background: color-mix(in srgb, var(--color-action-primary) 13%, var(--color-surface));
+  border-block-end: 1px solid var(--color-border);
+}
+
+.concept-customize summary:hover {
+  background: color-mix(in srgb, var(--color-action-primary) 13%, var(--color-surface));
+}
+
+.concept-customize summary:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: -2px;
+}
+
+.concept-customize__content {
+  display: grid;
+  padding-block: var(--space-1) var(--space-2);
+  row-gap: var(--space-1);
+}
+
 .concept-slider-controls {
   display: flex;
   width: min(100%, 45rem);
   padding: var(--space-1) var(--space-2) 0;
-  margin: var(--space-1) auto 0;
+  margin: 0 auto;
   border: 0;
   flex-wrap: wrap;
   column-gap: var(--space-4);
   row-gap: var(--space-1);
+}
+
+.concept-color-controls {
+  display: flex;
+  width: min(100%, 45rem);
+  padding: var(--space-1) var(--space-2);
+  margin: 0 auto;
+  border: 0;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.concept-color-controls label {
+  display: grid;
+  flex: 1 1 9rem;
+  max-width: 16rem;
+  gap: var(--space-1);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.concept-color-controls select {
+  width: 100%;
 }
 
 .concept-slider-controls label {

@@ -192,6 +192,7 @@ import AppTooltip from '@/components/AppTooltip.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
+import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import {
   eightStepPreviewReferences,
   useEightStepPreviews,
@@ -312,6 +313,8 @@ const {
   arms,
   leftPropVisible,
   rightPropVisible,
+  leftPropColor,
+  rightPropColor,
 } = storeToRefs(conceptsStore)
 const selectedCell = ref<EightStepPatternDefinition>()
 const shape = ref<EightStepShape>('diamond')
@@ -359,6 +362,8 @@ const { previewUrls, requestPreviews } = useEightStepPreviews({
   scale,
   spacing,
   shape,
+  leftPropColor,
+  rightPropColor,
 })
 
 let previewObserver: ResizeObserver | undefined
@@ -396,6 +401,12 @@ const createSelection = (cell: EightStepPatternDefinition): EightStepPatternSele
   if (arms.value !== vtgPlayerSettings.arms) selection.arms = arms.value
   if (!leftPropVisible.value) selection.left = false
   if (!rightPropVisible.value) selection.right = false
+  if (
+    leftPropColor.value !== defaultPatternPropColors[0] ||
+    rightPropColor.value !== defaultPatternPropColors[1]
+  ) {
+    selection.propColors = [leftPropColor.value, rightPropColor.value]
+  }
 
   return selection
 }
@@ -471,6 +482,8 @@ watch(
     arms,
     leftPropVisible,
     rightPropVisible,
+    leftPropColor,
+    rightPropColor,
   ],
   () => {
     if (!suppressPatternEmit && selectedCell.value) emitPatternSelection(selectedCell.value)
@@ -522,6 +535,14 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     arms.value = animation.arms
     leftPropVisible.value = isPatternPropVisible(animation.props[0])
     rightPropVisible.value = isPatternPropVisible(animation.props[1])
+    leftPropColor.value =
+      animation.props[0]?.color === undefined
+        ? defaultPatternPropColors[0]
+        : COLORS[animation.props[0].color]
+    rightPropColor.value =
+      animation.props[1]?.color === undefined
+        ? defaultPatternPropColors[1]
+        : COLORS[animation.props[1].color]
   } else {
     selectedCell.value = undefined
   }

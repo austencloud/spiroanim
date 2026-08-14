@@ -2,6 +2,7 @@ import type { PropReadable, RootDataFinal, RootReadable } from '@/types/AnimType
 import type { PatternShape } from '@/types/PatternTypes'
 import type { PatternPropVisibilitySelection } from '@/features/concepts/patternPropVisibility'
 import type { PatternPropSpacingSelection } from '@/features/concepts/patternPropSpacing'
+import type { PatternPropColorSelection } from '@/features/concepts/patternPropColors'
 
 export type VtgRuleNumber = 1 | 2 | 3 | 4 | 5 | 6
 
@@ -22,16 +23,27 @@ export interface VtgCellAddress {
 
 export const vtgSpeedRatios = ['1:1', '1:2', '1:3', '1:4', '1:5'] as const
 export type VtgSpeedRatio = (typeof vtgSpeedRatios)[number]
-export const supportsVtgQtrTransition = (speedRatio: VtgSpeedRatio) => speedRatio !== '1:1'
-export const vtgDefaultSpeedRatio = '1:3' satisfies VtgSpeedRatio
+export const supportsVtgQtrTransition = (
+  speedRatio: VtgSpeedRatio,
+  enableDevelopmentRatios = import.meta.env.DEV,
+) => enableDevelopmentRatios || (speedRatio !== '1:1' && speedRatio !== '1:2')
+export const vtgCanonicalSpeedRatio = '1:3' satisfies VtgSpeedRatio
+export const vtgDefaultSpeedRatio = vtgCanonicalSpeedRatio
 export const vtgBeats = [1, 2, 3, 4] as const
 export type VtgBeat = (typeof vtgBeats)[number]
 export const vtgTransitionBeats = [6, 5, 4, 3, 2] as const
 export type VtgTransitionBeats = (typeof vtgTransitionBeats)[number]
+export const vtgPatternOrientations = [0, 90] as const
+export type VtgPatternOrientation = (typeof vtgPatternOrientations)[number]
+export const supportsVtgPatternOrientation = (speedRatio: VtgSpeedRatio) =>
+  speedRatio === '1:2' || speedRatio === '1:4'
+export const getDefaultVtgPatternOrientation = (
+  _speedRatio: VtgSpeedRatio,
+): VtgPatternOrientation => 0
 export const vtgDefaultTransitionBeats = 4 satisfies VtgTransitionBeats
 
 export interface VtgPatternSelection
-  extends PatternPropVisibilitySelection, PatternPropSpacingSelection {
+  extends PatternPropVisibilitySelection, PatternPropSpacingSelection, PatternPropColorSelection {
   reference: VtgCellReference
   speedRatio: VtgSpeedRatio
   isAnti?: boolean
@@ -43,6 +55,7 @@ export interface VtgPatternSelection
   transitionBeats?: VtgTransitionBeats
   transitionQuad?: boolean
   transitionSecond?: boolean
+  orientation?: VtgPatternOrientation
   bpm?: number
   scale?: number
   thick?: number
@@ -63,6 +76,7 @@ export interface VtgPatternMatch {
   transitionBeats?: VtgTransitionBeats
   transitionQuad?: boolean
   transitionSecond?: boolean
+  orientation?: VtgPatternOrientation
   bpm: number
   scale: number
 }

@@ -27,6 +27,20 @@ const createAnimation = (selection: VtgPatternSelection) => {
 }
 
 describe('VTG animation matching', () => {
+  it.each(['1:2', '1:4'] as const)(
+    'recognizes the initial arc orientation after a beat shift at %s',
+    (speedRatio) => {
+      const selection = {
+        reference: '5-1',
+        speedRatio,
+        orientation: 90,
+        beat: 3,
+      } as const satisfies VtgPatternSelection
+
+      expect(findVtgPatternMatch(createAnimation(selection))).toMatchObject(selection)
+    },
+  )
+
   it.each(vtgTransitionBeats)('detects the %s-beat reciprocal transition', (transitionBeats) => {
     const selection = {
       reference: '5-1',

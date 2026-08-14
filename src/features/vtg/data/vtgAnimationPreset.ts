@@ -38,7 +38,7 @@ export const vtgAnimationPreset = {
       ],
     },
     {
-      color: 'Orange',
+      color: 'Cyan',
       // prettier-ignore
       anim: [
         { plane: 180, arc:   0, turns:  180 },

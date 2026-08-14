@@ -35,18 +35,39 @@
         </template>
       </AppTooltip>
     </div>
+
+    <AppTooltip v-if="showOrientation" text="Rotate the entire pattern from its starting position">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps" class="pattern-playback-controls__orientation">
+          <input
+            v-model="rotated"
+            type="checkbox"
+            aria-label="Rotate the pattern"
+            :data-role="`${concept}-orientation`"
+          />
+          <span>Rotate</span>
+        </label>
+      </template>
+    </AppTooltip>
   </fieldset>
 </template>
 
 <script setup lang="ts">
 import AppTooltip from '@/components/AppTooltip.vue'
 import { vtgBeats } from '@/features/vtg/types'
-import type { VtgBeat } from '@/features/vtg/types'
+import type { VtgBeat, VtgPatternOrientation } from '@/features/vtg/types'
 
-defineProps<{ concept: 'vtg' | 'qtr' }>()
+defineProps<{ concept: 'vtg' | 'qtr'; showOrientation?: boolean }>()
 
 const beat = defineModel<VtgBeat>('beat', { required: true })
 const qtr = defineModel<boolean>('qtr', { required: true })
+const orientation = defineModel<VtgPatternOrientation>('orientation', { default: 0 })
+const rotated = computed({
+  get: () => orientation.value === 90,
+  set: (value: boolean) => {
+    orientation.value = value ? 90 : 0
+  },
+})
 </script>
 
 <style scoped>
@@ -72,14 +93,16 @@ const qtr = defineModel<boolean>('qtr', { required: true })
 }
 
 .pattern-playback-controls__beats label,
-.pattern-playback-controls__qtr {
+.pattern-playback-controls__qtr,
+.pattern-playback-controls__orientation {
   position: relative;
   min-width: 0;
   cursor: pointer;
 }
 
 .pattern-playback-controls__beats input,
-.pattern-playback-controls__qtr input {
+.pattern-playback-controls__qtr input,
+.pattern-playback-controls__orientation input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -87,7 +110,8 @@ const qtr = defineModel<boolean>('qtr', { required: true })
 }
 
 .pattern-playback-controls__beats label > span,
-.pattern-playback-controls__qtr > span {
+.pattern-playback-controls__qtr > span,
+.pattern-playback-controls__orientation > span {
   display: grid;
   min-width: 2rem;
   padding-block: var(--space-1);
@@ -114,14 +138,16 @@ const qtr = defineModel<boolean>('qtr', { required: true })
   border-color: var(--color-action-primary);
 }
 
-.pattern-playback-controls__qtr input:checked + span {
+.pattern-playback-controls__qtr input:checked + span,
+.pattern-playback-controls__orientation input:checked + span {
   color: var(--color-on-action-primary);
   background: var(--color-pattern-mode-active);
   border-color: var(--color-pattern-mode-active-border);
 }
 
 .pattern-playback-controls__beats input:focus-visible + span,
-.pattern-playback-controls__qtr input:focus-visible + span {
+.pattern-playback-controls__qtr input:focus-visible + span,
+.pattern-playback-controls__orientation input:focus-visible + span {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }

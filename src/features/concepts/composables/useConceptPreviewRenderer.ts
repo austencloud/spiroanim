@@ -14,6 +14,7 @@ interface UseConceptPreviewRendererOptions<Reference extends string> {
   createAnimation: (reference: Reference) => RootDataFinal | undefined
   label: string
   partialIndexes?: readonly number[]
+  activeIndexes?: Readonly<Ref<readonly number[]>>
 }
 
 const isBlobUrl = (url: string) => url.startsWith('blob:')
@@ -28,6 +29,7 @@ export const useConceptPreviewRenderer = <Reference extends string>({
   createAnimation,
   label,
   partialIndexes = [],
+  activeIndexes,
 }: UseConceptPreviewRendererOptions<Reference>) => {
   const previewUrls = ref<string[]>(Array.from({ length: references.length }, () => ''))
 
@@ -41,9 +43,13 @@ export const useConceptPreviewRenderer = <Reference extends string>({
   let requestedPartialVersion = 0
   let renderedPartialVersion = 0
 
+  const getActiveIndexes = () => activeIndexes?.value ?? references.map((_, index) => index)
   const hasRenderableDimensions = () =>
     dimensions.length === references.length &&
-    dimensions.every(({ width, height }) => width > 0 && height > 0)
+    getActiveIndexes().every((index) => {
+      const item = dimensions[index]
+      return item !== undefined && item.width > 0 && item.height > 0
+    })
 
   const requestPreviews = () => {
     requestedVersion++
@@ -68,7 +74,10 @@ export const useConceptPreviewRenderer = <Reference extends string>({
         const renderAll = renderedVersion !== requestedVersion
         const version = requestedVersion
         const partialVersion = requestedPartialVersion
-        const previewIndexes = renderAll ? references.map((_, index) => index) : partialIndexes
+        const currentActiveIndexes = getActiveIndexes()
+        const previewIndexes = renderAll
+          ? currentActiveIndexes
+          : partialIndexes.filter((index) => currentActiveIndexes.includes(index))
         let failed = false
 
         for (const index of previewIndexes) {

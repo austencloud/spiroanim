@@ -16,7 +16,12 @@ import {
 } from '@/features/vtg/math/createVtgAnimationSignature'
 import { inferVtgSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
 import type { VtgCellReference, VtgRuleNumber, VtgSpeedRatio } from '@/features/vtg/types'
-import { supportsVtgQtrTransition, vtgBeats } from '@/features/vtg/types'
+import {
+  supportsVtgPatternOrientation,
+  supportsVtgQtrTransition,
+  vtgBeats,
+  vtgPatternOrientations,
+} from '@/features/vtg/types'
 import {
   doubleAnimationPlayback,
   doublePlaybackMultiplier,
@@ -50,6 +55,9 @@ const addCandidate = (
 
 const buildCandidateCache = (speedRatio: VtgSpeedRatio) => {
   const candidates = new Map<string, QtrCandidateMatch[]>()
+  const orientationOptions = supportsVtgPatternOrientation(speedRatio)
+    ? vtgPatternOrientations
+    : ([0] as const)
 
   for (const column of ruleNumbers) {
     for (const row of ruleNumbers) {
@@ -61,70 +69,66 @@ const buildCandidateCache = (speedRatio: VtgSpeedRatio) => {
 
       for (const isAnti of antiOptions) {
         for (const shape of shapeOptions) {
-          const baseAnimations = new Map<boolean, RootDataFinal | undefined>()
-          const playbackAnimations = new Map<
-            boolean,
-            Map<QtrPatternSelection['beat'], RootDataFinal>
-          >()
+          const baseAnimations = new Map<string, RootDataFinal | undefined>()
+          const playbackAnimations = new Map<string, RootDataFinal>()
 
           for (const swapProps of booleanOptions) {
             for (const reversePlane of booleanOptions) {
-              const selection: QtrPatternSelection = {
-                reference,
-                speedRatio,
-                quarters: 1,
-                isAnti,
-                swapProps,
-                reversePlane,
-                ...(shape === 'box' ? { shape } : undefined),
-              }
-              // Box keeps QTR #1 for both final-plane states, so its playback bases are shared.
-              const baseKey = shape === 'box' ? false : reversePlane
-              let baseAnimation = baseAnimations.get(baseKey)
-              if (!baseAnimations.has(baseKey)) {
-                baseAnimation = createDefaultQtrBaseAnimation(selection)
-                baseAnimations.set(baseKey, baseAnimation)
-              }
-              if (!baseAnimation) continue
-
-              let reversePlaybackAnimations = playbackAnimations.get(baseKey)
-              if (!reversePlaybackAnimations) {
-                reversePlaybackAnimations = new Map()
-                playbackAnimations.set(baseKey, reversePlaybackAnimations)
-              }
-
-              for (const beat of vtgBeats) {
-                const candidate: QtrCandidateMatch = {
+              for (const orientation of orientationOptions) {
+                const selection: QtrPatternSelection = {
                   reference,
                   speedRatio,
                   quarters: 1,
                   isAnti,
                   swapProps,
                   reversePlane,
-                  ...(beat === 1 ? undefined : { beat }),
+                  ...(orientation === 0 ? undefined : { orientation }),
                   ...(shape === 'box' ? { shape } : undefined),
                 }
-                let playback = reversePlaybackAnimations.get(beat)
-                if (!playback) {
-                  playback = applyVtgPlaybackControls(baseAnimation, { speedRatio, beat })
-                  if (!playback) continue
-                  reversePlaybackAnimations.set(beat, playback)
+                // Box keeps QTR #1 for both final-plane states, so those bases are shared.
+                const baseKey = `${shape === 'box' ? false : reversePlane}:${orientation}`
+                let baseAnimation = baseAnimations.get(baseKey)
+                if (!baseAnimations.has(baseKey)) {
+                  baseAnimation = createDefaultQtrBaseAnimation(selection)
+                  baseAnimations.set(baseKey, baseAnimation)
                 }
+                if (!baseAnimation) continue
 
-                const finalTransforms = { swapProps, reversePlane }
-                addCandidate(
-                  candidates,
-                  createFinalTransformedVtgAnimationSignature(playback, finalTransforms),
-                  candidate,
-                )
+                for (const beat of vtgBeats) {
+                  const candidate: QtrCandidateMatch = {
+                    reference,
+                    speedRatio,
+                    quarters: 1,
+                    isAnti,
+                    swapProps,
+                    reversePlane,
+                    ...(orientation === 0 ? undefined : { orientation }),
+                    ...(beat === 1 ? undefined : { beat }),
+                    ...(shape === 'box' ? { shape } : undefined),
+                  }
+                  const playbackKey = `${baseKey}:${beat}`
+                  let playback = playbackAnimations.get(playbackKey)
+                  if (!playback) {
+                    playback = applyVtgPlaybackControls(baseAnimation, { speedRatio, beat })
+                    if (!playback) continue
+                    playbackAnimations.set(playbackKey, playback)
+                  }
 
-                const subdivided = doubleAnimationPlayback(playback)
-                if (subdivided) {
+                  const finalTransforms = { swapProps, reversePlane }
                   addCandidate(
                     candidates,
-                    createFinalTransformedVtgAnimationSignature(subdivided, finalTransforms),
-                    { ...candidate, subdivided: true },
+                    createFinalTransformedVtgAnimationSignature(playback, finalTransforms),
+                    candidate,
                   )
+
+                  const subdivided = doubleAnimationPlayback(playback)
+                  if (subdivided) {
+                    addCandidate(
+                      candidates,
+                      createFinalTransformedVtgAnimationSignature(subdivided, finalTransforms),
+                      { ...candidate, subdivided: true },
+                    )
+                  }
                 }
               }
             }

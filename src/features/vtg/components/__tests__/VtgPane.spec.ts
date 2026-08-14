@@ -191,13 +191,13 @@ describe('VtgPane', () => {
     expect(firstSideProps[0]?.attributes('style')).toContain('inset-block-start: 4%')
     expect(firstSideProps[1]?.attributes('style')).toContain('inset-inline-start: 59%')
     expect(firstSideProps[0]?.attributes('style')).toContain(
-      '--vtg-rule-prop-head-color: rgb(255,165,0)',
+      '--vtg-rule-prop-head-color: rgb(0,255,255)',
     )
     expect(firstSideProps[0]?.attributes('style')).toContain(
-      '--vtg-rule-prop-handle-color: rgb(136,165,0)',
+      '--vtg-rule-prop-handle-color: rgb(0,136,136)',
     )
     expect(firstSideProps[0]?.attributes('style')).toContain(
-      '--vtg-rule-prop-tether-color: rgb(85,26,0)',
+      '--vtg-rule-prop-tether-color: rgb(0,85,85)',
     )
     expect(firstSideProps[1]?.attributes('style')).toContain(
       '--vtg-rule-prop-head-color: rgb(0,255,0)',
@@ -426,6 +426,26 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="vtg-shuffle"]').attributes('title')).toBeUndefined()
   })
 
+  it.each(['1:2', '1:4'] as const)(
+    'defaults Rotate off at %s and emits the rotated option when checked',
+    async (speedRatio) => {
+      const wrapper = mount(VtgPane)
+      await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await nextTick()
+
+      const rotate = wrapper.get<HTMLInputElement>('[data-role="vtg-orientation"]')
+      expect(rotate.element.type).toBe('checkbox')
+      expect(rotate.element.checked).toBe(false)
+      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([{ reference: '5-1', speedRatio }])
+
+      await rotate.setValue(true)
+      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+        { reference: '5-1', speedRatio, orientation: 90 },
+      ])
+    },
+  )
+
   it('offers a Tilted checkbox that reapplies VTG and Qtr patterns', async () => {
     for (const qtrEnabled of [false, true]) {
       const quarters = qtrEnabled ? 1 : undefined
@@ -572,39 +592,50 @@ describe('VtgPane', () => {
     }
   })
 
-  it('disables the reciprocal transition controls at 1:1', async () => {
-    const concept = 'vtg'
-    for (const qtrEnabled of [false, true]) {
-      const wrapper = await mountVtgPane(qtrEnabled)
-      await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+  it.each(['1:1', '1:2'] as const)(
+    'enables the reciprocal transition controls at %s in development',
+    async (speedRatio) => {
+      const concept = 'vtg'
+      for (const qtrEnabled of [false, true]) {
+        const wrapper = await mountVtgPane(qtrEnabled)
+        await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
 
-      const oneToOne = wrapper.get<HTMLInputElement>('input[value="1:1"]')
-      await oneToOne.setValue()
+        const ratio = wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`)
+        await ratio.setValue()
 
-      expect(oneToOne.element.checked).toBe(true)
-      expect(
-        wrapper.get<HTMLButtonElement>(`[data-role="${concept}-transition"]`).element.disabled,
-      ).toBe(true)
-      expect(
-        wrapper.get<HTMLSelectElement>('[data-role="vtg-transition-beats"]').element.disabled,
-      ).toBe(true)
-      expect(
-        wrapper.get<HTMLInputElement>('[data-role="vtg-transition-quad"]').element.disabled,
-      ).toBe(true)
-      expect(
-        wrapper.get<HTMLInputElement>('[data-role="vtg-transition-second"]').element.disabled,
-      ).toBe(true)
-      expect(wrapper.find(`[data-role="${concept}-double"]`).exists()).toBe(false)
+        expect(ratio.element.checked).toBe(true)
+        expect(
+          wrapper.get<HTMLButtonElement>(`[data-role="${concept}-transition"]`).element.disabled,
+        ).toBe(false)
+        expect(
+          wrapper.get<HTMLSelectElement>('[data-role="vtg-transition-beats"]').element.disabled,
+        ).toBe(true)
+        expect(
+          wrapper.get<HTMLInputElement>('[data-role="vtg-transition-quad"]').element.disabled,
+        ).toBe(true)
+        expect(
+          wrapper.get<HTMLInputElement>('[data-role="vtg-transition-second"]').element.disabled,
+        ).toBe(true)
+        expect(wrapper.find(`[data-role="${concept}-double"]`).exists()).toBe(false)
 
-      await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
-      expect(wrapper.find(`[data-role="${concept}-double"]`).exists()).toBe(false)
-      expect(
-        wrapper.get<HTMLButtonElement>(`[data-role="${concept}-transition"]`).element.disabled,
-      ).toBe(false)
+        await wrapper.get<HTMLButtonElement>(`[data-role="${concept}-transition"]`).trigger('click')
+        expect(
+          wrapper.get<HTMLSelectElement>('[data-role="vtg-transition-beats"]').element.disabled,
+        ).toBe(false)
+        expect(
+          wrapper.get<HTMLInputElement>('[data-role="vtg-transition-quad"]').element.disabled,
+        ).toBe(false)
 
-      wrapper.unmount()
-    }
-  })
+        await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
+        expect(wrapper.find(`[data-role="${concept}-double"]`).exists()).toBe(false)
+        expect(
+          wrapper.get<HTMLButtonElement>(`[data-role="${concept}-transition"]`).element.disabled,
+        ).toBe(false)
+
+        wrapper.unmount()
+      }
+    },
+  )
 
   it('enables transition timing, Quad, and Second controls as their prerequisites activate', async () => {
     const wrapper = mount(VtgPane)
@@ -844,7 +875,7 @@ describe('VtgPane', () => {
     expect(outputs.map((output) => output.text())).toEqual(['1.4', '15', '20', '40'])
   })
 
-  it('places playback controls above rendering controls and sliders for VTG and Qtr', async () => {
+  it('places rendering controls and sliders inside Customize for VTG and Qtr', async () => {
     const concept = 'vtg'
     for (const qtrEnabled of [false, true]) {
       const wrapper = await mountVtgPane(qtrEnabled)
@@ -863,6 +894,9 @@ describe('VtgPane', () => {
       const playbackControls = wrapper.get(`[data-role="${concept}-playback-controls"]`).element
       const transitionControls = wrapper.get('[data-role="vtg-transition-controls"]').element
       const buttonRows = wrapper.get('.concept-button-rows').element
+      const customize = wrapper.get<HTMLDetailsElement>('[data-role="vtg-customize"]').element
+      const sliders = wrapper.get('.vtg-slider-controls').element
+      const colors = wrapper.get('.concept-color-controls').element
       const tilted = wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]').element
       const qtr = wrapper.get<HTMLInputElement>(`[data-role="${concept}-qtr"]`).element
       const firstBeat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat-1"]`).element
@@ -881,10 +915,15 @@ describe('VtgPane', () => {
       ).toBeTruthy()
       expect(playbackControls.parentElement).toBe(buttonRows)
       expect(transitionControls.parentElement).toBe(buttonRows)
-      expect(options.element.parentElement).toBe(buttonRows)
+      expect(customize.open).toBe(false)
+      expect(customize.contains(options.element)).toBe(true)
+      expect(customize.contains(sliders)).toBe(true)
+      expect(customize.contains(colors)).toBe(true)
       expect(
-        options.element.compareDocumentPosition(wrapper.get('.vtg-slider-controls').element) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
+        options.element.compareDocumentPosition(sliders) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+      expect(
+        sliders.compareDocumentPosition(colors) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy()
 
       wrapper.unmount()
@@ -1462,6 +1501,80 @@ describe('VtgPane', () => {
       .filter(({ type }) => type === 'data' || type === 'reqimgs')
       .map(({ type }) => type)
     expect(renderMessages).toEqual(Array.from({ length: 9 }, () => ['data', 'reqimgs']).flat())
+  })
+
+  it.each(['1:2', '1:4'] as const)(
+    'uses one bottom thumbnail per horizontal cell pair at %s',
+    async (speedRatio) => {
+      const wrapper = mount(VtgPane)
+      await settlePreviewRendering()
+      reportAllBlankDimensions(72, 68)
+      await settlePreviewRendering()
+
+      const before = countWorkerMessages('data')
+      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await nextTick()
+      reportAllBlankDimensions(72, 68)
+      await settlePreviewRendering()
+
+      const blanks = wrapper.findAll('[data-role="vtg-blank"]')
+      expect(blanks).toHaveLength(18)
+      expect(wrapper.findAll('[data-role="vtg-preview"]')).toHaveLength(18)
+      expect(countWorkerMessages('data')).toBe(before + 18)
+      expect(blanks[0]?.attributes('style')).toContain('grid-column: 1 / span 2')
+      expect(blanks[0]?.attributes('style')).toContain('grid-row: 1')
+      expect(blanks[17]?.attributes('style')).toContain('grid-column: 5 / span 2')
+      expect(blanks[17]?.attributes('style')).toContain('grid-row: 6')
+      expect(wrapper.get('[data-cell-reference="1-1"]').classes()).toContain(
+        'vtg-tile--paired-left',
+      )
+      expect(wrapper.get('[data-cell-reference="2-1"]').classes()).toContain(
+        'vtg-tile--paired-right',
+      )
+      expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label').text()).toBe('TS/TS')
+      expect(wrapper.get('[data-cell-reference="2-1"] .vtg-tile__label').text()).toBe('SO/SO')
+
+      await wrapper.get('[data-cell-reference="5-5"]').trigger('click')
+      expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+        'vtg-tile__spin-toggle--paired-left',
+      )
+      await wrapper.get('[data-cell-reference="6-5"]').trigger('click')
+      expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+        'vtg-tile__spin-toggle--paired-right',
+      )
+    },
+  )
+
+  it('applies Rotate directly without changing the paired layout', async () => {
+    const wrapper = mount(VtgPane)
+    await settlePreviewRendering()
+    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+    await nextTick()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+
+    const previewAnimations = () =>
+      FakeWorker.instances[0]?.messages
+        .filter(({ type }) => type === 'data')
+        .map(({ data }) => data as RootDataFinal) ?? []
+
+    expect(
+      previewAnimations()
+        .at(-18)
+        ?.props.map((prop) => prop.anim[0]?.arc),
+    ).toEqual([90, 90])
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-orientation"]').setValue(true)
+    await nextTick()
+    await nextTick()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+
+    expect(
+      previewAnimations()
+        .at(-18)
+        ?.props.map((prop) => prop.anim[0]?.arc),
+    ).toEqual([180, 180])
   })
 
   it('refreshes previews for resize and non-BPM form changes', async () => {

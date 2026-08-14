@@ -6,6 +6,7 @@ import type {
   EightStepPatternSelection,
   EightStepShape,
 } from '@/features/eight-step/types'
+import type { PatternPropColor } from '@/features/concepts/patternPropColors'
 
 interface UseEightStepPreviewsOptions {
   dimensions: readonly ConceptPreviewDimensions[]
@@ -14,6 +15,8 @@ interface UseEightStepPreviewsOptions {
   scale: Ref<number>
   spacing: Ref<number>
   shape: Ref<EightStepShape>
+  leftPropColor: Ref<PatternPropColor>
+  rightPropColor: Ref<PatternPropColor>
 }
 
 export const eightStepPreviewReferences = [
@@ -35,6 +38,8 @@ export const useEightStepPreviews = ({
   scale,
   spacing,
   shape,
+  leftPropColor,
+  rightPropColor,
 }: UseEightStepPreviewsOptions) => {
   const renderer = useConceptPreviewRenderer({
     dimensions,
@@ -47,6 +52,7 @@ export const useEightStepPreviews = ({
         scale: scale.value,
         spacing: spacing.value,
         shape: shape.value,
+        propColors: [leftPropColor.value, rightPropColor.value],
       }
 
       if (swapProps.value) selection.swapProps = true
@@ -56,7 +62,10 @@ export const useEightStepPreviews = ({
   })
 
   // BPM affects timing only; visual controls use the same fixed preview presentation as VTG/QTR.
-  watch([swapProps, reversePlane, scale, spacing, shape], renderer.requestPreviews)
+  watch(
+    [swapProps, reversePlane, scale, spacing, shape, leftPropColor, rightPropColor],
+    renderer.requestPreviews,
+  )
 
   return {
     previewUrls: renderer.previewUrls,

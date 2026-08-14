@@ -8,7 +8,7 @@ import {
 import { buildVtgPattern as buildSelectedVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
-import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { supportsVtgQtrTransition, vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { reverseAngle } from '@/math/animation/AngleFunc'
@@ -68,7 +68,9 @@ describe('createVtgAnimation', () => {
       for (const row of ruleNumbers) {
         const reference = `${column}-${row}` as VtgCellReference
         const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
-        for (const speedRatio of vtgSpeedRatios.filter((ratio) => ratio !== '1:1')) {
+        for (const speedRatio of vtgSpeedRatios.filter((ratio) =>
+          supportsVtgQtrTransition(ratio),
+        )) {
           for (const isAnti of antiOptions) {
             for (const shape of patternShapes) {
               for (const beat of vtgBeats) {
@@ -171,19 +173,24 @@ describe('createVtgAnimation', () => {
     }
   })
 
-  it('ignores the reciprocal transition at 1:1 without subdividing playback', () => {
-    const selection = {
-      reference: '5-1',
-      speedRatio: '1:1',
-    } as const satisfies VtgPatternSelection
-
-    expect(
-      createVtgAnimationForSelection(createCurrentAnimation(), {
+  it.each(['1:1', '1:2'] as const)(
+    'enables the reciprocal transition at %s only for development builds',
+    (speedRatio) => {
+      const selection = {
+        reference: '5-1',
+        speedRatio,
+      } as const satisfies VtgPatternSelection
+      const original = createVtgAnimationForSelection(createCurrentAnimation(), selection)
+      const transitioned = createVtgAnimationForSelection(createCurrentAnimation(), {
         ...selection,
         transition: true,
-      }),
-    ).toEqual(createVtgAnimationForSelection(createCurrentAnimation(), selection))
-  })
+      })
+
+      expect(supportsVtgQtrTransition(speedRatio)).toBe(true)
+      expect(supportsVtgQtrTransition(speedRatio, false)).toBe(false)
+      expect(transitioned?.bpm).toBe((original?.bpm ?? 0) * doublePlaybackMultiplier)
+    },
+  )
 
   it('rotates only the initial prop arcs by 45 degrees before the final 180 transform', () => {
     const baseSelection = {
@@ -320,7 +327,7 @@ describe('createVtgAnimation', () => {
       speed: vtgPlayerSettings.speed,
       props: [
         {
-          color: 6,
+          color: 4,
           anim: [{ plane: 180, arc: 90 }, { plane: 180, arc: 90 }, {}, {}, {}],
         },
         {
@@ -469,7 +476,7 @@ describe('createVtgAnimation', () => {
       isAnti: false,
     })
 
-    expect(animation?.props.map((prop) => prop.color)).toEqual([6, 1])
+    expect(animation?.props.map((prop) => prop.color)).toEqual([4, 1])
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([{ arc: 90, scale: 8 }, { arc: 90 }])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { plane: 180, arc: 90, turns: 180, scale: 8 },
@@ -489,7 +496,7 @@ describe('createVtgAnimation', () => {
       swapProps: true,
     })
 
-    expect(swapped?.props.map((prop) => prop.color)).toEqual([6, 1])
+    expect(swapped?.props.map((prop) => prop.color)).toEqual([4, 1])
     expect(swapped?.props[0]?.anim).toEqual(original?.props[1]?.anim)
     expect(swapped?.props[1]?.anim).toEqual(original?.props[0]?.anim)
   })

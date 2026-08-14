@@ -12,6 +12,7 @@ import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { applyPatternPropVisibility } from '@/features/concepts/patternPropVisibility'
 import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
+import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 
 const addPropDefaults = (pattern: EightStepReadableAnimation): EightStepReadableAnimation => ({
   ...pattern,
@@ -73,10 +74,13 @@ export const createEightStepAnimation = (
   // Eight Step definitions name the first relationship first, but performers expect that
   // relationship on prop 2. Invert the shared Swap transform here so the expected assignment is
   // the concept default while the application-wide Swap control keeps its normal meaning.
-  return applyPatternFinalTransforms(animation, {
-    ...selection,
-    swapProps: !selection.swapProps,
-  })
+  return applyPatternPropColors(
+    applyPatternFinalTransforms(animation, {
+      ...selection,
+      swapProps: !selection.swapProps,
+    }),
+    selection,
+  )
 }
 
 export const createDefaultEightStepAnimation = (
