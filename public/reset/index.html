@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <link rel="icon" href="/images/app-icons/pwa-source.svg" />
     <title>Reset SpiroAnim</title>
     <style>
       :root {
@@ -159,6 +160,40 @@
       const statusMessage = document.querySelector('#status-message')
       const openButton = document.querySelector('#open-button')
       const retryButton = document.querySelector('#retry-button')
+      const resetOperationTimeout = 30000
+
+      function withTimeout(operation, operationName) {
+        let timeout
+        const timeoutFailure = new Promise((_, reject) => {
+          timeout = setTimeout(
+            () => reject(new Error(`Timed out while removing ${operationName}.`)),
+            resetOperationTimeout,
+          )
+        })
+
+        return Promise.race([operation, timeoutFailure]).finally(() => clearTimeout(timeout))
+      }
+
+      async function settleCleanupOperations(operations) {
+        let completed = 0
+        const results = await Promise.allSettled(
+          operations.map(async ({ name, remove }) => {
+            try {
+              await withTimeout(Promise.resolve().then(remove), name)
+            } finally {
+              completed += 1
+              statusMessage.textContent = `Clearing saved data... (${completed}/${operations.length})`
+            }
+          }),
+        )
+
+        const failures = results
+          .filter((result) => result.status === 'rejected')
+          .map((result) => result.reason)
+        if (failures.length > 0) {
+          throw new AggregateError(failures, 'One or more storage areas could not be cleared.')
+        }
+      }
 
       async function removeServiceWorkers() {
         if (!('serviceWorker' in navigator)) return
@@ -239,18 +274,17 @@
         statusMessage.textContent = 'Reset in progress...'
 
         try {
-          const workerResults = await Promise.allSettled([removeServiceWorkers()])
-          const dataResults = await Promise.allSettled([
-            removeOfflineCaches(),
-            removeIndexedDatabases(),
-            removeOriginPrivateFiles(),
-            Promise.resolve().then(removeCookies),
-            Promise.resolve().then(removeWebStorage),
-          ])
+          statusMessage.textContent = 'Removing update workers...'
+          await settleCleanupOperations([{ name: 'update workers', remove: removeServiceWorkers }])
 
-          if ([...workerResults, ...dataResults].some((result) => result.status === 'rejected')) {
-            throw new Error('One or more storage areas could not be cleared.')
-          }
+          statusMessage.textContent = 'Clearing saved data...'
+          await settleCleanupOperations([
+            { name: 'offline caches', remove: removeOfflineCaches },
+            { name: 'browser databases', remove: removeIndexedDatabases },
+            { name: 'offline files', remove: removeOriginPrivateFiles },
+            { name: 'cookies', remove: removeCookies },
+            { name: 'web storage', remove: removeWebStorage },
+          ])
 
           title.textContent = 'Reset complete'
           description.textContent =

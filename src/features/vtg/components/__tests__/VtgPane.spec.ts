@@ -427,7 +427,7 @@ describe('VtgPane', () => {
   })
 
   it.each(['1:2', '1:4'] as const)(
-    'defaults Rotate off at %s and emits the rotated option when checked',
+    'defaults Rotate on at %s and emits the unrotated option when unchecked',
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
@@ -436,13 +436,13 @@ describe('VtgPane', () => {
 
       const rotate = wrapper.get<HTMLInputElement>('[data-role="vtg-orientation"]')
       expect(rotate.element.type).toBe('checkbox')
-      expect(rotate.element.checked).toBe(false)
-      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([{ reference: '5-1', speedRatio }])
-
-      await rotate.setValue(true)
+      expect(rotate.element.checked).toBe(true)
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
         { reference: '5-1', speedRatio, orientation: 90 },
       ])
+
+      await rotate.setValue(false)
+      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([{ reference: '5-1', speedRatio }])
     },
   )
 
@@ -1562,9 +1562,9 @@ describe('VtgPane', () => {
       previewAnimations()
         .at(-18)
         ?.props.map((prop) => prop.anim[0]?.arc),
-    ).toEqual([90, 90])
+    ).toEqual([180, 180])
 
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-orientation"]').setValue(true)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-orientation"]').setValue(false)
     await nextTick()
     await nextTick()
     reportAllBlankDimensions(72, 68)
@@ -1574,7 +1574,7 @@ describe('VtgPane', () => {
       previewAnimations()
         .at(-18)
         ?.props.map((prop) => prop.anim[0]?.arc),
-    ).toEqual([180, 180])
+    ).toEqual([90, 90])
   })
 
   it('refreshes previews for resize and non-BPM form changes', async () => {

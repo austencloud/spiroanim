@@ -187,7 +187,8 @@ describe('createVtgAnimation', () => {
       })
 
       expect(supportsVtgQtrTransition(speedRatio)).toBe(true)
-      expect(supportsVtgQtrTransition(speedRatio, false)).toBe(false)
+      expect(supportsVtgQtrTransition(speedRatio, 'dev.spiroanim.com')).toBe(true)
+      expect(supportsVtgQtrTransition(speedRatio, 'spiroanim.com')).toBe(false)
       expect(transitioned?.bpm).toBe((original?.bpm ?? 0) * doublePlaybackMultiplier)
     },
   )
