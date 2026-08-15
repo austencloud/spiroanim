@@ -133,7 +133,9 @@ rotation at the handoff. The process visits each prop twice, returning both trac
 turn values before the animation loops into its original doubled cycle. Cycle and transition sizes
 come from the animation and subdivision multiplier rather than fixed frame counts.
 
-The transition is unavailable at 1:1, and the builder ignores the transition flag at that ratio.
+On the production website, the transition controls are hidden at 1:1 and 1:2, and the builder
+ignores the transition flag at those ratios. Development hosts continue to expose those experimental
+transition options.
 
 Matching does not precompute the extended transition animations. Their derived frame-count shape is
 used to recover the internally subdivided base cycle; the

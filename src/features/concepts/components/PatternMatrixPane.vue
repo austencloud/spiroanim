@@ -213,6 +213,7 @@
       </template>
       <template #between-controls>
         <PatternTransitionControls
+          v-if="transitionAvailable"
           v-model:transition="transition"
           v-model:beats="transitionBeats"
           v-model:quad="transitionQuad"

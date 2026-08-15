@@ -8,6 +8,7 @@ import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
 import { useQSMainStore } from '@/stores/useQSMainStore'
+import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type {
   PatternMatchingClient,
@@ -716,6 +717,21 @@ describe('VtgPane', () => {
       }
     },
   )
+
+  it('hides reciprocal transition controls at 1:1 and 1:2 on the production website', async () => {
+    vi.stubGlobal('location', new URL(`https://${PRODUCTION_PWA_HOSTNAME}`))
+    const wrapper = mount(VtgPane)
+
+    for (const speedRatio of ['1:1', '1:2'] as const) {
+      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(false)
+    }
+
+    for (const speedRatio of ['1:3', '1:4', '1:5'] as const) {
+      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(true)
+    }
+  })
 
   it('enables transition timing, Quad, and Second controls as their prerequisites activate', async () => {
     const wrapper = mount(VtgPane)

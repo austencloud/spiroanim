@@ -191,6 +191,9 @@ describe('ConceptsPane', () => {
     expect(wrapper.find('[data-role="eight-step-pane"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('The Kinetic Alphabet')
     expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('Possibly coming soon')
+    expect(wrapper.get('[data-role="tka-development-note"]').text()).toBe(
+      'Austin might be working on something...',
+    )
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
