@@ -112,6 +112,32 @@ describe('describePatternRelationships', () => {
     },
   )
 
+  it.each(['1:2', '1:4'] as const)(
+    'keeps the established relationship matrix at the 180-degree %s orientation',
+    (speedRatio) => {
+      for (const row of ruleNumbers) {
+        for (const column of ruleNumbers) {
+          const reference: VtgCellReference = `${column}-${row}`
+          const expected = expectedLabelsByRow[row][column - 1]
+          if (!expected) throw new Error(`Missing established label for ${reference}`)
+
+          expect(
+            describePatternSelectionRelationships({ reference, speedRatio, orientation: 180 })
+              .label,
+          ).toBe(expected)
+          expect(
+            describePatternSelectionRelationships({
+              reference,
+              speedRatio,
+              orientation: 180,
+              quarters: 1,
+            }).label,
+          ).toBe(quarterLabel(expected))
+        }
+      }
+    },
+  )
+
   it('keeps every Qtr relationship invariant across playback-only controls', () => {
     const mismatches: string[] = []
 
@@ -158,7 +184,7 @@ describe('describePatternRelationships', () => {
           for (const isAnti of antiOptions) {
             const orientations =
               speedRatio === '1:2' || speedRatio === '1:4'
-                ? ([-90, 0, 90] as const)
+                ? ([-90, 0, 90, 180] as const)
                 : ([0] as const)
             for (const orientation of orientations) {
               for (const swapProps of booleanOptions) {
@@ -173,16 +199,15 @@ describe('describePatternRelationships', () => {
                   })
                   if (!animation) throw new Error(`Missing VTG animation for ${reference}`)
 
-                  const expectedOrientationLabel =
-                    orientation === 0 ? establishedLabel : expectedLabelsByRow[column][row - 1]
+                  const quarterTurn = orientation === -90 || orientation === 90
+                  const expectedOrientationLabel = quarterTurn
+                    ? expectedLabelsByRow[column][row - 1]
+                    : establishedLabel
                   if (!expectedOrientationLabel) {
                     throw new Error(`Missing rotated label for ${reference}`)
                   }
                   expect(
-                    describePatternRelationships(
-                      animation,
-                      orientation === 0 ? 'destination' : 'source',
-                    ),
+                    describePatternRelationships(animation, quarterTurn ? 'source' : 'destination'),
                   ).toMatchObject({
                     label: expectedOrientationLabel,
                     description: expectedDescription(expectedOrientationLabel),
@@ -208,7 +233,7 @@ describe('describePatternRelationships', () => {
           for (const isAnti of antiOptions) {
             const orientations =
               speedRatio === '1:2' || speedRatio === '1:4'
-                ? ([-90, 0, 90] as const)
+                ? ([-90, 0, 90, 180] as const)
                 : ([0] as const)
 
             for (const orientation of orientations) {
@@ -226,8 +251,10 @@ describe('describePatternRelationships', () => {
                     })
                     if (!animation) throw new Error(`Missing Qtr animation for ${reference}`)
 
-                    const expectedOrientationLabel =
-                      orientation === 0 ? establishedLabel : expectedLabelsByRow[column][row - 1]
+                    const quarterTurn = orientation === -90 || orientation === 90
+                    const expectedOrientationLabel = quarterTurn
+                      ? expectedLabelsByRow[column][row - 1]
+                      : establishedLabel
                     if (!expectedOrientationLabel) {
                       throw new Error(`Missing rotated Qtr label for ${reference}`)
                     }
@@ -235,7 +262,7 @@ describe('describePatternRelationships', () => {
                     expect(
                       describePatternRelationships(
                         animation,
-                        orientation === 0 ? 'destination' : 'source',
+                        quarterTurn ? 'source' : 'destination',
                       ),
                     ).toMatchObject({
                       label: expectedLabel,

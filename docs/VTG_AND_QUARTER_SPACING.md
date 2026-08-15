@@ -198,7 +198,16 @@ An unrotated matrix classifies the destination rule relationship. A 90-degree pa
 swaps the horizontal and vertical rule axes, so the same classifier uses the source relationship.
 This transposes the logical relationship matrix without a cell-label map; for example, rotated
 `2-1` corresponds to unrotated `1-2`. Both directions retain the real path axes when deriving Same
-or Opposite.
+or Opposite. At 1:2 and 1:4, the rotation selector is ordered `0°`, `90°`, `-90°`, then `180°`.
+The 180-degree orientation rotates the starting arcs by a half-turn but does not swap the matrix or
+header axes, so it retains the destination relationship checkpoint and established matrix layout.
+
+Some compiled 180-degree animations are exactly equivalent to another cell, starting beat, Swap
+state, or orientation. Pattern matching retains the exact 180-degree selection among its candidate
+matches, and the last emitted selection prevents an immediate UI reclassification. Animation-only
+hydration, including a URL reload without selection metadata, may canonicalize an ambiguous result
+to another equivalent interpretation because the rendered animation does not contain enough
+information to distinguish how it was authored.
 
 Beat and the QTR/VTG transition are playback-only controls and are removed before
 relationship classification.

@@ -479,13 +479,23 @@ describe('VtgPane', () => {
 
       const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
       expect(rotate.element.value).toBe('-90')
-      expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°', '90°', '-90°'])
+      expect(rotate.findAll('option').map((option) => option.text())).toEqual([
+        '0°',
+        '90°',
+        '-90°',
+        '180°',
+      ])
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
         { reference: '5-1', speedRatio, orientation: -90 },
       ])
 
       await rotate.setValue('0')
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([{ reference: '5-1', speedRatio }])
+
+      await rotate.setValue('180')
+      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+        { reference: '5-1', speedRatio, orientation: 180 },
+      ])
     },
   )
 
@@ -525,6 +535,10 @@ describe('VtgPane', () => {
     await rotate.setValue('90')
     expect(firstRowSecondColumn()).toBe('TO/TO')
     expect(secondRowFirstColumn()).toBe('SO/SO')
+
+    await rotate.setValue('180')
+    expect(firstRowSecondColumn()).toBe('SO/SO')
+    expect(secondRowFirstColumn()).toBe('TO/TO')
   })
 
   it('offers a Tilted checkbox that reapplies VTG and Qtr patterns', async () => {
@@ -1509,6 +1523,11 @@ describe('VtgPane', () => {
     expect(sideRule().classes()).toContain('vtg-rule-card--vertical')
 
     await wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').setValue('0')
+
+    expect(columnRule().classes()).toContain('vtg-rule-card--vertical')
+    expect(sideRule().classes()).toContain('vtg-rule-card--horizontal')
+
+    await wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').setValue('180')
 
     expect(columnRule().classes()).toContain('vtg-rule-card--vertical')
     expect(sideRule().classes()).toContain('vtg-rule-card--horizontal')

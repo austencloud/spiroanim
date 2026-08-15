@@ -24,8 +24,8 @@ export const describePatternSelectionRelationships = (selection: MatrixPatternSe
 
   return describePatternRelationships(
     animation,
-    semanticSelection.orientation === undefined || semanticSelection.orientation === 0
-      ? 'destination'
-      : 'source',
+    semanticSelection.orientation === 90 || semanticSelection.orientation === -90
+      ? 'source'
+      : 'destination',
   )
 }

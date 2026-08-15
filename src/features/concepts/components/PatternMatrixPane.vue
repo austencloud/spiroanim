@@ -355,17 +355,19 @@ const usesPairedPreviewLayout = computed(
   () => speedRatio.value === '1:2' || speedRatio.value === '1:4',
 )
 const hideColumnHeaderDetails = computed(() => isQtr.value || usesPairedPreviewLayout.value)
-const usesRotatedHeaderLayout = computed(
-  () => supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0,
+const usesQuarterTurnHeaderLayout = computed(
+  () =>
+    supportsVtgPatternOrientation(speedRatio.value) &&
+    (orientation.value === 90 || orientation.value === -90),
 )
 const columnHeaderOrientation = computed(() =>
-  usesRotatedHeaderLayout.value ? 'horizontal' : 'vertical',
+  usesQuarterTurnHeaderLayout.value ? 'horizontal' : 'vertical',
 )
 const sideHeaderOrientation = computed(() =>
-  usesRotatedHeaderLayout.value ? 'vertical' : 'horizontal',
+  usesQuarterTurnHeaderLayout.value ? 'vertical' : 'horizontal',
 )
 const sideHeaderReversed = computed(() => {
-  if (usesRotatedHeaderLayout.value) return orientation.value === -90
+  if (usesQuarterTurnHeaderLayout.value) return orientation.value === -90
   return reversePlane.value
 })
 const activeQtrMode = computed<1 | false>(() => (isQtr.value ? 1 : false))

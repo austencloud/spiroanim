@@ -19,9 +19,9 @@ const createQtrAnimation = (selection: QtrPatternSelection) => {
 
 describe('Qtr animation matching', () => {
   it.each(['1:2', '1:4'] as const)(
-    'recognizes both initial arc rotations after a beat shift at %s',
+    'recognizes every nonzero initial arc rotation after a beat shift at %s',
     (speedRatio) => {
-      for (const orientation of [90, -90] as const) {
+      for (const orientation of [90, -90, 180] as const) {
         const selection = {
           reference: '5-1',
           speedRatio,
