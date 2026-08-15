@@ -629,7 +629,7 @@ describe('VtgPane', () => {
       expect(wrapper.findAll('[data-role="vtg-tile"]').map((tile) => tile.text())).toEqual(
         initialLabels,
       )
-      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('60')
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('40')
       await transition.trigger('click')
       expect(transition.attributes('aria-pressed')).toBe('true')
       expect(wrapper.emitted('patternSelect')).toEqual([
@@ -908,7 +908,7 @@ describe('VtgPane', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').element.value).toBe('0.8')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').element.value).toBe('5')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-spacing"]').element.value).toBe('1')
-    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('60')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('40')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]').element.checked).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-hands"]').element.checked).toBe(false)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-arms"]').element.checked).toBe(true)
@@ -940,35 +940,35 @@ describe('VtgPane', () => {
     expect(scale.attributes()).toMatchObject({ min: '0.5', max: '1.4', step: '0.1' })
     expect(thick.attributes()).toMatchObject({ min: '1', max: '15', step: '1' })
     expect(spacing.attributes()).toMatchObject({ min: '0', max: '20', step: '1' })
-    expect(bpm.element.value).toBe('60')
+    expect(bpm.element.value).toBe('40')
     expect(scale.element.value).toBe('0.8')
     expect(thick.element.value).toBe('5')
     expect(spacing.element.value).toBe('1')
-    expect(outputs.map((output) => output.text())).toEqual(['0.8', '5', '1', '60'])
+    expect(outputs.map((output) => output.text())).toEqual(['0.8', '5', '1', '40'])
 
     await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
-    await bpm.setValue(40)
+    await bpm.setValue(41)
     await scale.setValue(1.4)
     await thick.setValue(15)
     await spacing.setValue(20)
 
     expect(wrapper.emitted('patternSelect')).toEqual([
       [{ reference: '1-6', speedRatio: '1:3' }],
-      [{ reference: '1-6', speedRatio: '1:3', bpm: 40 }],
-      [{ reference: '1-6', speedRatio: '1:3', bpm: 40, scale: 1.4 }],
-      [{ reference: '1-6', speedRatio: '1:3', bpm: 40, scale: 1.4, thick: 15 }],
+      [{ reference: '1-6', speedRatio: '1:3', bpm: 41 }],
+      [{ reference: '1-6', speedRatio: '1:3', bpm: 41, scale: 1.4 }],
+      [{ reference: '1-6', speedRatio: '1:3', bpm: 41, scale: 1.4, thick: 15 }],
       [
         {
           reference: '1-6',
           speedRatio: '1:3',
-          bpm: 40,
+          bpm: 41,
           scale: 1.4,
           thick: 15,
           spacing: 20,
         },
       ],
     ])
-    expect(outputs.map((output) => output.text())).toEqual(['1.4', '15', '20', '40'])
+    expect(outputs.map((output) => output.text())).toEqual(['1.4', '15', '20', '41'])
   })
 
   it('places rendering controls and sliders inside Customize for VTG and Qtr', async () => {

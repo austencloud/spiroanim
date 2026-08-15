@@ -146,7 +146,7 @@ describe('VTG animation matching', () => {
         isAnti: false,
         swapProps: false,
         reversePlane: false,
-        bpm: 60,
+        bpm: 40,
         scale: 0.8,
       })
     },
@@ -331,7 +331,7 @@ describe('VTG animation matching', () => {
     expect(findVtgPatternMatch(animation)).toMatchObject({
       reference: '6-1',
       speedRatio: '1:1',
-      bpm: 60,
+      bpm: 40,
       scale: 0.8,
     })
   })

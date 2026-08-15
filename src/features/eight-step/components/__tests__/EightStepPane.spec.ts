@@ -546,7 +546,7 @@ describe('EightStepPane', () => {
 
     expect(store.swapProps).toBe(false)
     expect(store.reversePlane).toBe(false)
-    expect(store.bpm).toBe(60)
+    expect(store.bpm).toBe(40)
     expect(store.scale).toBe(0.8)
     expect(store.thick).toBe(5)
     expect(store.spacing).toBe(1)

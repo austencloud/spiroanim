@@ -189,6 +189,7 @@ describe('SpiroAnim view', () => {
     const expectedOneToThree = createVtgAnimation(playerRoot.value, {
       reference: '6-2',
       speedRatio: '1:3',
+      bpm: 60,
     })
     await wrapper.get<HTMLInputElement>('input[value="1:3"]').setValue()
     await wrapper.get('[data-cell-reference="6-2"]').trigger('click')
@@ -199,6 +200,7 @@ describe('SpiroAnim view', () => {
       reference: '6-2',
       speedRatio: '1:3',
       quarters: 1,
+      bpm: 60,
     })
     await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(true)
     await flushPromises()
@@ -208,6 +210,7 @@ describe('SpiroAnim view', () => {
     const expectedVtgAgain = createVtgAnimation(playerRoot.value, {
       reference: '6-2',
       speedRatio: '1:3',
+      bpm: 60,
     })
     await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(false)
     await flushPromises()
@@ -217,6 +220,7 @@ describe('SpiroAnim view', () => {
     const expectedEightStep = createEightStepAnimation(playerRoot.value, {
       concept: '8stp',
       reference: '8-II',
+      bpm: 60,
     })
     await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('8stp')
     await wrapper.get('[data-cell-reference="8-II"]').trigger('click')

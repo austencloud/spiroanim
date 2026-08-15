@@ -5,7 +5,7 @@ export const vtgBpmControl = {
   min: 40,
   max: 140,
   step: 1,
-  default: 60,
+  default: 40,
 } as const
 
 export const vtgScaleControl = {

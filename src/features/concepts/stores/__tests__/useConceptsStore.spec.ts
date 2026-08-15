@@ -38,7 +38,7 @@ describe('useConceptsStore', () => {
     expect(store.speedRatio).toBe('1:3')
     expect(store.swapProps).toBe(false)
     expect(store.reversePlane).toBe(false)
-    expect(store.bpm).toBe(60)
+    expect(store.bpm).toBe(40)
     expect(store.scale).toBe(0.8)
     expect(store.thick).toBe(5)
     expect(store.spacing).toBe(1)
@@ -91,7 +91,7 @@ describe('useConceptsStore', () => {
       speedRatio: '1:3',
       swapProps: false,
       reversePlane: false,
-      bpm: 60,
+      bpm: 40,
       scale: 0.8,
       thick: 5,
       spacing: 1,

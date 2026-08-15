@@ -77,7 +77,7 @@ describe('Qtr animation matching', () => {
       isAnti: false,
       swapProps: false,
       reversePlane: false,
-      bpm: 60,
+      bpm: 40,
       scale: 0.8,
     })
   })
@@ -97,7 +97,7 @@ describe('Qtr animation matching', () => {
         isAnti: false,
         swapProps: false,
         reversePlane: false,
-        bpm: 60,
+        bpm: 40,
         scale: 0.8,
       })
     },
@@ -117,7 +117,7 @@ describe('Qtr animation matching', () => {
         expect(findQtrPatternMatches(createQtrAnimation(selection))).toContainEqual({
           ...selection,
           isAnti: false,
-          bpm: 60,
+          bpm: 40,
           scale: 0.8,
         })
       }
@@ -155,7 +155,7 @@ describe('Qtr animation matching', () => {
       ...selection,
       isAnti: false,
       swapProps: false,
-      bpm: 60,
+      bpm: 40,
       scale: 0.8,
     })
   })
