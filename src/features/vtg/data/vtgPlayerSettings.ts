@@ -1,4 +1,4 @@
-import type { VtgReadableAnimation } from '@/features/vtg/types'
+import type { VtgReadableAnimation, VtgSpeedRatio } from '@/features/vtg/types'
 import type { AnimReadable, PropReadable } from '@/types/AnimTypes'
 
 export const vtgBpmControl = {
@@ -19,6 +19,15 @@ export const vtgScaleControl = {
   distanceMax: 25,
 } as const
 
+/** Added to the Scale control value before converting it to VTG's internal x10 scale. */
+export const vtgScaleAdjustmentBySpeedRatio = {
+  '1:1': 0.1,
+  '1:2': -0.2,
+  '1:3': 0,
+  '1:4': 0.1,
+  '1:5': 0.2,
+} as const satisfies Readonly<Record<VtgSpeedRatio, number>>
+
 export const vtgThickControl = {
   min: 1,
   max: 15,
@@ -35,10 +44,38 @@ export const vtgSpacingControl = {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
+const toVtgRawScale = (scale: number) => Math.round(scale * 10)
+
+export const getAdjustedVtgScale = (scale: number, speedRatio: VtgSpeedRatio): number => {
+  const adjustedRawScale =
+    toVtgRawScale(scale) + toVtgRawScale(vtgScaleAdjustmentBySpeedRatio[speedRatio])
+  const minRawScale = toVtgRawScale(vtgScaleControl.min)
+  const maxRawScale = toVtgRawScale(vtgScaleControl.max)
+
+  return clamp(adjustedRawScale, minRawScale, maxRawScale) / 10
+}
+
+export const getVtgScaleControlValue = (
+  adjustedScale: number,
+  speedRatio: VtgSpeedRatio,
+): number => {
+  if (adjustedScale < vtgScaleControl.min || adjustedScale > vtgScaleControl.max) {
+    return adjustedScale
+  }
+
+  return (
+    clamp(
+      toVtgRawScale(adjustedScale) - toVtgRawScale(vtgScaleAdjustmentBySpeedRatio[speedRatio]),
+      toVtgRawScale(vtgScaleControl.min),
+      toVtgRawScale(vtgScaleControl.max),
+    ) / 10
+  )
+}
+
 export const clampVtgBpm = (bpm: number) => clamp(bpm, vtgBpmControl.min, vtgBpmControl.max)
 
 export const toVtgInternalScale = (scale: number) =>
-  Math.round(clamp(scale, vtgScaleControl.min, vtgScaleControl.max) * 10)
+  toVtgRawScale(clamp(scale, vtgScaleControl.min, vtgScaleControl.max))
 
 export const getVtgDistanceForScale = (scale: number) => {
   const clampedScale = clamp(scale, vtgScaleControl.min, vtgScaleControl.max)

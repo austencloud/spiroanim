@@ -3,6 +3,7 @@ import {
   createDefaultVtgAnimation,
 } from '@/features/vtg/createVtgAnimation'
 import { hasFixedVtgPatternShape } from '@/features/vtg/data/vtgPatternCatalog'
+import { getVtgScaleControlValue } from '@/features/vtg/data/vtgPlayerSettings'
 import {
   createFinalTransformedVtgAnimationSignature,
   createVtgAnimationSignature,
@@ -141,11 +142,12 @@ const buildCandidateCache = (speedRatio: VtgSpeedRatio) => {
 const findBaseVtgCandidateMatches = (
   animation: RootDataFinal,
 ): readonly (VtgPatternMatch & { subdivided?: boolean })[] => {
-  const scale = getVtgAnimationScale(animation)
-  if (scale === undefined) return []
-
   const speedRatio = inferVtgSpeedRatio(animation)
   if (speedRatio === undefined) return []
+
+  const adjustedScale = getVtgAnimationScale(animation)
+  if (adjustedScale === undefined) return []
+  const scale = getVtgScaleControlValue(adjustedScale, speedRatio)
 
   const signature = createVtgAnimationSignature(animation)
   if (!signature) return []

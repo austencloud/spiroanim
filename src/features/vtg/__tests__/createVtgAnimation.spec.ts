@@ -7,7 +7,11 @@ import {
 } from '@/features/vtg/createVtgAnimation'
 import { buildVtgPattern as buildSelectedVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
-import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import {
+  getAdjustedVtgScale,
+  vtgPlayerSettings,
+  vtgScaleAdjustmentBySpeedRatio,
+} from '@/features/vtg/data/vtgPlayerSettings'
 import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
@@ -59,6 +63,29 @@ const expectVectorClose = (actual: readonly number[], expected: readonly number[
 }
 
 describe('createVtgAnimation', () => {
+  it.each([
+    ['1:1', 0.1, 9, 19],
+    ['1:2', -0.2, 6, 15],
+    ['1:3', 0, 8, 18],
+    ['1:4', 0.1, 9, 19],
+    ['1:5', 0.2, 10, 20],
+  ] as const)(
+    'adds the %s Scale adjustment before converting to raw scale',
+    (speedRatio, adjustment, rawScale, distance) => {
+      const pattern = buildVtgPattern({ reference: '1-6', speedRatio })
+
+      expect(vtgScaleAdjustmentBySpeedRatio[speedRatio]).toBe(adjustment)
+      expect(pattern?.props.map((prop) => prop.anim[0]?.scale)).toEqual([rawScale, rawScale])
+      expect(pattern?.distance).toBe(distance)
+    },
+  )
+
+  it('lists every ratio adjustment and clamps adjusted Scale to the control bounds', () => {
+    expect(Object.keys(vtgScaleAdjustmentBySpeedRatio)).toEqual(vtgSpeedRatios)
+    expect(getAdjustedVtgScale(0.5, '1:2')).toBe(0.5)
+    expect(getAdjustedVtgScale(1.4, '1:5')).toBe(1.4)
+  })
+
   it('keeps every removable transition-subdivision continuation frame empty', () => {
     const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
     const booleanOptions = [false, true] as const
@@ -417,7 +444,7 @@ describe('createVtgAnimation', () => {
       visible: false,
       thick: 15,
     })
-    expect(preview.camera[0]!.orbit?.distance).toBe(vtgPlayerSettings.distance)
+    expect(preview.camera[0]!.orbit?.distance).toBe(19)
     expect(preview.props.every((prop) => prop.anim.length === 5)).toBe(true)
     expect(
       preview.props.every(
@@ -441,7 +468,7 @@ describe('createVtgAnimation', () => {
     ).toBe(true)
   })
 
-  it('sets scale 8 on VTG base frames and inherits it through compilation', () => {
+  it('adds the 1:1 adjustment to VTG base frames and inherits it through compilation', () => {
     const animation = createVtgAnimation(createCurrentAnimation(), {
       reference: '1-6',
       speedRatio: '1:1',
@@ -449,11 +476,11 @@ describe('createVtgAnimation', () => {
     if (animation === undefined) throw new Error('Expected the VTG pattern to be defined')
 
     expect(animation.props.map((prop) => prop.anim.map((frame) => frame.scale))).toEqual([
-      [8, undefined, undefined, undefined, undefined],
-      [8, undefined, undefined, undefined, undefined],
+      [9, undefined, undefined, undefined, undefined],
+      [9, undefined, undefined, undefined, undefined],
     ])
     expect(
-      rootCompile(animation).props.every((prop) => prop.anim.every((frame) => frame.scale === 8)),
+      rootCompile(animation).props.every((prop) => prop.anim.every((frame) => frame.scale === 9)),
     ).toBe(true)
   })
 
@@ -464,11 +491,11 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { plane: 180, arc: 90, scale: 8 },
+      { plane: 180, arc: 90, scale: 9 },
       { plane: 180, arc: 90 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, scale: 8 },
+      { arc: 90, scale: 9 },
       { arc: 90, turns: -180 },
     ])
   })
@@ -480,11 +507,11 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { plane: 180, arc: 90, turns: -180, scale: 8 },
+      { plane: 180, arc: 90, turns: -180, scale: 9 },
       { plane: 180, arc: 90, turns: 0 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, turns: 180, scale: 8 },
+      { arc: 90, turns: 180, scale: 9 },
       { arc: 90, turns: -180 },
     ])
   })
@@ -497,9 +524,9 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props.map((prop) => prop.color)).toEqual([4, 1])
-    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([{ arc: 90, scale: 8 }, { arc: 90 }])
+    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([{ arc: 90, scale: 9 }, { arc: 90 }])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { plane: 180, arc: 90, turns: 180, scale: 8 },
+      { plane: 180, arc: 90, turns: 180, scale: 9 },
       { plane: 180, arc: 90, turns: 0 },
     ])
   })
@@ -567,7 +594,7 @@ describe('createVtgAnimation', () => {
     const pivot = buildVtgPattern({
       reference: '1-6',
       speedRatio: '1:1',
-      scale: 0.6,
+      scale: 0.5,
     })
 
     expect(minimum).toMatchObject({ bpm: 40, distance: 14 })
@@ -584,11 +611,11 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, scale: 8 },
+      { arc: 90, scale: 10 },
       { arc: 90, turns: -540 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, turns: 180, scale: 8 },
+      { arc: 90, turns: 180, scale: 10 },
       { plane: 180, arc: 90, turns: 360 },
     ])
   })

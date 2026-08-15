@@ -1,5 +1,6 @@
 import type { AnimData, RootDataFinal } from '@/types/AnimTypes'
 import { reverseAngle } from '@/math/animation/AngleFunc'
+import { rootCompile } from '@/math/animation/AnimFunc'
 
 const normalizePlane = (angle: number | undefined) => {
   if (angle === undefined) return null
@@ -43,6 +44,8 @@ export const createFinalTransformedVtgAnimationSignature = (
 }
 
 export const getVtgAnimationScale = (animation: RootDataFinal): number | undefined => {
-  const firstScale = animation.props[0]?.anim[0]?.scale
+  // A shifted frame may omit Scale when it inherits the internal default of 10.
+  const firstScale =
+    animation.props[0]?.anim[0]?.scale ?? rootCompile(animation).props[0]?.anim[0]?.scale
   return firstScale === undefined ? undefined : firstScale / 10
 }

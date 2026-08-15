@@ -1,6 +1,7 @@
 import { vtgRowPatterns } from '@/features/vtg/data/patterns/rows'
 import {
   clampVtgBpm,
+  getAdjustedVtgScale,
   getVtgDistanceForScale,
   toVtgInternalScale,
   vtgScaleControl,
@@ -43,9 +44,14 @@ export const buildVtgPattern = (
 
   const applyBoxShape =
     selection.shape === 'box' && !hasFixedVtgPatternShape(selection.reference, selection.speedRatio)
+  const adjustedScale = getAdjustedVtgScale(
+    selection.scale ?? vtgScaleControl.default,
+    selection.speedRatio,
+  )
+  const applyScale = selection.scale !== undefined || adjustedScale !== vtgScaleControl.default
 
   const transformedProps =
-    selection.scale !== undefined || applyBoxShape
+    applyScale || applyBoxShape
       ? pattern.props.map((prop) => {
           const baseFrame = prop.anim[0]
           if (baseFrame === undefined) return prop
@@ -62,8 +68,8 @@ export const buildVtgPattern = (
                 ? { arc: (initialArc + boxArcDelta + 360) % 360 }
                 : undefined),
               ...(frameIndex === 1 && applyBoxShape ? { arc: firstContinuationArc } : undefined),
-              ...(frameIndex === 0 && selection.scale !== undefined
-                ? { scale: toVtgInternalScale(selection.scale) }
+              ...(frameIndex === 0 && applyScale
+                ? { scale: toVtgInternalScale(adjustedScale) }
                 : undefined),
             })),
           }
@@ -73,7 +79,7 @@ export const buildVtgPattern = (
   return {
     ...pattern,
     ...(selection.bpm !== undefined ? { bpm: clampVtgBpm(selection.bpm) } : undefined),
-    distance: getVtgDistanceForScale(selection.scale ?? vtgScaleControl.default),
+    distance: getVtgDistanceForScale(adjustedScale),
     props: transformedProps,
   }
 }

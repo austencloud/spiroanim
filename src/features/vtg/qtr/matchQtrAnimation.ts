@@ -4,6 +4,7 @@ import {
 } from '@/features/vtg/qtr/createQtrAnimation'
 import { applyVtgPlaybackControls } from '@/features/vtg/createVtgAnimation'
 import { hasFixedVtgPatternShape } from '@/features/vtg/data/vtgPatternCatalog'
+import { getVtgScaleControlValue } from '@/features/vtg/data/vtgPlayerSettings'
 import type {
   QtrPatternMatch,
   QtrPatternMatchPreferences,
@@ -144,11 +145,12 @@ const buildCandidateCache = (speedRatio: VtgSpeedRatio) => {
 export const findQtrPatternMatches = (animation: RootDataFinal): readonly QtrPatternMatch[] => {
   const alternating = analyzeAlternatingPatternPlayback(animation)
   const matchingAnimation = alternating?.base ?? animation
-  const scale = getVtgAnimationScale(matchingAnimation)
-  if (scale === undefined) return []
-
   const speedRatio = inferVtgSpeedRatio(matchingAnimation)
   if (speedRatio === undefined) return []
+
+  const adjustedScale = getVtgAnimationScale(matchingAnimation)
+  if (adjustedScale === undefined) return []
+  const scale = getVtgScaleControlValue(adjustedScale, speedRatio)
 
   const signature = createVtgAnimationSignature(matchingAnimation)
   if (!signature) return []
