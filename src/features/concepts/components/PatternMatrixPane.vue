@@ -68,20 +68,22 @@
 
       <div class="vtg-column-headers" data-role="vtg-column-headers">
         <VtgRuleCard
-          v-for="rule in columnRules"
-          :key="`column-${rule.number}`"
-          :labels="rule.labels"
-          :display-labels="isQtr ? qtrColumnRuleLabels[rule.number] : undefined"
-          :number="rule.number"
-          :diagram="rule.diagram"
-          :description="rule.description"
+          v-for="header in displayedColumnRules"
+          :key="`column-${header.column}`"
+          :labels="header.rule.labels"
+          :display-labels="
+            hideColumnHeaderDetails ? qtrColumnRuleLabels[header.rule.number] : undefined
+          "
+          :number="header.rule.number"
+          :diagram="header.rule.diagram"
+          :description="header.rule.description"
           :orientation="columnHeaderOrientation"
-          :accent="rule.number === selectedCell?.column"
-          :show-divider="!isQtr"
-          :show-props="!isQtr"
-          :tooltip-disabled="isQtr"
-          :mirror-props="!isQtr"
-          @select="selectColumn(rule.number)"
+          :accent="header.column === selectedCell?.column"
+          :show-divider="!hideColumnHeaderDetails"
+          :show-props="!hideColumnHeaderDetails"
+          :tooltip-disabled="hideColumnHeaderDetails"
+          :mirror-props="!hideColumnHeaderDetails"
+          @select="selectColumn(header.column)"
         />
       </div>
 
@@ -342,6 +344,7 @@ const transitionAvailable = computed(() => supportsVtgQtrTransition(speedRatio.v
 const usesPairedPreviewLayout = computed(
   () => speedRatio.value === '1:2' || speedRatio.value === '1:4',
 )
+const hideColumnHeaderDetails = computed(() => isQtr.value || usesPairedPreviewLayout.value)
 const usesRotatedHeaderLayout = computed(
   () => supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0,
 )
@@ -831,6 +834,22 @@ const columnRules: readonly VtgRuleSpec[] = [
     description: ruleDescriptions[6],
   },
 ]
+
+const swappedColumnRuleNumbers = [3, 4, 1, 2, 5, 6] as const satisfies readonly VtgRuleNumber[]
+const displayedColumnRules = computed(() => {
+  const ruleNumbers =
+    speedRatio.value === '1:1' || speedRatio.value === '1:5'
+      ? swappedColumnRuleNumbers
+      : columnRuleNumbers
+
+  return columnRuleNumbers.map((column, index) => {
+    const ruleNumber = ruleNumbers[index]
+    const rule = columnRules.find((candidate) => candidate.number === ruleNumber)
+    if (!rule) throw new Error(`Missing VTG column header rule ${ruleNumber}`)
+
+    return { column, rule }
+  })
+})
 
 const sideRules: readonly VtgRuleSpec[] = [
   {

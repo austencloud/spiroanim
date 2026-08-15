@@ -258,6 +258,48 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
+  it.each(['1:2', '1:4'] as const)(
+    'hides top-header labels, diagrams, and dividers at %s while retaining left-header details',
+    async (speedRatio) => {
+      const wrapper = mount(VtgPane)
+      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+
+      const columnHeaders = wrapper.get('[data-role="vtg-column-headers"]')
+      const sideHeaders = wrapper.get('[data-role="vtg-sidebar"]')
+      expect(columnHeaders.findAll('[data-role="vtg-rule-card"]')).toHaveLength(6)
+      expect(
+        columnHeaders.findAll('.vtg-rule-card__title').every((title) => title.text() === ''),
+      ).toBe(true)
+      expect(columnHeaders.findAll('[data-role="vtg-rule-card"][aria-describedby]')).toHaveLength(0)
+      expect(columnHeaders.findAll('[data-role="vtg-prop"]')).toHaveLength(0)
+      expect(columnHeaders.findAll('[data-role="vtg-divider"]')).toHaveLength(0)
+      expect(
+        sideHeaders.findAll('.vtg-rule-card__title').every((title) => title.text() !== ''),
+      ).toBe(true)
+      expect(sideHeaders.findAll('[data-role="vtg-prop"]')).toHaveLength(12)
+      expect(sideHeaders.findAll('[data-role="vtg-divider"]')).toHaveLength(6)
+    },
+  )
+
+  it.each([
+    ['1:1', ['3', '4', '1', '2', '5', '6']],
+    ['1:3', ['1', '2', '3', '4', '5', '6']],
+    ['1:5', ['3', '4', '1', '2', '5', '6']],
+  ] as const)('maps the %s top headers by physical column', async (speedRatio, expectedNumbers) => {
+    const wrapper = mount(VtgPane)
+    await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+
+    const headers = wrapper.findAll('[data-role="vtg-column-headers"] [data-role="vtg-rule-card"]')
+    expect(headers.map((header) => header.get('.vtg-rule-card__number').text())).toEqual(
+      expectedNumbers,
+    )
+
+    await wrapper.get('[data-cell-reference="6-6"]').trigger('click')
+    await headers[0]?.trigger('click')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-6')
+    expect(headers[0]?.attributes('aria-pressed')).toBe('true')
+  })
+
   it('maps the extracted header descriptions to both sets of rule buttons', async () => {
     vi.useFakeTimers()
     const wrapper = mount(VtgPane)
@@ -1464,18 +1506,19 @@ describe('VtgPane', () => {
     const columnSplitProps = columnSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
     expect(columnSplitRule.classes()).toContain('vtg-rule-card--horizontal')
     expect(columnSplitRule.classes()).not.toContain('vtg-rule-card--reversed')
-    expect(
-      columnSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetInlineStart,
-    ).toBe('97%')
-    expect(columnSplitProps.map(({ element }) => element.style.insetInlineStart)).toEqual([
-      '4%',
-      '48%',
-    ])
+    expect(columnSplitRule.find('[data-role="vtg-divider"]').exists()).toBe(false)
+    expect(columnSplitProps).toHaveLength(0)
   })
 
-  it.each(['1:1', '1:2', '1:3', '1:4', '1:5'] as const)(
-    'uses 180 degrees to flip horizontal left headers at %s when rotation is zero',
-    async (speedRatio) => {
+  it.each([
+    { speedRatio: '1:1', columnDividerPosition: '97%', columnPropPositions: ['4%', '48%'] },
+    { speedRatio: '1:2', columnDividerPosition: undefined, columnPropPositions: [] },
+    { speedRatio: '1:3', columnDividerPosition: '97%', columnPropPositions: ['4%', '48%'] },
+    { speedRatio: '1:4', columnDividerPosition: undefined, columnPropPositions: [] },
+    { speedRatio: '1:5', columnDividerPosition: '97%', columnPropPositions: ['4%', '48%'] },
+  ] as const)(
+    'uses 180 degrees to flip horizontal left headers at $speedRatio when rotation is zero',
+    async ({ speedRatio, columnDividerPosition, columnPropPositions }) => {
       const wrapper = mount(VtgPane)
       await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
       if (speedRatio === '1:2' || speedRatio === '1:4') {
@@ -1504,14 +1547,15 @@ describe('VtgPane', () => {
 
       const columnSplitRule = wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 5"]')
       const columnSplitProps = columnSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
+      const columnDivider = columnSplitRule.find<HTMLElement>('[data-role="vtg-divider"]')
       expect(columnSplitRule.classes()).not.toContain('vtg-rule-card--reversed')
-      expect(
-        columnSplitRule.get<HTMLElement>('[data-role="vtg-divider"]').element.style.insetBlockStart,
-      ).toBe('97%')
-      expect(columnSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual([
-        '4%',
-        '48%',
-      ])
+      expect(columnDivider.exists()).toBe(columnDividerPosition !== undefined)
+      expect(columnDivider.exists() ? columnDivider.element.style.insetBlockStart : undefined).toBe(
+        columnDividerPosition,
+      )
+      expect(columnSplitProps.map(({ element }) => element.style.insetBlockStart)).toEqual(
+        columnPropPositions,
+      )
     },
   )
 

@@ -310,7 +310,7 @@ onBeforeUnmount(endSliderHistory)
 <style scoped>
 .concept-customize {
   box-sizing: border-box;
-  width: min(100%, 45rem);
+  width: min(calc(100% - var(--space-2)), 45rem);
   min-width: var(--size-concept-content-min-width);
   margin: var(--space-1) auto 0;
   overflow: hidden;

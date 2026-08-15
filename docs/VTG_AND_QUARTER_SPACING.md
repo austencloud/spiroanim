@@ -244,6 +244,11 @@ corresponding non-Tilted pattern.
 
 The top-header prop diagrams are not displayed in QTR mode.
 
+The 1:2 and 1:4 VTG ratios also hide the top-header labels, prop diagrams, dividers, and tooltips
+while retaining the numbers and selection behavior. At 1:1 and 1:5, the visible top-header rules
+are remapped by physical column as `3, 4, 1, 2, 5, 6`. The 1:3 top headers retain their standard
+`1, 2, 3, 4, 5, 6` mapping.
+
 The 180° control mirrors each left header from left to right. Its title block, divider, and regular
 prop placements move together, including which end of a prop is rendered as the head. Rotated
 left-header titles are right-aligned against the right edge. Header numbers remain in their normal
