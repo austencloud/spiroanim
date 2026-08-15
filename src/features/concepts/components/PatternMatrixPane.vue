@@ -38,6 +38,7 @@
       </fieldset>
 
       <PatternTransformControls
+        confirm-reset
         :reverse-label="isQtr ? 'Flip' : '180°'"
         :reverse-description="
           isQtr
@@ -1037,10 +1038,12 @@ defineExpose({
 }
 
 .vtg-top-options {
+  box-sizing: border-box;
   display: flex;
+  width: min(100%, 45rem);
   min-width: var(--size-concept-content-min-width);
   padding: 0 var(--space-2) var(--space-1);
-  flex-wrap: wrap;
+  margin: 0 auto;
   gap: var(--space-1);
   justify-content: center;
 }
@@ -1072,10 +1075,12 @@ defineExpose({
 
 .vtg-radio-options label > span {
   display: grid;
-  padding: var(--space-2);
+  padding-block: var(--space-1);
+  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
   color: var(--color-text);
-  font-size: 0.875rem;
+  font-size: clamp(0.625rem, 3cqi, 0.875rem);
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
   background: var(--color-surface);
   border: 1px solid var(--color-border);

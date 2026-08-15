@@ -33,29 +33,51 @@
           v-bind="activatorProps"
           type="button"
           :data-role="`${rolePrefix}-reset`"
-          @click="emit('reset')"
+          @click="requestReset"
         >
           Reset
         </button>
       </template>
     </AppTooltip>
   </fieldset>
+
+  <BaseDialog
+    v-if="confirmationOpen"
+    v-model="confirmationOpen"
+    class="pattern-reset-dialog"
+    title="Reset pattern?"
+    close-label="Close reset confirmation"
+  >
+    <p class="pattern-reset-dialog__message">
+      <strong>Are you sure?</strong> This restores the current pattern and its controls to their
+      defaults.
+    </p>
+    <div class="pattern-reset-dialog__actions">
+      <button type="button" @click="confirmationOpen = false">Cancel</button>
+      <button type="button" class="pattern-reset-dialog__confirm" @click="performReset">
+        Reset
+      </button>
+    </div>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import AppTooltip from '@/components/AppTooltip.vue'
+import BaseDialog from '@/components/ui/BaseDialog.vue'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     rolePrefix?: string
     reverseLabel?: string
     reverseDescription?: string
+    confirmReset?: boolean
   }>(),
   {
     rolePrefix: 'vtg',
     reverseLabel: '180°',
     reverseDescription: 'Rotate motion plane 180 degrees',
+    confirmReset: false,
   },
 )
 
@@ -64,6 +86,21 @@ const emit = defineEmits<{
 }>()
 
 const { swapProps, reversePlane } = storeToRefs(useConceptsStore())
+const confirmationOpen = ref(false)
+
+function requestReset() {
+  if (props.confirmReset) {
+    confirmationOpen.value = true
+    return
+  }
+
+  emit('reset')
+}
+
+function performReset() {
+  confirmationOpen.value = false
+  emit('reset')
+}
 </script>
 
 <style scoped>
@@ -92,10 +129,12 @@ const { swapProps, reversePlane } = storeToRefs(useConceptsStore())
 .concept-pattern-options label > span,
 .concept-pattern-options button {
   display: grid;
-  padding: var(--space-2);
+  padding-block: var(--space-1);
+  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
   color: var(--color-text);
-  font-size: 0.875rem;
+  font-size: clamp(0.625rem, 3cqi, 0.875rem);
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -133,5 +172,49 @@ const { swapProps, reversePlane } = storeToRefs(useConceptsStore())
   white-space: nowrap;
   border: 0;
   clip-path: inset(50%);
+}
+
+:deep(.pattern-reset-dialog .base-dialog__body) {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.pattern-reset-dialog__message {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.pattern-reset-dialog__message strong {
+  color: var(--color-text);
+}
+
+.pattern-reset-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
+.pattern-reset-dialog__actions button {
+  min-height: 2.75rem;
+  padding-inline: var(--space-4);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 750;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.pattern-reset-dialog__actions .pattern-reset-dialog__confirm {
+  color: var(--color-on-action-primary);
+  background: var(--color-status-warning);
+  border-color: var(--color-status-warning);
+}
+
+.pattern-reset-dialog__actions button:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
 }
 </style>

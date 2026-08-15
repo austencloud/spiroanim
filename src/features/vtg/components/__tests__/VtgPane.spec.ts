@@ -924,7 +924,25 @@ describe('VtgPane', () => {
     await wrapper.get<HTMLInputElement>('[data-role="vtg-arms"]').setValue(false)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(true)
     const emissionCount = wrapper.emitted('patternSelect')?.length ?? 0
+
     await wrapper.get('[data-role="vtg-reset"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('.pattern-reset-dialog').attributes()).toHaveProperty('open')
+    expect(wrapper.get('.pattern-reset-dialog__message').text()).toBe(
+      'Are you sure? This restores the current pattern and its controls to their defaults.',
+    )
+    expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
+    expect(wrapper.emitted('patternSelect')).toHaveLength(emissionCount)
+
+    await wrapper.get('.pattern-reset-dialog__actions button').trigger('click')
+    expect(wrapper.find('.pattern-reset-dialog').exists()).toBe(false)
+    expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
+    expect(wrapper.emitted('patternSelect')).toHaveLength(emissionCount)
+
+    await wrapper.get('[data-role="vtg-reset"]').trigger('click')
+    await nextTick()
+    await wrapper.get('.pattern-reset-dialog__confirm').trigger('click')
     await nextTick()
 
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-6')

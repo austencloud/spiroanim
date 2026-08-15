@@ -554,7 +554,8 @@ function requestImages() {
   } else {
     // Determine items which are visible and need to be loaded
     const visible = []
-    for (let i = 0; i < imgsVisible.length; i++) if (imgsVisible[i]) visible.push(i)
+    for (let i = 0; i < imgsVisible.length; i++)
+      if (imgsVisible[i] && !imgsLoaded[i]) visible.push(i)
     // Request images as needed
     if (visible.length) {
       const generation = imageGeneration

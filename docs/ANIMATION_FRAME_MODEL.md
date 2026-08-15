@@ -220,8 +220,9 @@ the camera to the new Camera track's initial authored pose while leaving Free Ca
 
 Selecting Camera in the editor shows its single root timeline regardless of prop selection. Orbit
 appears before Center and owns the Beats control. Both paths are rendered in the main player only
-while Camera is selected. Timeline thumbnails
-and image/video exports suppress those guides. Camera supports Insert Frame and Delete Selection,
+while Camera is selected. Timeline thumbnails always render the authored Camera track and
+intentionally ignore temporary gestures and the Free Camera override. Timeline thumbnails and
+image/video exports suppress Camera guides. Camera supports Insert Frame and Delete Selection,
 but deletion cannot remove its final frame. While Free Camera is enabled, Manage also exposes
 Match Free Camera. It rewrites the active Camera frame's Center and Orbit to the closest pose
 available under the integer angle, Distance, Shape, Axis, and Amount constraints. A 100% Circle

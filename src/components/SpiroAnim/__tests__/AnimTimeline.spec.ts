@@ -296,6 +296,47 @@ describe('AnimTimeline', () => {
       'https://example.test/new-3.png',
     ])
 
+    observer.showObserved()
+    await flushPromises()
+    expect(worker.imageRequests).toHaveLength(2)
+
+    wrapper.unmount()
+    await flushPromises()
+  })
+
+  it('keeps authored timeline thumbnails unchanged for a manual camera pose', async () => {
+    const storeId = 'timeline-authored-camera'
+    const store = usePlayerStore(storeId)
+    const runtime = store.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      props: [{ anim: [{}], motion: [] }],
+    }
+    await nextTick()
+
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: storeId,
+        dim: { width: 600, height: 400, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    const worker = FakeWorker.instances[0]!
+    FakeIntersectionObserver.instances[0]!.showObserved()
+    expect(worker.imageRequests).toHaveLength(1)
+
+    worker.respondToImageRequest(0, { 0: 'https://example.test/authored.png' })
+    await flushPromises()
+
+    store.freeCameraPose = {
+      position: [4, 5, -20],
+      target: [1, 2, 3],
+    }
+    await flushPromises()
+
+    expect(worker.imageRequests).toHaveLength(1)
+
     wrapper.unmount()
     await flushPromises()
   })
