@@ -134,7 +134,9 @@
                 data-role="vtg-tile"
                 @click="selectTile(tile)"
               >
-                <span class="vtg-tile__label">{{ tile.label }}</span>
+                <span class="vtg-tile__label">
+                  <span class="vtg-tile__label-text">{{ tile.label }}</span>
+                </span>
               </button>
               <AppTooltip
                 v-if="tile.reference === selectedCellReference && isSpinToggleCell(tile.reference)"
@@ -1106,6 +1108,7 @@ defineExpose({
   --vtg-color-preview: #071421;
   --vtg-color-line: #e9eef2;
   --vtg-board-gap: 0.65cqi;
+  --vtg-paired-preview-width: 39%;
 
   container-type: inline-size;
   display: grid;
@@ -1254,36 +1257,39 @@ defineExpose({
 }
 
 .vtg-blank--paired {
-  width: 39%;
+  width: var(--vtg-paired-preview-width);
   align-self: center;
   justify-self: center;
   transform: none;
 }
 
-.vtg-tile--paired-left,
-.vtg-tile--paired-right {
-  padding-inline: max(0.4rem, 1cqi);
-  align-items: center;
-}
-
-.vtg-tile--paired-left {
-  justify-items: start;
-}
-
-.vtg-tile--paired-right {
-  justify-items: end;
+.vtg-tile--paired-left .vtg-tile__label,
+.vtg-tile--paired-right .vtg-tile__label {
+  position: absolute;
+  inset-block: 0;
+  display: grid;
+  inline-size: calc(100% - var(--vtg-paired-preview-width));
+  place-items: center;
 }
 
 .vtg-tile--paired-left .vtg-tile__label {
+  inset-inline-start: 0;
+}
+
+.vtg-tile--paired-right .vtg-tile__label {
+  inset-inline-end: 0;
+}
+
+.vtg-tile--paired-left .vtg-tile__label-text {
   transform: rotate(-90deg);
 }
 
-.vtg-tile--paired-right .vtg-tile__label {
+.vtg-tile--paired-right .vtg-tile__label-text {
   transform: rotate(90deg);
 }
 
-.vtg-tile--paired-left .vtg-tile__label,
-.vtg-tile--paired-right .vtg-tile__label {
+.vtg-tile--paired-left .vtg-tile__label-text,
+.vtg-tile--paired-right .vtg-tile__label-text {
   white-space: nowrap;
 }
 
