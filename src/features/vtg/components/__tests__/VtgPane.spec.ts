@@ -674,7 +674,7 @@ describe('VtgPane', () => {
   })
 
   it.each(['1:1', '1:2'] as const)(
-    'enables the reciprocal transition controls at %s in development',
+    'enables the reciprocal transition controls at %s',
     async (speedRatio) => {
       const concept = 'vtg'
       for (const qtrEnabled of [false, true]) {
@@ -718,18 +718,30 @@ describe('VtgPane', () => {
     },
   )
 
-  it('hides reciprocal transition controls at 1:1 and 1:2 on the production website', async () => {
+  it('shows reciprocal transitions at every production ratio and warns for active 1:1 and 1:2 transitions', async () => {
     vi.stubGlobal('location', new URL(`https://${PRODUCTION_PWA_HOSTNAME}`))
     const wrapper = mount(VtgPane)
 
+    for (const speedRatio of ['1:1', '1:2', '1:3', '1:4', '1:5'] as const) {
+      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(true)
+      expect(wrapper.get<HTMLButtonElement>('[data-role="vtg-transition"]').element.disabled).toBe(
+        false,
+      )
+    }
+
+    await wrapper.get('[data-role="vtg-transition"]').trigger('click')
+
     for (const speedRatio of ['1:1', '1:2'] as const) {
       await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
-      expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(false)
+      expect(wrapper.get('[data-role="vtg-transition-static-note"]').text()).toBe(
+        'Some or all of these 45° Transitions may only work with Static Props in the current ratio selection.',
+      )
     }
 
     for (const speedRatio of ['1:3', '1:4', '1:5'] as const) {
       await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
-      expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(true)
+      expect(wrapper.find('[data-role="vtg-transition-static-note"]').exists()).toBe(false)
     }
   })
 

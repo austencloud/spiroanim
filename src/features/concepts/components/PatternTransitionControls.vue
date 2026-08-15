@@ -10,7 +10,6 @@
           class="pattern-transition-controls__button"
           :class="{ 'pattern-transition-controls__button--active': transition }"
           :aria-pressed="transition"
-          :disabled="!available"
           data-role="vtg-transition"
           @click="transition = !transition"
         >
@@ -27,7 +26,7 @@
           </span>
           <select
             v-model.number="transitionBeats"
-            :disabled="!available || !transition"
+            :disabled="!transition"
             aria-label="Choose the beat interval between 45-degree transitions"
             data-role="vtg-transition-beats"
           >
@@ -45,7 +44,7 @@
           <input
             v-model="quad"
             type="checkbox"
-            :disabled="!available || !transition"
+            :disabled="!transition"
             aria-label="Transition one prop at a time for four total changes"
             data-role="vtg-transition-quad"
           />
@@ -60,7 +59,7 @@
           <input
             v-model="second"
             type="checkbox"
-            :disabled="!available || !transition || !quad"
+            :disabled="!transition || !quad"
             aria-label="Start the 45-degree Quad transition with the second prop"
             data-role="vtg-transition-second"
           />
@@ -75,8 +74,6 @@
 import AppTooltip from '@/components/AppTooltip.vue'
 import { vtgTransitionBeats } from '@/features/vtg/types'
 import type { VtgTransitionBeats } from '@/features/vtg/types'
-
-defineProps<{ available: boolean }>()
 
 const transition = defineModel<boolean>('transition', { required: true })
 const transitionBeats = defineModel<VtgTransitionBeats>('beats', { required: true })

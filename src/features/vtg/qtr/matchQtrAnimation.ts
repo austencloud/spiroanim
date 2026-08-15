@@ -18,7 +18,6 @@ import { inferVtgSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
 import type { VtgCellReference, VtgRuleNumber, VtgSpeedRatio } from '@/features/vtg/types'
 import {
   supportsVtgPatternOrientation,
-  supportsVtgQtrTransition,
   vtgBeats,
   vtgPatternOrientations,
 } from '@/features/vtg/types'
@@ -156,10 +155,7 @@ export const findQtrPatternMatches = (animation: RootDataFinal): readonly QtrPat
 
   const candidates = candidateCaches.get(speedRatio) ?? buildCandidateCache(speedRatio)
   return (candidates.get(signature) ?? [])
-    .filter(
-      (candidate) =>
-        !alternating || (candidate.subdivided && supportsVtgQtrTransition(candidate.speedRatio)),
-    )
+    .filter((candidate) => !alternating || candidate.subdivided)
     .map((candidate) => {
       const { subdivided, ...match } = candidate
       return {

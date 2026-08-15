@@ -8,7 +8,7 @@ import {
 import { buildVtgPattern as buildSelectedVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
-import { supportsVtgQtrTransition, vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { reverseAngle } from '@/math/animation/AngleFunc'
@@ -68,9 +68,7 @@ describe('createVtgAnimation', () => {
       for (const row of ruleNumbers) {
         const reference = `${column}-${row}` as VtgCellReference
         const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
-        for (const speedRatio of vtgSpeedRatios.filter((ratio) =>
-          supportsVtgQtrTransition(ratio),
-        )) {
+        for (const speedRatio of vtgSpeedRatios) {
           for (const isAnti of antiOptions) {
             for (const shape of patternShapes) {
               for (const beat of vtgBeats) {
@@ -174,7 +172,7 @@ describe('createVtgAnimation', () => {
   })
 
   it.each(['1:1', '1:2'] as const)(
-    'enables the reciprocal transition at %s only for development builds',
+    'enables the reciprocal transition at %s in every build',
     (speedRatio) => {
       const selection = {
         reference: '5-1',
@@ -186,9 +184,6 @@ describe('createVtgAnimation', () => {
         transition: true,
       })
 
-      expect(supportsVtgQtrTransition(speedRatio)).toBe(true)
-      expect(supportsVtgQtrTransition(speedRatio, 'dev.spiroanim.com')).toBe(true)
-      expect(supportsVtgQtrTransition(speedRatio, 'spiroanim.com')).toBe(false)
       expect(transitioned?.bpm).toBe((original?.bpm ?? 0) * doublePlaybackMultiplier)
     },
   )

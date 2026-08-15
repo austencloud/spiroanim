@@ -213,13 +213,19 @@
       </template>
       <template #between-controls>
         <PatternTransitionControls
-          v-if="transitionAvailable"
           v-model:transition="transition"
           v-model:beats="transitionBeats"
           v-model:quad="transitionQuad"
           v-model:second="transitionSecond"
-          :available="transitionAvailable"
         />
+        <p
+          v-if="showStaticPropsTransitionNote"
+          class="vtg-transition-static-note"
+          data-role="vtg-transition-static-note"
+        >
+          Some or all of these 45° Transitions may only work with Static Props in the current ratio
+          selection.
+        </p>
       </template>
     </ConceptAnimationControls>
   </section>
@@ -274,7 +280,6 @@ import type {
 } from '@/features/vtg/types'
 import {
   supportsVtgPatternOrientation,
-  supportsVtgQtrTransition,
   vtgDefaultPatternOrientation,
   vtgDefaultTransitionBeats,
   vtgSpeedRatios,
@@ -343,7 +348,9 @@ const transition = ref(false)
 const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
 const transitionQuad = ref(false)
 const transitionSecond = ref(false)
-const transitionAvailable = computed(() => supportsVtgQtrTransition(speedRatio.value))
+const showStaticPropsTransitionNote = computed(
+  () => transition.value && (speedRatio.value === '1:1' || speedRatio.value === '1:2'),
+)
 const usesPairedPreviewLayout = computed(
   () => speedRatio.value === '1:2' || speedRatio.value === '1:4',
 )
@@ -411,7 +418,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       ...(reversePlane.value ? { reversePlane: true } : undefined),
       ...(shape.value === 'box' ? { shape: shape.value } : undefined),
       ...(beat.value === 1 ? undefined : { beat: beat.value }),
-      ...(transition.value && transitionAvailable.value ? { transition: true } : undefined),
+      ...(transition.value ? { transition: true } : undefined),
       ...(supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0
         ? { orientation: orientation.value }
         : undefined),
@@ -453,23 +460,14 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (reversePlane.value) baseSelection.reversePlane = true
   if (shape.value === 'box') baseSelection.shape = shape.value
   if (beat.value !== 1) baseSelection.beat = beat.value
-  if (transition.value && transitionAvailable.value) baseSelection.transition = true
-  if (
-    transition.value &&
-    transitionAvailable.value &&
-    transitionBeats.value !== vtgDefaultTransitionBeats
-  ) {
+  if (transition.value) baseSelection.transition = true
+  if (transition.value && transitionBeats.value !== vtgDefaultTransitionBeats) {
     baseSelection.transitionBeats = transitionBeats.value
   }
-  if (transition.value && transitionAvailable.value && transitionQuad.value) {
+  if (transition.value && transitionQuad.value) {
     baseSelection.transitionQuad = true
   }
-  if (
-    transition.value &&
-    transitionAvailable.value &&
-    transitionQuad.value &&
-    transitionSecond.value
-  ) {
+  if (transition.value && transitionQuad.value && transitionSecond.value) {
     baseSelection.transitionSecond = true
   }
   if (supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0) {
@@ -1011,7 +1009,6 @@ defineExpose({
   shape,
   beat,
   transition,
-  transitionAvailable,
   bpm,
   scale,
   thick,
@@ -1097,6 +1094,22 @@ defineExpose({
 .vtg-radio-options input:focus-visible + span {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
+}
+
+.vtg-transition-static-note {
+  box-sizing: border-box;
+  width: min(calc(100% - var(--space-2)), 45rem);
+  padding: var(--space-2) var(--space-3);
+  margin: 0 auto;
+  color: var(--color-text);
+  font-size: clamp(0.6875rem, 2.7cqi, 0.8125rem);
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  background: color-mix(in srgb, var(--color-status-warning) 10%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-status-warning) 48%, var(--color-border));
+  border-inline-start-width: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .vtg-board {

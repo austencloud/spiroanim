@@ -2,7 +2,7 @@ import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { toConceptPreviewAnimation } from '@/features/concepts/data/toConceptPreviewAnimation'
 import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
-import { supportsVtgQtrTransition, vtgDefaultTransitionBeats } from '@/features/vtg/types'
+import { vtgDefaultTransitionBeats } from '@/features/vtg/types'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
@@ -67,7 +67,7 @@ export const applyVtgPlaybackControls = (
   >,
 ): RootDataFinal | undefined => {
   const shifted = shiftVtgStartingBeat(animation, selection.beat ?? 1)
-  const transition = selection.transition === true && supportsVtgQtrTransition(selection.speedRatio)
+  const transition = selection.transition === true
   if (!shifted || !transition) return shifted
 
   const subdivided = doubleAnimationPlayback(shifted)

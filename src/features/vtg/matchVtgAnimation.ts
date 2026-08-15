@@ -19,7 +19,6 @@ import type {
 } from '@/features/vtg/types'
 import {
   supportsVtgPatternOrientation,
-  supportsVtgQtrTransition,
   vtgBeats,
   vtgPatternOrientations,
 } from '@/features/vtg/types'
@@ -172,7 +171,7 @@ export const findVtgPatternMatches = (animation: RootDataFinal): readonly VtgPat
   if (!alternating) return findBaseVtgPatternMatches(animation)
 
   return findBaseVtgCandidateMatches(alternating.base)
-    .filter((match) => match.subdivided && supportsVtgQtrTransition(match.speedRatio))
+    .filter((match) => match.subdivided)
     .map((match) => ({
       ...withoutSubdivisionMarker(match),
       transition: true,
