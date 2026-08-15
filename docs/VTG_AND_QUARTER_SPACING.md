@@ -182,11 +182,21 @@ so selected cells and shared options can be recovered when toggling QTR or loadi
 ## Relationship classification
 
 Matrix labels and cell tooltips are derived from each compiled pattern rather than a cell-label
-table. Hand timing compares the two compiled position vectors, prop timing compares the two
-rotation vectors, and direction compares their travel axes. Parallel timing is Together (`T`),
-antiparallel timing is Split (`S`), and orthogonal timing is Quarter (`Q`); direction remains Same
-(`S`) or Opposite (`O`). The generated tooltip expands those letters as
+table. Hand timing compares the two compiled destination position vectors. Prop timing advances the
+two real starting rotation vectors through the VTG three-quarter phase checkpoint using each
+track's actual incoming axis and travel direction. This local-phase calculation is necessary at
+even speed ratios, where opposite half-turn paths can have coincident Cartesian endpoints even
+though their semantic relationship is Split. At 1:3, the phase checkpoint is the ordinary compiled
+destination, so every established 1:3 label remains unchanged. Direction compares the travel axes.
+Parallel timing is Together (`T`), antiparallel timing is Split (`S`), and orthogonal timing is
+Quarter (`Q`); direction remains Same (`S`) or Opposite (`O`). The generated tooltip expands those letters as
 `Hands: Timing / Direction` and `Props: Timing / Direction`.
+
+An unrotated matrix classifies the destination rule relationship. A 90-degree pattern orientation
+swaps the horizontal and vertical rule axes, so the same classifier uses the source relationship.
+This transposes the logical relationship matrix without a cell-label map; for example, rotated
+`2-1` corresponds to unrotated `1-2`. Both directions retain the real path axes when deriving Same
+or Opposite.
 
 Beat and the QTR/VTG transition are playback-only controls and are removed before
 relationship classification.

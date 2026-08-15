@@ -461,6 +461,29 @@ describe('VtgPane', () => {
     ])
   })
 
+  it('transposes relationship labels when rotation switches between zero and ninety degrees', async () => {
+    const wrapper = mount(VtgPane)
+    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+
+    const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+    const firstRowSecondColumn = () =>
+      wrapper.get('[data-cell-reference="2-1"] .vtg-tile__label').text()
+    const secondRowFirstColumn = () =>
+      wrapper.get('[data-cell-reference="1-2"] .vtg-tile__label').text()
+
+    expect(rotate.element.value).toBe('-90')
+    expect(firstRowSecondColumn()).toBe('TO/TO')
+    expect(secondRowFirstColumn()).toBe('SO/SO')
+
+    await rotate.setValue('0')
+    expect(firstRowSecondColumn()).toBe('SO/SO')
+    expect(secondRowFirstColumn()).toBe('TO/TO')
+
+    await rotate.setValue('90')
+    expect(firstRowSecondColumn()).toBe('TO/TO')
+    expect(secondRowFirstColumn()).toBe('SO/SO')
+  })
+
   it('offers a Tilted checkbox that reapplies VTG and Qtr patterns', async () => {
     for (const qtrEnabled of [false, true]) {
       const quarters = qtrEnabled ? 1 : undefined
@@ -1603,7 +1626,8 @@ describe('VtgPane', () => {
         'vtg-tile--paired-right',
       )
       expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label').text()).toBe('TS/TS')
-      expect(wrapper.get('[data-cell-reference="2-1"] .vtg-tile__label').text()).toBe('SO/SO')
+      expect(wrapper.get('[data-cell-reference="2-1"] .vtg-tile__label').text()).toBe('TO/TO')
+      expect(wrapper.get('[data-cell-reference="1-2"] .vtg-tile__label').text()).toBe('SO/SO')
 
       await wrapper.get('[data-cell-reference="5-5"]').trigger('click')
       expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
