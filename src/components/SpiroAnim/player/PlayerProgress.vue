@@ -92,7 +92,8 @@ const update = (/*val: number | [number, number]*/) => {
   UPDATE.value = Symbol()
 }
 
-const start = (/*original: number*/) => {
+const start = (event?: Event) => {
+  if (event?.defaultPrevented) return
   if (interacting) return
   interacting = true
 

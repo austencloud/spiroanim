@@ -125,17 +125,121 @@ describe('useSpiroAnimKeyboard', () => {
     expect(CURRENT.value).toBe(19)
   })
 
-  it('ignores Space from interactive controls and held-key repeats', () => {
+  it('uses Space for playback after pointer-focused controls without taking keyboard activation', async () => {
     const playerStore = usePlayerStore('main')
     playerStore.PLAYING = false
     vi.spyOn(useViewportStore(), 'isTouchDevice').mockReturnValue(false)
     stop = useSpiroAnimKeyboard()
 
+    const button = document.createElement('button')
+    const select = document.createElement('select')
+    select.append(document.createElement('option'))
+    const customControl = document.createElement('div')
+    customControl.tabIndex = 0
     const input = document.createElement('input')
-    document.body.append(input)
-    input.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
+    document.body.append(button, select, customControl, input)
+
+    button.focus()
+    button.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
+    expect(playerStore.PLAYING).toBe(false)
+
+    button.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    button.focus()
+    await Promise.resolve()
+    const buttonSpace = new KeyboardEvent('keydown', {
+      code: 'Space',
+      bubbles: true,
+      cancelable: true,
+    })
+    button.dispatchEvent(buttonSpace)
+    expect(playerStore.PLAYING).toBe(true)
+    expect(buttonSpace.defaultPrevented).toBe(true)
+
+    select.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    select.focus()
+    await Promise.resolve()
+    select.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'Space', bubbles: true, cancelable: true }),
+    )
+    expect(playerStore.PLAYING).toBe(false)
+
+    customControl.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    customControl.focus()
+    await Promise.resolve()
+    customControl.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'Space', bubbles: true, cancelable: true }),
+    )
+    expect(playerStore.PLAYING).toBe(true)
+
+    playerStore.PLAYING = false
+    input.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    input.focus()
+    await Promise.resolve()
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'Space', bubbles: true, cancelable: true }),
+    )
+    expect(playerStore.PLAYING).toBe(false)
+
+    input.readOnly = true
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'Space', bubbles: true, cancelable: true }),
+    )
+    expect(playerStore.PLAYING).toBe(true)
+
+    playerStore.PLAYING = false
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', repeat: true }))
 
     expect(playerStore.PLAYING).toBe(false)
+  })
+
+  it('navigates frames after pointer-focused controls without taking their keyboard arrow keys', async () => {
+    const playerStore = usePlayerStore('main')
+    const { CURRENT } = playerStore.raw()
+    playerStore.ETIMES = [0, 10, 20]
+    CURRENT.value = 15
+    vi.spyOn(useViewportStore(), 'isTouchDevice').mockReturnValue(false)
+    stop = useSpiroAnimKeyboard()
+
+    const select = document.createElement('select')
+    select.append(document.createElement('option'))
+    const input = document.createElement('input')
+    const label = document.createElement('label')
+    const radio = document.createElement('input')
+    const labelText = document.createElement('span')
+    radio.type = 'radio'
+    label.append(radio, labelText)
+    document.body.append(select, input, label)
+
+    select.focus()
+    select.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowLeft', bubbles: true }))
+    expect(CURRENT.value).toBe(15)
+
+    select.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    select.focus()
+    await Promise.resolve()
+    const selectArrow = new KeyboardEvent('keydown', {
+      code: 'ArrowLeft',
+      bubbles: true,
+      cancelable: true,
+    })
+    select.dispatchEvent(selectArrow)
+    expect(CURRENT.value).toBe(10)
+    expect(selectArrow.defaultPrevented).toBe(true)
+
+    input.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    input.focus()
+    await Promise.resolve()
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'ArrowRight', bubbles: true, cancelable: true }),
+    )
+    expect(CURRENT.value).toBe(10)
+
+    labelText.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    radio.focus()
+    await Promise.resolve()
+    radio.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'ArrowRight', bubbles: true, cancelable: true }),
+    )
+    expect(CURRENT.value).toBe(19)
   })
 })

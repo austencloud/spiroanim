@@ -64,6 +64,19 @@ describe('PlayerProgress', () => {
     expect(store.PLAYING).toBe(false)
   })
 
+  it('does not treat a claimed global shortcut as progress interaction', () => {
+    const store = usePlayerStore('progress-global-shortcut')
+    const wrapper = mountProgress('progress-global-shortcut')
+    const slider = wrapper.get('input[aria-label="Animation position"]')
+    store.PLAYING = true
+    const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true })
+    event.preventDefault()
+
+    slider.element.dispatchEvent(event)
+
+    expect(store.PLAYING).toBe(true)
+  })
+
   it('uses frame indices in selection mode and preserves the endpoint timing rule', async () => {
     const store = usePlayerStore('progress-selection')
     store.ETIMES = [0, 1000, 2000]
