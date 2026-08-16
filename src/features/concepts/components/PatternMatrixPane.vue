@@ -349,9 +349,7 @@ const transition = ref(false)
 const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
 const transitionQuad = ref(false)
 const transitionSecond = ref(false)
-const showStaticPropsTransitionNote = computed(
-  () => transition.value && (speedRatio.value === '1:1' || speedRatio.value === '1:2'),
-)
+const showStaticPropsTransitionNote = computed(() => transition.value && speedRatio.value === '1:1')
 const usesPairedPreviewLayout = computed(
   () => speedRatio.value === '1:2' || speedRatio.value === '1:4',
 )

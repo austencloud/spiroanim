@@ -743,7 +743,7 @@ describe('VtgPane', () => {
     },
   )
 
-  it('shows reciprocal transitions at every production ratio and warns for active 1:1 and 1:2 transitions', async () => {
+  it('shows reciprocal transitions at every production ratio and warns only for active 1:1 transitions', async () => {
     vi.stubGlobal('location', new URL(`https://${PRODUCTION_PWA_HOSTNAME}`))
     const wrapper = mount(VtgPane)
 
@@ -757,14 +757,12 @@ describe('VtgPane', () => {
 
     await wrapper.get('[data-role="vtg-transition"]').trigger('click')
 
-    for (const speedRatio of ['1:1', '1:2'] as const) {
-      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
-      expect(wrapper.get('[data-role="vtg-transition-static-note"]').text()).toBe(
-        'Some or all of these 45° Transitions may only work with Static Props in the current ratio selection.',
-      )
-    }
+    await wrapper.get<HTMLInputElement>('input[value="1:1"]').setValue()
+    expect(wrapper.get('[data-role="vtg-transition-static-note"]').text()).toBe(
+      'Some or all of these 45° Transitions may only work with Static Props in the current ratio selection.',
+    )
 
-    for (const speedRatio of ['1:3', '1:4', '1:5'] as const) {
+    for (const speedRatio of ['1:2', '1:3', '1:4', '1:5'] as const) {
       await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
       expect(wrapper.find('[data-role="vtg-transition-static-note"]').exists()).toBe(false)
     }
