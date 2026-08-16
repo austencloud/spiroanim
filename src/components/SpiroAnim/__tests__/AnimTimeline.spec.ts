@@ -180,6 +180,40 @@ describe('AnimTimeline', () => {
     expect(FakeWorker.instances[0]!.terminate).toHaveBeenCalledOnce()
   })
 
+  it('shows a centered timeline value control and updates its number', async () => {
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: 'timeline-value-control',
+        dim: { width: 600, height: 400, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    const control = wrapper.get('[role="group"][aria-label="Timeline Value"]')
+    expect(control.get('output').text()).toBe('0')
+
+    await control.get('button[aria-label="Increase Timeline Value"]').trigger('click')
+    expect(control.get('output').text()).toBe('1')
+
+    await control.get('button[aria-label="Decrease Timeline Value"]').trigger('click')
+    await control.get('button[aria-label="Decrease Timeline Value"]').trigger('click')
+    expect(control.get('output').text()).toBe('-1')
+
+    const decrease = control.get('button[aria-label="Decrease Timeline Value"]')
+    await decrease.trigger('click')
+    await decrease.trigger('click')
+    expect(control.get('output').text()).toBe('-3')
+    expect(decrease.attributes('disabled')).toBeDefined()
+
+    const increase = control.get('button[aria-label="Increase Timeline Value"]')
+    for (let index = 0; index < 8; index++) await increase.trigger('click')
+    expect(control.get('output').text()).toBe('5')
+    expect(increase.attributes('disabled')).toBeDefined()
+
+    wrapper.unmount()
+    await flushPromises()
+  })
+
   it('shows one unfilled cell for empty Motion and an endpoint cell for shorter Motion', async () => {
     const storeId = 'timeline-motion'
     const store = usePlayerStore(storeId)

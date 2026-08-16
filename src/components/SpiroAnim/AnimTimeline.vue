@@ -1,48 +1,80 @@
 <template>
-  <div ref="eScroll" class="scrollbar" :style="scrollStyle">
-    <div :style="gridStyle">
-      <div
-        v-for="(time, index) in ETIMES"
-        ref="eCells"
-        :key="`u${time}`"
-        :style="thumbStyle"
-        class="timeline-cell"
-        :class="{
-          'timeline-cell--selected': isThumbnailSelected(index),
-          'timeline-cell--placeholder': isPlaceholder(index),
-        }"
-      >
-        <span
-          v-for="circle in circles[index]"
-          :key="`u${time}-p${circle.prop}`"
-          class="circle"
-          :class="{ 'circle--prop-visible': isPropMarkerVisible(circle.prop) }"
-          :style="circleCSS(circle.prop, circle.color)"
-        />
-        <img
-          ref="eThumbs"
-          src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
-          :data-index="index"
-          :alt="`Animation thumbnail ${index + 1}`"
-          class="thumb"
+  <div class="timeline" :style="timelineStyle">
+    <div ref="eScroll" class="scrollbar" :style="scrollStyle">
+      <div :style="gridStyle">
+        <div
+          v-for="(time, index) in ETIMES"
+          ref="eCells"
+          :key="`u${time}`"
           :style="thumbStyle"
-          role="button"
-          tabindex="0"
-          @click="thumbClick(index, $event)"
-          @keydown.enter="thumbClick(index, $event)"
-          @keydown.space.prevent="thumbClick(index, $event)"
-        />
-        <AppTooltip class="thumbStart" text="Index: Beat">
-          <template #activator="{ props: tooltipProps }">
-            <span v-bind="tooltipProps"
-              ><span class="thumbIndex">{{ index + 1 }}: </span>{{ msToBeat(time, ROOT.bpm) }}</span
-            >
-          </template>
-        </AppTooltip>
+          class="timeline-cell"
+          :class="{
+            'timeline-cell--selected': isThumbnailSelected(index),
+            'timeline-cell--placeholder': isPlaceholder(index),
+          }"
+        >
+          <span
+            v-for="circle in circles[index]"
+            :key="`u${time}-p${circle.prop}`"
+            class="circle"
+            :class="{ 'circle--prop-visible': isPropMarkerVisible(circle.prop) }"
+            :style="circleCSS(circle.prop, circle.color)"
+          />
+          <img
+            ref="eThumbs"
+            src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+            :data-index="index"
+            :alt="`Animation thumbnail ${index + 1}`"
+            class="thumb"
+            :style="thumbStyle"
+            role="button"
+            tabindex="0"
+            @click="thumbClick(index, $event)"
+            @keydown.enter="thumbClick(index, $event)"
+            @keydown.space.prevent="thumbClick(index, $event)"
+          />
+          <AppTooltip class="thumbStart" text="Index: Beat">
+            <template #activator="{ props: tooltipProps }">
+              <span v-bind="tooltipProps"
+                ><span class="thumbIndex">{{ index + 1 }}: </span
+                >{{ msToBeat(time, ROOT.bpm) }}</span
+              >
+            </template>
+          </AppTooltip>
+        </div>
       </div>
+      <div :style="activeStyle"></div>
+      <div class="cursor" :style="cursorStyle"></div>
     </div>
-    <div :style="activeStyle"></div>
-    <div class="cursor" :style="cursorStyle"></div>
+    <div class="timeline-value-control" role="group" aria-label="Timeline Value">
+      <AppTooltip text="Decrease Timeline Columns">
+        <template #activator="{ props: tooltipProps }">
+          <button
+            v-bind="tooltipProps"
+            type="button"
+            aria-label="Decrease Timeline Value"
+            :disabled="columnOffset <= MIN_TIMELINE_COLUMN_OFFSET"
+            @click="decreaseColumnOffset"
+          >
+            <BaseIcon :path="mdiMinus" :size="20" />
+          </button>
+        </template>
+      </AppTooltip>
+      <output aria-live="polite">{{ columnOffset }}</output>
+      <AppTooltip text="Increase Timeline Columns">
+        <template #activator="{ props: tooltipProps }">
+          <button
+            v-bind="tooltipProps"
+            type="button"
+            aria-label="Increase Timeline Value"
+            :disabled="columnOffset >= MAX_TIMELINE_COLUMN_OFFSET"
+            @click="increaseColumnOffset"
+          >
+            <BaseIcon :path="mdiPlus" :size="20" />
+          </button>
+        </template>
+      </AppTooltip>
+    </div>
   </div>
 </template>
 
@@ -50,6 +82,7 @@
 // src\components\SpiroAnim\AnimTimeline.vue
 
 import AppTooltip from '@/components/AppTooltip.vue'
+import BaseIcon from '@/components/icons/BaseIcon.vue'
 import { usePingPongValue, easeInOut } from '@/composables/usePingPongValue'
 import { throttleTrailing, nextFrame, toColor } from '@/utils/UtilFunc'
 import { COLSET } from '@/domain/animation/AnimStruct'
@@ -58,8 +91,14 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useViewportStore } from '@/stores/useViewportStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import {
+  MAX_TIMELINE_COLUMN_OFFSET,
+  MIN_TIMELINE_COLUMN_OFFSET,
+  useTimelineSettingsStore,
+} from '@/stores/useTimelineSettingsStore'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
+import { mdiMinus, mdiPlus } from '@mdi/js'
 
 const props = withDefaults(
   defineProps<{
@@ -77,6 +116,9 @@ const props = withDefaults(
 
 const { parents: mainViews } = storeToRefs(useMainPaneStore())
 const { pSELECTED, pFRAMES, showFullTimeline } = storeToRefs(usePropertiesStore(props.store))
+const timelineSettingsStore = useTimelineSettingsStore()
+const { decreaseColumnOffset, increaseColumnOffset, adjustedColumnCount } = timelineSettingsStore
+const { columnOffset } = storeToRefs(timelineSettingsStore)
 
 // Dimensions provided by parent component
 const dim: Readonly<typeof props.dim> = readonly(props.dim)
@@ -270,24 +312,27 @@ onMounted(() => {
   // Handle resizing based on eScroll's realtime dimensions, and update gridPos.cols
   // This eliminates race conditions that I previously ran into
   const { width, height } = useElementBounding(eScroll)
-  watchImmediate([width, height, aspectRatio], ([width, height, aspect]) => {
-    // If 0's this executes again
-    if (width === 0 || height === 0) return
+  watchImmediate(
+    [width, height, aspectRatio, columnOffset, () => props.cols],
+    ([width, height, aspect]) => {
+      // If 0's this executes again
+      if (width === 0 || height === 0) return
 
-    // Use clientWidth to exclude the scroll bar
-    const sWidth = eScroll.value?.clientWidth ?? 0
-    const cCols = calcCols(dim.perc, props.landscape)
-    gridPos.cols = props.cols ?? cCols
-    gridPos.rows = Math.ceil(ETIMES.value.length / gridPos.cols)
+      // Use clientWidth to exclude the scroll bar
+      const sWidth = eScroll.value?.clientWidth ?? 0
+      const baseColumnCount = props.cols ?? calcCols(dim.perc, props.landscape)
+      gridPos.cols = adjustedColumnCount(baseColumnCount)
+      gridPos.rows = Math.ceil(ETIMES.value.length / gridPos.cols)
 
-    // Calculate width / height of the thumbnails
-    cellDim.width = Math.floor(sWidth / gridPos.cols)
-    cellDim.height = Math.floor(isNaN(aspect) ? cellDim.width * 0.75 : cellDim.width / aspect)
+      // Calculate width / height of the thumbnails
+      cellDim.width = Math.floor(sWidth / gridPos.cols)
+      cellDim.height = Math.floor(isNaN(aspect) ? cellDim.width * 0.75 : cellDim.width / aspect)
 
-    // Layout CSS Updates
-    gridTemplateColumns.value = `repeat(${gridPos.cols}, ${100 / gridPos.cols}%)`
-    gridAutoRows.value = `${cellDim.height}px`
-  })
+      // Layout CSS Updates
+      gridTemplateColumns.value = `repeat(${gridPos.cols}, ${100 / gridPos.cols}%)`
+      gridAutoRows.value = `${cellDim.height}px`
+    },
+  )
 
   // Request images and scroll to active item when we've resized
   // Moved out of resize handler to resolve a race condition
@@ -653,6 +698,11 @@ const scrollStyle = computed<CSSProperties>(() => ({
   'border-color': 'var(--color-workspace-boundary)',
 }))
 
+const timelineStyle = computed<CSSProperties>(() => ({
+  width: `${dim.width}px`,
+  height: `${dim.height}px`,
+}))
+
 const gridStyle = computed<CSSProperties>(() => ({
   width: `${gridPos.cols * cellDim.width}px`, // eliminates occasional gaps in cells
   'grid-template-columns': gridTemplateColumns.value,
@@ -685,6 +735,56 @@ const cursorStyle = computed<CSSProperties>(() => ({
 </script>
 
 <style scoped>
+.timeline {
+  position: relative;
+  overflow: hidden;
+}
+.timeline-value-control {
+  position: absolute;
+  bottom: var(--space-workspace-bottom-offset);
+  left: 50%;
+  z-index: 1010;
+  display: flex;
+  height: var(--size-pane-switch-button);
+  overflow: hidden;
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-surface) 50%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(-50%);
+}
+.timeline-value-control button {
+  display: grid;
+  width: var(--size-pane-switch-button);
+  padding: 0;
+  color: var(--color-action-primary);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  place-items: center;
+}
+.timeline-value-control button:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-action-primary) 10%, transparent);
+}
+.timeline-value-control button:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.timeline-value-control button:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: -2px;
+}
+.timeline-value-control output {
+  display: grid;
+  min-width: var(--size-pane-switch-button);
+  padding-inline: var(--space-1);
+  border-inline: 1px solid var(--color-border);
+  font-variant-numeric: tabular-nums;
+  place-items: center;
+}
 .cursor {
   position: absolute;
   z-index: 501;
