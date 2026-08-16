@@ -14,10 +14,17 @@ import {
   type PatternPropColor,
 } from '@/features/concepts/patternPropColors'
 
+const defaultQuickSlotCount = 0
+const restoredQuickSlotCount = 4
+const createEmptyQuickSlots = (count: number) => Array<string | null>(count).fill(null)
+
 export const useConceptsStore = defineStore(
   'sa-concepts',
   () => {
     const selectedConcept = ref<ConceptKey>('vtg')
+    const quickSlotCount = ref(defaultQuickSlotCount)
+    const selectedQuickSlot = ref<number | null>(null)
+    const quickSlotPaths = ref<Array<string | null>>(createEmptyQuickSlots(defaultQuickSlotCount))
     const qtrEnabled = ref(false)
     const speedRatio = ref<VtgSpeedRatio>(vtgDefaultSpeedRatio)
     const swapProps = ref(false)
@@ -52,8 +59,56 @@ export const useConceptsStore = defineStore(
       rightPropColor.value = defaultPatternPropColors[1]
     }
 
+    const addQuickSlot = () => {
+      quickSlotCount.value++
+      quickSlotPaths.value.push(null)
+    }
+
+    const removeQuickSlot = () => {
+      if (quickSlotCount.value <= 0) return
+
+      quickSlotCount.value--
+      quickSlotPaths.value.length = quickSlotCount.value
+      if (quickSlotCount.value === 0) {
+        selectedQuickSlot.value = null
+      } else if (selectedQuickSlot.value !== null) {
+        selectedQuickSlot.value = Math.min(selectedQuickSlot.value, quickSlotCount.value)
+      }
+    }
+
+    const restoreQuickSlots = () => {
+      quickSlotCount.value = restoredQuickSlotCount
+      quickSlotPaths.value = createEmptyQuickSlots(restoredQuickSlotCount)
+      selectedQuickSlot.value = null
+    }
+
+    const saveCurrentQuickSlot = (path: string) => {
+      if (selectedQuickSlot.value === null) return
+      quickSlotPaths.value[selectedQuickSlot.value - 1] = path
+    }
+
+    const toggleQuickSlot = (slot: number) => {
+      selectedQuickSlot.value = selectedQuickSlot.value === slot ? null : slot
+    }
+
+    const selectQuickSlotForPath = (path: string) => {
+      const query = path.split('?', 2)[1]?.split('#', 1)[0]
+      if (!query) {
+        selectedQuickSlot.value = null
+        return
+      }
+
+      const matchingIndex = quickSlotPaths.value.findIndex(
+        (quickSlotPath) => quickSlotPath?.split('?', 2)[1]?.split('#', 1)[0] === query,
+      )
+      selectedQuickSlot.value = matchingIndex === -1 ? null : matchingIndex + 1
+    }
+
     return {
       selectedConcept,
+      quickSlotCount,
+      selectedQuickSlot,
+      quickSlotPaths,
       qtrEnabled,
       speedRatio,
       swapProps,
@@ -71,12 +126,21 @@ export const useConceptsStore = defineStore(
       leftPropColor,
       rightPropColor,
       resetPatternControls,
+      addQuickSlot,
+      removeQuickSlot,
+      restoreQuickSlots,
+      saveCurrentQuickSlot,
+      toggleQuickSlot,
+      selectQuickSlotForPath,
     }
   },
   {
     persist: {
       pick: [
         'selectedConcept',
+        'quickSlotCount',
+        'selectedQuickSlot',
+        'quickSlotPaths',
         'qtrEnabled',
         'speedRatio',
         'swapProps',
@@ -92,6 +156,25 @@ export const useConceptsStore = defineStore(
         }
         if (!conceptKeys.some((concept) => concept === store.selectedConcept)) {
           store.selectedConcept = 'vtg'
+        }
+        if (!Number.isSafeInteger(store.quickSlotCount) || store.quickSlotCount < 0) {
+          store.quickSlotCount = defaultQuickSlotCount
+        }
+        if (store.quickSlotCount === 0 || store.selectedQuickSlot === null) {
+          store.selectedQuickSlot = null
+          // An explicitly cleared selection is valid persisted state.
+        } else if (!Number.isSafeInteger(store.selectedQuickSlot) || store.selectedQuickSlot < 1) {
+          store.selectedQuickSlot = 1
+        } else {
+          store.selectedQuickSlot = Math.min(store.selectedQuickSlot, store.quickSlotCount)
+        }
+        if (!Array.isArray(store.quickSlotPaths)) {
+          store.quickSlotPaths = createEmptyQuickSlots(store.quickSlotCount)
+        } else {
+          store.quickSlotPaths = Array.from({ length: store.quickSlotCount }, (_, index) => {
+            const path = store.quickSlotPaths[index]
+            return typeof path === 'string' && path.length > 0 ? path : null
+          })
         }
         if (!vtgSpeedRatios.includes(store.speedRatio)) {
           store.speedRatio = vtgDefaultSpeedRatio

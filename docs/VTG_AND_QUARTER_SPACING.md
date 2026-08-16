@@ -15,7 +15,8 @@ The authoritative implementations are:
 - `src/features/vtg/math/` for VTG building, matching, and relationship classification.
 - `src/features/vtg/qtr/` for the VTG-owned QTR transforms, matching, labels, and frame-derived
   headers, with the shared QTR contracts in `src/features/vtg/types.ts`.
-- The shared Concepts store for QTR mode, Speed Ratio, Swap, and 180° state.
+- The shared Concepts store for the selected concept, Quick Slots, QTR mode, Speed Ratio, Swap,
+  and 180° state.
 - `src/math/animation/subdivideAnimationPlayback.ts` for frame subdivision that preserves the
   visible path while changing the authored playback rate.
 
@@ -29,6 +30,13 @@ Speed Ratio, Swap, 180°, and the player controls are held in the shared Concept
 applicable values remain unchanged when switching panels. Persisted selections from the retired
 Quarter Spacing panel migrate to VTG with QTR enabled. Legacy Quarter Spacing routes do the same and
 then canonicalize to the VTG route.
+
+The Quick Slots control appears above the concept selector and defaults to four slots with Q1
+selected. Adding or removing a slot and selecting Q1, Q2, Q3, and so on currently changes only the
+control state. The slot count and selected slot persist in the shared Concepts store, the count
+cannot fall below one, and removing the selected last slot selects the new last slot. When the
+controls exceed the available width, the slots use the same shared balanced-row layout behavior as
+QST pagination. Quick Slot tooltips are explicitly disabled on touch devices.
 
 Scale, Thick, Spacing, and BPM appear below the Starting Beat and transition controls in VTG. Each
 slider gesture is one undo step. The sliders begin a query

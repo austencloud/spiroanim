@@ -34,6 +34,9 @@ describe('useConceptsStore', () => {
     const { app, store } = mountStore()
 
     expect(store.selectedConcept).toBe('vtg')
+    expect(store.quickSlotCount).toBe(0)
+    expect(store.selectedQuickSlot).toBeNull()
+    expect(store.quickSlotPaths).toEqual([])
     expect(store.qtrEnabled).toBe(false)
     expect(store.speedRatio).toBe('1:3')
     expect(store.swapProps).toBe(false)
@@ -50,6 +53,88 @@ describe('useConceptsStore', () => {
     expect(store.leftPropColor).toBe('Cyan')
     expect(store.rightPropColor).toBe('Green')
     expect(store.customizeExpanded).toBe(false)
+    app.unmount()
+  })
+
+  it('restores four Quick Slots and allows removing all of them', () => {
+    const { app, store } = mountStore()
+
+    store.restoreQuickSlots()
+    expect(store.quickSlotCount).toBe(4)
+    expect(store.quickSlotPaths).toEqual([null, null, null, null])
+
+    store.addQuickSlot()
+    expect(store.quickSlotCount).toBe(5)
+    expect(store.quickSlotPaths).toEqual([null, null, null, null, null])
+
+    store.selectedQuickSlot = 5
+    store.removeQuickSlot()
+    expect(store.quickSlotCount).toBe(4)
+    expect(store.selectedQuickSlot).toBe(4)
+    expect(store.quickSlotPaths).toEqual([null, null, null, null])
+
+    store.removeQuickSlot()
+    store.removeQuickSlot()
+    store.removeQuickSlot()
+    store.removeQuickSlot()
+    expect(store.quickSlotCount).toBe(0)
+    expect(store.selectedQuickSlot).toBeNull()
+    expect(store.quickSlotPaths).toEqual([])
+
+    app.unmount()
+  })
+
+  it('saves a path only in the selected Quick Slot', () => {
+    const { app, store } = mountStore()
+
+    store.restoreQuickSlots()
+    store.selectedQuickSlot = 3
+    store.saveCurrentQuickSlot('/play-vtg?r=pattern&v=6')
+
+    expect(store.quickSlotPaths).toEqual([null, null, '/play-vtg?r=pattern&v=6', null])
+    app.unmount()
+  })
+
+  it('matches Quick Slots by query string without considering the page', () => {
+    const { app, store } = mountStore()
+    store.restoreQuickSlots()
+    store.quickSlotPaths = ['/play-vtg?r=first&v=6', '/8stp-time?r=matching&v=6', null, null]
+
+    store.selectQuickSlotForPath('/qst-play?r=matching&v=6')
+    expect(store.selectedQuickSlot).toBe(2)
+
+    store.selectQuickSlotForPath('/8stp-time?r=different&v=6')
+    expect(store.selectedQuickSlot).toBeNull()
+
+    app.unmount()
+  })
+
+  it('hydrates the Quick Slot count and selected slot', () => {
+    localStorage.setItem(
+      'sa-concepts',
+      JSON.stringify({
+        quickSlotCount: 6,
+        selectedQuickSlot: 5,
+        quickSlotPaths: ['/play-vtg?r=one&v=6', null],
+      }),
+    )
+
+    const { app, store } = mountStore()
+
+    expect(store.quickSlotCount).toBe(6)
+    expect(store.selectedQuickSlot).toBe(5)
+    expect(store.quickSlotPaths).toEqual(['/play-vtg?r=one&v=6', null, null, null, null, null])
+    app.unmount()
+  })
+
+  it('accepts zero persisted Quick Slots and clears the selection', () => {
+    localStorage.setItem('sa-concepts', JSON.stringify({ quickSlotCount: 0, selectedQuickSlot: 9 }))
+
+    const { app, store } = mountStore()
+
+    expect(store.quickSlotCount).toBe(0)
+    expect(store.selectedQuickSlot).toBeNull()
+    expect(store.quickSlotPaths).toEqual([])
     app.unmount()
   })
 

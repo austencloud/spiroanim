@@ -496,11 +496,14 @@ onBeforeUnmount(endSliderHistory)
 }
 
 .concept-render-options {
+  --space-concept-control-inline: clamp(var(--space-1), 2.3cqi, var(--space-2));
+  --font-size-concept-control: clamp(0.625rem, 4cqi, 0.875rem);
+
   container-type: inline-size;
   box-sizing: border-box;
   width: min(100%, 45rem);
   min-width: var(--size-concept-content-min-width);
-  padding-inline: var(--space-1);
+  padding-inline: var(--space-concept-control-row-inline);
   margin: 0 auto;
   justify-content: center;
 }
@@ -511,8 +514,8 @@ onBeforeUnmount(endSliderHistory)
 
 .concept-render-options label > span {
   padding-block: var(--space-1);
-  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
-  font-size: clamp(0.625rem, 3cqi, 0.875rem);
+  padding-inline: var(--space-concept-control-inline);
+  font-size: var(--font-size-concept-control);
   white-space: nowrap;
 }
 

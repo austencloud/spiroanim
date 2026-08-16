@@ -41,6 +41,24 @@ function emitPwaManifests(): Plugin {
   }
 }
 
+function serveResetPageInDevelopment(): Plugin {
+  return {
+    name: 'serve-reset-page-in-development',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use((request, _response, next) => {
+        if (request.url?.startsWith('/reset/') === true) {
+          const suffix = request.url.slice('/reset/'.length)
+          if (suffix === '' || suffix.startsWith('?')) {
+            request.url = `/reset/index.html${suffix}`
+          }
+        }
+        next()
+      })
+    },
+  }
+}
+
 export function createViteConfig(isSsrBuild: boolean) {
   return {
     //root: path.resolve(__dirname, 'src'),
@@ -77,6 +95,7 @@ export function createViteConfig(isSsrBuild: boolean) {
       vue(),
       !isSsrBuild && vueDevTools(),
       !isSsrBuild && emitPwaManifests(),
+      serveResetPageInDevelopment(),
       AutoImport({
         imports: [AutoImports],
         dts: 'src/sys/auto-imports-generated.d.ts',

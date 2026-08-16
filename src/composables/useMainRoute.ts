@@ -6,8 +6,8 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore, viewKeysMain } from '@/stores/useMainPaneStore'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
-import { conceptKeys } from '@/features/concepts/types'
-import type { ConceptKey } from '@/features/concepts/types'
+import { findConceptForPath, fullPathByConcept } from '@/features/concepts/conceptRoutes'
+import type { RootDataFinal } from '@/types/AnimTypes'
 
 import { findKeyByValue } from '@/utils/UtilFunc'
 import { UnsupportedSpiroAnimQSVersionError } from '@/services/query/versions'
@@ -30,13 +30,6 @@ const shortToView = {
 type MainView = (typeof viewKeysMain)[number]
 type ShortKey = keyof typeof shortToView
 
-const fullPathByConcept = {
-  vtg: 'vulkan-tech-gospel',
-  '8stp': 'eight-step',
-  qst: 'quarter-space-tech',
-  tka: 'the-kinetic-alphabet',
-} as const satisfies Record<ConceptKey, string>
-
 const fullToView = {
   player: 'player',
   editor: 'editor',
@@ -53,9 +46,6 @@ type FullKey = keyof typeof fullToView
 
 const isShortKey = (value: string): value is ShortKey => value in shortToView
 const isFullKey = (value: string): value is FullKey => value in fullToView
-const isConceptKey = (value: string): value is ConceptKey =>
-  conceptKeys.some((concept) => concept === value)
-
 // Build all combo's for the two panes (also used in router/index.ts)
 export const paneSplits: string[] = routeKeys.flatMap((a) =>
   routeKeys.filter((b) => shortToView[a] !== shortToView[b]).map((b) => `/${a}-${b}`),
@@ -93,14 +83,10 @@ export function useMainRoute() {
   if (page && page !== 'app')
     if (isFullKey(page)) {
       const view = fullToView[page]
-      const requestedConcept = conceptKeys.find((concept) => fullPathByConcept[concept] === page)
-      if (requestedConcept) {
-        selectedConcept.value = requestedConcept
-        if (requestedConcept === 'vtg') qtrEnabled.value = false
-      }
-      if (page === 'quarterspacing') {
-        selectedConcept.value = 'vtg'
-        qtrEnabled.value = true
+      const conceptRoute = findConceptForPath(page)
+      if (conceptRoute) {
+        selectedConcept.value = conceptRoute.concept
+        qtrEnabled.value = conceptRoute.qtrEnabled
       }
       shouldCanonicalizeConceptRoute = page === 'concepts' || page === 'quarterspacing'
 
@@ -125,17 +111,10 @@ export function useMainRoute() {
         const left = shortToView[leftKey]
         const right = shortToView[rightKey]
 
-        if (isConceptKey(leftKey)) {
-          selectedConcept.value = leftKey
-          if (leftKey === 'vtg') qtrEnabled.value = false
-        }
-        if (isConceptKey(rightKey)) {
-          selectedConcept.value = rightKey
-          if (rightKey === 'vtg') qtrEnabled.value = false
-        }
-        if (leftKey === 'qtr' || rightKey === 'qtr') {
-          selectedConcept.value = 'vtg'
-          qtrEnabled.value = true
+        const conceptRoute = findConceptForPath(page)
+        if (conceptRoute) {
+          selectedConcept.value = conceptRoute.concept
+          qtrEnabled.value = conceptRoute.qtrEnabled
         }
         shouldCanonicalizeConceptRoute =
           leftKey === 'cnc' || rightKey === 'cnc' || leftKey === 'qtr' || rightKey === 'qtr'
@@ -267,7 +246,14 @@ export function useMainRoute() {
       })
   }
 
+  const createShareableAnimationPath = (animation: RootDataFinal): string =>
+    router.resolve({
+      path,
+      query: encodeQS(animation, false),
+    }).fullPath
+
   return {
     animationReady: readonly(animationReady),
+    createShareableAnimationPath,
   }
 }

@@ -8,6 +8,8 @@ import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import { useQSMainStore } from '@/stores/useQSMainStore'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
@@ -223,13 +225,110 @@ describe('SpiroAnim view', () => {
       bpm: 60,
     })
     await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('8stp')
+    const conceptsStore = useConceptsStore()
+    conceptsStore.restoreQuickSlots()
+    const previousQuickSlot = conceptsStore.quickSlotPaths[0]
+    conceptsStore.selectedQuickSlot = 2
     await wrapper.get('[data-cell-reference="8-II"]').trigger('click')
 
     expect(playerRoot.value).toEqual(expectedEightStep)
     expect(playerRoot.value.props.map(({ anim }) => anim.length)).toEqual([13, 13])
+    expect(conceptsStore.quickSlotPaths[0]).toBe(previousQuickSlot)
+    expect(conceptsStore.quickSlotPaths[1]).toMatch(/^\/8stp-time\?r=/)
 
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)
+  })
+
+  it('does not save a Quick Slot when animation data is loaded from a URL', async () => {
+    const pinia = createPinia().use(piniaPluginPersistedstate)
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    })
+    const playerRoot = usePlayerStore('main').raw().ROOT
+    const animation = createVtgAnimation(playerRoot.value, {
+      reference: '1-1',
+      speedRatio: '1:3',
+    })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const query = useQSMainStore().encodeQS(animation, false)
+    await router.push({ path: '/play-vtg', query })
+    await router.isReady()
+    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+
+    const wrapper = mount(SpiroAnim, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Player: { template: '<div>Player</div>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(useConceptsStore().quickSlotPaths).toEqual([])
+
+    wrapper.unmount()
+  })
+
+  it('applies a stored Quick Slot without changing the pane layout', async () => {
+    const pinia = createPinia().use(piniaPluginPersistedstate)
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    })
+    await router.push('/vtg-play')
+    await router.isReady()
+
+    const playerRoot = usePlayerStore('main').raw().ROOT
+    const initialAnimation = createVtgAnimation(playerRoot.value, {
+      reference: '1-1',
+      speedRatio: '1:3',
+    })
+    if (!initialAnimation) throw new Error('Expected a supported VTG animation')
+    playerRoot.value = initialAnimation
+
+    const targetAnimation = createEightStepAnimation(playerRoot.value, {
+      concept: '8stp',
+      reference: '8-II',
+    })
+    if (!targetAnimation) throw new Error('Expected a supported Eight Step animation')
+    const qsStore = useQSMainStore()
+    const targetPath = router.resolve({
+      path: '/play-8stp',
+      query: qsStore.encodeQS(targetAnimation, false),
+    }).fullPath
+    const conceptsStore = useConceptsStore()
+    conceptsStore.restoreQuickSlots()
+    conceptsStore.quickSlotPaths[1] = targetPath
+
+    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+    const wrapper = mount(SpiroAnim, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Player: { template: '<div>Player</div>' },
+        },
+      },
+    })
+    await flushPromises()
+    const paneStore = useMainPaneStore()
+    const originalParents = structuredClone(toRaw(paneStore.parents))
+
+    await wrapper.get<HTMLInputElement>('input[value="2"]').setValue()
+    await flushPromises()
+
+    expect(qsStore.encodeQS(playerRoot.value, false)).toEqual(
+      qsStore.encodeQS(targetAnimation, false),
+    )
+    expect(paneStore.parents).toEqual(originalParents)
+    expect(conceptsStore.selectedConcept).toBe('8stp')
+    expect(router.currentRoute.value.path).toBe('/8stp-play')
+
+    wrapper.unmount()
   })
 
   it('does not auto-select a Concepts pattern for unsupported animation data', async () => {

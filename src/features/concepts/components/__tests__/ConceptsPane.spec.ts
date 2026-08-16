@@ -21,6 +21,55 @@ describe('ConceptsPane', () => {
     })
   })
 
+  it('selects a matching Quick Slot by query when Concepts loads', async () => {
+    const store = useConceptsStore()
+    store.restoreQuickSlots()
+    store.quickSlotPaths = [null, '/play-vtg?r=matching&v=6', null, null]
+
+    const wrapper = mount(ConceptsPane, {
+      props: { currentPath: '/8stp-time?r=matching&v=6' },
+    })
+    await nextTick()
+
+    expect(store.selectedQuickSlot).toBe(2)
+    expect(wrapper.get<HTMLInputElement>('input[value="2"]').element.checked).toBe(true)
+  })
+
+  it('clears the selected Quick Slot when Concepts loads without a query match', async () => {
+    const store = useConceptsStore()
+    store.restoreQuickSlots()
+    store.quickSlotPaths = ['/play-vtg?r=saved&v=6', null, null, null]
+    store.selectedQuickSlot = 1
+
+    const wrapper = mount(ConceptsPane, {
+      props: { currentPath: '/play-vtg?r=different&v=6' },
+    })
+    await nextTick()
+
+    expect(store.selectedQuickSlot).toBeNull()
+    expect(
+      wrapper
+        .findAll<HTMLInputElement>('input[name="quick-slot"]')
+        .map((input) => input.element.checked),
+    ).toEqual([false, false, false, false])
+  })
+
+  it('creates four Quick Slots beside the selector from the empty state', async () => {
+    const wrapper = mount(ConceptsPane)
+    const store = useConceptsStore()
+
+    expect(wrapper.find('[data-role="quick-slots"]').exists()).toBe(false)
+    const createButton = wrapper.get('[data-role="quick-slots-create"]')
+    expect(createButton.attributes('aria-label')).toBe('Create four Quick Slots')
+
+    await createButton.trigger('click')
+
+    expect(store.quickSlotCount).toBe(4)
+    expect(store.selectedQuickSlot).toBeNull()
+    expect(wrapper.findAll('input[name="quick-slot"]')).toHaveLength(4)
+    expect(wrapper.find('[data-role="quick-slots-create"]').exists()).toBe(false)
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
     if (originalScrollIntoView) {
@@ -34,6 +83,7 @@ describe('ConceptsPane', () => {
   })
 
   it('integrates QTR into VTG while preserving shared controls across concepts', async () => {
+    useConceptsStore().restoreQuickSlots()
     const wrapper = mount(ConceptsPane)
     const pane = wrapper.get('[data-concepts-pane]')
     const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
@@ -47,6 +97,10 @@ describe('ConceptsPane', () => {
       'Quarter Space Tech',
       'The Kinetic Alphabet',
     ])
+    expect(wrapper.findAll('[data-role^="quick-slot-"]')).toHaveLength(6)
+    expect(wrapper.findAll('input[name="quick-slot"]')).toHaveLength(4)
+    expect(pane.element.children[0]?.getAttribute('data-role')).toBe('quick-slots')
+    expect(pane.element.children[1]?.querySelector('[data-role="concept-selector"]')).not.toBeNull()
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
     const vtgCustomize = wrapper.get<HTMLDetailsElement>('[data-role="vtg-customize"]')
     expect(vtgCustomize.element.open).toBe(false)

@@ -53,9 +53,11 @@
         ref="cConcepts"
         :animation="ROOT"
         :animation-ready="animationReady"
+        :current-path="route.fullPath"
         data-type="concepts"
         data-role="concepts-view"
         @pattern-select="applyConceptPattern"
+        @quick-slot-apply="applyQuickSlot"
       />
     </div>
     <AppNavigationMenu />
@@ -81,16 +83,8 @@ import Player from '@/components/SpiroAnim/AnimPlayer.vue'
 import Editor from '@/components/SpiroAnim/AnimEditor.vue'
 import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
-import { createEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
-import { createQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
-import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
-import {
-  isEightStepPatternSelection,
-  isQstPatternSelection,
-  isQtrPatternSelection,
-} from '@/features/concepts/types'
+import { applyConceptPattern as createConceptPattern } from '@/features/concepts/applyConceptPattern'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
-import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useScrollSelectScale } from '@/composables/useScrollSelectScale'
@@ -101,11 +95,16 @@ import { useViewportStore } from '@/stores/useViewportStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useQSMainStore } from '@/stores/useQSMainStore'
+import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import { findConceptForPath } from '@/features/concepts/conceptRoutes'
+import { useQueryVersionStore } from '@/stores/useQueryVersionStore'
+import { UnsupportedSpiroAnimQSVersionError } from '@/services/query/versions'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { mdiFilterOff } from '@mdi/js'
 
 useScrollSelectScale()
-const { animationReady } = useMainRoute() // Handles updates to route path and query
+const { animationReady, createShareableAnimationPath } = useMainRoute() // Handles updates to route path and query
 useSpiroAnimKeyboard()
 
 const { viewWidth, viewHeight, viewLeft, viewTop, isLandscape } = storeToRefs(useViewportStore())
@@ -115,6 +114,10 @@ const { leftWidth, leftHeight, rightWidth, rightHeight, leftPerc } = storeToRefs
 
 const paneStore = useMainPaneStore()
 const playerStore = usePlayerStore('main')
+const conceptsStore = useConceptsStore()
+const qsStore = useQSMainStore()
+const queryVersionStore = useQueryVersionStore()
+const route = useRoute()
 const { ROOT } = playerStore.raw()
 const { ETIMES, PTIMES, UTIMES } = storeToRefs(playerStore)
 const { pSELECTED, showFullTimeline } = storeToRefs(usePropertiesStore('main'))
@@ -182,16 +185,30 @@ registerComponentEl(cTimeline, eTimeline)
 registerComponentEl(cConcepts, eConcepts)
 
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
-  const animation = isEightStepPatternSelection(selection)
-    ? createEightStepAnimation(ROOT.value, selection)
-    : isQstPatternSelection(selection)
-      ? createQstAnimation(ROOT.value, selection)
-      : isQtrPatternSelection(selection)
-        ? createQtrAnimation(ROOT.value, selection)
-        : createVtgAnimation(ROOT.value, selection)
+  const animation = createConceptPattern(ROOT.value, selection)
   if (animation) {
     ROOT.value = animation
     playerStore.cameraReset = Symbol()
+    conceptsStore.saveCurrentQuickSlot(createShareableAnimationPath(animation))
+  }
+}
+
+const applyQuickSlot = async (path: string) => {
+  const conceptRoute = findConceptForPath(path)
+  const query = Object.fromEntries(new URLSearchParams(path.split('?', 2)[1] ?? ''))
+  try {
+    const animation = await qsStore.decodeVer(query)
+    if (conceptRoute) {
+      conceptsStore.selectedConcept = conceptRoute.concept
+      conceptsStore.qtrEnabled = conceptRoute.qtrEnabled
+    }
+    ROOT.value = animation
+    playerStore.cameraReset = Symbol()
+  } catch (error: unknown) {
+    if (error instanceof UnsupportedSpiroAnimQSVersionError) {
+      queryVersionStore.reportUnsupportedVersion(error.version)
+    }
+    console.warn('Failed to apply animation data from the Quick Slot.', error)
   }
 }
 

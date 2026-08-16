@@ -68,6 +68,7 @@ import { mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
+import { useBalancedControlRows } from '@/composables/useBalancedControlRows'
 
 const props = defineProps<{
   pageCount: number
@@ -78,62 +79,16 @@ const emit = defineEmits<{
   change: [pageIndex: number]
 }>()
 
-const paginationElement = ref<HTMLElement>()
-const rowCount = ref(1)
 const pageNumbers = computed(() =>
   Array.from({ length: props.pageCount }, (_, pageIndex) => pageIndex + 1),
 )
-const pageGroups = computed(() => {
-  const baseGroupSize = Math.floor(pageNumbers.value.length / rowCount.value)
-  const largerGroupCount = pageNumbers.value.length % rowCount.value
-  let start = 0
-
-  return Array.from({ length: rowCount.value }, (_, groupIndex) => {
-    const groupSize = baseGroupSize + (groupIndex < largerGroupCount ? 1 : 0)
-    const group = pageNumbers.value.slice(start, start + groupSize)
-    start += groupSize
-    return group
-  })
-})
-
-const updateSplitRows = () => {
-  const element = paginationElement.value
-  if (!element) return
-
-  const buttons = [...element.querySelectorAll<HTMLButtonElement>('button')]
-  const style = getComputedStyle(element)
-  const gap = Number.parseFloat(style.columnGap) || 0
-  const padding =
-    (Number.parseFloat(style.paddingInlineStart) || 0) +
-    (Number.parseFloat(style.paddingInlineEnd) || 0)
-  const buttonWidth = Math.max(0, ...buttons.map((button) => button.offsetWidth))
-  if (buttonWidth === 0) {
-    rowCount.value = 1
-    return
-  }
-
-  const availableWidth = Math.max(0, element.clientWidth - padding)
-  const controlsPerRow = Math.max(1, Math.floor((availableWidth + gap) / (buttonWidth + gap)))
-  const requiredRowCount = Math.max(1, Math.ceil((props.pageCount + 2) / controlsPerRow))
-  rowCount.value = Math.min(Math.max(1, props.pageCount), requiredRowCount)
-}
-
-let resizeObserver: ResizeObserver | undefined
-
-onMounted(() => {
-  updateSplitRows()
-  if (typeof ResizeObserver === 'undefined' || !paginationElement.value) return
-
-  resizeObserver = new ResizeObserver(updateSplitRows)
-  resizeObserver.observe(paginationElement.value)
-})
-
-watch(
-  () => props.pageCount,
-  () => void nextTick(updateSplitRows),
+const { containerElement: paginationElement, itemGroups: pageGroups } = useBalancedControlRows(
+  pageNumbers,
+  {
+    controlSelector: 'button',
+    extraControlCount: 2,
+  },
 )
-
-onBeforeUnmount(() => resizeObserver?.disconnect())
 </script>
 
 <style scoped>

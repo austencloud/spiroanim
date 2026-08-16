@@ -52,9 +52,9 @@ const tilted = computed({
 .pattern-shape-controls label > span {
   display: grid;
   padding-block: var(--space-1);
-  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
+  padding-inline: var(--space-concept-control-inline);
   color: var(--color-text);
-  font-size: clamp(0.625rem, 3cqi, 0.875rem);
+  font-size: var(--font-size-concept-control);
   font-weight: 700;
   white-space: nowrap;
   background: var(--color-surface);

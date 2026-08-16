@@ -75,7 +75,7 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
   width: min(100%, 45rem);
   min-width: var(--size-concept-content-min-width);
   padding-block: 0;
-  padding-inline: var(--space-1);
+  padding-inline: var(--space-concept-control-row-inline);
   margin: 0 auto;
   border: 0;
   gap: var(--space-1);
@@ -110,10 +110,10 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
   display: grid;
   min-width: 2rem;
   padding-block: var(--space-1);
-  padding-inline: clamp(var(--space-1), 1.2cqi, var(--space-2));
+  padding-inline: var(--space-concept-control-inline);
   color: var(--color-text);
   font: inherit;
-  font-size: clamp(0.625rem, 3cqi, 0.875rem);
+  font-size: var(--font-size-concept-control);
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
