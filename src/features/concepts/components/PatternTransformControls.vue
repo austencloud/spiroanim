@@ -76,7 +76,7 @@ const props = withDefaults(
   {
     rolePrefix: 'vtg',
     reverseLabel: '180°',
-    reverseDescription: 'Rotate motion plane 180 degrees',
+    reverseDescription: 'Rotate floor plane by 180 degrees',
     confirmReset: false,
   },
 )

@@ -45,7 +45,7 @@
             ? shape === 'box'
               ? 'Flip QTR direction'
               : 'Flip QTR orientation and direction'
-            : 'Rotate motion plane 180 degrees'
+            : 'Rotate floor plane by 180 degrees'
         "
         @reset="resetPatternControls"
       />

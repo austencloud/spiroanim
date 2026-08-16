@@ -36,13 +36,13 @@
       </AppTooltip>
     </div>
 
-    <AppTooltip v-if="showOrientation" text="Rotate the entire pattern from its starting position">
+    <AppTooltip v-if="showOrientation" text="Rotate wall plane by the selected angle">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps" class="pattern-playback-controls__orientation">
           <span class="pattern-playback-controls__visually-hidden">Pattern rotation</span>
           <select
             v-model.number="orientation"
-            aria-label="Rotate the pattern from its starting position"
+            aria-label="Rotate wall plane by the selected angle"
             :data-role="`${concept}-orientation`"
           >
             <option v-for="option in vtgPatternOrientations" :key="option" :value="option">

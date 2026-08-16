@@ -433,7 +433,7 @@ describe('VtgPane', () => {
     expect(swap.element.checked).toBe(false)
     expect(reverse.element.checked).toBe(false)
     expect(swap.element.nextElementSibling?.textContent).toBe('Swap')
-    expect(reverse.attributes('aria-label')).toBe('Rotate motion plane 180 degrees')
+    expect(reverse.attributes('aria-label')).toBe('Rotate floor plane by 180 degrees')
     expect(reverse.element.nextElementSibling?.textContent).toBe('180°')
     expect(
       wrapper
@@ -489,6 +489,7 @@ describe('VtgPane', () => {
       await nextTick()
 
       const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+      expect(rotate.attributes('aria-label')).toBe('Rotate wall plane by the selected angle')
       expect(rotate.element.value).toBe('-90')
       expect(rotate.findAll('option').map((option) => option.text())).toEqual([
         '-135°',
