@@ -44,8 +44,9 @@ describe('ConceptsPane', () => {
     await createButton.trigger('click')
 
     expect(store.quickSlotCount).toBe(4)
-    expect(store.selectedQuickSlot).toBeNull()
+    expect(store.selectedQuickSlot).toBe(1)
     expect(wrapper.findAll('input[name="quick-slot"]')).toHaveLength(4)
+    expect(wrapper.get<HTMLInputElement>('input[value="1"]').element.checked).toBe(true)
     expect(wrapper.find('[data-role="quick-slots-create"]').exists()).toBe(false)
   })
 

@@ -25,9 +25,8 @@ describe('QuickSlotsControl', () => {
 
     await wrapper.get('[data-role="quick-slot-add"]').trigger('click')
     expect(wrapper.findAll('input[type="radio"]')).toHaveLength(5)
-
-    await wrapper.get<HTMLInputElement>('input[value="5"]').setValue()
     expect(store.selectedQuickSlot).toBe(5)
+    expect(wrapper.get<HTMLInputElement>('input[value="5"]').element.checked).toBe(true)
 
     await wrapper.get('[data-role="quick-slot-remove"]').trigger('click')
     expect(wrapper.findAll('input[type="radio"]')).toHaveLength(4)

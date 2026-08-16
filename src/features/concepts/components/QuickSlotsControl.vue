@@ -80,7 +80,7 @@
             v-bind="activatorProps"
             aria-label="Add a Quick Slot"
             data-role="quick-slot-add"
-            @click="conceptsStore.addQuickSlot()"
+            @click="addAndSelectQuickSlot"
           >
             <BaseIcon :path="mdiPlus" :size="18" />
           </QuickSlotVisual>
@@ -132,6 +132,11 @@ const quickSlotLabel = (slot: number) =>
 
 const quickSlotTooltip = (slot: number) =>
   `${selectedQuickSlot.value === slot ? 'Clear' : 'Select'} Quick Slot ${slot} (${quickSlotHasContent(slot) ? 'Saved - double-click or hold to clear' : 'Empty'})`
+
+const addAndSelectQuickSlot = () => {
+  conceptsStore.addQuickSlot()
+  selectedQuickSlot.value = quickSlotCount.value
+}
 
 const clearStoredQuickSlot = (slot: number) => {
   if (quickSlotHasContent(slot)) conceptsStore.clearQuickSlot(slot)

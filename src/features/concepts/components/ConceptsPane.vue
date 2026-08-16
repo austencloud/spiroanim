@@ -28,7 +28,7 @@
             v-bind="activatorProps"
             aria-label="Create four Quick Slots"
             data-role="quick-slots-create"
-            @click="conceptsStore.restoreQuickSlots()"
+            @click="createQuickSlots"
           >
             <BaseIcon :path="mdiPlus" :size="18" />
           </QuickSlotVisual>
@@ -91,6 +91,11 @@ const conceptsStore = useConceptsStore()
 const { quickSlotCount, selectedConcept } = storeToRefs(conceptsStore)
 const usesPatternMatching = computed(() => selectedConcept.value !== 'tka')
 const patternMatcher = usePatternMatchingClient(usesPatternMatching)
+
+const createQuickSlots = () => {
+  conceptsStore.restoreQuickSlots()
+  conceptsStore.selectedQuickSlot = 1
+}
 
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 </script>
