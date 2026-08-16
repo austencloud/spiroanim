@@ -147,8 +147,41 @@ describe('QuickSlotsControl', () => {
       expect(store.quickSlotPaths[2]).toBeNull()
 
       dispatchPointer('pointerup')
+      await vi.advanceTimersByTimeAsync(1)
       await slot.trigger('click')
       expect(store.selectedQuickSlot).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not refill a selected Quick Slot from a delayed click after a touch long-press', async () => {
+    vi.useFakeTimers()
+    try {
+      const store = useConceptsStore()
+      store.selectedQuickSlot = 3
+      store.quickSlotPaths[2] = '/play-vtg?r=stored&v=6'
+      const wrapper = mount(QuickSlotsControl)
+      const slot = wrapper.get('[data-role="quick-slot-3"]')
+      const dispatchPointer = (type: string) => {
+        const event = new MouseEvent(type, { bubbles: true, button: 0, clientX: 10, clientY: 10 })
+        Object.defineProperties(event, {
+          isPrimary: { value: true },
+          pointerId: { value: 3 },
+          pointerType: { value: 'touch' },
+        })
+        slot.element.dispatchEvent(event)
+      }
+
+      dispatchPointer('pointerdown')
+      await vi.advanceTimersByTimeAsync(501)
+      dispatchPointer('pointerup')
+      await vi.advanceTimersByTimeAsync(1)
+      await slot.trigger('click')
+
+      expect(store.quickSlotPaths[2]).toBeNull()
+      expect(store.selectedQuickSlot).toBe(3)
+      expect(wrapper.emitted('save')).toBeUndefined()
     } finally {
       vi.useRealTimers()
     }

@@ -123,7 +123,6 @@ let longPressTimer: ReturnType<typeof setTimeout> | undefined
 let longPressPointerId: number | undefined
 let longPressStart = { x: 0, y: 0 }
 let suppressClickSlot: number | undefined
-let suppressClickResetTimer: ReturnType<typeof setTimeout> | undefined
 
 const quickSlotHasContent = (slot: number) => typeof quickSlotPaths.value[slot - 1] === 'string'
 
@@ -156,11 +155,12 @@ const cancelLongPress = (event?: PointerEvent) => {
 }
 
 const startLongPress = (event: PointerEvent, slot: number) => {
+  // A completed long press owns its ensuing click until that click is delivered. If the browser
+  // never synthesizes one, the next real pointer interaction starts a fresh activation instead.
+  suppressClickSlot = undefined
   if (event.button !== 0 || !event.isPrimary || !quickSlotHasContent(slot)) return
 
   cancelLongPress()
-  if (suppressClickResetTimer !== undefined) clearTimeout(suppressClickResetTimer)
-  suppressClickResetTimer = undefined
   longPressPointerId = event.pointerId
   longPressStart = { x: event.clientX, y: event.clientY }
   longPressTimer = setTimeout(() => {
@@ -181,12 +181,7 @@ const cancelLongPressAfterMove = (event: PointerEvent) => {
 
 const finishLongPress = (event: PointerEvent) => {
   cancelLongPress(event)
-  if (suppressClickSlot === undefined) return
-
-  suppressClickResetTimer = setTimeout(() => {
-    suppressClickSlot = undefined
-    suppressClickResetTimer = undefined
-  }, 0)
+  if (suppressClickSlot !== undefined) event.preventDefault()
 }
 
 const suppressClickAfterLongPress = (event: MouseEvent, slot: number) => {
@@ -194,8 +189,6 @@ const suppressClickAfterLongPress = (event: MouseEvent, slot: number) => {
   event.preventDefault()
   event.stopPropagation()
   suppressClickSlot = undefined
-  if (suppressClickResetTimer !== undefined) clearTimeout(suppressClickResetTimer)
-  suppressClickResetTimer = undefined
 }
 
 const handleSelectedQuickSlotClick = (slot: number) => {
@@ -212,7 +205,6 @@ const applyQuickSlot = (slot: number) => {
 
 onBeforeUnmount(() => {
   cancelLongPress()
-  if (suppressClickResetTimer !== undefined) clearTimeout(suppressClickResetTimer)
 })
 </script>
 
