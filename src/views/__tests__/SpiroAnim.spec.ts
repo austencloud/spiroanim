@@ -273,6 +273,45 @@ describe('SpiroAnim view', () => {
     wrapper.unmount()
   })
 
+  it('keeps an empty persisted Quick Slot selected when the startup fallback populates it', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    localStorage.setItem(
+      'sa-concepts',
+      JSON.stringify({
+        selectedConcept: 'vtg',
+        quickSlotCount: 4,
+        selectedQuickSlot: 3,
+        quickSlotPaths: [null, null, null, null],
+      }),
+    )
+    const pinia = createPinia().use(piniaPluginPersistedstate)
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    })
+    await router.push('/app')
+    await router.isReady()
+    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+
+    const wrapper = mount(SpiroAnim, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Player: { template: '<div>Player</div>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    const conceptsStore = useConceptsStore()
+    expect(conceptsStore.selectedQuickSlot).toBe(3)
+    expect(conceptsStore.quickSlotPaths[2]).toMatch(/^\/play-vtg\?r=/)
+    expect(wrapper.get<HTMLInputElement>('input[value="3"]').element.checked).toBe(true)
+
+    wrapper.unmount()
+  })
+
   it('applies a stored Quick Slot without changing the pane layout', async () => {
     const pinia = createPinia().use(piniaPluginPersistedstate)
     setActivePinia(pinia)

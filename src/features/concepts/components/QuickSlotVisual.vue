@@ -23,6 +23,7 @@ withDefaults(
   --quick-slot-surface: color-mix(in srgb, var(--quick-slot-accent) 9%, var(--color-surface));
 
   box-sizing: border-box;
+  position: relative;
   display: grid;
   min-width: 2rem;
   min-height: 2rem;

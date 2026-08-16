@@ -87,6 +87,11 @@ export const useConceptsStore = defineStore(
       quickSlotPaths.value[selectedQuickSlot.value - 1] = path
     }
 
+    const clearQuickSlot = (slot: number) => {
+      if (!Number.isSafeInteger(slot) || slot < 1 || slot > quickSlotCount.value) return
+      quickSlotPaths.value[slot - 1] = null
+    }
+
     const toggleQuickSlot = (slot: number) => {
       selectedQuickSlot.value = selectedQuickSlot.value === slot ? null : slot
     }
@@ -130,6 +135,7 @@ export const useConceptsStore = defineStore(
       removeQuickSlot,
       restoreQuickSlots,
       saveCurrentQuickSlot,
+      clearQuickSlot,
       toggleQuickSlot,
       selectQuickSlotForPath,
     }

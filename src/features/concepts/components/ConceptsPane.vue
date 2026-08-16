@@ -77,10 +77,9 @@ import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { isTouchDevice } from '@/utils/device'
 
-const props = defineProps<{
+defineProps<{
   animation?: RootDataFinal
   animationReady?: boolean
-  currentPath?: string
 }>()
 
 const emit = defineEmits<{
@@ -93,7 +92,6 @@ const { quickSlotCount, selectedConcept } = storeToRefs(conceptsStore)
 const usesPatternMatching = computed(() => selectedConcept.value !== 'tka')
 const patternMatcher = usePatternMatchingClient(usesPatternMatching)
 
-onMounted(() => conceptsStore.selectQuickSlotForPath(props.currentPath ?? ''))
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 </script>
 

@@ -64,12 +64,33 @@ export function useMainRoute() {
   const paneStore = useMainPaneStore()
   const { rotatePane, setViewInPane } = paneStore
   const { parents } = storeToRefs(paneStore)
-  const { selectedConcept, qtrEnabled } = storeToRefs(useConceptsStore())
+  const conceptsStore = useConceptsStore()
+  const { selectedConcept, qtrEnabled, selectedQuickSlot, quickSlotPaths } =
+    storeToRefs(conceptsStore)
   const { unsupportedVersion } = storeToRefs(queryVersionStore)
 
   const router = useRouter()
   const route = useRoute()
-  const animationReady = ref(route.query.r === undefined)
+  const selectedQuickSlotPath =
+    selectedQuickSlot.value === null
+      ? undefined
+      : (quickSlotPaths.value[selectedQuickSlot.value - 1] ?? undefined)
+  const selectedQuickSlotQuery = selectedQuickSlotPath
+    ? Object.fromEntries(new URLSearchParams(selectedQuickSlotPath.split('?', 2)[1] ?? ''))
+    : undefined
+  const startupQuickSlot =
+    route.query.r === undefined &&
+    ROOT.value.props.length === 0 &&
+    selectedQuickSlot.value !== null &&
+    selectedQuickSlotPath !== undefined &&
+    selectedQuickSlotQuery?.r !== undefined
+      ? {
+          slot: selectedQuickSlot.value,
+          path: selectedQuickSlotPath,
+          query: selectedQuickSlotQuery,
+        }
+      : undefined
+  const animationReady = ref(route.query.r === undefined && startupQuickSlot === undefined)
 
   const page = route.path.substring(1)
 
@@ -200,6 +221,19 @@ export function useMainRoute() {
   // The selected child is part of the shareable pane layout path.
   watch(selectedConcept, updatePath)
 
+  // The route owns Quick Slot reconciliation, and slot identity depends only on the serialized
+  // animation query. Path-only changes such as switching concepts or rearranging panes must not
+  // clear an intentionally selected empty slot.
+  watch(
+    () => route.fullPath.split('?', 2)[1]?.split('#', 1)[0],
+    (animationQuery) => {
+      if (animationQuery && new URLSearchParams(animationQuery).has('r')) {
+        conceptsStore.selectQuickSlotForPath(`?${animationQuery}`)
+      }
+    },
+    { immediate: true },
+  )
+
   // Watch for "snap" values from the splitter
   watch(leftPerc, (nval, oval) => {
     const wasEdge = oval === 0 || oval === 100
@@ -228,15 +262,40 @@ export function useMainRoute() {
   )
   */
 
-  // Load data from query string
-  if (route.query.r !== undefined) {
-    decodeVer(route.query)
-      .then((data) => (ROOT.value = data))
+  // A persisted Quick Slot gets the same startup priority as animation data in the URL. Keeping
+  // animationReady false until it loads prevents an empty concept pane from selecting a random
+  // pattern and overwriting the slot before restoration finishes.
+  const initialAnimationQuery =
+    route.query.r !== undefined
+      ? { query: route.query, source: 'route' as const }
+      : startupQuickSlot
+        ? { query: startupQuickSlot.query, source: 'quick-slot' as const }
+        : undefined
+
+  if (initialAnimationQuery) {
+    decodeVer(initialAnimationQuery.query)
+      .then((data) => {
+        if (startupQuickSlot) {
+          const conceptRoute = findConceptForPath(startupQuickSlot.path)
+          if (conceptRoute) {
+            selectedConcept.value = conceptRoute.concept
+            qtrEnabled.value = conceptRoute.qtrEnabled
+          }
+          selectedQuickSlot.value = startupQuickSlot.slot
+        }
+        ROOT.value = data
+      })
       .catch((error: unknown) => {
         if (error instanceof UnsupportedSpiroAnimQSVersionError) {
           queryVersionStore.reportUnsupportedVersion(error.version)
         }
-        console.warn('Failed to load animation data from the route.', error)
+        if (initialAnimationQuery.source === 'quick-slot') selectedQuickSlot.value = null
+        console.warn(
+          initialAnimationQuery.source === 'route'
+            ? 'Failed to load animation data from the route.'
+            : 'Failed to load animation data from the selected Quick Slot.',
+          error,
+        )
       })
       .finally(() => {
         if (unsupportedVersion.value !== undefined) return

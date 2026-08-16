@@ -92,6 +92,9 @@ describe('useConceptsStore', () => {
     store.saveCurrentQuickSlot('/play-vtg?r=pattern&v=6')
 
     expect(store.quickSlotPaths).toEqual([null, null, '/play-vtg?r=pattern&v=6', null])
+
+    store.clearQuickSlot(3)
+    expect(store.quickSlotPaths).toEqual([null, null, null, null])
     app.unmount()
   })
 

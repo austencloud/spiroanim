@@ -53,7 +53,6 @@
         ref="cConcepts"
         :animation="ROOT"
         :animation-ready="animationReady"
-        :current-path="route.fullPath"
         data-type="concepts"
         data-role="concepts-view"
         @pattern-select="applyConceptPattern"
@@ -117,7 +116,6 @@ const playerStore = usePlayerStore('main')
 const conceptsStore = useConceptsStore()
 const qsStore = useQSMainStore()
 const queryVersionStore = useQueryVersionStore()
-const route = useRoute()
 const { ROOT } = playerStore.raw()
 const { ETIMES, PTIMES, UTIMES } = storeToRefs(playerStore)
 const { pSELECTED, showFullTimeline } = storeToRefs(usePropertiesStore('main'))

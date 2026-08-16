@@ -30,21 +30,42 @@
       <AppTooltip
         v-for="slot in slotGroup"
         :key="slot"
-        :text="`${selectedQuickSlot === slot ? 'Clear' : 'Select'} Quick Slot ${slot}`"
+        :text="quickSlotTooltip(slot)"
         :disabled="touchDevice"
       >
         <template #activator="{ props: activatorProps }">
-          <label v-bind="activatorProps" :data-role="`quick-slot-${slot}`">
+          <label
+            v-bind="activatorProps"
+            :data-role="`quick-slot-${slot}`"
+            @click.capture="suppressClickAfterLongPress($event, slot)"
+            @dblclick.prevent="clearStoredQuickSlot(slot)"
+            @pointerdown="startLongPress($event, slot)"
+            @pointermove="cancelLongPressAfterMove"
+            @pointerup="finishLongPress"
+            @pointercancel="cancelLongPress"
+            @pointerleave="cancelLongPress"
+            @contextmenu.prevent
+          >
             <input
               v-model="selectedQuickSlot"
               type="radio"
               name="quick-slot"
               :value="slot"
-              :aria-label="`Quick Slot ${slot}`"
+              :aria-label="quickSlotLabel(slot)"
               @click="clearQuickSlotIfSelected(slot)"
               @change="applyQuickSlot(slot)"
+              @keydown.delete.prevent="clearStoredQuickSlot(slot)"
+              @keydown.backspace.prevent="clearStoredQuickSlot(slot)"
             />
-            <QuickSlotVisual tag="span">Q{{ slot }}</QuickSlotVisual>
+            <QuickSlotVisual tag="span">
+              Q{{ slot }}
+              <span
+                v-if="quickSlotHasContent(slot)"
+                class="quick-slot-saved-indicator"
+                data-role="quick-slot-saved-indicator"
+                aria-hidden="true"
+              />
+            </QuickSlotVisual>
           </label>
         </template>
       </AppTooltip>
@@ -84,7 +105,7 @@ const emit = defineEmits<{
 }>()
 
 const conceptsStore = useConceptsStore()
-const { quickSlotCount, selectedQuickSlot } = storeToRefs(conceptsStore)
+const { quickSlotCount, quickSlotPaths, selectedQuickSlot } = storeToRefs(conceptsStore)
 const quickSlots = computed(() =>
   Array.from({ length: quickSlotCount.value }, (_, index) => index + 1),
 )
@@ -96,6 +117,75 @@ const { containerElement: quickSlotsElement, itemGroups: slotGroups } = useBalan
   },
 )
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
+const longPressDuration = 500
+const longPressMoveTolerance = 10
+let longPressTimer: ReturnType<typeof setTimeout> | undefined
+let longPressPointerId: number | undefined
+let longPressStart = { x: 0, y: 0 }
+let suppressClickSlot: number | undefined
+let suppressClickResetTimer: ReturnType<typeof setTimeout> | undefined
+
+const quickSlotHasContent = (slot: number) => typeof quickSlotPaths.value[slot - 1] === 'string'
+
+const quickSlotLabel = (slot: number) =>
+  `Quick Slot ${slot}, ${quickSlotHasContent(slot) ? 'saved; double-click or press and hold to clear' : 'empty'}`
+
+const quickSlotTooltip = (slot: number) =>
+  `${selectedQuickSlot.value === slot ? 'Clear' : 'Select'} Quick Slot ${slot} (${quickSlotHasContent(slot) ? 'Saved - double-click or hold to clear' : 'Empty'})`
+
+const clearStoredQuickSlot = (slot: number) => {
+  if (quickSlotHasContent(slot)) conceptsStore.clearQuickSlot(slot)
+}
+
+const cancelLongPress = (event?: PointerEvent) => {
+  if (event && longPressPointerId !== event.pointerId) return
+  if (longPressTimer !== undefined) clearTimeout(longPressTimer)
+  longPressTimer = undefined
+  longPressPointerId = undefined
+}
+
+const startLongPress = (event: PointerEvent, slot: number) => {
+  if (event.button !== 0 || !event.isPrimary || !quickSlotHasContent(slot)) return
+
+  cancelLongPress()
+  if (suppressClickResetTimer !== undefined) clearTimeout(suppressClickResetTimer)
+  suppressClickResetTimer = undefined
+  longPressPointerId = event.pointerId
+  longPressStart = { x: event.clientX, y: event.clientY }
+  longPressTimer = setTimeout(() => {
+    longPressTimer = undefined
+    suppressClickSlot = slot
+    clearStoredQuickSlot(slot)
+  }, longPressDuration)
+}
+
+const cancelLongPressAfterMove = (event: PointerEvent) => {
+  if (longPressPointerId !== event.pointerId) return
+  if (
+    Math.hypot(event.clientX - longPressStart.x, event.clientY - longPressStart.y) >
+    longPressMoveTolerance
+  )
+    cancelLongPress(event)
+}
+
+const finishLongPress = (event: PointerEvent) => {
+  cancelLongPress(event)
+  if (suppressClickSlot === undefined) return
+
+  suppressClickResetTimer = setTimeout(() => {
+    suppressClickSlot = undefined
+    suppressClickResetTimer = undefined
+  }, 0)
+}
+
+const suppressClickAfterLongPress = (event: MouseEvent, slot: number) => {
+  if (suppressClickSlot !== slot) return
+  event.preventDefault()
+  event.stopPropagation()
+  suppressClickSlot = undefined
+  if (suppressClickResetTimer !== undefined) clearTimeout(suppressClickResetTimer)
+  suppressClickResetTimer = undefined
+}
 
 const clearQuickSlotIfSelected = (slot: number) => {
   if (selectedQuickSlot.value === slot) conceptsStore.toggleQuickSlot(slot)
@@ -105,6 +195,11 @@ const applyQuickSlot = (slot: number) => {
   const path = conceptsStore.quickSlotPaths[slot - 1]
   if (path) emit('apply', path)
 }
+
+onBeforeUnmount(() => {
+  cancelLongPress()
+  if (suppressClickResetTimer !== undefined) clearTimeout(suppressClickResetTimer)
+})
 </script>
 
 <style scoped>
@@ -170,6 +265,16 @@ const applyQuickSlot = (slot: number) => {
 .quick-slots input:focus-visible + .quick-slot-visual {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
+}
+
+.quick-slot-saved-indicator {
+  position: absolute;
+  right: var(--space-1);
+  bottom: var(--space-1);
+  width: 0.3rem;
+  height: 0.3rem;
+  background: currentColor;
+  border-radius: 50%;
 }
 
 .quick-slots__visually-hidden {

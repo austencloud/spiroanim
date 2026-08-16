@@ -21,37 +21,16 @@ describe('ConceptsPane', () => {
     })
   })
 
-  it('selects a matching Quick Slot by query when Concepts loads', async () => {
+  it('preserves the selected Quick Slot when Concepts mounts', async () => {
     const store = useConceptsStore()
     store.restoreQuickSlots()
-    store.quickSlotPaths = [null, '/play-vtg?r=matching&v=6', null, null]
+    store.selectedQuickSlot = 3
 
-    const wrapper = mount(ConceptsPane, {
-      props: { currentPath: '/8stp-time?r=matching&v=6' },
-    })
+    const wrapper = mount(ConceptsPane)
     await nextTick()
 
-    expect(store.selectedQuickSlot).toBe(2)
-    expect(wrapper.get<HTMLInputElement>('input[value="2"]').element.checked).toBe(true)
-  })
-
-  it('clears the selected Quick Slot when Concepts loads without a query match', async () => {
-    const store = useConceptsStore()
-    store.restoreQuickSlots()
-    store.quickSlotPaths = ['/play-vtg?r=saved&v=6', null, null, null]
-    store.selectedQuickSlot = 1
-
-    const wrapper = mount(ConceptsPane, {
-      props: { currentPath: '/play-vtg?r=different&v=6' },
-    })
-    await nextTick()
-
-    expect(store.selectedQuickSlot).toBeNull()
-    expect(
-      wrapper
-        .findAll<HTMLInputElement>('input[name="quick-slot"]')
-        .map((input) => input.element.checked),
-    ).toEqual([false, false, false, false])
+    expect(store.selectedQuickSlot).toBe(3)
+    expect(wrapper.get<HTMLInputElement>('input[value="3"]').element.checked).toBe(true)
   })
 
   it('creates four Quick Slots beside the selector from the empty state', async () => {

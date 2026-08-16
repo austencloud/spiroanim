@@ -69,6 +69,67 @@ describe('QuickSlotsControl', () => {
 
     expect(store.selectedQuickSlot).toBe(2)
     expect(wrapper.emitted('apply')).toEqual([['/play-8stp?r=stored&v=6']])
+    expect(wrapper.findAll('[data-role="quick-slot-saved-indicator"]')).toHaveLength(1)
+    expect(
+      wrapper
+        .get('[data-role="quick-slot-2"]')
+        .find('[data-role="quick-slot-saved-indicator"]')
+        .exists(),
+    ).toBe(true)
+    expect(wrapper.get('input[value="2"]').attributes('aria-label')).toBe(
+      'Quick Slot 2, saved; double-click or press and hold to clear',
+    )
+    expect(wrapper.get('input[value="1"]').attributes('aria-label')).toBe('Quick Slot 1, empty')
+  })
+
+  it('clears a populated Quick Slot on double-click or Delete', async () => {
+    const store = useConceptsStore()
+    store.quickSlotPaths[1] = '/play-vtg?r=stored&v=6'
+    const wrapper = mount(QuickSlotsControl)
+    const slot = wrapper.get('[data-role="quick-slot-2"]')
+
+    await slot.trigger('dblclick')
+    expect(store.quickSlotPaths[1]).toBeNull()
+
+    store.quickSlotPaths[1] = '/play-vtg?r=stored-again&v=6'
+    await wrapper.get('input[value="2"]').trigger('keydown', { key: 'Delete' })
+    expect(store.quickSlotPaths[1]).toBeNull()
+  })
+
+  it('clears a populated Quick Slot after a touch long-press without selecting it', async () => {
+    vi.useFakeTimers()
+    try {
+      const store = useConceptsStore()
+      store.quickSlotPaths[2] = '/play-vtg?r=stored&v=6'
+      const wrapper = mount(QuickSlotsControl)
+      const slot = wrapper.get('[data-role="quick-slot-3"]')
+      const dispatchPointer = (type: string, clientX = 10, clientY = 10) => {
+        const event = new MouseEvent(type, { bubbles: true, button: 0, clientX, clientY })
+        Object.defineProperties(event, {
+          isPrimary: { value: true },
+          pointerId: { value: 3 },
+          pointerType: { value: 'touch' },
+        })
+        slot.element.dispatchEvent(event)
+      }
+
+      dispatchPointer('pointerdown')
+      dispatchPointer('pointermove', 25, 10)
+      await vi.advanceTimersByTimeAsync(501)
+      expect(store.quickSlotPaths[2]).toBe('/play-vtg?r=stored&v=6')
+      dispatchPointer('pointerup', 25, 10)
+
+      dispatchPointer('pointerdown')
+      await vi.advanceTimersByTimeAsync(501)
+
+      expect(store.quickSlotPaths[2]).toBeNull()
+
+      dispatchPointer('pointerup')
+      await slot.trigger('click')
+      expect(store.selectedQuickSlot).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('provides desktop tooltips for every Quick Slot control', () => {
@@ -76,10 +137,10 @@ describe('QuickSlotsControl', () => {
 
     expect(wrapper.findAllComponents(AppTooltip).map((tooltip) => tooltip.props('text'))).toEqual([
       'Remove a Quick Slot',
-      'Select Quick Slot 1',
-      'Select Quick Slot 2',
-      'Select Quick Slot 3',
-      'Select Quick Slot 4',
+      'Select Quick Slot 1 (Empty)',
+      'Select Quick Slot 2 (Empty)',
+      'Select Quick Slot 3 (Empty)',
+      'Select Quick Slot 4 (Empty)',
       'Add a Quick Slot',
     ])
     expect(

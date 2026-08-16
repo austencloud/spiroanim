@@ -1,4 +1,4 @@
-import { createPinia } from 'pinia'
+import { createPinia, setActivePinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { createApp, defineComponent, h } from 'vue'
@@ -11,6 +11,7 @@ import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useQueryVersionStore } from '@/stores/useQueryVersionStore'
+import { useQSMainStore } from '@/stores/useQSMainStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -142,6 +143,77 @@ describe('useMainRoute', () => {
     expect(splitterStore.leftPerc).toBe(50)
     expect(playerStore.raw().ROOT.value).toMatchObject({ bpm: 120, props: [] })
     expect(router.currentRoute.value.path).toBe('/play-vtg')
+  })
+
+  it('restores a selected Quick Slot before running the empty-animation fallback', async () => {
+    setActivePinia(createPinia())
+    const targetAnimation = createLoadedAnimation()
+    const encoded = useQSMainStore().encodeQS(targetAnimation, false)
+    const search = new URLSearchParams()
+    for (const [key, value] of Object.entries(encoded)) {
+      if (value !== undefined && value !== null) search.set(key, String(value))
+    }
+    const savedPath = `/play-vtg?${search.toString()}`
+    localStorage.setItem(
+      'sa-concepts',
+      JSON.stringify({
+        quickSlotCount: 4,
+        selectedQuickSlot: 1,
+        quickSlotPaths: [savedPath, null, null, null],
+      }),
+    )
+
+    const { animationReady, conceptsStore, playerStore } = await mountRoute('/app')
+    await flushPromises()
+
+    expect(animationReady.value).toBe(true)
+    expect(useQSMainStore().encodeQS(playerStore.raw().ROOT.value, false)).toEqual(encoded)
+    expect(conceptsStore.selectedQuickSlot).toBe(1)
+    expect(conceptsStore.quickSlotPaths[0]).toBe(savedPath)
+  })
+
+  it('reconciles a populated route with its matching Quick Slot', async () => {
+    setActivePinia(createPinia())
+    const targetAnimation = createLoadedAnimation()
+    const encoded = useQSMainStore().encodeQS(targetAnimation, false)
+    const search = new URLSearchParams()
+    for (const [key, value] of Object.entries(encoded)) {
+      if (value !== undefined && value !== null) search.set(key, String(value))
+    }
+    const savedPath = `/play-vtg?${search.toString()}`
+    localStorage.setItem(
+      'sa-concepts',
+      JSON.stringify({
+        quickSlotCount: 4,
+        selectedQuickSlot: 1,
+        quickSlotPaths: [null, savedPath, null, null],
+      }),
+    )
+
+    const { conceptsStore } = await mountRoute(savedPath)
+    await flushPromises()
+
+    expect(conceptsStore.selectedQuickSlot).toBe(2)
+  })
+
+  it('keeps an empty Quick Slot selected across a concept-only route change', async () => {
+    setActivePinia(createPinia())
+    const encoded = useQSMainStore().encodeQS(createLoadedAnimation(), false)
+    const search = new URLSearchParams()
+    for (const [key, value] of Object.entries(encoded)) {
+      if (value !== undefined && value !== null) search.set(key, String(value))
+    }
+    const { conceptsStore, router } = await mountRoute(`/play-vtg?${search.toString()}`)
+    await flushPromises()
+
+    conceptsStore.restoreQuickSlots()
+    conceptsStore.selectedQuickSlot = 3
+    conceptsStore.selectedConcept = '8stp'
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/play-8stp')
+    expect(conceptsStore.quickSlotPaths[2]).toBeNull()
+    expect(conceptsStore.selectedQuickSlot).toBe(3)
   })
 
   it('does not force play-vtg when animation data is cleared after startup', async () => {
