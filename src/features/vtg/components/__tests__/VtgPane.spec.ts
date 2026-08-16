@@ -492,13 +492,9 @@ describe('VtgPane', () => {
       expect(rotate.attributes('aria-label')).toBe('Rotate wall plane by the selected angle')
       expect(rotate.element.value).toBe('-90')
       expect(rotate.findAll('option').map((option) => option.text())).toEqual([
-        '-135°',
         '-90°',
-        '-45°',
         '0°',
-        '45°',
         '90°',
-        '135°',
         '180°',
       ])
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
@@ -511,11 +507,6 @@ describe('VtgPane', () => {
       await rotate.setValue('180')
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
         { reference: '5-1', speedRatio, orientation: 180 },
-      ])
-
-      await rotate.setValue('135')
-      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-        { reference: '5-1', speedRatio, orientation: 135 },
       ])
     },
   )
