@@ -2,8 +2,8 @@
   <PropertyPanel panel="manage" title="Manage">
     <template v-if="pFRAMES === 'animation'">
       <InsertPoints v-if="PROPS.length" />
-      <DeleteSelection v-if="ANIMS.length" />
       <ShiftFrames v-if="PROPS.length" />
+      <DeleteSelection v-if="ANIMS.length" />
       <AddProp />
       <DeleteProps v-if="PROPS.length" />
     </template>

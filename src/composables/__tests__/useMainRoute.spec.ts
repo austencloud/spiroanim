@@ -27,12 +27,16 @@ const mountRoute = async (path: string, initialAnimation?: RootDataFinal) => {
 
   const pinia = createPinia().use(piniaPluginPersistedstate)
   let animationReady: ReturnType<typeof useMainRoute>['animationReady'] | undefined
+  let saveCurrentPatternToQuickSlot:
+    | ReturnType<typeof useMainRoute>['saveCurrentPatternToQuickSlot']
+    | undefined
   const app = createApp(
     defineComponent({
       setup() {
         if (initialAnimation) usePlayerStore('main').raw().ROOT.value = initialAnimation
         const routeState = useMainRoute()
         animationReady = routeState.animationReady
+        saveCurrentPatternToQuickSlot = routeState.saveCurrentPatternToQuickSlot
         return () => h('div')
       },
     }),
@@ -43,9 +47,11 @@ const mountRoute = async (path: string, initialAnimation?: RootDataFinal) => {
   mountedApps.push(app)
   await nextTick()
   if (!animationReady) throw new Error('Main route state was not created')
+  if (!saveCurrentPatternToQuickSlot) throw new Error('Quick Slot saver was not created')
 
   return {
     animationReady,
+    saveCurrentPatternToQuickSlot,
     router,
     paneStore: useMainPaneStore(pinia),
     conceptsStore: useConceptsStore(pinia),
@@ -244,6 +250,26 @@ describe('useMainRoute', () => {
       )
     },
   )
+
+  it.each([
+    ['/editor', '/timeline'],
+    ['/play-edit', '/play-time'],
+    ['/edit-play', '/time-play'],
+    ['/play-vtg', '/play-vtg'],
+  ])('immediately saves an empty Quick Slot from %s at %s', async (source, saved) => {
+    const { conceptsStore, saveCurrentPatternToQuickSlot } = await mountRoute(
+      source,
+      createLoadedAnimation(),
+    )
+    conceptsStore.restoreQuickSlots()
+    conceptsStore.selectedQuickSlot = 2
+
+    saveCurrentPatternToQuickSlot(2)
+
+    expect(conceptsStore.quickSlotPaths[1]).toMatch(
+      new RegExp(`^${saved.replace('/', '\\/')}\\?r=`),
+    )
+  })
 
   it('does not rewrite a selected Quick Slot when only the pane route changes', async () => {
     const animation = createLoadedAnimation()

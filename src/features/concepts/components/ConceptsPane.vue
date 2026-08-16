@@ -1,6 +1,10 @@
 <template>
   <section class="concepts-pane scrollbar" aria-label="Concepts" data-concepts-pane>
-    <QuickSlotsControl v-if="quickSlotCount > 0" @apply="emit('quickSlotApply', $event)" />
+    <QuickSlotsControl
+      v-if="quickSlotCount > 0"
+      @apply="emit('quickSlotApply', $event)"
+      @save="emit('quickSlotSave', $event)"
+    />
 
     <div
       class="concepts-pane__selector-row"
@@ -85,6 +89,7 @@ defineProps<{
 const emit = defineEmits<{
   patternSelect: [selection: ConceptPatternSelection]
   quickSlotApply: [path: string]
+  quickSlotSave: [slot: number]
 }>()
 
 const conceptsStore = useConceptsStore()

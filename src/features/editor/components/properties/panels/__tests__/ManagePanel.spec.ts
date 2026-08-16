@@ -57,8 +57,8 @@ describe('ManagePanel', () => {
 
     const expected = [
       'Insert Points',
-      'Delete Selection',
       'Shift',
+      'Delete Selection',
       'Add Prop',
       'Delete Props',
       'Compress',

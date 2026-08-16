@@ -6,6 +6,7 @@
         class="timeline-quick-slots"
         :class="{ 'timeline-quick-slots--floating': quickSlotsFloat }"
         @apply="emit('quickSlotApply', $event)"
+        @save="emit('quickSlotSave', $event)"
       />
       <div
         class="timeline-scroll-content"
@@ -115,6 +116,7 @@ import { mdiMinus, mdiPlus } from '@mdi/js'
 
 const emit = defineEmits<{
   quickSlotApply: [path: string]
+  quickSlotSave: [slot: number]
 }>()
 
 const props = withDefaults(

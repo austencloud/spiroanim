@@ -33,6 +33,16 @@ describe('ConceptsPane', () => {
     expect(wrapper.get<HTMLInputElement>('input[value="3"]').element.checked).toBe(true)
   })
 
+  it('requests the current pattern when an empty Quick Slot is selected', async () => {
+    const store = useConceptsStore()
+    store.restoreQuickSlots()
+    const wrapper = mount(ConceptsPane)
+
+    await wrapper.get<HTMLInputElement>('input[value="2"]').setValue()
+
+    expect(wrapper.emitted('quickSlotSave')).toEqual([[2]])
+  })
+
   it('creates four Quick Slots beside the selector from the empty state', async () => {
     const wrapper = mount(ConceptsPane)
     const store = useConceptsStore()

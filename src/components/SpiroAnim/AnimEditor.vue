@@ -22,6 +22,7 @@
         :landscape="false"
         :cols="tCols"
         @quick-slot-apply="emit('quickSlotApply', $event)"
+        @quick-slot-save="emit('quickSlotSave', $event)"
       />
     </div>
     <PaneSwapButton
@@ -58,6 +59,7 @@ import { useEditorPaneStore } from '@/features/editor/stores/useEditorPaneStore'
 
 const emit = defineEmits<{
   quickSlotApply: [path: string]
+  quickSlotSave: [slot: number]
 }>()
 
 const props = defineProps<{

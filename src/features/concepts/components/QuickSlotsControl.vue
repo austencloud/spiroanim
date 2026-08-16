@@ -38,7 +38,6 @@
             v-bind="activatorProps"
             :data-role="`quick-slot-${slot}`"
             @click.capture="suppressClickAfterLongPress($event, slot)"
-            @dblclick.prevent="clearStoredQuickSlot(slot)"
             @pointerdown="startLongPress($event, slot)"
             @pointermove="cancelLongPressAfterMove"
             @pointerup="finishLongPress"
@@ -52,7 +51,7 @@
               name="quick-slot"
               :value="slot"
               :aria-label="quickSlotLabel(slot)"
-              @click="clearQuickSlotIfSelected(slot)"
+              @click.capture="handleSelectedQuickSlotClick(slot)"
               @change="applyQuickSlot(slot)"
               @keydown.delete.prevent="clearStoredQuickSlot(slot)"
               @keydown.backspace.prevent="clearStoredQuickSlot(slot)"
@@ -102,6 +101,7 @@ import { isTouchDevice } from '@/utils/device'
 
 const emit = defineEmits<{
   apply: [path: string]
+  save: [slot: number]
 }>()
 
 const conceptsStore = useConceptsStore()
@@ -128,14 +128,14 @@ let suppressClickResetTimer: ReturnType<typeof setTimeout> | undefined
 const quickSlotHasContent = (slot: number) => typeof quickSlotPaths.value[slot - 1] === 'string'
 
 const quickSlotLabel = (slot: number) =>
-  `Quick Slot ${slot}, ${quickSlotHasContent(slot) ? 'saved; double-click or press and hold to clear' : 'empty'}`
+  `Quick Slot ${slot}, ${quickSlotHasContent(slot) ? 'saved; press and hold to clear' : 'empty'}`
 
 const quickSlotPathLabel = (slot: number) =>
   quickSlotPaths.value[slot - 1]?.split(/[?#]/, 1)[0]?.replace(/^\/+/, '')
 
 const quickSlotTooltip = (slot: number) => {
   const pathLabel = quickSlotPathLabel(slot)
-  const instruction = `${selectedQuickSlot.value === slot ? 'Clear' : 'Select'} Quick Slot ${slot} (${quickSlotHasContent(slot) ? 'Saved - double-click or hold to clear' : 'Empty'})`
+  const instruction = `${selectedQuickSlot.value === slot ? 'Clear' : 'Select'} Quick Slot ${slot} (${quickSlotHasContent(slot) ? 'Saved - hold to clear' : 'Empty'})`
   return pathLabel ? `${instruction}\nLoads: ${pathLabel}` : instruction
 }
 
@@ -198,13 +198,16 @@ const suppressClickAfterLongPress = (event: MouseEvent, slot: number) => {
   suppressClickResetTimer = undefined
 }
 
-const clearQuickSlotIfSelected = (slot: number) => {
-  if (selectedQuickSlot.value === slot) conceptsStore.toggleQuickSlot(slot)
+const handleSelectedQuickSlotClick = (slot: number) => {
+  if (selectedQuickSlot.value !== slot) return
+  if (quickSlotHasContent(slot)) conceptsStore.toggleQuickSlot(slot)
+  else emit('save', slot)
 }
 
 const applyQuickSlot = (slot: number) => {
   const path = conceptsStore.quickSlotPaths[slot - 1]
   if (path) emit('apply', path)
+  else emit('save', slot)
 }
 
 onBeforeUnmount(() => {

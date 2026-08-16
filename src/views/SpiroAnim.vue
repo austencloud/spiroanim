@@ -39,6 +39,7 @@
         :landscape="isLandscape"
         :vtl="viewVisible.timeline"
         @quick-slot-apply="applyQuickSlotFromView($event, 'editor')"
+        @quick-slot-save="saveCurrentPatternToQuickSlot"
       />
       <Timeline
         v-if="viewVisible.timeline"
@@ -49,6 +50,7 @@
         :dim="dTimeline"
         :landscape="isLandscape"
         @quick-slot-apply="applyQuickSlotFromView($event, 'timeline')"
+        @quick-slot-save="saveCurrentPatternToQuickSlot"
       />
       <ConceptsPane
         v-if="viewVisible.concepts"
@@ -59,6 +61,7 @@
         data-role="concepts-view"
         @pattern-select="applyConceptPattern"
         @quick-slot-apply="applyQuickSlotFromView($event, 'concepts')"
+        @quick-slot-save="saveCurrentPatternToQuickSlot"
       />
     </div>
     <AppNavigationMenu />
@@ -105,7 +108,7 @@ import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { mdiFilterOff } from '@mdi/js'
 
 useScrollSelectScale()
-const { animationReady } = useMainRoute() // Handles updates to route path and query
+const { animationReady, saveCurrentPatternToQuickSlot } = useMainRoute() // Handles updates to route path and query
 useSpiroAnimKeyboard()
 
 const { viewWidth, viewHeight, viewLeft, viewTop, isLandscape } = storeToRefs(useViewportStore())

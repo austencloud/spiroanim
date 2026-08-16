@@ -1,11 +1,12 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ShiftFrames from '@/features/editor/components/properties/manage/ShiftFrames.vue'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { AnimData, RootData } from '@/types/AnimTypes'
 
 const closedFrames = (): AnimData[] => [
@@ -56,6 +57,14 @@ const expectVectorClose = (actual: readonly number[], expected: readonly number[
   actual.forEach((coordinate, axis) => expect(coordinate).toBeCloseTo(expected[axis]!, 9))
 }
 
+const openShiftForm = async (wrapper: ReturnType<typeof mount>) => {
+  await wrapper.get('a').trigger('click')
+}
+
+const applyShift = async (wrapper: ReturnType<typeof mount>) => {
+  await wrapper.get('.action-button').trigger('click')
+}
+
 describe('ShiftFrames', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -77,7 +86,8 @@ describe('ShiftFrames', () => {
     const wrapper = mount(ShiftFrames, {
       global: { provide: { store: ref(storeId) } },
     })
-    await wrapper.get('a').trigger('click')
+    await openShiftForm(wrapper)
+    await applyShift(wrapper)
 
     expect(ROOT.value.props[0]!.anim[0]).toMatchObject({ arc: 90, beats: 3, scale: 8 })
     expect(ROOT.value.props[1]!.anim[0]).toMatchObject({ arc: 90, beats: 3, scale: 8 })
@@ -112,6 +122,7 @@ describe('ShiftFrames', () => {
 
     const original = structuredClone(ROOT.value.props[0]!.anim)
     await link.trigger('click')
+    await applyShift(wrapper)
     expect(ROOT.value.props[0]!.anim).toEqual(original)
     expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(true)
 
@@ -119,7 +130,7 @@ describe('ShiftFrames', () => {
     expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(false)
     expect(ROOT.value.props[0]!.anim).toEqual(original)
 
-    await link.trigger('click')
+    await applyShift(wrapper)
     await wrapper.get('.shift-warning__choice input').setValue(true)
     await wrapper.get('.shift-warning__proceed').trigger('click')
     await nextTick()
@@ -130,7 +141,7 @@ describe('ShiftFrames', () => {
     ROOT.value = createRoot([openFrames()])
     await nextTick()
     const resetOpenFrames = structuredClone(ROOT.value.props[0]!.anim)
-    await link.trigger('click')
+    await applyShift(wrapper)
     await nextTick()
     expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(false)
     expect(ROOT.value.props[0]!.anim).not.toEqual(resetOpenFrames)
@@ -141,7 +152,8 @@ describe('ShiftFrames', () => {
     wrapper = mount(ShiftFrames, {
       global: { provide: { store: ref(storeId) } },
     })
-    await wrapper.get('a').trigger('click')
+    await openShiftForm(wrapper)
+    await applyShift(wrapper)
     expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(true)
   })
 
@@ -169,6 +181,7 @@ describe('ShiftFrames', () => {
     const link = wrapper.get('a')
     expect(link.attributes('aria-disabled')).toBe('false')
     await link.trigger('click')
+    await applyShift(wrapper)
     await nextTick()
 
     const result = COMPILED.value.props[0]!.anim
@@ -211,6 +224,7 @@ describe('ShiftFrames', () => {
     const link = wrapper.get('a')
     expect(link.attributes('aria-disabled')).toBe('false')
     await link.trigger('click')
+    await applyShift(wrapper)
     await nextTick()
 
     expect(COMPILED.value.props[0]!.anim.at(-1)).toMatchObject({
@@ -221,5 +235,47 @@ describe('ShiftFrames', () => {
     })
     expect(player.PTIMES[0]!.at(-1)).toBe(originalFinalTime)
     expect(player.SELECTED).toEqual([0, 2])
+  })
+
+  it('shifts the requested number of times up to the available frame count minus one', async () => {
+    const storeId = 'shift-count'
+    const player = usePlayerStore(storeId)
+    const { ROOT, COMPILED } = player.raw()
+    ROOT.value = createRoot([closedFrames()])
+    player.PLAYING = false
+
+    const properties = usePropertiesStore(storeId)
+    properties.pSELECTED = { 0: true }
+    Reflect.deleteProperty(properties.$state, 'pSHIFT')
+    await nextTick()
+
+    const originalCompiled = structuredClone(COMPILED.value.props[0]!.anim)
+    const history = useQSMainStore()
+    const beginHistoryGroup = vi.spyOn(history, 'beginHistoryGroup')
+    const endHistoryGroup = vi.spyOn(history, 'endHistoryGroup')
+    let wrapper = mount(ShiftFrames, {
+      global: { provide: { store: ref(storeId) } },
+    })
+    await openShiftForm(wrapper)
+
+    const slider = wrapper.get<HTMLInputElement>('input[type="range"]')
+    expect(wrapper.get('.shift-count').text()).toContain('Times: 1')
+    expect(slider.attributes('min')).toBe('1')
+    expect(slider.attributes('max')).toBe('2')
+    await slider.setValue(2)
+    expect(wrapper.get('.shift-count').text()).toContain('Times: 2')
+
+    wrapper.unmount()
+    wrapper = mount(ShiftFrames, {
+      global: { provide: { store: ref(storeId) } },
+    })
+    expect(wrapper.get<HTMLInputElement>('input[type="range"]').element.value).toBe('2')
+
+    await applyShift(wrapper)
+
+    expect(beginHistoryGroup).toHaveBeenCalledTimes(1)
+    expect(endHistoryGroup).toHaveBeenCalledTimes(1)
+    expectVectorClose(COMPILED.value.props[0]!.anim[0]!.pos, originalCompiled[2]!.pos)
+    expectVectorClose(COMPILED.value.props[0]!.anim[0]!.rot, originalCompiled[2]!.rot)
   })
 })

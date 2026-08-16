@@ -72,6 +72,7 @@ export const usePropertiesStore = (id: string) => {
       const pSELECTED = ref<Record<number, boolean>>({ 0: true })
       const pRADIO = ref(-1)
       const pMOVENEXT = ref(false)
+      const pSHIFT = ref(1)
       const showFullTimeline = ref(false)
 
       // Default expanded state "Desktop Mode"
@@ -207,6 +208,7 @@ export const usePropertiesStore = (id: string) => {
         pSELECTED,
         pRADIO,
         pMOVENEXT,
+        pSHIFT,
         showFullTimeline,
 
         pINPUT: ref(''),

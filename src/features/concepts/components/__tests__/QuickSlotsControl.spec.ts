@@ -41,9 +41,10 @@ describe('QuickSlotsControl', () => {
     expect(wrapper.findAll('input[type="radio"]')).toHaveLength(0)
   })
 
-  it('clears an already selected slot and leaves saving disabled', async () => {
+  it('clears an already selected saved slot and leaves saving disabled', async () => {
     const store = useConceptsStore()
     store.selectedQuickSlot = 1
+    store.quickSlotPaths[0] = '/play-vtg?r=stored&v=6'
     const wrapper = mount(QuickSlotsControl)
 
     await wrapper.get<HTMLInputElement>('input[value="1"]').trigger('click')
@@ -56,7 +57,25 @@ describe('QuickSlotsControl', () => {
     ).toEqual([false, false, false, false])
 
     store.saveCurrentQuickSlot('/play-vtg?r=ignored&v=6')
-    expect(store.quickSlotPaths).toEqual([null, null, null, null])
+    expect(store.quickSlotPaths).toEqual(['/play-vtg?r=stored&v=6', null, null, null])
+  })
+
+  it('requests the current pattern when an empty Quick Slot is clicked', async () => {
+    const store = useConceptsStore()
+    const wrapper = mount(QuickSlotsControl)
+
+    await wrapper.get<HTMLInputElement>('input[value="2"]').setValue()
+
+    expect(store.selectedQuickSlot).toBe(2)
+    expect(wrapper.emitted('save')).toEqual([[2]])
+    expect(wrapper.emitted('apply')).toBeUndefined()
+
+    store.selectedQuickSlot = 3
+    await nextTick()
+    await wrapper.get<HTMLInputElement>('input[value="3"]').trigger('click')
+
+    expect(store.selectedQuickSlot).toBe(3)
+    expect(wrapper.emitted('save')).toEqual([[2], [3]])
   })
 
   it('emits a stored path when a different Quick Slot is selected', async () => {
@@ -66,7 +85,7 @@ describe('QuickSlotsControl', () => {
     await nextTick()
 
     expect(wrapper.findAllComponents(AppTooltip).map((tooltip) => tooltip.props('text'))).toContain(
-      'Select Quick Slot 2 (Saved - double-click or hold to clear)\nLoads: play-8stp',
+      'Select Quick Slot 2 (Saved - hold to clear)\nLoads: play-8stp',
     )
 
     await wrapper.get<HTMLInputElement>('input[value="2"]').setValue()
@@ -81,21 +100,20 @@ describe('QuickSlotsControl', () => {
         .exists(),
     ).toBe(true)
     expect(wrapper.get('input[value="2"]').attributes('aria-label')).toBe(
-      'Quick Slot 2, saved; double-click or press and hold to clear',
+      'Quick Slot 2, saved; press and hold to clear',
     )
     expect(wrapper.get('input[value="1"]').attributes('aria-label')).toBe('Quick Slot 1, empty')
   })
 
-  it('clears a populated Quick Slot on double-click or Delete', async () => {
+  it('does not clear on double-click and retains keyboard deletion', async () => {
     const store = useConceptsStore()
     store.quickSlotPaths[1] = '/play-vtg?r=stored&v=6'
     const wrapper = mount(QuickSlotsControl)
     const slot = wrapper.get('[data-role="quick-slot-2"]')
 
     await slot.trigger('dblclick')
-    expect(store.quickSlotPaths[1]).toBeNull()
+    expect(store.quickSlotPaths[1]).toBe('/play-vtg?r=stored&v=6')
 
-    store.quickSlotPaths[1] = '/play-vtg?r=stored-again&v=6'
     await wrapper.get('input[value="2"]').trigger('keydown', { key: 'Delete' })
     expect(store.quickSlotPaths[1]).toBeNull()
   })

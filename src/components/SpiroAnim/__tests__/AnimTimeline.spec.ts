@@ -141,6 +141,9 @@ describe('AnimTimeline', () => {
 
     expect(wrapper.emitted('quickSlotApply')).toEqual([['/play-time?r=stored&v=6']])
     expect(quickSlots.classes()).toContain('timeline-quick-slots--floating')
+
+    await quickSlots.get<HTMLInputElement>('input[value="1"]').setValue()
+    expect(wrapper.emitted('quickSlotSave')).toEqual([[1]])
   })
 
   it('only floats Quick Slots for a selected empty or Timeline-targeted slot', async () => {

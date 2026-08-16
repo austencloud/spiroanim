@@ -7,20 +7,35 @@
           href="#"
           :aria-disabled="!canShift"
           :class="{ 'shift-link--warning': canShift && endpointsMismatch }"
-          @click.prevent="clickShift"
+          @click.prevent="activate"
         >
           Shift
         </a>
       </template>
       <template #html>
         <strong>Shift</strong><br />
-        Moves the first animation interval of every selected prop or selected timeline range to the
-        end.<br />
+        Moves the chosen number of animation intervals from the start of every selected prop or
+        selected timeline range to the end.<br />
         Existing position and rotation paths stay in place when the first and last frames match. A
         warning appears before shifting unmatched endpoints. The final frame keeps its outgoing
         properties.
       </template>
     </AppTooltip>
+    <div v-show="pINPUT === inputName" class="shift-controls">
+      <label class="shift-count">
+        <span>Times: {{ shiftCount }}</span>
+        <input
+          v-model.number="shiftCount"
+          type="range"
+          min="1"
+          :max="maxShiftCount"
+          :disabled="!canShift"
+        />
+      </label>
+      <button class="action-button" type="button" :disabled="!canShift" @click="clickShift">
+        APPLY
+      </button>
+    </div>
     <BaseDialog
       v-model="warningOpen"
       class="shift-warning"
@@ -54,14 +69,19 @@ import {
   shiftAnimationFrameRange,
 } from '@/math/animation/shiftAnimationFrames'
 import { useManageProperties } from '@/features/editor/composables/useManageProperties'
+import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useQSMainStore } from '@/stores/useQSMainStore'
 
 const store = inject('store', ref('main'))
 const playerStore = usePlayerStore(store.value)
 const { ROOT, COMPILED } = playerStore.raw()
 const { PLAYING, SELECTION, SELECTED, ETIMES } = storeToRefs(playerStore)
-const { pSELECTED } = useProperties(store.value)
+const { pINPUT, pSELECTED } = useProperties(store.value)
+const shiftCount = toRef(usePropertiesStore(store.value).$state, 'pSHIFT', 1)
 const { propSelection } = useManageProperties(store.value)
+const { beginHistoryGroup, endHistoryGroup } = useQSMainStore()
+const inputName = 'manage.shift'
 const warningOpen = ref(false)
 const skipWarningChoice = ref(false)
 const suppressMismatchWarning = ref(false)
@@ -109,6 +129,14 @@ const canShift = computed(
     !PLAYING.value && shiftTargets.value.length > 0 && shiftTargets.value.every(targetIsShiftable),
 )
 
+const maxShiftCount = computed(() => {
+  if (shiftTargets.value.length === 0) return 1
+  return Math.max(
+    1,
+    Math.min(...shiftTargets.value.map(({ startIndex, endIndex }) => endIndex - startIndex)),
+  )
+})
+
 const endpointsMismatch = computed(() =>
   shiftTargets.value.some(({ propIndex, startIndex, endIndex }) => {
     const frames = COMPILED.value.props[propIndex]?.anim
@@ -117,36 +145,50 @@ const endpointsMismatch = computed(() =>
 )
 
 const performShift = async () => {
+  const targets = shiftTargets.value.map((target) => ({ ...target }))
+  const repetitions = Math.min(Math.max(shiftCount.value, 1), maxShiftCount.value)
   const selectedTimes = SELECTION.value
     ? ([ETIMES.value[SELECTED.value[0]!], ETIMES.value[SELECTED.value[1]!]] as const)
     : undefined
-  const shiftedProps = shiftTargets.value.map(({ propIndex, startIndex, endIndex }) => {
-    const prop = ROOT.value.props[propIndex]!
-    return shiftAnimationFrameRange(
-      prop.anim,
-      COMPILED.value.props[propIndex]!.anim,
-      startIndex,
-      endIndex,
-      { allowEndpointMismatch: true, preserveFinalOutgoing: true },
-    )
-  })
-  if (shiftedProps.some((frames) => frames === undefined)) return
+  beginHistoryGroup(ROOT.value)
+  try {
+    for (let repetition = 0; repetition < repetitions; repetition++) {
+      const shiftedProps = targets.map(({ propIndex, startIndex, endIndex }) => {
+        const prop = ROOT.value.props[propIndex]!
+        return shiftAnimationFrameRange(
+          prop.anim,
+          COMPILED.value.props[propIndex]!.anim,
+          startIndex,
+          endIndex,
+          { allowEndpointMismatch: true, preserveFinalOutgoing: true },
+        )
+      })
+      if (shiftedProps.some((frames) => frames === undefined)) return
 
-  for (const [selectionIndex, target] of shiftTargets.value.entries()) {
-    ROOT.value.props[target.propIndex]!.anim.splice(
-      target.startIndex,
-      target.endIndex - target.startIndex + 1,
-      ...shiftedProps[selectionIndex]!,
-    )
-  }
-  triggerRef(ROOT)
+      for (const [selectionIndex, target] of targets.entries()) {
+        ROOT.value.props[target.propIndex]!.anim.splice(
+          target.startIndex,
+          target.endIndex - target.startIndex + 1,
+          ...shiftedProps[selectionIndex]!,
+        )
+      }
+      triggerRef(ROOT)
+      await nextTick()
+    }
 
-  if (selectedTimes?.[0] !== undefined && selectedTimes[1] !== undefined) {
-    await nextTick()
-    const startIndex = ETIMES.value.indexOf(selectedTimes[0])
-    const endIndex = ETIMES.value.indexOf(selectedTimes[1])
-    if (startIndex >= 0 && endIndex >= 0) SELECTED.value = [startIndex, endIndex]
+    if (selectedTimes?.[0] !== undefined && selectedTimes[1] !== undefined) {
+      const startIndex = ETIMES.value.indexOf(selectedTimes[0])
+      const endIndex = ETIMES.value.indexOf(selectedTimes[1])
+      if (startIndex >= 0 && endIndex >= 0) SELECTED.value = [startIndex, endIndex]
+    }
+  } finally {
+    endHistoryGroup()
   }
+}
+
+const activate = () => {
+  if (!canShift.value) return
+  pINPUT.value = pINPUT.value === inputName ? '' : inputName
 }
 
 const clickShift = async () => {
@@ -171,11 +213,47 @@ const confirmShift = async () => {
   warningOpen.value = false
   await performShift()
 }
+
+watch(maxShiftCount, (maximum) => {
+  if (shiftCount.value > maximum) shiftCount.value = maximum
+})
 </script>
 
 <style scoped>
 .shift-container {
   padding: 5px;
+}
+
+.shift-controls {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 12rem;
+  padding-block-start: var(--space-2);
+}
+
+.shift-count {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.shift-count input {
+  width: 100%;
+  accent-color: var(--color-action-primary);
+}
+
+.action-button {
+  justify-self: start;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-on-action-primary);
+  cursor: pointer;
+  background: var(--color-action-primary);
+  border: 0;
+  border-radius: var(--radius-sm);
+}
+
+.action-button:disabled {
+  cursor: default;
+  opacity: 0.65;
 }
 
 [aria-disabled='true'] {

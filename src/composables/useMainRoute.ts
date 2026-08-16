@@ -198,6 +198,18 @@ export function useMainRoute() {
       query: encodeQS(animation, false),
     }).fullPath
 
+  const saveCurrentPatternToQuickSlot = (slot: number) => {
+    if (
+      selectedQuickSlot.value !== slot ||
+      slot < 1 ||
+      slot > quickSlotPaths.value.length ||
+      quickSlotPaths.value[slot - 1] !== null
+    )
+      return
+
+    conceptsStore.saveCurrentQuickSlot(createQuickSlotAnimationPath(ROOT.value))
+  }
+
   const animationQueryFromPath = (animationPath: string | null | undefined) =>
     animationPath?.split('?', 2)[1]?.split('#', 1)[0]
   let lastObservedAnimationQuery = animationQueryFromPath(createQuickSlotAnimationPath(ROOT.value))
@@ -350,5 +362,6 @@ export function useMainRoute() {
 
   return {
     animationReady: readonly(animationReady),
+    saveCurrentPatternToQuickSlot,
   }
 }

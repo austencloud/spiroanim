@@ -59,11 +59,19 @@ describe('DeleteSelection', () => {
       global: { provide: { store: ref(storeId) } },
     })
     await wrapper.get('a').trigger('click')
+    expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(true)
+    expect(wrapper.get('dialog').text()).toContain('Are you sure?')
+    expect(ROOT.value.props[0]!.motion).toHaveLength(3)
+    await wrapper.get('.delete-confirmation__choice input').setValue(true)
+    await wrapper.get('.delete-confirmation__proceed').trigger('click')
     await nextTick()
 
     expect(ROOT.value.props[0]!.motion).toEqual([{ beats: 1, distance: 1 }])
     expect(ROOT.value.props[0]!.anim).toEqual(animation)
     expect(properties.MOTIONS).toEqual([])
+
+    await wrapper.get('a').trigger('click')
+    expect((wrapper.get('dialog').element as HTMLDialogElement).open).toBe(false)
   })
 
   it('continues deleting only Animation frames when Animation is selected', async () => {
@@ -85,6 +93,11 @@ describe('DeleteSelection', () => {
       global: { provide: { store: ref(storeId) } },
     })
     await wrapper.get('a').trigger('click')
+    await wrapper.get('.delete-confirmation__cancel').trigger('click')
+    expect(ROOT.value.props[0]!.anim).toHaveLength(3)
+
+    await wrapper.get('a').trigger('click')
+    await wrapper.get('.delete-confirmation__proceed').trigger('click')
     await nextTick()
 
     expect(ROOT.value.props[0]!.anim).toEqual([{ beats: 1, arc: 0 }, { arc: 90 }])
@@ -111,11 +124,13 @@ describe('DeleteSelection', () => {
       global: { provide: { store: ref(storeId) } },
     })
     await wrapper.get('a').trigger('click')
+    await wrapper.get('.delete-confirmation__proceed').trigger('click')
     expect(ROOT.value.camera).toHaveLength(1)
 
     player.SELECTED = [0, 0]
     await nextTick()
     await wrapper.get('a').trigger('click')
+    await wrapper.get('.delete-confirmation__proceed').trigger('click')
     expect(ROOT.value.camera).toHaveLength(1)
   })
 })

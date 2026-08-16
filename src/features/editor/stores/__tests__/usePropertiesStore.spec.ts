@@ -339,6 +339,7 @@ describe('usePropertiesStore', () => {
         pFRAMES: 'motion',
         pSELECTED: { 4: true },
         pMOVENEXT: true,
+        pSHIFT: 2,
       }),
     )
     activatePersistedPinia()
@@ -353,5 +354,6 @@ describe('usePropertiesStore', () => {
     expect(store.pSELECTED).toEqual({ 0: true })
     expect(store.pFRAMES).toBe('animation')
     expect(store.pMOVENEXT).toBe(true)
+    expect(store.pSHIFT).toBe(1)
   })
 })
