@@ -9,7 +9,7 @@ import type {
   VtgPatternSelection,
   VtgRuleNumber,
 } from '@/features/vtg/types'
-import { vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
+import { vtgPatternOrientations, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 
@@ -30,7 +30,7 @@ describe('VTG animation matching', () => {
   it.each(['1:2', '1:4'] as const)(
     'recognizes every nonzero initial arc rotation after a beat shift at %s',
     (speedRatio) => {
-      for (const orientation of [90, -90, 180] as const) {
+      for (const orientation of vtgPatternOrientations.filter((option) => option !== 0)) {
         const selection = {
           reference: '5-1',
           speedRatio,

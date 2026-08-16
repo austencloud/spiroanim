@@ -4,7 +4,7 @@ import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { findQtrPatternMatch, findQtrPatternMatches } from '@/features/vtg/qtr/matchQtrAnimation'
 import type { QtrPatternSelection } from '@/features/vtg/types'
-import { vtgTransitionBeats } from '@/features/vtg/types'
+import { vtgPatternOrientations, vtgTransitionBeats } from '@/features/vtg/types'
 import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
@@ -21,7 +21,7 @@ describe('Qtr animation matching', () => {
   it.each(['1:2', '1:4'] as const)(
     'recognizes every nonzero initial arc rotation after a beat shift at %s',
     (speedRatio) => {
-      for (const orientation of [90, -90, 180] as const) {
+      for (const orientation of vtgPatternOrientations.filter((option) => option !== 0)) {
         const selection = {
           reference: '5-1',
           speedRatio,
