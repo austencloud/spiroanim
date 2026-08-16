@@ -98,6 +98,71 @@ describe('useConceptsStore', () => {
     app.unmount()
   })
 
+  it('saves, overwrites, and loads named Quick Slot sets by stable ID', () => {
+    const { app, store } = mountStore()
+    store.restoreQuickSlots()
+    store.quickSlotPaths = ['/play-vtg?r=one&v=6', null, '/play-time?r=three&v=6', null]
+    store.selectedQuickSlot = 3
+
+    const firstId = store.saveNewQuickSlotSet('Practice')
+    expect(firstId).toBe('quick-slot-set-1')
+    expect(store.selectedQuickSlotSetId).toBe(firstId)
+    expect(store.quickSlotSets).toEqual([
+      {
+        id: firstId,
+        name: 'Practice',
+        paths: ['/play-vtg?r=one&v=6', null, '/play-time?r=three&v=6', null],
+        selectedSlot: 3,
+      },
+    ])
+
+    store.quickSlotPaths[0] = '/play-vtg?r=updated&v=6'
+    expect(store.quickSlotSets[0]?.paths[0]).toBe('/play-vtg?r=one&v=6')
+    expect(store.overwriteQuickSlotSet(firstId, 'Practice Updated')).toBe(true)
+
+    store.quickSlotPaths = []
+    store.quickSlotCount = 0
+    store.selectedQuickSlot = null
+    expect(store.loadQuickSlotSet(firstId)).toBe(true)
+    expect(store.quickSlotCount).toBe(4)
+    expect(store.quickSlotPaths[0]).toBe('/play-vtg?r=updated&v=6')
+    expect(store.selectedQuickSlot).toBe(3)
+    expect(store.quickSlotSets[0]?.name).toBe('Practice Updated')
+
+    expect(store.deleteQuickSlotSet(firstId)).toBe(true)
+    expect(store.quickSlotSets).toEqual([])
+    expect(store.selectedQuickSlotSetId).toBeNull()
+    app.unmount()
+  })
+
+  it('uses the first available default name and remembers the last saved set after hydration', () => {
+    localStorage.setItem(
+      'sa-concepts',
+      JSON.stringify({
+        quickSlotSets: [
+          {
+            id: 'quick-slot-set-4',
+            name: 'Quick Slot Set #1',
+            paths: ['/play-vtg?r=saved&v=6'],
+            selectedSlot: 1,
+          },
+          {
+            id: 'quick-slot-set-7',
+            name: 'Quick Slot Set #2',
+            paths: ['/play-time?r=second&v=6'],
+            selectedSlot: null,
+          },
+        ],
+        selectedQuickSlotSetId: 'quick-slot-set-4',
+      }),
+    )
+    const { app, store } = mountStore()
+
+    expect(store.selectedQuickSlotSetId).toBe('quick-slot-set-4')
+    expect(store.nextQuickSlotSetName()).toBe('Quick Slot Set #3')
+    app.unmount()
+  })
+
   it('matches Quick Slots by query string without considering the page', () => {
     const { app, store } = mountStore()
     store.restoreQuickSlots()

@@ -64,6 +64,15 @@
           <BaseIcon :path="mdiLightbulbOnOutline" :size="22" />
           <span>Tips</span>
         </RouterLink>
+        <button
+          class="menu-link menu-action quick-slots-menu-item"
+          type="button"
+          role="menuitem"
+          @click="openQuickSlotSetsDialog"
+        >
+          <BaseIcon :path="mdiViewGridOutline" :size="22" />
+          <span>Quick Slots</span>
+        </button>
         <template v-if="playerVisible">
           <button
             class="menu-link menu-action export-image-menu-item"
@@ -126,6 +135,7 @@
       </div>
     </div>
     <ShareDialog ref="shareDialog" />
+    <QuickSlotSetsDialog ref="quickSlotSetsDialog" />
     <PwaResetDialog ref="resetDialog" />
     <ExportImageDialog ref="exportImageDialog" @export="startImageExport" />
     <ExportVideoDialog ref="exportVideoDialog" @export="startVideoExport" />
@@ -153,6 +163,7 @@ import {
   mdiPanoramaVariant,
   mdiRestoreAlert,
   mdiShareVariantOutline,
+  mdiViewGridOutline,
 } from '@mdi/js'
 import { onClickOutside, useFullscreen } from '@vueuse/core'
 import { useId } from 'vue'
@@ -165,6 +176,7 @@ import ExportVideoDialog from '@/components/layout/ExportVideoDialog.vue'
 import ExportVideoProgressDialog from '@/components/layout/ExportVideoProgressDialog.vue'
 import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
 import PwaResetDialog from '@/components/layout/PwaResetDialog.vue'
+import QuickSlotSetsDialog from '@/components/layout/QuickSlotSetsDialog.vue'
 import ShareDialog from '@/components/layout/ShareDialog.vue'
 import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 import { hasVideoExportApi, probeVideoExportCodecs } from '@/services/videoExportSupport'
@@ -194,6 +206,7 @@ const rootElement = ref<HTMLElement>()
 const triggerElement = ref<HTMLButtonElement>()
 const menuElement = ref<HTMLElement>()
 const shareDialog = ref<InstanceType<typeof ShareDialog>>()
+const quickSlotSetsDialog = ref<InstanceType<typeof QuickSlotSetsDialog>>()
 const resetDialog = ref<InstanceType<typeof PwaResetDialog>>()
 const exportImageDialog = ref<InstanceType<typeof ExportImageDialog>>()
 const exportVideoDialog = ref<InstanceType<typeof ExportVideoDialog>>()
@@ -289,6 +302,11 @@ function startImageExport(settings: ImageExportSettings) {
 function openShareDialog() {
   closeMenu()
   void shareDialog.value?.open()
+}
+
+function openQuickSlotSetsDialog() {
+  closeMenu()
+  quickSlotSetsDialog.value?.open()
 }
 
 function openResetDialog() {

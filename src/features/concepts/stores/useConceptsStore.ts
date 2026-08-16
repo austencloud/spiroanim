@@ -18,6 +18,17 @@ const defaultQuickSlotCount = 0
 const restoredQuickSlotCount = 4
 const createEmptyQuickSlots = (count: number) => Array<string | null>(count).fill(null)
 
+export interface QuickSlotSet {
+  id: string
+  name: string
+  paths: Array<string | null>
+  selectedSlot: number | null
+}
+
+const quickSlotSetIdPrefix = 'quick-slot-set-'
+const defaultQuickSlotSetName = (number: number) => `Quick Slot Set #${number}`
+const copyQuickSlotPaths = (paths: Array<string | null>) => [...paths]
+
 export const useConceptsStore = defineStore(
   'sa-concepts',
   () => {
@@ -25,6 +36,9 @@ export const useConceptsStore = defineStore(
     const quickSlotCount = ref(defaultQuickSlotCount)
     const selectedQuickSlot = ref<number | null>(null)
     const quickSlotPaths = ref<Array<string | null>>(createEmptyQuickSlots(defaultQuickSlotCount))
+    const quickSlotSets = ref<QuickSlotSet[]>([])
+    const selectedQuickSlotSetId = ref<string | null>(null)
+    const nextQuickSlotSetId = ref(1)
     const qtrEnabled = ref(false)
     const speedRatio = ref<VtgSpeedRatio>(vtgDefaultSpeedRatio)
     const swapProps = ref(false)
@@ -109,11 +123,70 @@ export const useConceptsStore = defineStore(
       selectedQuickSlot.value = matchingIndex === -1 ? null : matchingIndex + 1
     }
 
+    const nextQuickSlotSetName = () => {
+      const existingNames = new Set(quickSlotSets.value.map((set) => set.name))
+      let number = 1
+      while (existingNames.has(defaultQuickSlotSetName(number))) number++
+      return defaultQuickSlotSetName(number)
+    }
+
+    const snapshotQuickSlots = (id: string, name: string): QuickSlotSet => ({
+      id,
+      name: name.trim() || nextQuickSlotSetName(),
+      paths: copyQuickSlotPaths(quickSlotPaths.value),
+      selectedSlot: selectedQuickSlot.value,
+    })
+
+    const saveNewQuickSlotSet = (name: string) => {
+      const id = `${quickSlotSetIdPrefix}${nextQuickSlotSetId.value++}`
+      quickSlotSets.value.push(snapshotQuickSlots(id, name))
+      selectedQuickSlotSetId.value = id
+      return id
+    }
+
+    const overwriteQuickSlotSet = (id: string, name: string) => {
+      const index = quickSlotSets.value.findIndex((set) => set.id === id)
+      if (index === -1) return false
+
+      quickSlotSets.value[index] = snapshotQuickSlots(id, name)
+      selectedQuickSlotSetId.value = id
+      return true
+    }
+
+    const loadQuickSlotSet = (id: string) => {
+      const set = quickSlotSets.value.find((candidate) => candidate.id === id)
+      if (!set) return false
+
+      quickSlotCount.value = set.paths.length
+      quickSlotPaths.value = copyQuickSlotPaths(set.paths)
+      selectedQuickSlot.value =
+        set.selectedSlot !== null && set.selectedSlot <= quickSlotCount.value
+          ? set.selectedSlot
+          : null
+      selectedQuickSlotSetId.value = id
+      return true
+    }
+
+    const deleteQuickSlotSet = (id: string) => {
+      const index = quickSlotSets.value.findIndex((set) => set.id === id)
+      if (index === -1) return false
+
+      quickSlotSets.value.splice(index, 1)
+      if (selectedQuickSlotSetId.value === id) {
+        selectedQuickSlotSetId.value =
+          quickSlotSets.value[index]?.id ?? quickSlotSets.value.at(-1)?.id ?? null
+      }
+      return true
+    }
+
     return {
       selectedConcept,
       quickSlotCount,
       selectedQuickSlot,
       quickSlotPaths,
+      quickSlotSets,
+      selectedQuickSlotSetId,
+      nextQuickSlotSetId,
       qtrEnabled,
       speedRatio,
       swapProps,
@@ -138,6 +211,11 @@ export const useConceptsStore = defineStore(
       clearQuickSlot,
       toggleQuickSlot,
       selectQuickSlotForPath,
+      nextQuickSlotSetName,
+      saveNewQuickSlotSet,
+      overwriteQuickSlotSet,
+      loadQuickSlotSet,
+      deleteQuickSlotSet,
     }
   },
   {
@@ -147,6 +225,9 @@ export const useConceptsStore = defineStore(
         'quickSlotCount',
         'selectedQuickSlot',
         'quickSlotPaths',
+        'quickSlotSets',
+        'selectedQuickSlotSetId',
+        'nextQuickSlotSetId',
         'qtrEnabled',
         'speedRatio',
         'swapProps',
@@ -182,6 +263,48 @@ export const useConceptsStore = defineStore(
             return typeof path === 'string' && path.length > 0 ? path : null
           })
         }
+        if (!Array.isArray(store.quickSlotSets)) {
+          store.quickSlotSets = []
+        } else {
+          store.quickSlotSets = store.quickSlotSets.flatMap((set: QuickSlotSet) => {
+            if (
+              typeof set?.id !== 'string' ||
+              typeof set.name !== 'string' ||
+              !Array.isArray(set.paths)
+            )
+              return []
+            const paths = set.paths.map((path) =>
+              typeof path === 'string' && path.length > 0 ? path : null,
+            )
+            const selectedSlot =
+              Number.isSafeInteger(set.selectedSlot) &&
+              set.selectedSlot !== null &&
+              set.selectedSlot >= 1 &&
+              set.selectedSlot <= paths.length
+                ? set.selectedSlot
+                : null
+            return [{ id: set.id, name: set.name.trim() || 'Quick Slot Set', paths, selectedSlot }]
+          })
+        }
+        if (
+          typeof store.selectedQuickSlotSetId !== 'string' ||
+          !store.quickSlotSets.some((set: QuickSlotSet) => set.id === store.selectedQuickSlotSetId)
+        ) {
+          store.selectedQuickSlotSetId = null
+        }
+        const nextIdAfterHydratedSets = store.quickSlotSets.reduce(
+          (highest: number, set: QuickSlotSet) => {
+            const numericId = Number(set.id.slice(quickSlotSetIdPrefix.length))
+            return set.id.startsWith(quickSlotSetIdPrefix) && Number.isSafeInteger(numericId)
+              ? Math.max(highest, numericId + 1)
+              : highest
+          },
+          1,
+        )
+        store.nextQuickSlotSetId =
+          Number.isSafeInteger(store.nextQuickSlotSetId) && store.nextQuickSlotSetId >= 1
+            ? Math.max(store.nextQuickSlotSetId, nextIdAfterHydratedSets)
+            : nextIdAfterHydratedSets
         if (!vtgSpeedRatios.includes(store.speedRatio)) {
           store.speedRatio = vtgDefaultSpeedRatio
         }

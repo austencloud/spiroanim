@@ -106,6 +106,7 @@ describe('AppNavigationMenu', () => {
       'Enter Full Screen',
       'Share This',
       'Tips',
+      'Quick Slots',
       'Export Image',
       'Export Video',
       'Tracer: Off',
@@ -156,6 +157,9 @@ describe('AppNavigationMenu', () => {
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Tips')
+
+    await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement?.textContent).toContain('Quick Slots')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Export Image')
@@ -325,6 +329,7 @@ describe('AppNavigationMenu', () => {
     expect(spiroAnimItems.map((item) => item.text())).toEqual([
       'Share This',
       'Tips',
+      'Quick Slots',
       'Export Image',
       'Export Video',
       'Tracer: Off',
@@ -339,6 +344,25 @@ describe('AppNavigationMenu', () => {
     expect(wrapper.get('.share-note').text()).toContain('any portion of this app can be shared')
     expect(wrapper.find('.copy-button').exists()).toBe(false)
 
+    wrapper.unmount()
+  })
+
+  it('opens Quick Slots management directly below Tips', async () => {
+    const { wrapper } = await mountMenu()
+    await wrapper.get('.menu-trigger').trigger('click')
+
+    const spiroAnimItems = wrapper
+      .get('[aria-labelledby="spiroanim-heading"]')
+      .findAll('[role="menuitem"]')
+    const tipsIndex = spiroAnimItems.findIndex((item) => item.text() === 'Tips')
+    expect(spiroAnimItems[tipsIndex + 1]?.text()).toBe('Quick Slots')
+
+    await wrapper.get('.quick-slots-menu-item').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+    expect(wrapper.get('.quick-slot-sets-dialog').attributes()).toHaveProperty('open')
+    expect(wrapper.get('.quick-slot-sets__status').text()).toContain("aren't currently enabled")
     wrapper.unmount()
   })
 
@@ -426,6 +450,7 @@ describe('AppNavigationMenu', () => {
     expect(wrapper.findAll('[role="menuitem"]').map((item) => item.text())).toEqual([
       'Share This',
       'Tips',
+      'Quick Slots',
       'Export Image',
       'Export Video',
       'Tracer: Off',
