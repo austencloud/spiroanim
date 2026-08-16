@@ -130,8 +130,14 @@ const quickSlotHasContent = (slot: number) => typeof quickSlotPaths.value[slot -
 const quickSlotLabel = (slot: number) =>
   `Quick Slot ${slot}, ${quickSlotHasContent(slot) ? 'saved; double-click or press and hold to clear' : 'empty'}`
 
-const quickSlotTooltip = (slot: number) =>
-  `${selectedQuickSlot.value === slot ? 'Clear' : 'Select'} Quick Slot ${slot} (${quickSlotHasContent(slot) ? 'Saved - double-click or hold to clear' : 'Empty'})`
+const quickSlotPathLabel = (slot: number) =>
+  quickSlotPaths.value[slot - 1]?.split(/[?#]/, 1)[0]?.replace(/^\/+/, '')
+
+const quickSlotTooltip = (slot: number) => {
+  const pathLabel = quickSlotPathLabel(slot)
+  const instruction = `${selectedQuickSlot.value === slot ? 'Clear' : 'Select'} Quick Slot ${slot} (${quickSlotHasContent(slot) ? 'Saved - double-click or hold to clear' : 'Empty'})`
+  return pathLabel ? `${instruction}\nLoads: ${pathLabel}` : instruction
+}
 
 const addAndSelectQuickSlot = () => {
   conceptsStore.addQuickSlot()

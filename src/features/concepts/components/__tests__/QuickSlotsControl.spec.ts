@@ -63,6 +63,11 @@ describe('QuickSlotsControl', () => {
     const wrapper = mount(QuickSlotsControl)
     const store = useConceptsStore()
     store.quickSlotPaths[1] = '/play-8stp?r=stored&v=6'
+    await nextTick()
+
+    expect(wrapper.findAllComponents(AppTooltip).map((tooltip) => tooltip.props('text'))).toContain(
+      'Select Quick Slot 2 (Saved - double-click or hold to clear)\nLoads: play-8stp',
+    )
 
     await wrapper.get<HTMLInputElement>('input[value="2"]').setValue()
 

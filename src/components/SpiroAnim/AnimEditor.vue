@@ -21,6 +21,7 @@
         :dim="dTimeline"
         :landscape="false"
         :cols="tCols"
+        @quick-slot-apply="emit('quickSlotApply', $event)"
       />
     </div>
     <PaneSwapButton
@@ -54,6 +55,10 @@ import { useViewDimensions } from '@/composables/useViewDimensions'
 
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useEditorPaneStore } from '@/features/editor/stores/useEditorPaneStore'
+
+const emit = defineEmits<{
+  quickSlotApply: [path: string]
+}>()
 
 const props = defineProps<{
   dim: { width: number; height: number; perc: number }

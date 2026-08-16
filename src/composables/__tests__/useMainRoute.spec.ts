@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { createApp, defineComponent, h } from 'vue'
+import { createApp, defineComponent, h, triggerRef } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -153,7 +153,7 @@ describe('useMainRoute', () => {
     for (const [key, value] of Object.entries(encoded)) {
       if (value !== undefined && value !== null) search.set(key, String(value))
     }
-    const savedPath = `/play-vtg?${search.toString()}`
+    const savedPath = `/play-time?${search.toString()}`
     localStorage.setItem(
       'sa-concepts',
       JSON.stringify({
@@ -163,13 +163,18 @@ describe('useMainRoute', () => {
       }),
     )
 
-    const { animationReady, conceptsStore, playerStore } = await mountRoute('/app')
+    const { animationReady, conceptsStore, paneStore, playerStore, router } =
+      await mountRoute('/app')
     await flushPromises()
 
     expect(animationReady.value).toBe(true)
     expect(useQSMainStore().encodeQS(playerStore.raw().ROOT.value, false)).toEqual(encoded)
     expect(conceptsStore.selectedQuickSlot).toBe(1)
     expect(conceptsStore.quickSlotPaths[0]).toBe(savedPath)
+    expect(router.currentRoute.value.path).toBe('/play-time')
+    expect(paneStore.parents.player).toBe('left')
+    expect(paneStore.parents.timeline).toBe('right')
+    expect(paneStore.parents.editor).toBe('hidden')
   })
 
   it('reconciles a populated route with its matching Quick Slot', async () => {
@@ -214,6 +219,61 @@ describe('useMainRoute', () => {
     expect(router.currentRoute.value.path).toBe('/play-8stp')
     expect(conceptsStore.quickSlotPaths[2]).toBeNull()
     expect(conceptsStore.selectedQuickSlot).toBe(3)
+  })
+
+  it.each([
+    ['/editor', '/timeline'],
+    ['/play-edit', '/play-time'],
+    ['/edit-play', '/time-play'],
+    ['/play-vtg', '/play-vtg'],
+    ['/vtg-play', '/vtg-play'],
+    ['/edit-time', '/edit-time'],
+  ])(
+    'stores Quick Slot animation data from %s at the appropriate route %s',
+    async (source, saved) => {
+      const { conceptsStore, playerStore } = await mountRoute(source, createLoadedAnimation())
+      conceptsStore.restoreQuickSlots()
+      conceptsStore.selectedQuickSlot = 1
+
+      const runtime = playerStore.raw()
+      runtime.ROOT.value = { ...runtime.ROOT.value, bpm: 61 }
+      await flushPromises()
+
+      expect(conceptsStore.quickSlotPaths[0]).toMatch(
+        new RegExp(`^${saved.replace('/', '\\/')}\\?r=`),
+      )
+    },
+  )
+
+  it('does not rewrite a selected Quick Slot when only the pane route changes', async () => {
+    const animation = createLoadedAnimation()
+    const { conceptsStore, playerStore, router } = await mountRoute('/play-time', animation)
+    const query = useQSMainStore().encodeQS(animation, false)
+    const savedPath = router.resolve({ path: '/play-time', query }).fullPath
+    conceptsStore.restoreQuickSlots()
+    conceptsStore.selectedQuickSlot = 1
+    conceptsStore.quickSlotPaths[0] = savedPath
+
+    await router.replace({ path: '/play-edit', query })
+    await flushPromises()
+    triggerRef(playerStore.raw().ROOT)
+    await flushPromises()
+
+    expect(conceptsStore.quickSlotPaths[0]).toBe(savedPath)
+  })
+
+  it('does not populate a selected empty Quick Slot from a pane-only animation notification', async () => {
+    const animation = createLoadedAnimation()
+    const { conceptsStore, playerStore, router } = await mountRoute('/play-time', animation)
+    conceptsStore.restoreQuickSlots()
+    conceptsStore.selectedQuickSlot = 1
+
+    await router.replace({ path: '/play-edit', query: useQSMainStore().encodeQS(animation, false) })
+    await flushPromises()
+    triggerRef(playerStore.raw().ROOT)
+    await flushPromises()
+
+    expect(conceptsStore.quickSlotPaths[0]).toBeNull()
   })
 
   it('does not force play-vtg when animation data is cleared after startup', async () => {

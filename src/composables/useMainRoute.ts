@@ -92,7 +92,25 @@ export function useMainRoute() {
       : undefined
   const animationReady = ref(route.query.r === undefined && startupQuickSlot === undefined)
 
-  const page = route.path.substring(1)
+  const createQuickSlotPath = (sourcePath: string): string => {
+    const pageParts = sourcePath.substring(1).split('-')
+    if (pageParts.includes('time')) return sourcePath
+
+    const editorIndex = pageParts.indexOf('edit')
+    if (editorIndex !== -1) {
+      pageParts[editorIndex] = 'time'
+      return `/${pageParts.join('-')}`
+    }
+
+    return sourcePath === '/editor' ? '/timeline' : sourcePath
+  }
+
+  const startupQuickSlotPath = startupQuickSlot?.path.split(/[?#]/, 1)[0]
+  const requestedPath =
+    startupQuickSlotPath && (route.path === '/' || route.path === '/app')
+      ? startupQuickSlotPath
+      : route.path
+  const page = requestedPath.substring(1)
 
   // Just in case something funky happened in the local storage
   if (!findKeyByValue(parents.value, 'left')) rotatePane('left')
@@ -148,7 +166,7 @@ export function useMainRoute() {
     }
 
   // Snapshot route state to avoid race conditions from simultaneous watcher updates
-  let path = route.path
+  let path = requestedPath
   let query = route.query
 
   // These are unnecessary, but just in case they're updated elsewhere
@@ -173,6 +191,16 @@ export function useMainRoute() {
         return selectedConcept.value
     }
   }
+
+  const createQuickSlotAnimationPath = (animation: RootDataFinal): string =>
+    router.resolve({
+      path: createQuickSlotPath(path),
+      query: encodeQS(animation, false),
+    }).fullPath
+
+  const animationQueryFromPath = (animationPath: string | null | undefined) =>
+    animationPath?.split('?', 2)[1]?.split('#', 1)[0]
+  let lastObservedAnimationQuery = animationQueryFromPath(createQuickSlotAnimationPath(ROOT.value))
 
   const updatePath = () => {
     let newPath: string | null = null
@@ -243,13 +271,28 @@ export function useMainRoute() {
 
   // Update query string when data changes
   watch(ROOT, (val) => {
-    if (!qsPause.value)
+    if (!qsPause.value) {
       router.replace({
         path: /*route.*/ path,
         query: (query = encodeQS(val)),
         hash: route.hash,
         force: true,
       })
+      const quickSlotAnimationPath = createQuickSlotAnimationPath(val)
+      const quickSlotAnimationQuery = animationQueryFromPath(quickSlotAnimationPath)
+      const animationChanged = quickSlotAnimationQuery !== lastObservedAnimationQuery
+      lastObservedAnimationQuery = quickSlotAnimationQuery
+      const currentQuickSlotPath =
+        selectedQuickSlot.value === null
+          ? undefined
+          : quickSlotPaths.value[selectedQuickSlot.value - 1]
+      if (
+        animationChanged &&
+        animationQueryFromPath(currentQuickSlotPath) !== quickSlotAnimationQuery
+      ) {
+        conceptsStore.saveCurrentQuickSlot(quickSlotAnimationPath)
+      }
+    }
   })
 
   /*
@@ -305,14 +348,7 @@ export function useMainRoute() {
       })
   }
 
-  const createShareableAnimationPath = (animation: RootDataFinal): string =>
-    router.resolve({
-      path,
-      query: encodeQS(animation, false),
-    }).fullPath
-
   return {
     animationReady: readonly(animationReady),
-    createShareableAnimationPath,
   }
 }

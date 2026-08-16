@@ -38,6 +38,7 @@
         :dim="dEditor"
         :landscape="isLandscape"
         :vtl="viewVisible.timeline"
+        @quick-slot-apply="applyQuickSlotFromView($event, 'editor')"
       />
       <Timeline
         v-if="viewVisible.timeline"
@@ -47,6 +48,7 @@
         data-role="timeline-view"
         :dim="dTimeline"
         :landscape="isLandscape"
+        @quick-slot-apply="applyQuickSlotFromView($event, 'timeline')"
       />
       <ConceptsPane
         v-if="viewVisible.concepts"
@@ -56,7 +58,7 @@
         data-type="concepts"
         data-role="concepts-view"
         @pattern-select="applyConceptPattern"
-        @quick-slot-apply="applyQuickSlot"
+        @quick-slot-apply="applyQuickSlotFromView($event, 'concepts')"
       />
     </div>
     <AppNavigationMenu />
@@ -103,7 +105,7 @@ import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { mdiFilterOff } from '@mdi/js'
 
 useScrollSelectScale()
-const { animationReady, createShareableAnimationPath } = useMainRoute() // Handles updates to route path and query
+const { animationReady } = useMainRoute() // Handles updates to route path and query
 useSpiroAnimKeyboard()
 
 const { viewWidth, viewHeight, viewLeft, viewTop, isLandscape } = storeToRefs(useViewportStore())
@@ -187,11 +189,10 @@ const applyConceptPattern = (selection: ConceptPatternSelection) => {
   if (animation) {
     ROOT.value = animation
     playerStore.cameraReset = Symbol()
-    conceptsStore.saveCurrentQuickSlot(createShareableAnimationPath(animation))
   }
 }
 
-const applyQuickSlot = async (path: string) => {
+const applyQuickSlot = async (path: string): Promise<boolean> => {
   const conceptRoute = findConceptForPath(path)
   const query = Object.fromEntries(new URLSearchParams(path.split('?', 2)[1] ?? ''))
   try {
@@ -202,12 +203,63 @@ const applyQuickSlot = async (path: string) => {
     }
     ROOT.value = animation
     playerStore.cameraReset = Symbol()
+    return true
   } catch (error: unknown) {
     if (error instanceof UnsupportedSpiroAnimQSVersionError) {
       queryVersionStore.reportUnsupportedVersion(error.version)
     }
     console.warn('Failed to apply animation data from the Quick Slot.', error)
+    return false
   }
+}
+
+type QuickSlotHostView = 'editor' | 'timeline' | 'concepts'
+type QuickSlotTargetView = 'player' | QuickSlotHostView
+
+const quickSlotViewByRoutePart: Readonly<Record<string, QuickSlotTargetView>> = {
+  play: 'player',
+  player: 'player',
+  edit: 'editor',
+  editor: 'editor',
+  time: 'timeline',
+  timeline: 'timeline',
+  cnc: 'concepts',
+  concepts: 'concepts',
+  vtg: 'concepts',
+  qtr: 'concepts',
+  '8stp': 'concepts',
+  qst: 'concepts',
+  tka: 'concepts',
+  'vulkan-tech-gospel': 'concepts',
+  quarterspacing: 'concepts',
+  'eight-step': 'concepts',
+  'quarter-space-tech': 'concepts',
+  'the-kinetic-alphabet': 'concepts',
+}
+
+const quickSlotTargetViews = (path: string): QuickSlotTargetView[] => {
+  const page = path.split(/[?#]/, 1)[0]?.replace(/^\//, '')
+  if (!page) return []
+  const fullPageView = quickSlotViewByRoutePart[page]
+  if (fullPageView) return [fullPageView]
+  return page
+    .split('-')
+    .map((part) => quickSlotViewByRoutePart[part])
+    .filter((view): view is QuickSlotTargetView => view !== undefined)
+}
+
+const applyQuickSlotFromView = async (path: string, sourceView: QuickSlotHostView) => {
+  if (!(await applyQuickSlot(path))) return
+
+  const sourcePane = parents.value[sourceView]
+  if (sourcePane === 'hidden') return
+
+  const otherPane = sourcePane === 'left' ? 'right' : 'left'
+  const otherView = Object.entries(parents.value).find(([, pane]) => pane === otherPane)?.[0]
+  const targetView =
+    quickSlotTargetViews(path).find((view) => view !== otherView) ?? quickSlotTargetViews(path)[0]
+  if (sourceView === 'editor' && targetView === 'timeline') return
+  if (targetView && targetView !== sourceView) paneStore.setViewInPane(targetView, sourcePane)
 }
 
 const parentDim = computed(() => ({ width: viewWidth.value, height: viewHeight.value }))

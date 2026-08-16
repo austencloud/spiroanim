@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { defineComponent, h } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSplitterStore } from '@/stores/useSplitterStore'
@@ -367,6 +368,145 @@ describe('SpiroAnim view', () => {
     expect(conceptsStore.selectedConcept).toBe('8stp')
     expect(router.currentRoute.value.path).toBe('/8stp-play')
 
+    wrapper.unmount()
+  })
+
+  it('replaces the Concepts pane with the Timeline targeted by a Quick Slot', async () => {
+    const pinia = createPinia().use(piniaPluginPersistedstate)
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    })
+    await router.push('/play-vtg')
+    await router.isReady()
+
+    const playerRoot = usePlayerStore('main').raw().ROOT
+    const animation = createVtgAnimation(playerRoot.value, {
+      reference: '1-1',
+      speedRatio: '1:3',
+    })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    playerRoot.value = animation
+    const conceptsStore = useConceptsStore()
+    conceptsStore.restoreQuickSlots()
+    conceptsStore.quickSlotPaths[0] = router.resolve({
+      path: '/play-time',
+      query: useQSMainStore().encodeQS(animation, false),
+    }).fullPath
+
+    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+    const wrapper = mount(SpiroAnim, {
+      global: {
+        plugins: [pinia, router],
+        stubs: { Player: { template: '<div />' }, Timeline: { template: '<div />' } },
+      },
+    })
+    await flushPromises()
+    await wrapper.get<HTMLInputElement>('input[value="1"]').setValue()
+    await flushPromises()
+
+    const paneStore = useMainPaneStore()
+    expect(paneStore.parents.timeline).toBe('right')
+    expect(paneStore.parents.concepts).toBe('hidden')
+    expect(router.currentRoute.value.path).toBe('/play-time')
+    wrapper.unmount()
+  })
+
+  it('replaces the Timeline pane with Concepts when targeted by a Quick Slot', async () => {
+    const pinia = createPinia().use(piniaPluginPersistedstate)
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    })
+    await router.push('/play-time')
+    await router.isReady()
+
+    const playerRoot = usePlayerStore('main').raw().ROOT
+    const animation = createVtgAnimation(playerRoot.value, {
+      reference: '1-1',
+      speedRatio: '1:3',
+    })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    playerRoot.value = animation
+    const targetPath = router.resolve({
+      path: '/play-vtg',
+      query: useQSMainStore().encodeQS(animation, false),
+    }).fullPath
+    await router.replace({
+      path: '/play-time',
+      query: useQSMainStore().encodeQS(animation, false),
+    })
+    const TimelineStub = defineComponent({
+      emits: { quickSlotApply: (_path: string) => true },
+      setup(_, { emit }) {
+        return () =>
+          h('button', {
+            'data-role': 'apply-timeline-quick-slot',
+            onClick: () => emit('quickSlotApply', targetPath),
+          })
+      },
+    })
+
+    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+    const wrapper = mount(SpiroAnim, {
+      global: {
+        plugins: [pinia, router],
+        stubs: { Player: { template: '<div />' }, Timeline: TimelineStub },
+      },
+    })
+    await flushPromises()
+    await wrapper.get('[data-role="timeline-view"]').trigger('click')
+    await flushPromises()
+
+    const paneStore = useMainPaneStore()
+    expect(paneStore.parents.concepts).toBe('right')
+    expect(paneStore.parents.timeline).toBe('hidden')
+    expect(router.currentRoute.value.path).toBe('/play-vtg')
+    wrapper.unmount()
+  })
+
+  it('keeps the Editor pane when its embedded Timeline loads a Timeline target', async () => {
+    const pinia = createPinia().use(piniaPluginPersistedstate)
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    })
+    const playerRoot = usePlayerStore('main').raw().ROOT
+    const animation = createVtgAnimation(playerRoot.value, {
+      reference: '1-1',
+      speedRatio: '1:3',
+    })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    playerRoot.value = animation
+    const query = useQSMainStore().encodeQS(animation, false)
+    await router.push({ path: '/play-edit', query })
+    await router.isReady()
+    const targetPath = router.resolve({ path: '/play-time', query }).fullPath
+    const EditorStub = defineComponent({
+      emits: { quickSlotApply: (_path: string) => true },
+      setup(_, { emit }) {
+        return () => h('button', { onClick: () => emit('quickSlotApply', targetPath) })
+      },
+    })
+
+    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+    const wrapper = mount(SpiroAnim, {
+      global: {
+        plugins: [pinia, router],
+        stubs: { Player: { template: '<div />' }, Editor: EditorStub },
+      },
+    })
+    await flushPromises()
+    await wrapper.get('[data-role="editor-view"]').trigger('click')
+    await flushPromises()
+
+    const paneStore = useMainPaneStore()
+    expect(paneStore.parents.editor).toBe('right')
+    expect(paneStore.parents.timeline).toBe('hidden')
+    expect(router.currentRoute.value.path).toBe('/play-edit')
     wrapper.unmount()
   })
 

@@ -187,6 +187,7 @@ defineExpose({ hide })
   font-size: 0.9375rem;
   line-height: 1.45;
   overflow-wrap: anywhere;
+  white-space: pre-line;
   pointer-events: none;
   background: var(--color-surface);
   border: 1px solid var(--color-border);

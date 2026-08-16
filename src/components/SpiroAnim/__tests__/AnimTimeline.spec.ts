@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import AnimTimeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
@@ -115,6 +116,58 @@ describe('AnimTimeline', () => {
     delete (Element.prototype as { scrollIntoView?: () => void }).scrollIntoView
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+  })
+
+  it('shows enabled Quick Slots at the top and emits stored animation data', async () => {
+    const conceptsStore = useConceptsStore()
+    conceptsStore.restoreQuickSlots()
+    conceptsStore.quickSlotPaths[1] = '/play-time?r=stored&v=6'
+
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: 'timeline-quick-slots',
+        dim: { width: 600, height: 400, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    const quickSlots = wrapper.get('[data-role="quick-slots"]')
+    expect(quickSlots.classes()).toContain('timeline-quick-slots')
+    expect(quickSlots.element.parentElement?.classList.contains('scrollbar')).toBe(true)
+    expect(wrapper.get('.timeline-scroll-content').classes()).toContain(
+      'timeline-scroll-content--with-quick-slots',
+    )
+    await quickSlots.get<HTMLInputElement>('input[value="2"]').setValue()
+
+    expect(wrapper.emitted('quickSlotApply')).toEqual([['/play-time?r=stored&v=6']])
+    expect(quickSlots.classes()).toContain('timeline-quick-slots--floating')
+  })
+
+  it('only floats Quick Slots for a selected empty or Timeline-targeted slot', async () => {
+    const conceptsStore = useConceptsStore()
+    conceptsStore.restoreQuickSlots()
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: 'timeline-quick-slot-position',
+        dim: { width: 600, height: 400, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    const quickSlots = wrapper.get('[data-role="quick-slots"]')
+    expect(quickSlots.classes()).not.toContain('timeline-quick-slots--floating')
+
+    conceptsStore.selectedQuickSlot = 1
+    await nextTick()
+    expect(quickSlots.classes()).toContain('timeline-quick-slots--floating')
+
+    conceptsStore.quickSlotPaths[0] = '/play-vtg?r=concept&v=6'
+    await nextTick()
+    expect(quickSlots.classes()).not.toContain('timeline-quick-slots--floating')
+
+    conceptsStore.quickSlotPaths[0] = '/time-play?r=timeline&v=6'
+    await nextTick()
+    expect(quickSlots.classes()).toContain('timeline-quick-slots--floating')
   })
 
   it('renders unique animation times and selects a range on thumbnail double click', async () => {

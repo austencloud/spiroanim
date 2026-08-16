@@ -1,50 +1,61 @@
 <template>
   <div class="timeline" :style="timelineStyle">
     <div ref="eScroll" class="scrollbar" :style="scrollStyle">
-      <div :style="gridStyle">
-        <div
-          v-for="(time, index) in ETIMES"
-          ref="eCells"
-          :key="`u${time}`"
-          :style="thumbStyle"
-          class="timeline-cell"
-          :class="{
-            'timeline-cell--selected': isThumbnailSelected(index),
-            'timeline-cell--placeholder': isPlaceholder(index),
-          }"
-        >
-          <span
-            v-for="circle in circles[index]"
-            :key="`u${time}-p${circle.prop}`"
-            class="circle"
-            :class="{ 'circle--prop-visible': isPropMarkerVisible(circle.prop) }"
-            :style="circleCSS(circle.prop, circle.color)"
-          />
-          <img
-            ref="eThumbs"
-            src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
-            :data-index="index"
-            :alt="`Animation thumbnail ${index + 1}`"
-            class="thumb"
+      <QuickSlotsControl
+        v-if="quickSlotCount > 0"
+        class="timeline-quick-slots"
+        :class="{ 'timeline-quick-slots--floating': quickSlotsFloat }"
+        @apply="emit('quickSlotApply', $event)"
+      />
+      <div
+        class="timeline-scroll-content"
+        :class="{ 'timeline-scroll-content--with-quick-slots': quickSlotCount > 0 }"
+      >
+        <div :style="gridStyle">
+          <div
+            v-for="(time, index) in ETIMES"
+            ref="eCells"
+            :key="`u${time}`"
             :style="thumbStyle"
-            role="button"
-            tabindex="0"
-            @click="thumbClick(index, $event)"
-            @keydown.enter="thumbClick(index, $event)"
-            @keydown.space.prevent="thumbClick(index, $event)"
-          />
-          <AppTooltip class="thumbStart" text="Index: Beat">
-            <template #activator="{ props: tooltipProps }">
-              <span v-bind="tooltipProps"
-                ><span class="thumbIndex">{{ index + 1 }}: </span
-                >{{ msToBeat(time, ROOT.bpm) }}</span
-              >
-            </template>
-          </AppTooltip>
+            class="timeline-cell"
+            :class="{
+              'timeline-cell--selected': isThumbnailSelected(index),
+              'timeline-cell--placeholder': isPlaceholder(index),
+            }"
+          >
+            <span
+              v-for="circle in circles[index]"
+              :key="`u${time}-p${circle.prop}`"
+              class="circle"
+              :class="{ 'circle--prop-visible': isPropMarkerVisible(circle.prop) }"
+              :style="circleCSS(circle.prop, circle.color)"
+            />
+            <img
+              ref="eThumbs"
+              src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+              :data-index="index"
+              :alt="`Animation thumbnail ${index + 1}`"
+              class="thumb"
+              :style="thumbStyle"
+              role="button"
+              tabindex="0"
+              @click="thumbClick(index, $event)"
+              @keydown.enter="thumbClick(index, $event)"
+              @keydown.space.prevent="thumbClick(index, $event)"
+            />
+            <AppTooltip class="thumbStart" text="Index: Beat">
+              <template #activator="{ props: tooltipProps }">
+                <span v-bind="tooltipProps"
+                  ><span class="thumbIndex">{{ index + 1 }}: </span
+                  >{{ msToBeat(time, ROOT.bpm) }}</span
+                >
+              </template>
+            </AppTooltip>
+          </div>
         </div>
+        <div :style="activeStyle"></div>
+        <div class="cursor" :style="cursorStyle"></div>
       </div>
-      <div :style="activeStyle"></div>
-      <div class="cursor" :style="cursorStyle"></div>
     </div>
     <div class="timeline-value-control" role="group" aria-label="Timeline Value">
       <AppTooltip text="Decrease Timeline Columns">
@@ -83,6 +94,7 @@
 
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import QuickSlotsControl from '@/features/concepts/components/QuickSlotsControl.vue'
 import { usePingPongValue, easeInOut } from '@/composables/usePingPongValue'
 import { throttleTrailing, nextFrame, toColor } from '@/utils/UtilFunc'
 import { COLSET } from '@/domain/animation/AnimStruct'
@@ -91,6 +103,7 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useViewportStore } from '@/stores/useViewportStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import {
   MAX_TIMELINE_COLUMN_OFFSET,
   MIN_TIMELINE_COLUMN_OFFSET,
@@ -99,6 +112,10 @@ import {
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 import { mdiMinus, mdiPlus } from '@mdi/js'
+
+const emit = defineEmits<{
+  quickSlotApply: [path: string]
+}>()
 
 const props = withDefaults(
   defineProps<{
@@ -115,6 +132,16 @@ const props = withDefaults(
 )
 
 const { parents: mainViews } = storeToRefs(useMainPaneStore())
+const { quickSlotCount, quickSlotPaths, selectedQuickSlot } = storeToRefs(useConceptsStore())
+const quickSlotsFloat = computed(() => {
+  if (selectedQuickSlot.value === null) return false
+
+  const selectedPath = quickSlotPaths.value[selectedQuickSlot.value - 1]
+  if (!selectedPath) return true
+
+  const page = selectedPath.split(/[?#]/, 1)[0]?.replace(/^\//, '')
+  return page === 'timeline' || page?.split('-').includes('time') === true
+})
 const { pSELECTED, pFRAMES, showFullTimeline } = storeToRefs(usePropertiesStore(props.store))
 const timelineSettingsStore = useTimelineSettingsStore()
 const { decreaseColumnOffset, increaseColumnOffset, adjustedColumnCount } = timelineSettingsStore
@@ -738,6 +765,21 @@ const cursorStyle = computed<CSSProperties>(() => ({
 .timeline {
   position: relative;
   overflow: hidden;
+}
+.timeline-quick-slots {
+  max-inline-size: calc(100% - 2 * var(--space-2));
+  margin-block: var(--space-1);
+}
+.timeline-quick-slots--floating {
+  position: sticky;
+  top: 0;
+  z-index: 1010;
+}
+.timeline-scroll-content {
+  position: relative;
+}
+.timeline-scroll-content--with-quick-slots {
+  border-block-start: 1px solid var(--color-workspace-separator);
 }
 .timeline-value-control {
   position: absolute;
