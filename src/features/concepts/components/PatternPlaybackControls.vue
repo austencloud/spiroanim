@@ -140,6 +140,10 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
   border-color: var(--color-pattern-mode-active-border);
 }
 
+.pattern-playback-controls__orientation select {
+  block-size: calc(1.2em + 2 * var(--space-1) + 2px);
+}
+
 .pattern-playback-controls__beats input:focus-visible + span,
 .pattern-playback-controls__qtr input:focus-visible + span,
 .pattern-playback-controls__orientation select:focus-visible {

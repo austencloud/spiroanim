@@ -283,23 +283,34 @@ describe('VtgPane', () => {
   )
 
   it.each([
-    ['1:1', ['3', '4', '1', '2', '5', '6']],
-    ['1:3', ['1', '2', '3', '4', '5', '6']],
-    ['1:5', ['3', '4', '1', '2', '5', '6']],
-  ] as const)('maps the %s top headers by physical column', async (speedRatio, expectedNumbers) => {
-    const wrapper = mount(VtgPane)
-    await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+    ['1:1', 'TOG IN rule 1'],
+    ['1:3', 'TOG OUT rule 1'],
+    ['1:5', 'TOG IN rule 1'],
+  ] as const)(
+    'maps the %s top headers by physical column',
+    async (speedRatio, firstHeaderLabel) => {
+      const wrapper = mount(VtgPane)
+      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
 
-    const headers = wrapper.findAll('[data-role="vtg-column-headers"] [data-role="vtg-rule-card"]')
-    expect(headers.map((header) => header.get('.vtg-rule-card__number').text())).toEqual(
-      expectedNumbers,
-    )
+      const headers = wrapper.findAll(
+        '[data-role="vtg-column-headers"] [data-role="vtg-rule-card"]',
+      )
+      expect(headers.map((header) => header.get('.vtg-rule-card__number').text())).toEqual([
+        '1',
+        '2',
+        '3',
+        '4',
+        '5',
+        '6',
+      ])
+      expect(headers[0]?.attributes('aria-label')).toBe(firstHeaderLabel)
 
-    await wrapper.get('[data-cell-reference="6-6"]').trigger('click')
-    await headers[0]?.trigger('click')
-    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-6')
-    expect(headers[0]?.attributes('aria-pressed')).toBe('true')
-  })
+      await wrapper.get('[data-cell-reference="6-6"]').trigger('click')
+      await headers[0]?.trigger('click')
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-6')
+      expect(headers[0]?.attributes('aria-pressed')).toBe('true')
+    },
+  )
 
   it('maps the extracted header descriptions to both sets of rule buttons', async () => {
     vi.useFakeTimers()
@@ -1550,6 +1561,23 @@ describe('VtgPane', () => {
     expect(columnRule().classes()).toContain('vtg-rule-card--vertical')
     expect(sideRule().classes()).toContain('vtg-rule-card--horizontal')
   })
+
+  it.each(['1:2', '1:4'] as const)(
+    'adds the %s rotation 180-degree left-header flip to the top 180-degree control',
+    async (speedRatio) => {
+      const wrapper = mount(VtgPane)
+      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').setValue('180')
+
+      const sideRule = wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
+      expect(sideRule.classes()).toContain('vtg-rule-card--horizontal')
+      expect(sideRule.classes()).toContain('vtg-rule-card--reversed')
+
+      await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
+
+      expect(sideRule.classes()).not.toContain('vtg-rule-card--reversed')
+    },
+  )
 
   it('uses the -90-degree option to flip rotated left header elements vertically', async () => {
     const wrapper = mount(VtgPane)

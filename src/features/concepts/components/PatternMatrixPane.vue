@@ -75,7 +75,7 @@
           :display-labels="
             hideColumnHeaderDetails ? qtrColumnRuleLabels[header.rule.number] : undefined
           "
-          :number="header.rule.number"
+          :number="header.column"
           :diagram="header.rule.diagram"
           :description="header.rule.description"
           :orientation="columnHeaderOrientation"
@@ -369,7 +369,9 @@ const sideHeaderOrientation = computed(() =>
 )
 const sideHeaderReversed = computed(() => {
   if (usesQuarterTurnHeaderLayout.value) return orientation.value === -90
-  return reversePlane.value
+  const hasHalfTurnRotation =
+    supportsVtgPatternOrientation(speedRatio.value) && orientation.value === 180
+  return reversePlane.value !== hasHalfTurnRotation
 })
 const activeQtrMode = computed<1 | false>(() => (isQtr.value ? 1 : false))
 const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
