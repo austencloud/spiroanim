@@ -174,9 +174,35 @@ const getMatchingOrientations = (
   )
 }
 
-export const findQtrPatternMatches = (
+const findCachedCandidates = (
+  speedRatio: VtgSpeedRatio,
+  rotationFilter: VtgPatternRotationFilter | undefined,
+  signature: string,
+  cacheKind: keyof QtrCandidateCache,
+  stopAtFirstMatchingTier: boolean,
+): readonly QtrCandidateMatch[] => {
+  const orientations = getMatchingOrientations(speedRatio, rotationFilter)
+  const orientationTiers = [
+    orientations.filter((orientation) => orientation === 0),
+    orientations.filter((orientation) => orientation !== 0),
+  ]
+
+  const allMatches: QtrCandidateMatch[] = []
+  for (const tier of orientationTiers) {
+    const matches = tier.flatMap(
+      (orientation) => getCandidateCache(speedRatio, orientation)[cacheKind].get(signature) ?? [],
+    )
+    if (matches.length > 0 && stopAtFirstMatchingTier) return matches
+    allMatches.push(...matches)
+  }
+
+  return allMatches
+}
+
+const findQtrPatternMatchesInternal = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
+  stopAtFirstMatchingOrientationTier = false,
 ): readonly QtrPatternMatch[] => {
   const alternating = analyzeAlternatingPatternPlayback(animation)
   const matchingAnimation = alternating?.base ?? animation
@@ -190,14 +216,23 @@ export const findQtrPatternMatches = (
   const signature = createVtgAnimationSignature(matchingAnimation)
   if (!signature) return []
 
-  const caches = getMatchingOrientations(speedRatio, rotationFilter).map((orientation) =>
-    getCandidateCache(speedRatio, orientation),
+  const exactMatches = findCachedCandidates(
+    speedRatio,
+    rotationFilter,
+    signature,
+    'exact',
+    stopAtFirstMatchingOrientationTier,
   )
-  const exactMatches = caches.flatMap(({ exact }) => exact.get(signature) ?? [])
   const candidates =
     exactMatches.length > 0 || alternating !== undefined
       ? exactMatches
-      : caches.flatMap(({ transitionTurns }) => transitionTurns.get(signature) ?? [])
+      : findCachedCandidates(
+          speedRatio,
+          rotationFilter,
+          signature,
+          'transitionTurns',
+          stopAtFirstMatchingOrientationTier,
+        )
 
   return candidates.map((candidate) => ({
     ...candidate,
@@ -213,6 +248,11 @@ export const findQtrPatternMatches = (
     scale,
   }))
 }
+
+export const findQtrPatternMatches = (
+  animation: RootDataFinal,
+  rotationFilter?: VtgPatternRotationFilter,
+): readonly QtrPatternMatch[] => findQtrPatternMatchesInternal(animation, rotationFilter)
 
 const startingBeat = (match: QtrPatternMatch) => match.beat ?? vtgDefaultBeat
 
@@ -239,7 +279,7 @@ export const findQtrPatternMatch = (
   preferences?: QtrPatternMatchPreferences,
   rotationFilter?: VtgPatternRotationFilter,
 ): QtrPatternMatch | undefined =>
-  [...preferUnrotatedMatches(findQtrPatternMatches(animation, rotationFilter))].sort(
+  [...preferUnrotatedMatches(findQtrPatternMatchesInternal(animation, rotationFilter, true))].sort(
     (first, second) => {
       if (preferences) {
         const preferenceDifference =

@@ -11,6 +11,7 @@ import type {
 } from '@/features/vtg/types'
 import { getVtgPatternOrientations, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
 import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
+import { getUniqueVtgPatternOrientations } from '@/features/vtg/math/getUniqueVtgPatternOrientations'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
@@ -37,7 +38,10 @@ describe('VTG animation matching', () => {
   it.each(['1:2', '1:4'] as const)(
     'recognizes every nonzero initial arc rotation after a beat shift at %s',
     (speedRatio) => {
-      for (const orientation of getVtgPatternOrientations(speedRatio).filter(
+      for (const orientation of getUniqueVtgPatternOrientations({
+        reference: '5-1',
+        speedRatio,
+      }).filter(
         (option) => option !== 0,
       )) {
         const selection = {
@@ -47,7 +51,14 @@ describe('VTG animation matching', () => {
           beat: 3,
         } as const satisfies VtgPatternSelection
 
-        expect(findVtgPatternMatch(createAnimation(selection))).toMatchObject(selection)
+        expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual({
+          ...selection,
+          isAnti: false,
+          swapProps: false,
+          reversePlane: false,
+          bpm: 40,
+          scale: 0.8,
+        })
       }
     },
   )
@@ -289,7 +300,7 @@ describe('VTG animation matching', () => {
     expect(mismatches).toEqual([])
   })
 
-  it('recognizes a pattern regardless of non-pattern animation settings', () => {
+  it('recognizes a pattern regardless of supported non-pattern animation settings', () => {
     const animation = createAnimation({
       reference: '3-4',
       speedRatio: '1:5',
@@ -297,7 +308,6 @@ describe('VTG animation matching', () => {
 
     animation.bpm = 240
     animation.speed = 2
-    animation.type = 1
     animation.turns = 45
     animation.depth = 3
     animation.prop = 1
@@ -328,8 +338,6 @@ describe('VTG animation matching', () => {
       for (const frame of prop.anim) {
         frame.beats = 2
         frame.depth = 3
-        frame.type = 1
-        frame.adjust = 15
         frame.move = [1, 2, 3]
       }
     }
@@ -343,6 +351,32 @@ describe('VTG animation matching', () => {
       bpm: 120,
       scale: 2.5,
     })
+  })
+
+  it.each([
+    [
+      'root Type',
+      (animation: ReturnType<typeof createAnimation>): void => {
+        animation.type = 1
+      },
+    ],
+    [
+      'frame Type',
+      (animation: ReturnType<typeof createAnimation>): void => {
+        animation.props[0]!.anim[0]!.type = 1
+      },
+    ],
+    [
+      'frame Adjust',
+      (animation: ReturnType<typeof createAnimation>): void => {
+        animation.props[0]!.anim[0]!.adjust = 15
+      },
+    ],
+  ] as const)('rejects a pattern when %s is authored', (_label, edit) => {
+    const animation = createAnimation({ reference: '3-4', speedRatio: '1:5' })
+    edit(animation)
+
+    expect(findVtgPatternMatch(animation)).toBeUndefined()
   })
 
   it('recognizes query-normalized data and equivalent -180 degree planes', () => {

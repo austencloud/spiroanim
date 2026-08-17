@@ -10,17 +10,15 @@ import type {
 } from '@/features/vtg/types'
 import { getVtgPatternOrientations, vtgBeats } from '@/features/vtg/types'
 
-const getUniqueOrientationsForTransforms = (
+const getUniqueOrientationsForBeat = (
   selection: VtgPatternSelection | QtrPatternSelection,
+  orientations: ReadonlySet<VtgPatternOrientation>,
 ): readonly VtgPatternOrientation[] => {
   const signatures = new Set<string>()
   const available: VtgPatternOrientation[] = []
-  const preferences = {
-    swapProps: selection.swapProps === true,
-    reversePlane: selection.reversePlane === true,
-  }
+  const preferences = { swapProps: false, reversePlane: false }
 
-  for (const orientation of getVtgPatternOrientations(selection.speedRatio)) {
+  for (const orientation of orientations) {
     const animation =
       'quarters' in selection
         ? createDefaultQtrAnimation({
@@ -58,10 +56,11 @@ const getUniqueOrientationsForTransforms = (
 /**
  * Retains rotations that create a distinct animation which cannot already be represented by an
  * unrotated VTG or QTR selection. Rotation describes the pattern family rather than one starting
- * phase, so an orientation is retained only when it remains distinct across all four starting
- * beats. Swap and 180 are final transforms, so availability is the union across their four
- * combinations. The result therefore cannot change when Beat, Swap, or 180 is toggled. Matcher
- * indexes are separated by orientation, so these checks initialize only the zero-degree index.
+ * phase, so an orientation is retained only when it remains distinct across all eight starting
+ * frames. Swap and 180 are reversible final transforms applied equally to the animation and the
+ * catalog, so they cannot change whether an unrotated representation exists. The result therefore
+ * cannot change when Beat, Swap, or 180 is toggled. Matcher indexes are separated by orientation,
+ * so these checks initialize only the zero-degree index.
  */
 export const getUniqueVtgPatternOrientations = (
   selection: VtgPatternSelection | QtrPatternSelection,
@@ -75,22 +74,15 @@ export const getUniqueVtgPatternOrientations = (
   const available = new Set<VtgPatternOrientation>(getVtgPatternOrientations(selection.speedRatio))
 
   for (const beat of vtgBeats) {
-    const availableForBeat = new Set<VtgPatternOrientation>([0])
-
-    for (const swapProps of [false, true]) {
-      for (const reversePlane of [false, true]) {
-        getUniqueOrientationsForTransforms({
-          ...baseSelection,
-          beat,
-          swapProps,
-          reversePlane,
-        }).forEach((orientation) => availableForBeat.add(orientation))
-      }
-    }
+    const availableForBeat = new Set<VtgPatternOrientation>(
+      getUniqueOrientationsForBeat({ ...baseSelection, beat }, available),
+    )
 
     for (const orientation of available) {
       if (!availableForBeat.has(orientation)) available.delete(orientation)
     }
+
+    if (available.size === 1) break
   }
 
   return getVtgPatternOrientations(selection.speedRatio).filter((orientation) =>

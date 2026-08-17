@@ -171,10 +171,36 @@ const getMatchingOrientations = (
   )
 }
 
+const findCachedCandidates = (
+  speedRatio: VtgSpeedRatio,
+  rotationFilter: VtgPatternRotationFilter | undefined,
+  signature: string,
+  cacheKind: keyof VtgCandidateCache,
+  stopAtFirstMatchingTier: boolean,
+): readonly VtgCandidateMatch[] => {
+  const orientations = getMatchingOrientations(speedRatio, rotationFilter)
+  const orientationTiers = [
+    orientations.filter((orientation) => orientation === 0),
+    orientations.filter((orientation) => orientation !== 0),
+  ]
+
+  const allMatches: VtgCandidateMatch[] = []
+  for (const tier of orientationTiers) {
+    const matches = tier.flatMap(
+      (orientation) => getCandidateCache(speedRatio, orientation)[cacheKind].get(signature) ?? [],
+    )
+    if (matches.length > 0 && stopAtFirstMatchingTier) return matches
+    allMatches.push(...matches)
+  }
+
+  return allMatches
+}
+
 const findBaseVtgCandidateMatches = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
   includeTransitionTurns = true,
+  stopAtFirstMatchingOrientationTier = false,
 ): readonly VtgPatternMatch[] => {
   const speedRatio = inferVtgSpeedRatio(animation)
   if (speedRatio === undefined) return []
@@ -186,14 +212,23 @@ const findBaseVtgCandidateMatches = (
   const signature = createVtgAnimationSignature(animation)
   if (!signature) return []
 
-  const caches = getMatchingOrientations(speedRatio, rotationFilter).map((orientation) =>
-    getCandidateCache(speedRatio, orientation),
+  const exactMatches = findCachedCandidates(
+    speedRatio,
+    rotationFilter,
+    signature,
+    'exact',
+    stopAtFirstMatchingOrientationTier,
   )
-  const exactMatches = caches.flatMap(({ exact }) => exact.get(signature) ?? [])
   const candidates =
     exactMatches.length > 0 || !includeTransitionTurns
       ? exactMatches
-      : caches.flatMap(({ transitionTurns }) => transitionTurns.get(signature) ?? [])
+      : findCachedCandidates(
+          speedRatio,
+          rotationFilter,
+          signature,
+          'transitionTurns',
+          stopAtFirstMatchingOrientationTier,
+        )
 
   return candidates.map((candidate) => ({
     ...candidate,
@@ -205,16 +240,26 @@ const findBaseVtgCandidateMatches = (
 const findBaseVtgPatternMatches = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
-): readonly VtgPatternMatch[] => findBaseVtgCandidateMatches(animation, rotationFilter)
+  stopAtFirstMatchingOrientationTier = false,
+): readonly VtgPatternMatch[] =>
+  findBaseVtgCandidateMatches(animation, rotationFilter, true, stopAtFirstMatchingOrientationTier)
 
-export const findVtgPatternMatches = (
+const findVtgPatternMatchesInternal = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
+  stopAtFirstMatchingOrientationTier = false,
 ): readonly VtgPatternMatch[] => {
   const alternating = analyzeAlternatingPatternPlayback(animation)
-  if (!alternating) return findBaseVtgPatternMatches(animation, rotationFilter)
+  if (!alternating) {
+    return findBaseVtgPatternMatches(animation, rotationFilter, stopAtFirstMatchingOrientationTier)
+  }
 
-  return findBaseVtgCandidateMatches(alternating.base, rotationFilter, false).map((match) => ({
+  return findBaseVtgCandidateMatches(
+    alternating.base,
+    rotationFilter,
+    false,
+    stopAtFirstMatchingOrientationTier,
+  ).map((match) => ({
     ...match,
     transition: true,
     transitionBeats: alternating.transitionBeats,
@@ -222,6 +267,11 @@ export const findVtgPatternMatches = (
     ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
   }))
 }
+
+export const findVtgPatternMatches = (
+  animation: RootDataFinal,
+  rotationFilter?: VtgPatternRotationFilter,
+): readonly VtgPatternMatch[] => findVtgPatternMatchesInternal(animation, rotationFilter)
 
 const startingBeat = (match: VtgPatternMatch) => match.beat ?? vtgDefaultBeat
 
@@ -253,7 +303,7 @@ export const findVtgPatternMatch = (
   preferences?: VtgPatternMatchPreferences,
   rotationFilter?: VtgPatternRotationFilter,
 ): VtgPatternMatch | undefined =>
-  [...preferUnrotatedMatches(findVtgPatternMatches(animation, rotationFilter))].sort(
+  [...preferUnrotatedMatches(findVtgPatternMatchesInternal(animation, rotationFilter, true))].sort(
     (first, second) => {
       if (preferences) {
         const preferenceDifference =

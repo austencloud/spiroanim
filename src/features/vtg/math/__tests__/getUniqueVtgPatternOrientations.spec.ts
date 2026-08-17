@@ -47,10 +47,8 @@ describe('getUniqueVtgPatternOrientations', () => {
     ).toEqual([0, 90])
   })
 
-  it('retains rotations whose complete beat families remain distinct', () => {
-    expect(getUniqueVtgPatternOrientations({ reference: '5-1', speedRatio: '1:2' })).toEqual([
-      0, 90,
-    ])
+  it('removes rotations whose position and rotation geometry has another catalog representation', () => {
+    expect(getUniqueVtgPatternOrientations({ reference: '5-1', speedRatio: '1:2' })).toEqual([0])
   })
 
   it('does not change availability with Beat, Swap, or 180', () => {

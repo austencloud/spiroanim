@@ -1,6 +1,7 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import { shiftAnimationFrames } from '@/math/animation/shiftAnimationFrames'
+import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import type { VtgPatternRotationFilter } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -9,6 +10,15 @@ const doubledVtgFrameCount = 9
 const transitionSegmentCount = 4
 
 export type VtgTransitionQuickSlotCandidates = readonly RootDataFinal[]
+export type VtgTransitionPreviewAnimations = readonly RootDataFinal[]
+
+export const getVtgTransitionPreviewBeatCount = (animation: RootDataFinal): number => {
+  const frames = rootCompile(animation).props[0]?.anim
+  if (!frames || frames.length < 2) return 0
+
+  const doubledBeatCount = frames.slice(0, -1).reduce((total, frame) => total + frame.beats, 0)
+  return doubledBeatCount / doublePlaybackMultiplier
+}
 
 export type VtgTransitionQuickSlotResolution =
   | { status: 'matched'; animations: readonly RootDataFinal[] }
@@ -80,6 +90,52 @@ const extractDoubledCycle = (
       ],
     })),
   }
+}
+
+/**
+ * Extracts pattern regions using the same relationship boundaries as Q2-Q5 while retaining each
+ * duration. A relationship authored on frame N describes the path from N-1 into N, so adjacent
+ * slices share frame N-1 and the following slice owns that complete visual segment.
+ */
+export const createVtgTransitionPreviewAnimations = (
+  animation: RootDataFinal,
+): VtgTransitionPreviewAnimations | undefined => {
+  const firstProp = animation.props[0]
+  if (
+    !firstProp ||
+    animation.props.length !== 2 ||
+    animation.props.some((prop) => prop.anim.length !== firstProp.anim.length)
+  ) {
+    return undefined
+  }
+
+  const relationshipChangeFrames = findExplicitPlaneOrTurnsFrameIndices(
+    animation,
+    extractedPatternSourceFrameCount,
+  )
+  const sliceStarts = [0, ...relationshipChangeFrames.map((frameIndex) => frameIndex - 1)]
+
+  const previews = sliceStarts.map((startFrameIndex, sliceIndex) => {
+    const shifted = shiftClosedAnimation(animation, startFrameIndex)
+    if (!shifted) return undefined
+
+    const nextStartFrameIndex = sliceStarts[sliceIndex + 1]
+    const sliceFrameCount =
+      nextStartFrameIndex === undefined
+        ? firstProp.anim.length - startFrameIndex
+        : nextStartFrameIndex - startFrameIndex + 1
+
+    return {
+      ...shifted,
+      props: shifted.props.map((prop) => ({
+        ...prop,
+        anim: prop.anim.slice(0, sliceFrameCount).map((frame) => ({ ...frame })),
+      })),
+    }
+  })
+  if (previews.some((preview) => preview === undefined)) return undefined
+
+  return previews.map((preview) => preview!)
 }
 
 /**

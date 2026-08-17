@@ -970,7 +970,7 @@ describe('VtgPane', () => {
     expect(store.quickSlotPaths).toEqual(savedPaths)
   })
 
-  it('accepts a directly extracted rotated QSlot match without phase shifting', async () => {
+  it('accepts a directly extracted QSlot match without phase shifting', async () => {
     const animation = createDefaultVtgAnimation({
       reference: '1-1',
       speedRatio: '1:3',
@@ -988,7 +988,6 @@ describe('VtgPane', () => {
       ...findQtrPatternMatches(expectedThirdSlot),
     ]
     expect(directMatches).not.toHaveLength(0)
-    expect(directMatches.every((match) => (match.orientation ?? 0) !== 0)).toBe(true)
 
     let createdSlots: readonly RootDataFinal[] | undefined
     const wrapper = mount(VtgPane, {
@@ -1011,7 +1010,7 @@ describe('VtgPane', () => {
     expect(createdSlots?.[2]).toEqual(expectedThirdSlot)
   })
 
-  it('creates every Quick Slot and warns when a transition extraction is unmatched', async () => {
+  it('creates every Quick Slot without displaying a persistent partial-match warning', async () => {
     const store = useConceptsStore()
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const animation = createDefaultVtgAnimation({
@@ -1054,15 +1053,12 @@ describe('VtgPane', () => {
       ).toBe(false)
     })
     await wrapper.get('[data-role="vtg-transition-qslots"]').trigger('click')
-    await vi.waitFor(() => {
-      expect(wrapper.get('[data-role="vtg-transition-qslots-error"]').text()).toContain(
-        'Q2, Q3, Q4, Q5',
-      )
-    })
+    await vi.waitFor(() => expect(createdSlots).toHaveLength(5))
 
     expect(store.quickSlotCount).toBe(0)
     expect(createdSlots).toHaveLength(5)
     expect(wrapper.emitted('quickSlotsCreate')).toHaveLength(1)
+    expect(wrapper.find('[data-role="vtg-transition-qslots-error"]').exists()).toBe(false)
     expect(warning).toHaveBeenCalledWith(
       'VTG Quick Slots 2, 3, 4, 5 did not resolve to a known pattern; the generated extractions were used.',
     )

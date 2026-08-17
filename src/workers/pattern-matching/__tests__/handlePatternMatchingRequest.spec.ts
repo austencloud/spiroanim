@@ -64,7 +64,7 @@ describe('handlePatternMatchingRequest', () => {
     })
   })
 
-  it('detects the supplied rotated 1:3 pattern as QTR', async () => {
+  it('canonicalizes the supplied 1:3 QTR geometry across equivalent orientations', async () => {
     const version = await loadSpiroAnimQSVersion(6)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -85,7 +85,21 @@ describe('handlePatternMatchingRequest', () => {
         preferences: { swapProps: false, reversePlane: false, quarters: 1 },
         rotationFilter: 'unrotated',
       }),
-    ).resolves.toEqual({ status: 'unmatched' })
+    ).resolves.toEqual({
+      status: 'matched',
+      source: 'qtr',
+      match: {
+        reference: '3-5',
+        speedRatio: '1:3',
+        quarters: 1,
+        isAnti: false,
+        swapProps: false,
+        reversePlane: false,
+        shape: 'box',
+        bpm: 40,
+        scale: 0.8,
+      },
+    })
 
     await expect(
       matchVtgPatternRequest({

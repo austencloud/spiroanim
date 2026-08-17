@@ -224,6 +224,15 @@
           :q-slots-warning-required="hasPopulatedQuickSlots"
           @q-slots="createQSlots"
         />
+        <p class="vtg-transition-support" data-role="vtg-transition-support">
+          {{ preparedTransitionPattern?.supported ? 'Supported' : 'Not supported' }}
+        </p>
+        <VtgTransitionPreviews
+          v-if="transitionPreviewAnimations"
+          :key="transitionPreviewAnimations.length"
+          :animations="transitionPreviewAnimations"
+          :refresh-key="transitionPreviewRefreshKey"
+        />
         <p
           v-if="quickSlotCreationError"
           class="vtg-transition-quick-slot-error"
@@ -265,6 +274,7 @@ import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/vtg/qtr/data/qtrLabels'
 import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
+import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
 import {
   pairedPatternPreviewReferences,
   patternPreviewReferences,
@@ -302,9 +312,11 @@ import {
 } from '@/features/vtg/types'
 import {
   createVtgTransitionQuickSlotAnimationCandidates,
+  createVtgTransitionPreviewAnimations,
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { getUniqueVtgPatternOrientations } from '@/features/vtg/math/getUniqueVtgPatternOrientations'
+import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import { toColor } from '@/utils/UtilFunc'
@@ -379,6 +391,17 @@ const hasPopulatedQuickSlots = computed(
     conceptsStore.quickSlotPaths.some((path) => typeof path === 'string'),
 )
 const showStaticPropsTransitionNote = computed(() => transition.value && speedRatio.value === '1:1')
+const preparedTransitionPattern = computed(() =>
+  props.animation === undefined ? undefined : prepareVtg45TransitionPattern(props.animation),
+)
+const transitionPreviewAnimations = computed(() => {
+  const prepared = preparedTransitionPattern.value
+  return prepared?.supported ? createVtgTransitionPreviewAnimations(prepared.pattern) : undefined
+})
+// Match the table thumbnails: timing and player-only rendering controls do not change stills.
+const transitionPreviewRefreshKey = computed(() =>
+  [scale.value, spacing.value, leftPropColor.value, rightPropColor.value].join('|'),
+)
 const usesPairedPreviewLayout = computed(
   () => speedRatio.value === '1:2' || speedRatio.value === '1:4',
 )
@@ -435,8 +458,6 @@ const createQSlots = async () => {
       },
     )
     if (resolution.status === 'partial') {
-      const slotLabel = resolution.unmatchedSlots.map((slot) => `Q${slot}`).join(', ')
-      quickSlotCreationError.value = `${slotLabel} did not match a known pattern. The generated pattern${resolution.unmatchedSlots.length === 1 ? ' was' : 's were'} still added.`
       console.warn(
         `VTG Quick Slot${resolution.unmatchedSlots.length === 1 ? '' : 's'} ${resolution.unmatchedSlots.join(', ')} did not resolve to a known pattern; the generated extraction${resolution.unmatchedSlots.length === 1 ? ' was' : 's were'} used.`,
       )
@@ -1289,6 +1310,14 @@ defineExpose({
   border: 1px solid color-mix(in srgb, var(--color-status-warning) 48%, var(--color-border));
   border-inline-start-width: 3px;
   border-radius: var(--radius-sm);
+}
+
+.vtg-transition-support {
+  margin: var(--space-1) auto 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-concept-control);
+  font-weight: 700;
+  text-align: center;
 }
 
 .vtg-transition-quick-slot-error {

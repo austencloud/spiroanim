@@ -5,9 +5,12 @@ import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import {
   createVtgTransitionQuickSlotAnimationCandidates,
+  createVtgTransitionPreviewAnimations,
+  getVtgTransitionPreviewBeatCount,
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { findQtrPatternMatch } from '@/features/vtg/qtr/matchQtrAnimation'
+import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import { useBaseQS } from '@/services/query/createBaseQS'
@@ -42,6 +45,59 @@ const selectDetectableAnimations = (
 }
 
 describe('createVtgTransitionQuickSlotAnimations', () => {
+  it('creates more than four previews when either prop contains additional relationships', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const source = codec.decodeQS(
+      queryFrom(
+        'r=Ew08kk11Y&p0=Q__._ZE_____s.bg0pk.._U0uY._U0pk.._U0uY._U0pk.._U0uY._U0pk.._U0uY&m0=_1_mxqv__&p1=N__._ZE_____s.bn_pk...........&c=_i_bhq&v=6',
+      ),
+    )
+    const prepared = prepareVtg45TransitionPattern(source)
+    const relationshipCount = findExplicitPlaneOrTurnsFrameIndices(prepared.pattern, 2).length
+    const previews = createVtgTransitionPreviewAnimations(prepared.pattern)
+
+    expect(prepared.supported).toBe(true)
+    expect(relationshipCount).toBeGreaterThan(3)
+    expect(previews).toHaveLength(relationshipCount + 1)
+  })
+
+  it('extracts every contiguous preview at its natural frame length', () => {
+    const animation = createDefaultVtgAnimation({
+      reference: '5-1',
+      speedRatio: '1:3',
+      transition: true,
+      transitionBeats: 5,
+      transitionQuad: true,
+      transitionSecond: true,
+    })
+    if (!animation) throw new Error('Expected a supported VTG transition')
+
+    const changes = findExplicitPlaneOrTurnsFrameIndices(animation, 2)
+    const starts = [0, ...changes.map((frameIndex) => frameIndex - 1)]
+    const expectedLengths = starts.map((start, index) => {
+      const nextStart = starts[index + 1]
+      return nextStart === undefined
+        ? animation.props[0]!.anim.length - start
+        : nextStart - start + 1
+    })
+    const previews = createVtgTransitionPreviewAnimations(animation)
+
+    expect(previews).toHaveLength(changes.length + 1)
+    expect(previews?.map((preview) => preview.props[0]?.anim.length)).toEqual(expectedLengths)
+    expect(previews?.map(getVtgTransitionPreviewBeatCount)).toEqual(
+      expectedLengths.map((length) => (length - 1) / 2),
+    )
+    expect(previews?.reduce((total, preview) => total + preview.props[0]!.anim.length - 1, 0)).toBe(
+      animation.props[0]!.anim.length - 1,
+    )
+    expect(new Set(expectedLengths)).not.toEqual(new Set([9]))
+  })
+
   it('reproduces the supplied four-beat transition extractions', async () => {
     const version = await loadSpiroAnimQSVersion(6)
     const codec = await useSpiroAnimQS(
