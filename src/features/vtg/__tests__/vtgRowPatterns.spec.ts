@@ -89,7 +89,7 @@ describe('VTG row patterns', () => {
               const baseTurns = baseFrameTurns ?? base.props[propIndex]?.anim[0]?.turns ?? 0
               const turns = frameTurns ?? pattern.props[propIndex]?.anim[0]?.turns ?? 0
               expect(shape).toEqual(baseShape)
-              expect(turns).toBe(((baseTurns + 90) * denominator) / 3 - 90)
+              expect(turns).toBe(((baseTurns + 45) * denominator) / 3 - 45)
             }
           }
         }

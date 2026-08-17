@@ -34,7 +34,7 @@ const createFirstFrame = (start: AnimReadable): AnimReadable => {
 }
 
 const transformTurns = (turns: number, speedRatio: VtgSpeedRatio): number =>
-  ((turns + 90) * Number(speedRatio.slice(2))) / 3 - 90
+  ((turns + 45) * Number(speedRatio.slice(2))) / 3 - 45
 
 const createContinuationFrame = (
   start: AnimReadable,
@@ -64,11 +64,19 @@ const createPattern = (
     anim: [
       createFirstFrame(row.starts[index]),
       createContinuationFrame(row.starts[index], continuations[index], speedRatio),
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
     ],
   })
 
   return {
     ...vtgPlayerSettings,
+    bpm: vtgPlayerSettings.bpm * 2,
     props: row.swapProps ? [createProp(1), createProp(0)] : [createProp(0), createProp(1)],
   }
 }
@@ -87,7 +95,7 @@ const createPatternBuilders = (
 /**
  * A VTG reference stores the column first and row second. Every cell in a row
  * shares the same first animation frame for each prop. Continuations are the
- * canonical 1:3 data; the builder derives only their turns for other ratios.
+ * canonical doubled 1:3 data; the builder derives only their turns for other ratios.
  * Only the four special cells define explicit Spin/Anti variants.
  */
 // prettier-ignore
@@ -96,60 +104,60 @@ const rowPatterns: Readonly<Record<VtgRuleNumber, VtgRowPattern>> = {
   1: {
     starts: [{ plane: 180, arc: 90, turns: 0 }, { plane: 180, arc: 90, turns: 0 }],
     columns: {
-      1: [{ plane: 180, arc: 90, turns: -360 }, { plane: 180, arc: 90, turns: -360 }],
-      2: [{ plane: 180, arc: 90, turns: -360 }, { plane: 0, arc: 90, turns: -360 }],
-      3: [{ plane: 180, arc: 90, turns: 180 }, { plane: 180, arc: 90, turns: 180 }],
-      4: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: 180 }],
-      5: [{ plane: 180, arc: 90, turns: 180 }, { plane: 180, arc: 90, turns: -360 }],
-      6: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: -360 }],
+      1: [{ plane: 180, arc: 45, turns: -180 }, { plane: 180, arc: 45, turns: -180 }],
+      2: [{ plane: 180, arc: 45, turns: -180 }, { plane: 0, arc: 45, turns: -180 }],
+      3: [{ plane: 180, arc: 45, turns: 90 }, { plane: 180, arc: 45, turns: 90 }],
+      4: [{ plane: 180, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: 90 }],
+      5: [{ plane: 180, arc: 45, turns: 90 }, { plane: 180, arc: 45, turns: -180 }],
+      6: [{ plane: 180, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: -180 }],
     },
   },
   // Row 2 starts the second prop on plane 0 and owns a separate copy of every continuation.
   2: {
     starts: [{ plane: 180, arc: 90, turns: 0 }, { plane: 0, arc: 90, turns: 0 }],
     columns: {
-      1: [{ plane: 180, arc: 90, turns: -360 }, { plane: 180, arc: 90, turns: -360 }],
-      2: [{ plane: 180, arc: 90, turns: -360 }, { plane: 0, arc: 90, turns: -360 }],
-      3: [{ plane: 180, arc: 90, turns: 180 }, { plane: 180, arc: 90, turns: 180 }],
-      4: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: 180 }],
-      5: [{ plane: 180, arc: 90, turns: 180 }, { plane: 180, arc: 90, turns: -360 }],
-      6: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: -360 }],
+      1: [{ plane: 180, arc: 45, turns: -180 }, { plane: 180, arc: 45, turns: -180 }],
+      2: [{ plane: 180, arc: 45, turns: -180 }, { plane: 0, arc: 45, turns: -180 }],
+      3: [{ plane: 180, arc: 45, turns: 90 }, { plane: 180, arc: 45, turns: 90 }],
+      4: [{ plane: 180, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: 90 }],
+      5: [{ plane: 180, arc: 45, turns: 90 }, { plane: 180, arc: 45, turns: -180 }],
+      6: [{ plane: 180, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: -180 }],
     },
   },
   // Row 3 starts the props in opposite directions and keeps row 4's second prop on plane 0.
   3: {
     starts: [{ plane: 180, arc: 90, turns: -180 }, { plane: 180, arc: 90, turns: 180 }],
     columns: {
-      1: [{ plane: 180, arc: 90, turns: 180 }, { plane: 180, arc: 90, turns: 180 }],
-      2: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: 180 }],
-      3: [{ plane: 180, arc: 90, turns: -360 }, { plane: 180, arc: 90, turns: -360 }],
-      4: [{ plane: 180, arc: 90, turns: -360 }, { plane: 0, arc: 90, turns: -360 }],
-      5: [{ plane: 180, arc: 90, turns: 180 }, { plane: 180, arc: 90, turns: -360 }],
-      6: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: -360 }],
+      1: [{ plane: 180, arc: 45, turns: 90 }, { plane: 180, arc: 45, turns: 90 }],
+      2: [{ plane: 180, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: 90 }],
+      3: [{ plane: 180, arc: 45, turns: -180 }, { plane: 180, arc: 45, turns: -180 }],
+      4: [{ plane: 180, arc: 45, turns: -180 }, { plane: 0, arc: 45, turns: -180 }],
+      5: [{ plane: 180, arc: 45, turns: 90 }, { plane: 180, arc: 45, turns: -180 }],
+      6: [{ plane: 180, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: -180 }],
     },
   },
   // Row 4 pairs a backward plane path with a forward arc path and owns every continuation.
   4: {
     starts: [{ plane: 180, arc: 90, turns: -180 }, { plane: 0, arc: 90, turns: 180 }],
     columns: {
-      1: [{ plane: 180, arc: 90, turns: 180 }, { plane: 180, arc: 90, turns: 180 }],
-      2: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: 180 }],
-      3: [{ plane: 180, arc: 90, turns: -360 }, { plane: 180, arc: 90, turns: -360 }],
-      4: [{ plane: 180, arc: 90, turns: -360 }, { plane: 0, arc: 90, turns: -360 }],
-      5: [{ plane: 180, arc: 90, turns: 180 }, { plane: 180, arc: 90, turns: -360 }],
-      6: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: -360 }],
+      1: [{ plane: 180, arc: 45, turns: 90 }, { plane: 180, arc: 45, turns: 90 }],
+      2: [{ plane: 180, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: 90 }],
+      3: [{ plane: 180, arc: 45, turns: -180 }, { plane: 180, arc: 45, turns: -180 }],
+      4: [{ plane: 180, arc: 45, turns: -180 }, { plane: 0, arc: 45, turns: -180 }],
+      5: [{ plane: 180, arc: 45, turns: 90 }, { plane: 180, arc: 45, turns: -180 }],
+      6: [{ plane: 180, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: -180 }],
     },
   },
   // Row 5 starts with two arc paths and defines Spin/Anti alternatives for rows 5 and 6.
   5: {
     starts: [{ plane: 0, arc: 90, turns: 0 }, { plane: 0, arc: 90, turns: 180 }],
     columns: {
-      1: [{ plane: 0, arc: 90, turns: -360 }, { plane: 0, arc: 90, turns: 180 }],
-      2: [{ plane: 0, arc: 90, turns: -360 }, { plane: 180, arc: 90, turns: 180 }],
-      3: [{ plane: 0, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: -360 }],
-      4: [{ plane: 0, arc: 90, turns: 180 }, { plane: 180, arc: 90, turns: -360 }],
-      5: { spin: [{ plane: 0, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: 180 }], anti: [{ plane: 180, arc: 90, turns: -360 }, { plane: 180, arc: 90, turns: -360 }] },
-      6: { spin: [{ plane: 0, arc: 90, turns: 180 }, { plane: 180, arc: 90, turns: 180 }], anti: [{ plane: 0, arc: 90, turns: -360 }, { plane: 180, arc: 90, turns: -360 }] },
+      1: [{ plane: 0, arc: 45, turns: -180 }, { plane: 0, arc: 45, turns: 90 }],
+      2: [{ plane: 0, arc: 45, turns: -180 }, { plane: 180, arc: 45, turns: 90 }],
+      3: [{ plane: 0, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: -180 }],
+      4: [{ plane: 0, arc: 45, turns: 90 }, { plane: 180, arc: 45, turns: -180 }],
+      5: { spin: [{ plane: 0, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: 90 }], anti: [{ plane: 180, arc: 45, turns: -180 }, { plane: 180, arc: 45, turns: -180 }] },
+      6: { spin: [{ plane: 0, arc: 45, turns: 90 }, { plane: 180, arc: 45, turns: 90 }], anti: [{ plane: 0, arc: 45, turns: -180 }, { plane: 180, arc: 45, turns: -180 }] },
     },
   },
   // Row 6 mirrors column 5's roles.
@@ -157,12 +165,12 @@ const rowPatterns: Readonly<Record<VtgRuleNumber, VtgRowPattern>> = {
     starts: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: 0 }],
     swapProps: true,
     columns: {
-      1: [{ plane: 0, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: -360 }],
-      2: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: -360 }],
-      3: [{ plane: 0, arc: 90, turns: -360 }, { plane: 0, arc: 90, turns: 180 }],
-      4: [{ plane: 180, arc: 90, turns: -360 }, { plane: 0, arc: 90, turns: 180 }],
-      5: { spin: [{ plane: 0, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: 180 }], anti: [{ plane: 0, arc: 90, turns: -360 }, { plane: 0, arc: 90, turns: -360 }] },
-      6: { spin: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: 180 }], anti: [{ plane: 180, arc: 90, turns: -360 }, { plane: 0, arc: 90, turns: -360 }] },
+      1: [{ plane: 0, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: -180 }],
+      2: [{ plane: 180, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: -180 }],
+      3: [{ plane: 0, arc: 45, turns: -180 }, { plane: 0, arc: 45, turns: 90 }],
+      4: [{ plane: 180, arc: 45, turns: -180 }, { plane: 0, arc: 45, turns: 90 }],
+      5: { spin: [{ plane: 0, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: 90 }], anti: [{ plane: 0, arc: 45, turns: -180 }, { plane: 0, arc: 45, turns: -180 }] },
+      6: { spin: [{ plane: 180, arc: 45, turns: 90 }, { plane: 0, arc: 45, turns: 90 }], anti: [{ plane: 180, arc: 45, turns: -180 }, { plane: 0, arc: 45, turns: -180 }] },
     },
   },
 }

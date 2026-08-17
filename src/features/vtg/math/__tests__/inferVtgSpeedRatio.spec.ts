@@ -4,10 +4,9 @@ import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { inferVtgSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
-import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 
 describe('inferVtgSpeedRatio', () => {
-  it.each(vtgSpeedRatios)('infers %s through every beat and playback rate', (speedRatio) => {
+  it.each(vtgSpeedRatios)('infers %s through every half-beat starting position', (speedRatio) => {
     for (const beat of vtgBeats) {
       const selection = { reference: '5-6', speedRatio, beat, isAnti: true } as const
       for (const animation of [
@@ -17,7 +16,6 @@ describe('inferVtgSpeedRatio', () => {
         if (!animation) throw new Error(`Missing ${speedRatio} animation`)
 
         expect(inferVtgSpeedRatio(animation)).toBe(speedRatio)
-        expect(inferVtgSpeedRatio(doubleAnimationPlayback(animation)!)).toBe(speedRatio)
       }
     }
   })

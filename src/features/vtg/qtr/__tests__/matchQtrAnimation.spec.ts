@@ -186,7 +186,7 @@ describe('Qtr animation matching', () => {
     })
   })
 
-  it('recovers the VTG transition by matching its internally subdivided base cycle', () => {
+  it('recovers the VTG transition by matching its shared doubled base cycle', () => {
     const selection = {
       reference: '1-1',
       speedRatio: '1:3',

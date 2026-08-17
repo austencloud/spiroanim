@@ -266,6 +266,10 @@ Validation should be proportional to the scope of the change. Run broader checks
 5. `npm run build`
 6. `npm run test:e2e` when the task affects a complete user workflow
 
+The exhaustive VTG 45 Trans audit is opt-in because it takes several minutes. When a change makes
+`npm run audit:vtg-45-trans` relevant, recommend it and wait for explicit user approval before
+running it.
+
 Report which commands ran and whether they passed. Use only scripts that exist in `package.json`; mention a missing command instead of inventing one. Note that the current formatting script targets only `src/`.
 
 # Environment Workarounds

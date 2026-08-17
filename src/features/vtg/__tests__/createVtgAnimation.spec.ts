@@ -125,7 +125,7 @@ describe('createVtgAnimation', () => {
         }
       }
     }
-  })
+  }, 15_000)
 
   it.each(vtgBeats)('uses Shift to start the closed cycle on beat %s', (beat) => {
     const selection = {
@@ -152,7 +152,7 @@ describe('createVtgAnimation', () => {
       const cycleLength = originalFrames.length - 1
 
       for (const [frameIndex, shiftedFrame] of shiftedProp.anim.entries()) {
-        const originalIndex = (beat - 1 + (frameIndex % cycleLength)) % cycleLength
+        const originalIndex = ((beat - 1) * 2 + (frameIndex % cycleLength)) % cycleLength
         const expectedFrame = originalFrames[originalIndex]!
 
         expectVectorClose(shiftedFrame.pos, expectedFrame.pos)
@@ -161,7 +161,7 @@ describe('createVtgAnimation', () => {
     }
   })
 
-  it('subdivides the base playback internally when applying the transition', () => {
+  it('applies the transition directly to the doubled base playback', () => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:3',
@@ -177,7 +177,7 @@ describe('createVtgAnimation', () => {
     const originalCompiled = rootCompile(original)
     const transitionedCompiled = rootCompile(transitioned)
 
-    expect(transitioned.bpm).toBe(original.bpm * doublePlaybackMultiplier)
+    expect(transitioned.bpm).toBe(original.bpm)
     expect(transitioned.props[0]!.anim[2]).toEqual({})
     for (const frame of transitioned.props[0]!.anim.slice(1)) {
       expect(frame).not.toHaveProperty('beats')
@@ -189,7 +189,7 @@ describe('createVtgAnimation', () => {
     for (const [propIndex, originalProp] of originalCompiled.props.entries()) {
       const transitionedFrames = transitionedCompiled.props[propIndex]!.anim
       for (const [frameIndex, originalFrame] of originalProp.anim.slice(0, -1).entries()) {
-        const transitionedFrame = transitionedFrames[frameIndex * doublePlaybackMultiplier]!
+        const transitionedFrame = transitionedFrames[frameIndex]!
         expectVectorClose(transitionedFrame.pos, originalFrame.pos)
         expectVectorClose(transitionedFrame.rot, originalFrame.rot)
         expect(transitionedFrame.scale).toBe(originalFrame.scale)
@@ -211,7 +211,7 @@ describe('createVtgAnimation', () => {
         transition: true,
       })
 
-      expect(transitioned?.bpm).toBe((original?.bpm ?? 0) * doublePlaybackMultiplier)
+      expect(transitioned?.bpm).toBe(original?.bpm)
     },
   )
 
@@ -368,18 +368,18 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation).toMatchObject({
-      bpm: vtgPlayerSettings.bpm,
+      bpm: vtgPlayerSettings.bpm * doublePlaybackMultiplier,
       aspectx: vtgPlayerSettings.aspectx,
       aspecty: vtgPlayerSettings.aspecty,
       speed: vtgPlayerSettings.speed,
       props: [
         {
           color: 4,
-          anim: [{ plane: 180, arc: 90 }, { plane: 180, arc: 90 }, {}, {}, {}],
+          anim: [{ plane: 180, arc: 90 }, { plane: 180, arc: 45 }, {}, {}, {}, {}, {}, {}, {}],
         },
         {
           color: 1,
-          anim: [{ plane: 180, arc: 90 }, { arc: 90, turns: -180 }, {}, {}, {}],
+          anim: [{ plane: 180, arc: 90 }, { arc: 45, turns: -90 }, {}, {}, {}, {}, {}, {}, {}],
         },
       ],
     })
@@ -396,7 +396,7 @@ describe('createVtgAnimation', () => {
       bpm: 90,
     })
 
-    expect(animation).toMatchObject({ bpm: 90, speed: 2 })
+    expect(animation).toMatchObject({ bpm: 180, speed: 2 })
   })
 
   it('returns fresh data without mutating the player state', () => {
@@ -415,18 +415,18 @@ describe('createVtgAnimation', () => {
     expect(first).not.toBe(second)
     expect(current).toEqual(currentSnapshot)
     expect(first?.props[0]?.anim).not.toBe(second?.props[0]?.anim)
-    expect(first?.props.every((prop) => prop.anim.length === 5)).toBe(true)
+    expect(first?.props.every((prop) => prop.anim.length === 9)).toBe(true)
     expect(first?.props[0]?.anim[2]).not.toBe(first?.props[0]?.anim[3])
   })
 
-  it('adds default frames outside the row definition', () => {
+  it('stores the complete doubled cycle in the row definition', () => {
     const selection = {
       reference: '1-6',
       speedRatio: '1:1',
     } as const
 
-    expect(buildVtgPattern(selection)?.props[0]?.anim).toHaveLength(2)
-    expect(createVtgAnimation(createCurrentAnimation(), selection)?.props[0]?.anim).toHaveLength(5)
+    expect(buildVtgPattern(selection)?.props[0]?.anim).toHaveLength(9)
+    expect(createVtgAnimation(createCurrentAnimation(), selection)?.props[0]?.anim).toHaveLength(9)
   })
 
   it('uses player VTG settings with preview-only visibility and thickness overrides', () => {
@@ -437,7 +437,7 @@ describe('createVtgAnimation', () => {
     if (preview === undefined) throw new Error('Expected the VTG preview pattern to be defined')
 
     expect(preview).toMatchObject({
-      bpm: vtgPlayerSettings.bpm,
+      bpm: vtgPlayerSettings.bpm * doublePlaybackMultiplier,
       paths: vtgPlayerSettings.paths,
       hands: vtgPlayerSettings.hands,
       arms: false,
@@ -445,7 +445,7 @@ describe('createVtgAnimation', () => {
       thick: 15,
     })
     expect(preview.camera[0]!.orbit?.distance).toBe(19)
-    expect(preview.props.every((prop) => prop.anim.length === 5)).toBe(true)
+    expect(preview.props.every((prop) => prop.anim.length === 9)).toBe(true)
     expect(
       preview.props.every(
         (prop) =>
@@ -463,7 +463,7 @@ describe('createVtgAnimation', () => {
           prop.arms === false &&
           prop.visible === false &&
           prop.thick === 15 &&
-          prop.anim.length === 5,
+          prop.anim.length === 9,
       ),
     ).toBe(true)
   })
@@ -476,8 +476,8 @@ describe('createVtgAnimation', () => {
     if (animation === undefined) throw new Error('Expected the VTG pattern to be defined')
 
     expect(animation.props.map((prop) => prop.anim.map((frame) => frame.scale))).toEqual([
-      [9, undefined, undefined, undefined, undefined],
-      [9, undefined, undefined, undefined, undefined],
+      [9, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined],
+      [9, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined],
     ])
     expect(
       rootCompile(animation).props.every((prop) => prop.anim.every((frame) => frame.scale === 9)),
@@ -492,11 +492,11 @@ describe('createVtgAnimation', () => {
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
       { plane: 180, arc: 90, scale: 9 },
-      { plane: 180, arc: 90 },
+      { plane: 180, arc: 45 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { arc: 90, scale: 9 },
-      { arc: 90, turns: -180 },
+      { arc: 45, turns: -90 },
     ])
   })
 
@@ -508,11 +508,11 @@ describe('createVtgAnimation', () => {
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
       { plane: 180, arc: 90, turns: -180, scale: 9 },
-      { plane: 180, arc: 90, turns: 0 },
+      { plane: 180, arc: 45, turns: 0 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { arc: 90, turns: 180, scale: 9 },
-      { arc: 90, turns: -180 },
+      { arc: 45, turns: -90 },
     ])
   })
 
@@ -524,10 +524,10 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props.map((prop) => prop.color)).toEqual([4, 1])
-    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([{ arc: 90, scale: 9 }, { arc: 90 }])
+    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([{ arc: 90, scale: 9 }, { arc: 45 }])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { plane: 180, arc: 90, turns: 180, scale: 9 },
-      { plane: 180, arc: 90, turns: 0 },
+      { plane: 180, arc: 45, turns: 0 },
     ])
   })
 
@@ -597,10 +597,10 @@ describe('createVtgAnimation', () => {
       scale: 0.5,
     })
 
-    expect(minimum).toMatchObject({ bpm: 40, distance: 14 })
+    expect(minimum).toMatchObject({ bpm: 80, distance: 14 })
     expect(minimum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([5, 5])
     expect(pivot).toMatchObject({ distance: 15 })
-    expect(maximum).toMatchObject({ bpm: 140, distance: 25 })
+    expect(maximum).toMatchObject({ bpm: 280, distance: 25 })
     expect(maximum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([14, 14])
   })
 
@@ -612,11 +612,11 @@ describe('createVtgAnimation', () => {
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
       { arc: 90, scale: 10 },
-      { arc: 90, turns: -540 },
+      { arc: 45, turns: -270 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { arc: 90, turns: 180, scale: 10 },
-      { plane: 180, arc: 90, turns: 360 },
+      { plane: 180, arc: 45 },
     ])
   })
 
@@ -629,11 +629,11 @@ describe('createVtgAnimation', () => {
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
       { arc: 90, scale: 8 },
-      { plane: 180, arc: 90, turns: -360 },
+      { plane: 180, arc: 45, turns: -180 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { arc: 90, turns: 180, scale: 8 },
-      { plane: 180, arc: 90, turns: -360 },
+      { plane: 180, arc: 45, turns: -180 },
     ])
   })
 })

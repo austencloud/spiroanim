@@ -22,12 +22,10 @@ import {
   getVtgPatternOrientations,
   supportsVtgPatternOrientation,
   vtgBeats,
+  vtgDefaultBeat,
   vtgTransitionInitialTurnsOffsets,
 } from '@/features/vtg/types'
-import {
-  doubleAnimationPlayback,
-  doublePlaybackMultiplier,
-} from '@/math/animation/subdivideAnimationPlayback'
+import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import { analyzeAlternatingPatternPlayback } from '@/math/animation/alternatePatternPlayback'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
@@ -36,7 +34,7 @@ const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber
 const booleanOptions = [false, true] as const
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 
-type QtrCandidateMatch = Omit<QtrPatternMatch, 'bpm' | 'scale'> & { subdivided?: boolean }
+type QtrCandidateMatch = Omit<QtrPatternMatch, 'bpm' | 'scale'>
 
 interface QtrCandidateCache {
   exact: ReadonlyMap<string, readonly QtrCandidateMatch[]>
@@ -131,23 +129,15 @@ const buildCandidateCache = (
                   candidate,
                 )
 
-                const subdivided = doubleAnimationPlayback(playback)
-                if (subdivided) {
+                for (const initialTurnsOffset of vtgTransitionInitialTurnsOffsets) {
                   addCandidate(
-                    exactCandidates,
-                    createFinalTransformedVtgAnimationSignature(subdivided, finalTransforms),
-                    { ...candidate, subdivided: true },
+                    transitionTurnsCandidates,
+                    createFinalTransformedVtgAnimationSignature(playback, {
+                      ...finalTransforms,
+                      initialTurnsOffset,
+                    }),
+                    { ...candidate, initialTurnsOffset },
                   )
-                  for (const initialTurnsOffset of vtgTransitionInitialTurnsOffsets) {
-                    addCandidate(
-                      transitionTurnsCandidates,
-                      createFinalTransformedVtgAnimationSignature(subdivided, {
-                        ...finalTransforms,
-                        initialTurnsOffset,
-                      }),
-                      { ...candidate, subdivided: true, initialTurnsOffset },
-                    )
-                  }
                 }
               }
             }
@@ -209,27 +199,22 @@ export const findQtrPatternMatches = (
       ? exactMatches
       : caches.flatMap(({ transitionTurns }) => transitionTurns.get(signature) ?? [])
 
-  return candidates
-    .filter((candidate) => !alternating || candidate.subdivided)
-    .map((candidate) => {
-      const { subdivided, ...match } = candidate
-      return {
-        ...match,
-        ...(alternating
-          ? {
-              transition: true,
-              transitionBeats: alternating.transitionBeats,
-              ...(alternating.transitionQuad ? { transitionQuad: true } : undefined),
-              ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
-            }
-          : undefined),
-        bpm: subdivided ? animation.bpm / doublePlaybackMultiplier : animation.bpm,
-        scale,
-      }
-    })
+  return candidates.map((candidate) => ({
+    ...candidate,
+    ...(alternating
+      ? {
+          transition: true,
+          transitionBeats: alternating.transitionBeats,
+          ...(alternating.transitionQuad ? { transitionQuad: true } : undefined),
+          ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
+        }
+      : undefined),
+    bpm: animation.bpm / doublePlaybackMultiplier,
+    scale,
+  }))
 }
 
-const startingBeat = (match: QtrPatternMatch) => match.beat ?? 1
+const startingBeat = (match: QtrPatternMatch) => match.beat ?? vtgDefaultBeat
 
 const playbackTransformationCount = (match: QtrPatternMatch) => Number(match.transition === true)
 

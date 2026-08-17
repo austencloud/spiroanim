@@ -9,20 +9,16 @@ import { vtgSpeedRatios } from '@/features/vtg/types'
 import {
   analyzeAlternatingPatternPlayback,
   alternatePatternPlayback,
-  getAlternatingPatternBase,
 } from '@/math/animation/alternatePatternPlayback'
-import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv5'
 
 describe('alternatePatternPlayback', () => {
-  const createSubdividedQtrAnimation = (selection: QtrPatternSelection) => {
-    const animation = createDefaultQtrAnimation(selection)
-    return animation ? doubleAnimationPlayback(animation) : undefined
-  }
+  const createDoubledQtrAnimation = (selection: QtrPatternSelection) =>
+    createDefaultQtrAnimation(selection)
 
   it('transitions both props together four times by default', () => {
-    const base = createSubdividedQtrAnimation({
+    const base = createDoubledQtrAnimation({
       reference: '1-1',
       speedRatio: '1:3',
       quarters: 1,
@@ -44,7 +40,7 @@ describe('alternatePatternPlayback', () => {
   })
 
   it.each(vtgSpeedRatios)('derives valid alternating turns for %s', (speedRatio) => {
-    const base = createSubdividedQtrAnimation({
+    const base = createDoubledQtrAnimation({
       reference: '1-1',
       speedRatio,
       quarters: 1,
@@ -54,7 +50,7 @@ describe('alternatePatternPlayback', () => {
     const animation = alternatePatternPlayback(base)
 
     expect(animation).toBeDefined()
-    expect(getAlternatingPatternBase(animation!)).toEqual(base)
+    expect(analyzeAlternatingPatternPlayback(animation!)?.base).toEqual(base)
   })
 
   it.each([
@@ -66,7 +62,7 @@ describe('alternatePatternPlayback', () => {
   ] as const)(
     'places reciprocal changes every $transitionBeats beats',
     ({ transitionBeats, frameCount, changeFrames }) => {
-      const base = createSubdividedQtrAnimation({
+      const base = createDoubledQtrAnimation({
         reference: '1-1',
         speedRatio: '1:3',
         quarters: 1,
@@ -91,7 +87,7 @@ describe('alternatePatternPlayback', () => {
   )
 
   it('uses Quad to alternate four changes starting with the selected prop', () => {
-    const base = createSubdividedQtrAnimation({
+    const base = createDoubledQtrAnimation({
       reference: '1-1',
       speedRatio: '1:3',
       quarters: 1,
@@ -111,15 +107,15 @@ describe('alternatePatternPlayback', () => {
     })
   })
 
-  it('recovers no base from an ordinary doubled cycle', () => {
-    const base = createSubdividedQtrAnimation({
+  it('does not analyze an ordinary doubled cycle as alternating playback', () => {
+    const base = createDoubledQtrAnimation({
       reference: '1-1',
       speedRatio: '1:3',
       quarters: 1,
     })
     if (!base) throw new Error('Expected doubled QTR animation')
 
-    expect(getAlternatingPatternBase(base)).toBeUndefined()
+    expect(analyzeAlternatingPatternPlayback(base)).toBeUndefined()
   })
 
   it('matches the supplied hand-authored QTR 1-1 transition', async () => {

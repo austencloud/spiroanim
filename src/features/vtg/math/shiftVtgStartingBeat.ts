@@ -33,4 +33,4 @@ export const shiftVtgStartingFrames = (
 export const shiftVtgStartingBeat = (
   animation: RootDataFinal,
   beat: VtgBeat,
-): RootDataFinal | undefined => shiftVtgStartingFrames(animation, beat - 1)
+): RootDataFinal | undefined => shiftVtgStartingFrames(animation, (beat - 1) * 2)

@@ -199,7 +199,7 @@
     </div>
 
     <ConceptAnimationControls :animation="animation">
-      <template #before-controls>
+      <template #before-controls="{ beginSliderHistory, endSliderHistory }">
         <PatternPlaybackControls
           v-model:beat="beat"
           v-model:qtr="isQtr"
@@ -207,6 +207,8 @@
           concept="vtg"
           :orientation-options="availablePatternOrientations"
           :show-orientation="supportsVtgPatternOrientation(speedRatio)"
+          @slider-start="beginSliderHistory"
+          @slider-end="endSliderHistory"
         >
           <template #before-controls>
             <PatternShapeControls v-model:shape="shape" />
@@ -415,8 +417,8 @@ const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5
 const createQSlots = async () => {
   quickSlotCreationError.value = undefined
   if (!props.animation) return
-  const candidateGroups = createVtgTransitionQuickSlotAnimationCandidates(props.animation)
-  if (!candidateGroups) return
+  const candidates = createVtgTransitionQuickSlotAnimationCandidates(props.animation)
+  if (!candidates) return
 
   const preferences = {
     swapProps: swapProps.value,
@@ -425,18 +427,13 @@ const createQSlots = async () => {
   }
   try {
     const resolution = await resolveVtgTransitionQuickSlotAnimations(
-      candidateGroups,
+      candidates,
       async (animation, rotationFilter) => {
         const result = await matchPattern({ animation, preferences, rotationFilter })
         if (result.status !== 'matched') return false
         return result.match.initialTurnsOffset === undefined ? 'exact' : 'transitionTurns'
       },
     )
-    if (resolution.status === 'invalid') {
-      quickSlotCreationError.value = `Quick Slot ${resolution.slot} could not be generated. Your current Quick Slots were not changed.`
-      console.warn(`VTG Quick Slot ${resolution.slot} could not be generated.`)
-      return
-    }
     if (resolution.status === 'partial') {
       const slotLabel = resolution.unmatchedSlots.map((slot) => `Q${slot}`).join(', ')
       quickSlotCreationError.value = `${slotLabel} did not match a known pattern. The generated pattern${resolution.unmatchedSlots.length === 1 ? ' was' : 's were'} still added.`
@@ -556,9 +553,19 @@ const rotationSelection = computed<VtgPatternSelection | QtrPatternSelection | u
 
 const availablePatternOrientations = computed<readonly VtgPatternOrientation[]>(() => {
   const selection = rotationSelection.value
-  return selection
+  const available = selection
     ? getUniqueVtgPatternOrientations(selection)
     : getVtgPatternOrientations(speedRatio.value)
+  if (
+    available.includes(orientation.value) ||
+    !getVtgPatternOrientations(speedRatio.value).includes(orientation.value)
+  ) {
+    return available
+  }
+
+  return getVtgPatternOrientations(speedRatio.value).filter(
+    (candidate) => candidate === orientation.value || available.includes(candidate),
+  )
 })
 
 const retainAvailableOrientation = () => {

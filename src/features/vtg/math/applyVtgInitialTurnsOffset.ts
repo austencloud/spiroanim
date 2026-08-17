@@ -1,9 +1,10 @@
-import type { VtgPatternSelection, VtgTransitionInitialTurnsOffset } from '@/features/vtg/types'
-import { shiftVtgStartingFrames } from '@/features/vtg/math/shiftVtgStartingBeat'
 import {
-  doubleAnimationPlayback,
-  doublePlaybackMultiplier,
-} from '@/math/animation/subdivideAnimationPlayback'
+  vtgDefaultBeat,
+  type VtgPatternSelection,
+  type VtgTransitionInitialTurnsOffset,
+} from '@/features/vtg/types'
+import { shiftVtgStartingFrames } from '@/features/vtg/math/shiftVtgStartingBeat'
+import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 /** Applies the shared prop-rotation state retained by a closed 45 Trans extraction. */
@@ -34,13 +35,13 @@ export const withVtgInitialTurnsOffsetBeat = (
     ? selection
     : {
         ...selection,
-        beat: selection.initialTurnsOffsetBeat ?? selection.beat ?? 1,
+        beat: selection.initialTurnsOffsetBeat ?? selection.beat ?? vtgDefaultBeat,
       }
 
 /**
- * Rebuilds a detected doubled-frame pattern at its matched beat before transporting the completed
- * animation to a newly selected beat. Applying the retained Turns offset after changing Beat would
- * move that adjustment to a different physical point in the cycle.
+ * Rebuilds a detected pattern at its matched beat before transporting the completed animation to a
+ * newly selected beat. Applying the retained Turns offset after changing Beat would move that
+ * adjustment to a different physical point in the cycle.
  */
 export const applyVtgInitialTurnsPlayback = (
   animation: RootDataFinal,
@@ -48,11 +49,9 @@ export const applyVtgInitialTurnsPlayback = (
 ): RootDataFinal | undefined => {
   if (selection.initialTurnsOffset === undefined) return animation
 
-  const doubled = doubleAnimationPlayback(animation)
-  if (!doubled) return undefined
-  const offset = applyVtgInitialTurnsOffset(doubled, selection.initialTurnsOffset)
-  const originBeat = selection.initialTurnsOffsetBeat ?? selection.beat ?? 1
-  const requestedBeat = selection.beat ?? 1
-  const relativeBeatShifts = (requestedBeat - originBeat + 4) % 4
-  return shiftVtgStartingFrames(offset, relativeBeatShifts * doublePlaybackMultiplier)
+  const offset = applyVtgInitialTurnsOffset(animation, selection.initialTurnsOffset)
+  const originBeat = selection.initialTurnsOffsetBeat ?? selection.beat ?? vtgDefaultBeat
+  const requestedBeat = selection.beat ?? vtgDefaultBeat
+  const relativeFrameShifts = ((requestedBeat - originBeat) * doublePlaybackMultiplier + 8) % 8
+  return shiftVtgStartingFrames(offset, relativeFrameShifts)
 }

@@ -181,11 +181,3 @@ export const analyzeAlternatingPatternPlayback = (
 
   return { base, transitionBeats, transitionQuad, transitionSecond }
 }
-
-/**
- * Uses the distinctive derived frame count to recover the original doubled
- * cycle without generating or caching every extended candidate.
- */
-export const getAlternatingPatternBase = (animation: RootDataFinal): RootDataFinal | undefined => {
-  return analyzeAlternatingPatternPlayback(animation)?.base
-}

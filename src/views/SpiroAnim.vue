@@ -28,6 +28,7 @@
         data-type="player"
         data-role="player-view"
         :dim="dPlayer"
+        :editor-visible="viewVisible.editor"
       />
       <Editor
         v-if="viewVisible.editor"

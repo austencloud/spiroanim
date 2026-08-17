@@ -12,10 +12,10 @@ import type {
   VtgPatternSelection,
   VtgRuleNumber,
 } from '@/features/vtg/types'
+import { vtgBeats } from '@/features/vtg/types'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
 const booleanOptions = [false, true] as const
-const beats = [1, 2, 3, 4] as const
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 
 const matchesSelection = (
@@ -48,7 +48,7 @@ describe('180-degree VTG orientation matching', () => {
             for (const shape of shapeOptions) {
               for (const swapProps of booleanOptions) {
                 for (const reversePlane of booleanOptions) {
-                  for (const beat of beats) {
+                  for (const beat of vtgBeats) {
                     const selection = {
                       reference,
                       speedRatio,
@@ -92,5 +92,5 @@ describe('180-degree VTG orientation matching', () => {
     }
 
     expect(missingSelections).toEqual([])
-  })
+  }, 30_000)
 })

@@ -16,12 +16,9 @@ import type {
   VtgPatternSelection,
   VtgRuleNumber,
 } from '@/features/vtg/types'
-import { getVtgPatternOrientations } from '@/features/vtg/types'
+import { getVtgPatternOrientations, vtgBeats } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
-import {
-  doubleAnimationPlayback,
-  doublePlaybackMultiplier,
-} from '@/math/animation/subdivideAnimationPlayback'
+import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import { shiftVtgStartingFrames } from '@/features/vtg/math/shiftVtgStartingBeat'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
@@ -64,26 +61,20 @@ const expectCompiledGeometryToMatch = (actual: RootDataFinal, expected: RootData
   }
 }
 
-const expectExactDoubledVtgMatch = (animation: RootDataFinal, label: string) => {
+const expectExactVtgMatch = (animation: RootDataFinal, label: string) => {
   const match = findVtgPatternMatch(animation, preferences)
   expect(match?.initialTurnsOffset).toBeUndefined()
   if (!match) throw new Error(`Expected ${label} to match`)
   const regenerated = createDefaultVtgAnimation(match)
-  const doubledRegenerated = regenerated ? doubleAnimationPlayback(regenerated) : undefined
-  expect(createVtgAnimationSignature(doubledRegenerated!)).toBe(
-    createVtgAnimationSignature(animation),
-  )
+  expect(createVtgAnimationSignature(regenerated!)).toBe(createVtgAnimationSignature(animation))
 }
 
-const expectExactDoubledQtrMatch = (animation: RootDataFinal, label: string) => {
+const expectExactQtrMatch = (animation: RootDataFinal, label: string) => {
   const match = findQtrPatternMatch(animation, { ...preferences, quarters: 1 })
   expect(match?.initialTurnsOffset).toBeUndefined()
   if (!match) throw new Error(`Expected ${label} to match`)
   const regenerated = createDefaultQtrAnimation(match)
-  const doubledRegenerated = regenerated ? doubleAnimationPlayback(regenerated) : undefined
-  expect(createVtgAnimationSignature(doubledRegenerated!)).toBe(
-    createVtgAnimationSignature(animation),
-  )
+  expect(createVtgAnimationSignature(regenerated!)).toBe(createVtgAnimationSignature(animation))
 }
 
 describe('45 Trans initial-turn matching', () => {
@@ -107,13 +98,10 @@ describe('45 Trans initial-turn matching', () => {
       const original = create(selection)
       if (!original) throw new Error('Expected a transition-derived pattern')
 
-      for (const beat of [1, 2, 3, 4] as const) {
+      for (const beat of vtgBeats) {
         const actual = create({ ...selection, beat, initialTurnsOffsetBeat: 2 })
-        const relativeBeatShifts = (beat - 2 + 4) % 4
-        const expected = shiftVtgStartingFrames(
-          original,
-          relativeBeatShifts * doublePlaybackMultiplier,
-        )
+        const relativeFrameShifts = ((beat - 2) * doublePlaybackMultiplier + 8) % 8
+        const expected = shiftVtgStartingFrames(original, relativeFrameShifts)
         if (!actual || !expected) throw new Error(`Expected Beat ${beat} animations`)
 
         expect(createVtgAnimationSignature(actual)).toBe(createVtgAnimationSignature(expected))
@@ -179,7 +167,7 @@ describe('45 Trans initial-turn matching', () => {
     expect(codec.encodeQS(resolution.animations[4]!, false)).toEqual(queryFrom(q5Query))
   })
 
-  it('keeps exact doubled odd-ratio VTG and QTR patterns ahead of turn-offset variants', () => {
+  it('keeps exact odd-ratio VTG and QTR patterns ahead of turn-offset variants', () => {
     let checkedPatterns = 0
     for (const speedRatio of oddRatios) {
       for (const row of rules) {
@@ -196,9 +184,8 @@ describe('45 Trans initial-turn matching', () => {
                   orientation,
                 }
                 const vtg = createDefaultVtgAnimation(baseSelection)
-                const doubledVtg = vtg ? doubleAnimationPlayback(vtg) : undefined
-                if (doubledVtg) {
-                  expectExactDoubledVtgMatch(doubledVtg, `VTG ${speedRatio} ${reference}`)
+                if (vtg) {
+                  expectExactVtgMatch(vtg, `VTG ${speedRatio} ${reference}`)
                   checkedPatterns += 1
                 }
 
@@ -207,9 +194,8 @@ describe('45 Trans initial-turn matching', () => {
                   quarters: 1,
                 }
                 const qtr = createDefaultQtrAnimation(qtrSelection)
-                const doubledQtr = qtr ? doubleAnimationPlayback(qtr) : undefined
-                if (!doubledQtr) continue
-                expectExactDoubledQtrMatch(doubledQtr, `QTR ${speedRatio} ${reference}`)
+                if (!qtr) continue
+                expectExactQtrMatch(qtr, `QTR ${speedRatio} ${reference}`)
                 checkedPatterns += 1
               }
             }

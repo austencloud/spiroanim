@@ -18,24 +18,6 @@
       </template>
     </AppTooltip>
 
-    <div class="pattern-playback-controls__beats" role="radiogroup" aria-label="Starting beat">
-      <AppTooltip v-for="option in vtgBeats" :key="option" :text="`Start on beat ${option}`">
-        <template #activator="{ props: activatorProps }">
-          <label v-bind="activatorProps">
-            <input
-              v-model="beat"
-              type="radio"
-              :name="`${concept}-beat`"
-              :value="option"
-              :aria-label="`Start on beat ${option}`"
-              :data-role="`${concept}-beat-${option}`"
-            />
-            <span>{{ option }}</span>
-          </label>
-        </template>
-      </AppTooltip>
-    </div>
-
     <AppTooltip v-if="showOrientation" text="Rotate wall plane by the selected angle">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps" class="pattern-playback-controls__orientation">
@@ -50,6 +32,31 @@
               {{ option }}°
             </option>
           </select>
+        </label>
+      </template>
+    </AppTooltip>
+
+    <AppTooltip :text="`Start on beat ${beat}`">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps" class="pattern-playback-controls__beat-slider">
+          <span class="pattern-playback-controls__visually-hidden">Starting beat</span>
+          <input
+            v-model.number="beat"
+            type="range"
+            :min="vtgBeats[0]"
+            :max="vtgBeats.at(-1)"
+            step="0.5"
+            aria-label="Starting beat"
+            :aria-valuetext="`Beat ${beat}`"
+            :data-role="`${concept}-beat`"
+            @pointerdown="emit('sliderStart')"
+            @pointerup="emit('sliderEnd')"
+            @pointercancel="emit('sliderEnd')"
+            @keydown="emit('sliderStart')"
+            @keyup="emit('sliderEnd')"
+            @blur="emit('sliderEnd')"
+          />
+          <output>{{ beat }}</output>
         </label>
       </template>
     </AppTooltip>
@@ -72,6 +79,11 @@ withDefaults(
   },
 )
 
+const emit = defineEmits<{
+  sliderStart: []
+  sliderEnd: []
+}>()
+
 const beat = defineModel<VtgBeat>('beat', { required: true })
 const qtr = defineModel<boolean>('qtr', { required: true })
 const orientation = defineModel<VtgPatternOrientation>('orientation', { default: 0 })
@@ -92,21 +104,12 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
   justify-content: center;
 }
 
-.pattern-playback-controls__beats {
-  display: grid;
-  grid-auto-columns: minmax(2rem, 1fr);
-  grid-auto-flow: column;
-  gap: var(--space-1);
-}
-
-.pattern-playback-controls__beats label,
 .pattern-playback-controls__qtr {
   position: relative;
   min-width: 0;
   cursor: pointer;
 }
 
-.pattern-playback-controls__beats input,
 .pattern-playback-controls__qtr input {
   position: absolute;
   width: 1px;
@@ -114,7 +117,6 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
   opacity: 0;
 }
 
-.pattern-playback-controls__beats label > span,
 .pattern-playback-controls__qtr > span,
 .pattern-playback-controls__orientation select {
   display: grid;
@@ -137,12 +139,6 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
     border-color var(--transition-fast);
 }
 
-.pattern-playback-controls__beats input:checked + span {
-  color: var(--color-on-action-primary);
-  background: var(--color-action-primary);
-  border-color: var(--color-action-primary);
-}
-
 .pattern-playback-controls__qtr input:checked + span,
 .pattern-playback-controls__orientation select {
   color: var(--color-on-action-primary);
@@ -162,11 +158,41 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
   opacity: 0.65;
 }
 
-.pattern-playback-controls__beats input:focus-visible + span,
 .pattern-playback-controls__qtr input:focus-visible + span,
 .pattern-playback-controls__orientation select:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
+}
+
+.pattern-playback-controls__beat-slider {
+  display: grid;
+  min-width: min(11rem, 42cqi);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  gap: var(--space-1);
+  color: var(--color-text);
+  font-size: var(--font-size-concept-control);
+  font-weight: 700;
+  grid-template-columns: minmax(4.5rem, 1fr) auto;
+  align-items: center;
+}
+
+.pattern-playback-controls__beat-slider input {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--color-action-primary);
+  cursor: pointer;
+}
+
+.pattern-playback-controls__beat-slider input:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+.pattern-playback-controls__beat-slider output {
+  min-width: 2em;
+  text-align: end;
+  white-space: nowrap;
 }
 
 .pattern-playback-controls__visually-hidden {

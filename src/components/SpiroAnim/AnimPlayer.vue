@@ -1,7 +1,7 @@
 <template>
   <div :style="containerStyle" data-role="player-container">
     <canvas ref="eCanvas" :style="canvasStyle" />
-    <Controls :store="props.store" />
+    <Controls :store="props.store" :editor-visible="props.editorVisible" />
     <span class="fps">{{ fps }}</span>
     <AppTooltip class="aspect-tooltip" placement="bottom">
       <template #activator="{ props: tooltipProps }">
@@ -62,9 +62,11 @@ const props = withDefaults(
   defineProps<{
     dim: { width: number; height: number; perc: number }
     store?: string
+    editorVisible?: boolean
   }>(),
   {
     store: 'main',
+    editorVisible: false,
   },
 )
 

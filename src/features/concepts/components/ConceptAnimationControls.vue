@@ -1,6 +1,10 @@
 <template>
   <div class="concept-button-rows">
-    <slot name="before-controls" />
+    <slot
+      name="before-controls"
+      :begin-slider-history="beginSliderHistory"
+      :end-slider-history="endSliderHistory"
+    />
 
     <slot name="between-controls" />
   </div>

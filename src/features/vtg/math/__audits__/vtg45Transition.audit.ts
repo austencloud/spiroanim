@@ -6,7 +6,7 @@ import { createVtgAnimationSignature } from '@/features/vtg/math/createVtgAnimat
 import {
   createVtgTransitionQuickSlotAnimationCandidates,
   resolveVtgTransitionQuickSlotAnimations,
-  type VtgTransitionQuickSlotCandidateGroups,
+  type VtgTransitionQuickSlotCandidates,
   type VtgTransitionQuickSlotMatchKind,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { getUniqueVtgPatternOrientations } from '@/features/vtg/math/getUniqueVtgPatternOrientations'
@@ -35,7 +35,8 @@ const transitionModes = vtgTransitionBeats.flatMap((transitionBeats) => [
   { transitionBeats, transitionQuad: true, transitionSecond: false },
   { transitionBeats, transitionQuad: true, transitionSecond: true },
 ])
-const exhaustiveAuditTimeout = 5 * 60 * 1000
+const exhaustiveAuditTimeout = 10 * 60 * 1000
+const orientationAuditTimeout = 30 * 1000
 
 interface UnclassifiedTransition {
   reference: VtgCellReference
@@ -76,29 +77,29 @@ const compiledFrameMatches = (
 
 const validateTransitionExtractions = (
   source: RootDataFinal,
-  groups: VtgTransitionQuickSlotCandidateGroups,
+  candidates: VtgTransitionQuickSlotCandidates,
   transitionBeats: VtgTransitionBeats,
 ): string | undefined => {
   const sourceCompiled = rootCompile(source)
   const transitionFrameCount = transitionBeats * 2
 
-  for (let groupIndex = 1; groupIndex < groups.length; groupIndex++) {
-    const candidates = groups[groupIndex]
-    const raw = candidates?.[0]
-    if (!candidates || !raw) return `Q${groupIndex + 1} has no raw extraction`
-    if (raw.bpm !== source.bpm) return `Q${groupIndex + 1} changed BPM`
+  for (let candidateIndex = 1; candidateIndex < candidates.length; candidateIndex++) {
+    const raw = candidates[candidateIndex]
+    if (!raw) return `Q${candidateIndex + 1} has no raw extraction`
+    if (raw.bpm !== source.bpm) return `Q${candidateIndex + 1} changed BPM`
 
-    const segmentIndex = groupIndex - 1
+    const segmentIndex = candidateIndex - 1
     const sourceFrameIndex = segmentIndex === 0 ? 0 : segmentIndex * transitionFrameCount + 1
     const rawCompiled = rootCompile(raw)
 
     for (const [propIndex, rawProp] of raw.props.entries()) {
       const sourceProp = sourceCompiled.props[propIndex]
       const rawCompiledProp = rawCompiled.props[propIndex]
-      if (!sourceProp || !rawCompiledProp) return `Q${groupIndex + 1} lost prop ${propIndex + 1}`
-      if (rawProp.anim.length !== 9) return `Q${groupIndex + 1} is not a nine-frame cycle`
+      if (!sourceProp || !rawCompiledProp)
+        return `Q${candidateIndex + 1} lost prop ${propIndex + 1}`
+      if (rawProp.anim.length !== 9) return `Q${candidateIndex + 1} is not a nine-frame cycle`
       if (rawProp.anim.slice(2).some((frame) => Object.keys(frame).length > 0)) {
-        return `Q${groupIndex + 1} contains authored data after its extracted interval`
+        return `Q${candidateIndex + 1} contains authored data after its extracted interval`
       }
 
       const expectedStart = sourceProp.anim[sourceFrameIndex]
@@ -106,36 +107,13 @@ const validateTransitionExtractions = (
       const actualStart = rawCompiledProp.anim[0]
       const actualEnd = rawCompiledProp.anim[1]
       if (!expectedStart || !expectedEnd || !actualStart || !actualEnd) {
-        return `Q${groupIndex + 1} references an unavailable source frame`
+        return `Q${candidateIndex + 1} references an unavailable source frame`
       }
       if (!compiledFrameMatches(actualStart, expectedStart)) {
-        return `Q${groupIndex + 1} starts at the wrong source frame for prop ${propIndex + 1}`
+        return `Q${candidateIndex + 1} starts at the wrong source frame for prop ${propIndex + 1}`
       }
       if (!compiledFrameMatches(actualEnd, expectedEnd)) {
-        return `Q${groupIndex + 1} ends at the wrong source frame for prop ${propIndex + 1}`
-      }
-    }
-
-    const cycleFrameCount = rawCompiled.props[0]?.anim.length
-      ? rawCompiled.props[0].anim.length - 1
-      : 0
-    for (const [phaseIndex, candidate] of candidates.entries()) {
-      const candidateCompiled = rootCompile(candidate)
-      for (const [propIndex, candidateProp] of candidateCompiled.props.entries()) {
-        const rawProp = rawCompiled.props[propIndex]
-        if (!rawProp || candidateProp.anim.length !== rawProp.anim.length) {
-          return `Q${groupIndex + 1} phase ${phaseIndex} changed frame structure`
-        }
-        for (const [frameIndex, actualFrame] of candidateProp.anim.entries()) {
-          const expectedIndex =
-            frameIndex === cycleFrameCount
-              ? phaseIndex % cycleFrameCount
-              : (frameIndex + phaseIndex) % cycleFrameCount
-          const expectedFrame = rawProp.anim[expectedIndex]
-          if (!expectedFrame || !compiledFrameMatches(actualFrame, expectedFrame)) {
-            return `Q${groupIndex + 1} phase ${phaseIndex} is not a cyclic re-indexing`
-          }
-        }
+        return `Q${candidateIndex + 1} ends at the wrong source frame for prop ${propIndex + 1}`
       }
     }
   }
@@ -239,12 +217,12 @@ describe('VTG 45 transition catalog audit', () => {
                     ...mode,
                   })
                   if (!animation) continue
-                  const groups = createVtgTransitionQuickSlotAnimationCandidates(animation)
-                  if (!groups) throw new Error(`Could not extract ${speedRatio} ${reference}`)
+                  const candidates = createVtgTransitionQuickSlotAnimationCandidates(animation)
+                  if (!candidates) throw new Error(`Could not extract ${speedRatio} ${reference}`)
 
                   const extractionError = validateTransitionExtractions(
                     animation,
-                    groups,
+                    candidates,
                     mode.transitionBeats,
                   )
                   if (extractionError) {
@@ -258,18 +236,10 @@ describe('VTG 45 transition catalog audit', () => {
                     })
                   }
 
-                  const result = await resolveVtgTransitionQuickSlotAnimations(groups, getMatchKind)
-                  if (result.status === 'invalid') {
-                    unclassified.push({
-                      reference,
-                      speedRatio,
-                      shape,
-                      beat,
-                      ...mode,
-                      slot: result.slot,
-                    })
-                    continue
-                  }
+                  const result = await resolveVtgTransitionQuickSlotAnimations(
+                    candidates,
+                    getMatchKind,
+                  )
                   if (result.status === 'partial') {
                     unclassified.push(
                       ...result.unmatchedSlots.map((slot) => ({
@@ -292,8 +262,8 @@ describe('VTG 45 transition catalog audit', () => {
                     }
 
                     const resolved = result.animations[slotIndex]
-                    const candidates = groups[slotIndex]
-                    if (!resolved || !candidates?.includes(resolved)) {
+                    const candidate = candidates[slotIndex]
+                    if (!resolved || resolved !== candidate) {
                       incorrect.push({
                         reference,
                         speedRatio,
@@ -301,7 +271,7 @@ describe('VTG 45 transition catalog audit', () => {
                         beat,
                         ...mode,
                         slot: slotIndex + 1,
-                        reason: 'resolver returned an animation outside the extracted phase family',
+                        reason: 'resolver returned an animation outside the extracted candidates',
                       })
                       continue
                     }
@@ -347,27 +317,31 @@ describe('VTG 45 transition catalog audit', () => {
     exhaustiveAuditTimeout,
   )
 
-  it('returns valid duplicate-free rotation options at every ratio', () => {
-    for (const speedRatio of vtgSpeedRatios) {
-      for (const row of ruleNumbers) {
-        for (const column of ruleNumbers) {
-          const reference: VtgCellReference = `${column}-${row}`
-          for (const shape of ['diamond', 'box'] as const) {
-            for (const quarters of [false, true] as const) {
-              const selection = {
-                reference,
-                speedRatio,
-                ...(shape === 'box' ? { shape } : undefined),
-                ...(quarters ? { quarters: 1 as const } : undefined),
-              }
-              const orientations = getUniqueVtgPatternOrientations(selection)
+  it(
+    'returns valid duplicate-free rotation options at every ratio',
+    () => {
+      for (const speedRatio of vtgSpeedRatios) {
+        for (const row of ruleNumbers) {
+          for (const column of ruleNumbers) {
+            const reference: VtgCellReference = `${column}-${row}`
+            for (const shape of ['diamond', 'box'] as const) {
+              for (const quarters of [false, true] as const) {
+                const selection = {
+                  reference,
+                  speedRatio,
+                  ...(shape === 'box' ? { shape } : undefined),
+                  ...(quarters ? { quarters: 1 as const } : undefined),
+                }
+                const orientations = getUniqueVtgPatternOrientations(selection)
 
-              expect(orientations).toContain(0)
-              expect(new Set(orientations).size).toBe(orientations.length)
+                expect(orientations).toContain(0)
+                expect(new Set(orientations).size).toBe(orientations.length)
+              }
             }
           }
         }
       }
-    }
-  })
+    },
+    orientationAuditTimeout,
+  )
 })

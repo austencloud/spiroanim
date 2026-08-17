@@ -78,7 +78,7 @@ export const buildVtgPattern = (
 
   return {
     ...pattern,
-    ...(selection.bpm !== undefined ? { bpm: clampVtgBpm(selection.bpm) } : undefined),
+    ...(selection.bpm !== undefined ? { bpm: clampVtgBpm(selection.bpm) * 2 } : undefined),
     distance: getVtgDistanceForScale(adjustedScale),
     props: transformedProps,
   }

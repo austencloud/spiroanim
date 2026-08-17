@@ -2,7 +2,7 @@ import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { toConceptPreviewAnimation } from '@/features/concepts/data/toConceptPreviewAnimation'
 import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
-import { vtgDefaultTransitionBeats } from '@/features/vtg/types'
+import { vtgDefaultBeat, vtgDefaultTransitionBeats } from '@/features/vtg/types'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
@@ -12,7 +12,6 @@ import {
   applyVtgInitialTurnsPlayback,
   withVtgInitialTurnsOffsetBeat,
 } from '@/features/vtg/math/applyVtgInitialTurnsOffset'
-import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import { alternatePatternPlayback } from '@/math/animation/alternatePatternPlayback'
 import { applyPatternPropVisibility } from '@/features/concepts/patternPropVisibility'
 import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
@@ -22,7 +21,7 @@ import {
 } from '@/features/concepts/applyPatternFinalTransforms'
 import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 
-const vtgFrameCount = 5
+const vtgFrameCount = 9
 
 const addDefaultFrames = (pattern: VtgReadableAnimation): VtgReadableAnimation => ({
   ...pattern,
@@ -70,12 +69,9 @@ export const applyVtgPlaybackControls = (
     | 'swapProps'
   >,
 ): RootDataFinal | undefined => {
-  const shifted = shiftVtgStartingBeat(animation, selection.beat ?? 1)
+  const shifted = shiftVtgStartingBeat(animation, selection.beat ?? vtgDefaultBeat)
   const transition = selection.transition === true
   if (!shifted || !transition) return shifted
-
-  const subdivided = doubleAnimationPlayback(shifted)
-  if (!subdivided) return undefined
 
   const selectedPropIndex = selection.transitionQuad && selection.transitionSecond ? 1 : 0
   const playbackPropIndex = selection.swapProps
@@ -84,7 +80,7 @@ export const applyVtgPlaybackControls = (
       : 0
     : selectedPropIndex
   return alternatePatternPlayback(
-    subdivided,
+    shifted,
     selection.transitionBeats ?? vtgDefaultTransitionBeats,
     playbackPropIndex,
     selection.transitionQuad,

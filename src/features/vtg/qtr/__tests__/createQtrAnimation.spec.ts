@@ -9,7 +9,6 @@ import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import type { VtgCellReference, VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
-import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import type { RootData, RootDataFinal } from '@/types/AnimTypes'
 
 const transposeSelection = <Selection extends VtgPatternSelection>(
@@ -194,7 +193,7 @@ describe('createQtrAnimation', () => {
         transition: true,
       })
 
-      expect(transitioned?.bpm).toBe((original?.bpm ?? 0) * doublePlaybackMultiplier)
+      expect(transitioned?.bpm).toBe(original?.bpm)
     },
   )
 })

@@ -125,8 +125,8 @@ export const describePatternRelationships = (
   const compiled = rootCompile(animation)
   const firstStart = compiled.props[0]?.anim[0]
   const secondStart = compiled.props[1]?.anim[0]
-  const firstEnd = compiled.props[0]?.anim[1]
-  const secondEnd = compiled.props[1]?.anim[1]
+  const firstEnd = compiled.props[0]?.anim[2]
+  const secondEnd = compiled.props[1]?.anim[2]
   if (!firstStart || !secondStart || !firstEnd || !secondEnd) {
     throw new Error('Pattern relationships require two props with at least two compiled frames')
   }

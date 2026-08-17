@@ -49,7 +49,7 @@ describe('getUniqueVtgPatternOrientations', () => {
 
   it('retains rotations whose complete beat families remain distinct', () => {
     expect(getUniqueVtgPatternOrientations({ reference: '5-1', speedRatio: '1:2' })).toEqual([
-      -90, 0, 90,
+      0, 90,
     ])
   })
 

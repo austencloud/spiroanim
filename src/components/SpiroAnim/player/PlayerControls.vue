@@ -49,6 +49,20 @@
     </template>
   </AppTooltip>
 
+  <AppTooltip v-if="canUndo && !props.editorVisible" class="btnUndo" text="Undo">
+    <template #activator="{ props: tooltipProps }">
+      <button
+        v-bind="tooltipProps"
+        class="icon-button"
+        type="button"
+        aria-label="Undo"
+        @click="clickUndo"
+      >
+        <BaseIcon :path="mdiUndoVariant" size="30" />
+      </button>
+    </template>
+  </AppTooltip>
+
   <label class="speed">
     <span>Speed</span>
     <AppTooltip class="speed-tooltip" text="Playback Speed">
@@ -68,6 +82,7 @@ import {
   mdiImageFilterCenterFocusWeak,
   mdiPauseCircleOutline,
   mdiPlayCircleOutline,
+  mdiUndoVariant,
   mdiVectorSelection,
   mdiSelectionMultiple,
 } from '@mdi/js'
@@ -75,15 +90,27 @@ import {
 import Progress from './PlayerProgress.vue'
 
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useQSMainStore } from '@/stores/useQSMainStore'
 
-const props = defineProps<{
-  store: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    store: string
+    editorVisible?: boolean
+  }>(),
+  {
+    editorVisible: false,
+  },
+)
 
 const playerStore = usePlayerStore(props.store)
 const { ROOT, CURRENT } = playerStore.raw()
 const { freeCamera, PLAYING, SELECTION, EINDEX, ETIMES, UPDATE, SELECTED } =
   storeToRefs(playerStore)
+
+const qsStore = useQSMainStore()
+const { qsHistory } = storeToRefs(qsStore)
+const { undoQS } = qsStore
+const canUndo = computed(() => qsHistory.value.length > 1)
 
 const speedOptions = [4, 3, 2, 1, 0.5, 0.25, 0.1] as const
 const speed = ref(ROOT.value.speed)
@@ -110,6 +137,11 @@ const clickMode = () => {
   }
 }
 
+const clickUndo = () => {
+  const previous = undoQS()
+  if (previous !== undefined) ROOT.value = previous
+}
+
 const playIcon = computed(() => (PLAYING.value ? mdiPauseCircleOutline : mdiPlayCircleOutline))
 const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelectionMultiple))
 </script>
@@ -119,6 +151,12 @@ const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelec
   position: absolute;
   right: 2px;
   bottom: calc(var(--space-workspace-bottom-offset) + 35px);
+}
+
+.btnUndo {
+  position: absolute;
+  top: 2px;
+  right: 2px;
 }
 
 .icon-button {

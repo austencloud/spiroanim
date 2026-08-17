@@ -23,12 +23,10 @@ import {
   getVtgPatternOrientations,
   supportsVtgPatternOrientation,
   vtgBeats,
+  vtgDefaultBeat,
   vtgTransitionInitialTurnsOffsets,
 } from '@/features/vtg/types'
-import {
-  doubleAnimationPlayback,
-  doublePlaybackMultiplier,
-} from '@/math/animation/subdivideAnimationPlayback'
+import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import { analyzeAlternatingPatternPlayback } from '@/math/animation/alternatePatternPlayback'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
@@ -37,7 +35,7 @@ const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber
 const booleanOptions = [false, true] as const
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 
-type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale'> & { subdivided?: boolean }
+type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale'>
 
 interface VtgCandidateCache {
   exact: ReadonlyMap<string, readonly VtgCandidateMatch[]>
@@ -128,23 +126,15 @@ const buildCandidateCache = (
                   candidate,
                 )
 
-                const subdivided = doubleAnimationPlayback(playback)
-                if (subdivided) {
+                for (const initialTurnsOffset of vtgTransitionInitialTurnsOffsets) {
                   addCandidate(
-                    exactCandidates,
-                    createFinalTransformedVtgAnimationSignature(subdivided, finalTransforms),
-                    { ...candidate, subdivided: true },
+                    transitionTurnsCandidates,
+                    createFinalTransformedVtgAnimationSignature(playback, {
+                      ...finalTransforms,
+                      initialTurnsOffset,
+                    }),
+                    { ...candidate, initialTurnsOffset },
                   )
-                  for (const initialTurnsOffset of vtgTransitionInitialTurnsOffsets) {
-                    addCandidate(
-                      transitionTurnsCandidates,
-                      createFinalTransformedVtgAnimationSignature(subdivided, {
-                        ...finalTransforms,
-                        initialTurnsOffset,
-                      }),
-                      { ...candidate, subdivided: true, initialTurnsOffset },
-                    )
-                  }
                 }
               }
             }
@@ -185,7 +175,7 @@ const findBaseVtgCandidateMatches = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
   includeTransitionTurns = true,
-): readonly (VtgPatternMatch & { subdivided?: boolean })[] => {
+): readonly VtgPatternMatch[] => {
   const speedRatio = inferVtgSpeedRatio(animation)
   if (speedRatio === undefined) return []
 
@@ -207,21 +197,15 @@ const findBaseVtgCandidateMatches = (
 
   return candidates.map((candidate) => ({
     ...candidate,
-    bpm: candidate.subdivided ? animation.bpm / doublePlaybackMultiplier : animation.bpm,
+    bpm: animation.bpm / doublePlaybackMultiplier,
     scale,
   }))
 }
 
-const withoutSubdivisionMarker = ({
-  subdivided: _subdivided,
-  ...match
-}: VtgPatternMatch & { subdivided?: boolean }): VtgPatternMatch => match
-
 const findBaseVtgPatternMatches = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
-): readonly VtgPatternMatch[] =>
-  findBaseVtgCandidateMatches(animation, rotationFilter).map(withoutSubdivisionMarker)
+): readonly VtgPatternMatch[] => findBaseVtgCandidateMatches(animation, rotationFilter)
 
 export const findVtgPatternMatches = (
   animation: RootDataFinal,
@@ -230,18 +214,16 @@ export const findVtgPatternMatches = (
   const alternating = analyzeAlternatingPatternPlayback(animation)
   if (!alternating) return findBaseVtgPatternMatches(animation, rotationFilter)
 
-  return findBaseVtgCandidateMatches(alternating.base, rotationFilter, false)
-    .filter((match) => match.subdivided)
-    .map((match) => ({
-      ...withoutSubdivisionMarker(match),
-      transition: true,
-      transitionBeats: alternating.transitionBeats,
-      ...(alternating.transitionQuad ? { transitionQuad: true } : undefined),
-      ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
-    }))
+  return findBaseVtgCandidateMatches(alternating.base, rotationFilter, false).map((match) => ({
+    ...match,
+    transition: true,
+    transitionBeats: alternating.transitionBeats,
+    ...(alternating.transitionQuad ? { transitionQuad: true } : undefined),
+    ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
+  }))
 }
 
-const startingBeat = (match: VtgPatternMatch) => match.beat ?? 1
+const startingBeat = (match: VtgPatternMatch) => match.beat ?? vtgDefaultBeat
 
 const playbackTransformationCount = (match: VtgPatternMatch) => Number(match.transition === true)
 

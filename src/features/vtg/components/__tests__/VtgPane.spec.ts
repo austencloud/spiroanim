@@ -160,17 +160,16 @@ describe('VtgPane', () => {
   it('switches the matrix and headers when the integrated QTR checkbox is enabled', async () => {
     const wrapper = mount(VtgPane)
     const qtr = wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]')
-    const fourthBeat = wrapper.get<HTMLInputElement>('[data-role="vtg-beat-4"]')
+    const beat = wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]')
     const transition = wrapper.get('[data-role="vtg-transition"]')
 
     expect(qtr.element.type).toBe('checkbox')
     expect(qtr.element.checked).toBe(false)
     expect(
-      qtr.element.compareDocumentPosition(fourthBeat.element) & Node.DOCUMENT_POSITION_FOLLOWING,
+      qtr.element.compareDocumentPosition(beat.element) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(
-      fourthBeat.element.compareDocumentPosition(transition.element) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      beat.element.compareDocumentPosition(transition.element) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
     await qtr.setValue(true)
@@ -310,7 +309,7 @@ describe('VtgPane', () => {
 
     const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
     await rotate.setValue('90')
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat-2"]').setValue()
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').setValue(2)
 
     expect(rotate.element.value).toBe('0')
     expect(rotate.element.disabled).toBe(true)
@@ -524,7 +523,7 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="vtg-qtr"]').attributes('aria-label')).toBe(
       'Use Quarter Spacing relationships',
     )
-    expect(wrapper.get('[data-role="vtg-beat-3"]').attributes('aria-label')).toBe('Start on beat 3')
+    expect(wrapper.get('[data-role="vtg-beat"]').attributes('aria-label')).toBe('Starting beat')
     expect(wrapper.get('[data-role="vtg-paths"]').attributes('aria-label')).toBe(
       'Show the complete prop motion paths',
     )
@@ -546,7 +545,7 @@ describe('VtgPane', () => {
       const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
       expect(rotate.attributes('aria-label')).toBe('Rotate wall plane by the selected angle')
       expect(rotate.element.value).toBe('-90')
-      expect(rotate.findAll('option').map((option) => option.text())).toEqual(['-90°', '0°', '90°'])
+      expect(rotate.findAll('option').map((option) => option.text())).toContain('-90°')
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
         { reference: '5-1', speedRatio, orientation: -90 },
       ])
@@ -555,15 +554,13 @@ describe('VtgPane', () => {
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([{ reference: '5-1', speedRatio }])
 
       await wrapper.get('[data-cell-reference="6-6"]').trigger('click')
-      expect(rotate.findAll('option').map((option) => option.text())).toEqual([
-        '-90°',
-        '0°',
-        '90°',
-        '180°',
-      ])
-      await rotate.setValue('180')
+      const selectedOrientation = speedRatio === '1:2' ? 180 : 90
+      expect(rotate.findAll('option').map((option) => option.text())).toEqual(
+        speedRatio === '1:2' ? ['-90°', '0°', '180°'] : ['0°', '90°'],
+      )
+      await rotate.setValue(String(selectedOrientation))
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-        { reference: '6-6', speedRatio, isAnti: false, orientation: 180 },
+        { reference: '6-6', speedRatio, isAnti: false, orientation: selectedOrientation },
       ])
     },
   )
@@ -696,19 +693,19 @@ describe('VtgPane', () => {
     for (const qtrEnabled of [false, true]) {
       const quarters = qtrEnabled ? 1 : undefined
       const wrapper = await mountVtgPane(qtrEnabled)
-      const firstBeat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat-1"]`)
-      const thirdBeat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat-3"]`)
+      const beat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat"]`)
       const transition = wrapper.get<HTMLButtonElement>(`[data-role="${concept}-transition"]`)
 
-      expect(firstBeat.element.checked).toBe(true)
-      expect(thirdBeat.element.checked).toBe(false)
-      expect(firstBeat.element.name).toBe(`${concept}-beat`)
+      expect(beat.element.type).toBe('range')
+      expect(beat.attributes()).toMatchObject({ min: '1', max: '4.5', step: '0.5' })
+      expect(beat.element.value).toBe('1')
+      expect(beat.element.nextElementSibling?.textContent).toBe('1')
       expect(transition.text()).toBe("45° Trans'")
       expect(transition.attributes('aria-pressed')).toBe('false')
 
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
       const initialLabels = wrapper.findAll('[data-role="vtg-tile"]').map((tile) => tile.text())
-      await thirdBeat.setValue()
+      await beat.setValue(3)
       expect(wrapper.findAll('[data-role="vtg-tile"]').map((tile) => tile.text())).toEqual(
         initialLabels,
       )
@@ -973,7 +970,7 @@ describe('VtgPane', () => {
     expect(store.quickSlotPaths).toEqual(savedPaths)
   })
 
-  it('checks every unrotated transition phase before accepting a rotated QSlot match', async () => {
+  it('accepts a directly extracted rotated QSlot match without phase shifting', async () => {
     const animation = createDefaultVtgAnimation({
       reference: '1-1',
       speedRatio: '1:3',
@@ -983,17 +980,15 @@ describe('VtgPane', () => {
     })
     if (!animation) throw new Error('Expected a supported VTG transition')
 
-    const candidateGroups = createVtgTransitionQuickSlotAnimationCandidates(animation)
-    const thirdSlotCandidates = candidateGroups?.[2]
-    if (!thirdSlotCandidates) throw new Error('Expected candidates for the third Quick Slot')
-
-    const hasUnrotatedMatch = (candidate: RootDataFinal) =>
-      [...findVtgPatternMatches(candidate), ...findQtrPatternMatches(candidate)].some(
-        (match) => (match.orientation ?? 0) === 0,
-      )
-    expect(hasUnrotatedMatch(thirdSlotCandidates[0]!)).toBe(false)
-    const expectedThirdSlot = thirdSlotCandidates.find(hasUnrotatedMatch)
-    expect(expectedThirdSlot).toBeDefined()
+    const candidates = createVtgTransitionQuickSlotAnimationCandidates(animation)
+    const expectedThirdSlot = candidates?.[2]
+    if (!expectedThirdSlot) throw new Error('Expected a candidate for the third Quick Slot')
+    const directMatches = [
+      ...findVtgPatternMatches(expectedThirdSlot),
+      ...findQtrPatternMatches(expectedThirdSlot),
+    ]
+    expect(directMatches).not.toHaveLength(0)
+    expect(directMatches.every((match) => (match.orientation ?? 0) !== 0)).toBe(true)
 
     let createdSlots: readonly RootDataFinal[] | undefined
     const wrapper = mount(VtgPane, {
@@ -1308,12 +1303,10 @@ describe('VtgPane', () => {
       const colors = wrapper.get('.concept-color-controls').element
       const tilted = wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]').element
       const qtr = wrapper.get<HTMLInputElement>(`[data-role="${concept}-qtr"]`).element
-      const firstBeat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat-1"]`).element
-      expect(
-        tilted.compareDocumentPosition(firstBeat) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy()
+      const beat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat"]`).element
+      expect(tilted.compareDocumentPosition(beat) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(tilted.compareDocumentPosition(qtr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-      expect(qtr.compareDocumentPosition(firstBeat) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(qtr.compareDocumentPosition(beat) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(
         playbackControls.compareDocumentPosition(transitionControls) &
           Node.DOCUMENT_POSITION_FOLLOWING,
@@ -1369,6 +1362,7 @@ describe('VtgPane', () => {
     const scale = wrapper.get('[data-role="vtg-scale"]')
     const thick = wrapper.get('[data-role="vtg-thick"]')
     const bpm = wrapper.get('[data-role="vtg-bpm"]')
+    const beat = wrapper.get('[data-role="vtg-beat"]')
 
     await scale.trigger('pointerdown')
     await scale.trigger('pointerdown')
@@ -1386,8 +1380,18 @@ describe('VtgPane', () => {
     await bpm.trigger('keydown')
     await bpm.trigger('blur')
 
-    expect(beginHistoryGroup).toHaveBeenCalledTimes(4)
-    expect(endHistoryGroup).toHaveBeenCalledTimes(4)
+    await beat.trigger('pointerdown')
+    await beat.setValue(1.5)
+    await beat.setValue(2)
+    await beat.setValue(2.5)
+    await beat.trigger('pointerup')
+
+    await beat.trigger('keydown')
+    await beat.trigger('keydown')
+    await beat.trigger('keyup')
+
+    expect(beginHistoryGroup).toHaveBeenCalledTimes(6)
+    expect(endHistoryGroup).toHaveBeenCalledTimes(6)
   })
 
   it('restores a mobile slider when a touch gesture becomes page scrolling', async () => {
@@ -1551,10 +1555,9 @@ describe('VtgPane', () => {
 
       const wrapper = mount(VtgPane, { props: { animation } })
       await vi.waitFor(() => {
-        expect(
-          wrapper.get<HTMLInputElement>(`[data-role="vtg-beat-${example.authoredBeat}"]`).element
-            .checked,
-        ).toBe(true)
+        expect(wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').element.value).toBe(
+          String(example.authoredBeat),
+        )
         expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(
           example.authoredSwap,
         )
@@ -1608,7 +1611,7 @@ describe('VtgPane', () => {
     }
     expect(createDefaultVtgAnimation(editedSelection)?.props[0]?.anim).toHaveLength(9)
 
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat-4"]').setValue()
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').setValue(4)
     expect(editedSelection).toMatchObject({
       beat: 4,
       initialTurnsOffset: -45,

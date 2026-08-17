@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import AppTooltip from '@/components/AppTooltip.vue'
 import PlayerControls from '@/components/SpiroAnim/player/PlayerControls.vue'
+import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useQSMainStore } from '@/stores/useQSMainStore'
 
 describe('PlayerControls', () => {
   beforeEach(() => {
@@ -62,6 +64,50 @@ describe('PlayerControls', () => {
     expect(button.attributes('aria-pressed')).toBe('false')
     await button.trigger('click')
     expect(button.attributes('aria-pressed')).toBe('true')
+
+    wrapper.unmount()
+  })
+
+  it('offers undo at the top right only while history exists and the Editor is hidden', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const playerStore = usePlayerStore('main')
+    const { ROOT } = playerStore.raw()
+    const originalBpm = ROOT.value.bpm
+    const historyStore = useQSMainStore()
+    historyStore.qsHistory = []
+    historyStore.qsFuture = []
+    historyStore.qsSkip = false
+
+    historyStore.encodeQS(ROOT.value)
+    ROOT.value = { ...ROOT.value, bpm: originalBpm + 10 }
+    historyStore.encodeQS(ROOT.value)
+    expect(historyStore.undoQS()?.bpm).toBe(originalBpm)
+    expect(historyStore.redoQS()?.bpm).toBe(originalBpm + 10)
+
+    const wrapper = mount(PlayerControls, {
+      props: { store: 'main' },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          BaseIcon: true,
+          Progress: {
+            template: '<div><slot name="play" /><slot name="mode" /></div>',
+          },
+        },
+      },
+    })
+
+    expect(wrapper.get('.btnUndo button[aria-label="Undo"]').attributes('aria-label')).toBe('Undo')
+
+    await wrapper.setProps({ editorVisible: true })
+    expect(wrapper.find('button[aria-label="Undo"]').exists()).toBe(false)
+
+    await wrapper.setProps({ editorVisible: false })
+    await wrapper.get('button[aria-label="Undo"]').trigger('click')
+
+    expect(ROOT.value.bpm).toBe(originalBpm)
+    expect(wrapper.find('button[aria-label="Undo"]').exists()).toBe(false)
 
     wrapper.unmount()
   })

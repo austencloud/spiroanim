@@ -10,6 +10,7 @@ import type {
   VtgRuleNumber,
 } from '@/features/vtg/types'
 import { getVtgPatternOrientations, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
+import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
@@ -178,7 +179,7 @@ describe('VTG animation matching', () => {
     },
   )
 
-  it('recovers the QTR transition by matching its internally subdivided base cycle', () => {
+  it('recovers the QTR transition by matching its shared doubled base cycle', () => {
     const selection = {
       reference: '1-1',
       speedRatio: '1:3',
@@ -339,7 +340,7 @@ describe('VTG animation matching', () => {
     expect(findVtgPatternMatch(animation)).toMatchObject({
       reference: '3-4',
       speedRatio: '1:5',
-      bpm: 240,
+      bpm: 120,
       scale: 2.5,
     })
   })
@@ -382,7 +383,7 @@ describe('VTG animation matching', () => {
       reference: '3-4',
       speedRatio: '1:5',
     })
-    animation.props[0]!.anim[1]!.arc = 45
+    animation.props[0]!.anim[1]!.arc = 46
 
     expect(findVtgPatternMatch(animation)).toBeUndefined()
   })
@@ -430,7 +431,10 @@ describe('VTG animation matching', () => {
         'r=Ew08kk11Y&p0=N__.5L_xM___s.blE...&m0=_1_mxqv__&p1=Q__.gZE_____s.bn_xM...&c=_i_bhq&v=6',
       ),
     )
-    const animation = codec.decodeQS(query)
+    const supplied = codec.decodeQS(query)
+    expect(codec.encodeQS(supplied, false)).toEqual(query)
+    const animation = doubleAnimationPlayback(supplied)
+    if (!animation) throw new Error('Expected the supplied pattern to double')
 
     expect(findVtgPatternMatch(animation)).toMatchObject({
       reference: '6-6',
@@ -439,6 +443,5 @@ describe('VTG animation matching', () => {
       swapProps: true,
       reversePlane: true,
     })
-    expect(codec.encodeQS(animation, false)).toEqual(query)
   })
 })
