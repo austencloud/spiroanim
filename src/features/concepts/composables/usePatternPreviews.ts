@@ -11,6 +11,7 @@ import type {
   VtgPatternSelection,
   VtgSpeedRatio,
   VtgPatternOrientation,
+  VtgTransitionInitialTurnsOffset,
 } from '@/features/vtg/types'
 import { supportsVtgPatternOrientation } from '@/features/vtg/types'
 import type { PatternShape } from '@/types/PatternTypes'
@@ -30,6 +31,8 @@ interface UseVtgPreviewsOptions {
   leftPropColor: Ref<PatternPropColor>
   rightPropColor: Ref<PatternPropColor>
   orientation: Ref<VtgPatternOrientation>
+  initialTurnsOffset: Ref<VtgTransitionInitialTurnsOffset | undefined>
+  initialTurnsOffsetBeat: Ref<VtgBeat | undefined>
   pairedLayout: Readonly<Ref<boolean>>
 }
 
@@ -61,6 +64,8 @@ export const usePatternPreviews = ({
   leftPropColor,
   rightPropColor,
   orientation,
+  initialTurnsOffset,
+  initialTurnsOffsetBeat,
   pairedLayout,
 }: UseVtgPreviewsOptions) => {
   const activePreviewIndexes = computed(() => {
@@ -86,6 +91,10 @@ export const usePatternPreviews = ({
     if (reversePlane.value) selection.reversePlane = true
     if (shape.value === 'box') selection.shape = shape.value
     if (beat.value !== 1) selection.beat = beat.value
+    if (initialTurnsOffset.value !== undefined) {
+      selection.initialTurnsOffset = initialTurnsOffset.value
+      selection.initialTurnsOffsetBeat = initialTurnsOffsetBeat.value
+    }
     if (supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0) {
       selection.orientation = orientation.value
     }
@@ -120,6 +129,8 @@ export const usePatternPreviews = ({
       leftPropColor,
       rightPropColor,
       orientation,
+      initialTurnsOffset,
+      initialTurnsOffsetBeat,
       pairedLayout,
     ],
     renderer.requestPreviews,

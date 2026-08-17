@@ -3,14 +3,14 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import { shiftAnimationFrames } from '@/math/animation/shiftAnimationFrames'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
-/** Applies Shift until the selected VTG/QTR beat becomes beat 1. */
-export const shiftVtgStartingBeat = (
+/** Applies the requested number of semantic Shift operations to a closed VTG/QTR animation. */
+export const shiftVtgStartingFrames = (
   animation: RootDataFinal,
-  beat: VtgBeat,
+  shiftCount: number,
 ): RootDataFinal | undefined => {
   let shiftedAnimation = animation
 
-  for (let shiftCount = 1; shiftCount < beat; shiftCount += 1) {
+  for (let completedShifts = 0; completedShifts < shiftCount; completedShifts += 1) {
     const compiled = rootCompile(shiftedAnimation)
     const shiftedProps = []
 
@@ -28,3 +28,9 @@ export const shiftVtgStartingBeat = (
 
   return shiftedAnimation
 }
+
+/** Applies Shift until the selected VTG/QTR beat becomes beat 1. */
+export const shiftVtgStartingBeat = (
+  animation: RootDataFinal,
+  beat: VtgBeat,
+): RootDataFinal | undefined => shiftVtgStartingFrames(animation, beat - 1)

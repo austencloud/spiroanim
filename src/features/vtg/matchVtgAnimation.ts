@@ -23,6 +23,7 @@ import {
   getVtgPatternOrientations,
   supportsVtgPatternOrientation,
   vtgBeats,
+  vtgTransitionInitialTurnsOffsets,
 } from '@/features/vtg/types'
 import {
   doubleAnimationPlayback,
@@ -38,7 +39,10 @@ const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5
 
 type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale'> & { subdivided?: boolean }
 
-type VtgCandidateCache = ReadonlyMap<string, readonly VtgCandidateMatch[]>
+interface VtgCandidateCache {
+  exact: ReadonlyMap<string, readonly VtgCandidateMatch[]>
+  transitionTurns: ReadonlyMap<string, readonly VtgCandidateMatch[]>
+}
 
 const candidateCaches = new Map<
   VtgSpeedRatio,
@@ -64,7 +68,8 @@ const buildCandidateCache = (
   speedRatio: VtgSpeedRatio,
   orientation: NonNullable<VtgPatternSelection['orientation']>,
 ) => {
-  const candidates = new Map<string, VtgCandidateMatch[]>()
+  const exactCandidates = new Map<string, VtgCandidateMatch[]>()
+  const transitionTurnsCandidates = new Map<string, VtgCandidateMatch[]>()
 
   for (const column of ruleNumbers) {
     for (const row of ruleNumbers) {
@@ -118,7 +123,7 @@ const buildCandidateCache = (
 
                 const finalTransforms = { swapProps, reversePlane }
                 addCandidate(
-                  candidates,
+                  exactCandidates,
                   createFinalTransformedVtgAnimationSignature(playback, finalTransforms),
                   candidate,
                 )
@@ -126,10 +131,20 @@ const buildCandidateCache = (
                 const subdivided = doubleAnimationPlayback(playback)
                 if (subdivided) {
                   addCandidate(
-                    candidates,
+                    exactCandidates,
                     createFinalTransformedVtgAnimationSignature(subdivided, finalTransforms),
                     { ...candidate, subdivided: true },
                   )
+                  for (const initialTurnsOffset of vtgTransitionInitialTurnsOffsets) {
+                    addCandidate(
+                      transitionTurnsCandidates,
+                      createFinalTransformedVtgAnimationSignature(subdivided, {
+                        ...finalTransforms,
+                        initialTurnsOffset,
+                      }),
+                      { ...candidate, subdivided: true, initialTurnsOffset },
+                    )
+                  }
                 }
               }
             }
@@ -140,6 +155,7 @@ const buildCandidateCache = (
   }
 
   const speedRatioCaches = candidateCaches.get(speedRatio) ?? new Map()
+  const candidates = { exact: exactCandidates, transitionTurns: transitionTurnsCandidates }
   speedRatioCaches.set(orientation, candidates)
   candidateCaches.set(speedRatio, speedRatioCaches)
   return candidates
@@ -168,6 +184,7 @@ const getMatchingOrientations = (
 const findBaseVtgCandidateMatches = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
+  includeTransitionTurns = true,
 ): readonly (VtgPatternMatch & { subdivided?: boolean })[] => {
   const speedRatio = inferVtgSpeedRatio(animation)
   if (speedRatio === undefined) return []
@@ -179,13 +196,20 @@ const findBaseVtgCandidateMatches = (
   const signature = createVtgAnimationSignature(animation)
   if (!signature) return []
 
-  return getMatchingOrientations(speedRatio, rotationFilter).flatMap((orientation) =>
-    (getCandidateCache(speedRatio, orientation).get(signature) ?? []).map((candidate) => ({
-      ...candidate,
-      bpm: candidate.subdivided ? animation.bpm / doublePlaybackMultiplier : animation.bpm,
-      scale,
-    })),
+  const caches = getMatchingOrientations(speedRatio, rotationFilter).map((orientation) =>
+    getCandidateCache(speedRatio, orientation),
   )
+  const exactMatches = caches.flatMap(({ exact }) => exact.get(signature) ?? [])
+  const candidates =
+    exactMatches.length > 0 || !includeTransitionTurns
+      ? exactMatches
+      : caches.flatMap(({ transitionTurns }) => transitionTurns.get(signature) ?? [])
+
+  return candidates.map((candidate) => ({
+    ...candidate,
+    bpm: candidate.subdivided ? animation.bpm / doublePlaybackMultiplier : animation.bpm,
+    scale,
+  }))
 }
 
 const withoutSubdivisionMarker = ({
@@ -206,7 +230,7 @@ export const findVtgPatternMatches = (
   const alternating = analyzeAlternatingPatternPlayback(animation)
   if (!alternating) return findBaseVtgPatternMatches(animation, rotationFilter)
 
-  return findBaseVtgCandidateMatches(alternating.base, rotationFilter)
+  return findBaseVtgCandidateMatches(alternating.base, rotationFilter, false)
     .filter((match) => match.subdivided)
     .map((match) => ({
       ...withoutSubdivisionMarker(match),
@@ -221,14 +245,11 @@ const startingBeat = (match: VtgPatternMatch) => match.beat ?? 1
 
 const playbackTransformationCount = (match: VtgPatternMatch) => Number(match.transition === true)
 
-// Added odd-ratio rotations overlap some established zero-degree cells. Keep the established
-// interpretation when it exists, and use rotated candidates only for signatures it cannot cover.
-const preferUnrotatedOddRatioMatches = (
+// Rotation is the final pattern comparison. Keep an equivalent zero-degree interpretation when
+// one exists, and use rotated candidates only for signatures the unrotated catalog cannot cover.
+const preferUnrotatedMatches = (
   matches: readonly VtgPatternMatch[],
 ): readonly VtgPatternMatch[] => {
-  const speedRatio = matches[0]?.speedRatio
-  if (speedRatio !== '1:1' && speedRatio !== '1:3' && speedRatio !== '1:5') return matches
-
   const unrotated = matches.filter((match) => (match.orientation ?? 0) === 0)
   return unrotated.length > 0 ? unrotated : matches
 }
@@ -250,7 +271,7 @@ export const findVtgPatternMatch = (
   preferences?: VtgPatternMatchPreferences,
   rotationFilter?: VtgPatternRotationFilter,
 ): VtgPatternMatch | undefined =>
-  [...preferUnrotatedOddRatioMatches(findVtgPatternMatches(animation, rotationFilter))].sort(
+  [...preferUnrotatedMatches(findVtgPatternMatches(animation, rotationFilter))].sort(
     (first, second) => {
       if (preferences) {
         const preferenceDifference =

@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
@@ -10,6 +11,8 @@ import { findVtgPatternMatches } from '@/features/vtg/matchVtgAnimation'
 import { createVtgTransitionQuickSlotAnimationCandidates } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { findQtrPatternMatches } from '@/features/vtg/qtr/matchQtrAnimation'
 import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
+import { useBaseQS } from '@/services/query/createBaseQS'
+import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { useQSMainStore } from '@/stores/useQSMainStore'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import type { RootDataFinal } from '@/types/AnimTypes'
@@ -1013,7 +1016,7 @@ describe('VtgPane', () => {
     expect(createdSlots?.[2]).toEqual(expectedThirdSlot)
   })
 
-  it('leaves Quick Slots unchanged when a transition extraction is unmatched', async () => {
+  it('creates every Quick Slot and warns when a transition extraction is unmatched', async () => {
     const store = useConceptsStore()
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const animation = createDefaultVtgAnimation({
@@ -1039,7 +1042,16 @@ describe('VtgPane', () => {
         .fn<PatternMatchingClient['matchQst']>()
         .mockResolvedValue({ status: 'unmatched' }),
     }
-    const wrapper = mount(VtgPane, { props: { animation, patternMatcher } })
+    let createdSlots: readonly RootDataFinal[] | undefined
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        patternMatcher,
+        onQuickSlotsCreate: (animations: readonly RootDataFinal[]) => {
+          createdSlots = animations
+        },
+      },
+    })
 
     await vi.waitFor(() => {
       expect(
@@ -1049,13 +1061,16 @@ describe('VtgPane', () => {
     await wrapper.get('[data-role="vtg-transition-qslots"]').trigger('click')
     await vi.waitFor(() => {
       expect(wrapper.get('[data-role="vtg-transition-qslots-error"]').text()).toContain(
-        'Quick Slot 2',
+        'Q2, Q3, Q4, Q5',
       )
     })
 
     expect(store.quickSlotCount).toBe(0)
-    expect(wrapper.emitted('quickSlotsCreate')).toBeUndefined()
-    expect(warning).toHaveBeenCalledWith('VTG Quick Slot 2 did not resolve to a known pattern.')
+    expect(createdSlots).toHaveLength(5)
+    expect(wrapper.emitted('quickSlotsCreate')).toHaveLength(1)
+    expect(warning).toHaveBeenCalledWith(
+      'VTG Quick Slots 2, 3, 4, 5 did not resolve to a known pattern; the generated extractions were used.',
+    )
     warning.mockRestore()
   })
 
@@ -1131,6 +1146,34 @@ describe('VtgPane', () => {
     expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
     expect(wrapper.find('[data-role="vtg-quarters"]').exists()).toBe(false)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-spacing"]').element.value).toBe('9')
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+  })
+
+  it('does not emit a stale selection when hydration switches from QTR to VTG', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const decode = (query: string) => codec.decodeQS(Object.fromEntries(new URLSearchParams(query)))
+    const qtrAnimation = decode(
+      'r=Ew08Yk11Y&p0=Q__.g_______s.5E0wm.......&m0=_1_mxqv__&p1=N__.5L______s.___wm.......&c=_i_bhq&v=6',
+    )
+    const vtgAnimation = decode(
+      'r=Ew08Yk11Y&p0=Q__.blE_____s.5JEs8.......&m0=_1_mxqv__&p1=N__.blE_____s.5L_s8.......&c=_i_bhq&v=6',
+    )
+    const wrapper = mount(VtgPane, { props: { animation: qtrAnimation } })
+
+    await vi.waitFor(() => {
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(true)
+    })
+    await wrapper.setProps({ animation: vtgAnimation })
+    await vi.waitFor(() => {
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(false)
+    })
+    await nextTick()
+
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
@@ -1402,6 +1445,32 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
+  it('hydrates the exact Q2 phase with its reproducible rotation value', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const animation = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew08Yk11Y&p0=Q__.mBE_____q.5JEsR.......&m0=_1_mxqv__&p1=N__.mBE_____q.5JEsR.......&c=_f_bhq&v=6',
+        ),
+      ),
+    )
+    const wrapper = mount(VtgPane, { props: { animation } })
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
+    })
+
+    const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+    expect(rotate.element.value).toBe('-90')
+    expect(rotate.element.disabled).toBe(false)
+    expect(rotate.findAll('option').map((option) => option.text())).toContain('-90°')
+  })
+
   it('ignores a stale match after a newer animation has been hydrated', async () => {
     const firstAnimation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     const secondAnimation = createDefaultVtgAnimation({ reference: '3-4', speedRatio: '1:5' })
@@ -1499,6 +1568,56 @@ describe('VtgPane', () => {
       expect(wrapper.get('[data-role="vtg-transition"]').attributes('aria-pressed')).toBe('true')
       wrapper.unmount()
     }
+  })
+
+  it('retains a detected 45 Trans initial-turn state while editing its matched pattern', async () => {
+    const animation = createDefaultVtgAnimation({
+      reference: '6-3',
+      speedRatio: '1:2',
+      shape: 'box',
+      beat: 2,
+      reversePlane: true,
+      orientation: -90,
+      initialTurnsOffset: -45,
+    })
+    if (!animation) throw new Error('Expected a transition-derived VTG animation')
+
+    let editedSelection: VtgPatternSelection | QtrPatternSelection | undefined
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        onPatternSelect: (selection) => {
+          if ('speedRatio' in selection) editedSelection = selection
+        },
+      },
+    })
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('6-3')
+    })
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
+    expect(editedSelection).toMatchObject({
+      reference: '6-3',
+      speedRatio: '1:2',
+      initialTurnsOffset: -45,
+      initialTurnsOffsetBeat: 2,
+      swapProps: true,
+    })
+    if (!editedSelection || 'quarters' in editedSelection) {
+      throw new Error('Expected an edited VTG selection')
+    }
+    expect(createDefaultVtgAnimation(editedSelection)?.props[0]?.anim).toHaveLength(9)
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat-4"]').setValue()
+    expect(editedSelection).toMatchObject({
+      beat: 4,
+      initialTurnsOffset: -45,
+      initialTurnsOffsetBeat: 2,
+    })
+
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
+    expect(editedSelection).not.toHaveProperty('initialTurnsOffset')
+    expect(editedSelection).not.toHaveProperty('initialTurnsOffsetBeat')
   })
 
   it('selects a random 1:3 pattern when the loaded animation is empty', async () => {

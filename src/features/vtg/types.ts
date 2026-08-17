@@ -28,6 +28,8 @@ export const vtgBeats = [1, 2, 3, 4] as const
 export type VtgBeat = (typeof vtgBeats)[number]
 export const vtgTransitionBeats = [6, 5, 4, 3, 2] as const
 export type VtgTransitionBeats = (typeof vtgTransitionBeats)[number]
+export const vtgTransitionInitialTurnsOffsets = [-45, 45] as const
+export type VtgTransitionInitialTurnsOffset = (typeof vtgTransitionInitialTurnsOffsets)[number]
 export const vtgPatternOrientations = [-90, 0, 90, 180] as const
 export type VtgPatternOrientation = (typeof vtgPatternOrientations)[number]
 // Odd-ratio 45 Trans audits found that -90 and 90 always identify the same quarter-turn class once
@@ -65,6 +67,8 @@ export interface VtgPatternSelection
   transitionBeats?: VtgTransitionBeats
   transitionQuad?: boolean
   transitionSecond?: boolean
+  initialTurnsOffset?: VtgTransitionInitialTurnsOffset
+  initialTurnsOffsetBeat?: VtgBeat
   orientation?: VtgPatternOrientation
   bpm?: number
   scale?: number
@@ -86,6 +90,7 @@ export interface VtgPatternMatch {
   transitionBeats?: VtgTransitionBeats
   transitionQuad?: boolean
   transitionSecond?: boolean
+  initialTurnsOffset?: VtgTransitionInitialTurnsOffset
   orientation?: VtgPatternOrientation
   bpm: number
   scale: number

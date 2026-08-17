@@ -99,11 +99,10 @@ for the active concept.
 When several control combinations produce the same authored pattern, matching tries every Starting
 Beat position before changing the current Swap, 180-degree, or Qtr mode. The lowest Starting Beat is
 used only to break a tie between candidates that preserve the same current transform controls.
-At odd ratios, added nonzero rotations are a last-resort canonical match: an available unrotated
-candidate wins before a rotated candidate. Transition Quick Slot generation applies the stronger
-phase-first rule described below and exhausts unrotated VTG and QTR phases before rotated phases.
-The matcher and selector use the same canonical orientation list. Even ratios retain their
-established orientation semantics.
+Nonzero rotations are a last-resort canonical match: an available unrotated candidate wins before
+a rotated candidate at every ratio. Transition Quick Slot generation applies the stronger
+exact-first rule described below. Within each match tier it exhausts unrotated VTG and QTR phases
+before rotated phases. The matcher and selector use the same canonical orientation rule.
 
 The rotation selector is also canonicalized at the pattern-family level. Availability checks all
 four Starting Beats and is invariant under the selected Beat, Swap, and 180-degree controls. A
@@ -179,14 +178,31 @@ slot is populated. The replacement leaves every slot unselected.
 The first generated slot is the complete detected transition. The next four correspond to the four
 relationship-change segments. Each segment is shifted to its transition boundary, reduced to its
 first two authored frames, and padded with inherited frames to the doubled base-cycle length. The
-raw extraction is considered first, followed by every cyclic phase. Generation asks the matcher to
-accept an unrotated phase before considering rotated matching; it does not change prop direction to
-manufacture a match. This phase-first rule is what allows edited doubled-frame extracts to resolve
-without making rotation the primary explanation.
+raw extraction is considered first, followed by every cyclic phase. Generation exhausts normal
+exact matches before transition-derived first-frame Turns matches. Within each tier, it accepts an
+unrotated phase before considering rotated matching; it does not change prop direction to
+manufacture a match.
 
-Quick Slot generation is atomic. All four extracted cycles must resolve through the normal matcher
-before any slot is replaced. An unresolved phase leaves the existing set unchanged and displays the
-slot number that failed; it is never replaced with an arbitrary candidate animation.
+A closed extraction may retain a shared `-45°` or `45°` first-frame Turns state from its transition
+handoff. These states use the same VTG/QTR candidate process at every speed ratio; there is no
+separate odd/even matcher. They are indexed only for doubled closed patterns and only after normal
+exact candidates, so an ordinary pattern cannot be reinterpreted as a transition-derived variant.
+Regeneration preserves the exact result by subdividing the selected closed pattern first and then
+applying the retained first-frame Turns state. Applying it before subdivision is not equivalent and
+would incorrectly create `22.5°` continuation frames. The state does not add wall-plane rotation
+options. It remains attached while editing the matched pattern, but selecting another matrix cell,
+resetting, or starting another 45 Trans clears it. Its detected Starting Beat is retained separately:
+when Beat changes, the builder completes the doubled pattern at that original beat and then applies
+two semantic frame shifts per Beat step. Reapplying the Turns offset to frame 1 after changing Beat
+would change the pattern's physical orientation instead of selecting another starting position.
+
+Quick Slot generation resolves each extracted cycle independently through the normal matcher. It
+exhausts exact unrotated phases, exact rotated phases, transition-derived unrotated phases, and
+transition-derived rotated phases in that order. This prevents a hidden transition-derived Turns
+state from replacing a normal rotated pattern whose visible controls can reproduce it. If no cyclic
+phase resolves, that slot retains its raw generated extraction rather than preventing the other
+slots from being created. The UI lists every unresolved slot so generated animation data is not
+mistaken for a confirmed catalog match.
 
 ## Diamond and Box
 
@@ -332,33 +348,37 @@ Changes in this area should cover the applicable behavior:
 - Header labels, tooltip availability, dividers, colors, and prop placement.
 - Full generated patterns through query encode/decode when serialized fields change.
 
-The broad 45-transition catalog scan is intentionally opt-in because it evaluates 6,480 generated
+The broad 45-transition catalog scan is intentionally opt-in because it evaluates 21,600 generated
 source selections and takes substantially longer than a focused unit test. Run it with
 `npm run audit:vtg-45-trans`. It is not discovered by `npm run test:unit` and is not part of the
 normal build.
 
 ### Known 45-transition audit findings
 
-The current base odd-ratio audit covers every matrix cell, all four Starting Beats, transition
-lengths 2 through 6, and the normal, Quad-first, and Quad-second transition modes. Its rotation
-family check passes, but 5,392 of the 6,480 source selections stop at an unresolved extraction:
+The current audit covers all five ratios, both Diamond and Box, every matrix cell, all four Starting
+Beats, transition lengths 2 through 6, and the normal, Quad-first, and Quad-second transition modes.
+That produces 21,600 source transitions and 86,400 generated Q2-Q5 extractions. Q2 resolves for
+every source. Of all generated extractions, 53,808 resolve and 32,592 remain unmatched:
 
-| Ratio | First unresolved generated slot | Source selections |
-| ----- | ------------------------------- | ----------------- |
-| 1:1   | Q3                              | 1,600             |
-| 1:1   | Q4                              | 256               |
-| 1:3   | Q3                              | 1,680             |
-| 1:5   | Q3                              | 1,600             |
-| 1:5   | Q4                              | 256               |
+| Ratio | Q3 unmatched | Q4 unmatched | Q5 unmatched | Total unmatched |
+| ----- | ------------ | ------------ | ------------ | --------------- |
+| 1:1   | 3,150        | 2,176        | 3,150        | 8,476           |
+| 1:2   | 1,830        | 0            | 1,830        | 3,660           |
+| 1:3   | 3,360        | 2,240        | 3,360        | 8,960           |
+| 1:4   | 1,520        | 0            | 1,520        | 3,040           |
+| 1:5   | 3,140        | 2,176        | 3,140        | 8,456           |
 
-These are source-selection counts, not a count of every unresolved generated slot: atomic
-resolution stops at the first unresolved slot for each selection. The result proves that the old
-`candidates[0]` substitution masked a broad Q3/Q4 semantic gap rather than isolated animation-data
-exceptions. That substitution must not be restored.
+Every one of the 53,808 recognized extractions regenerates exactly from its selected VTG or QTR
+controls after accounting for legitimate doubled playback. Verification compares BPM, normalized
+authored signatures, and compiled position, rotation, and adjustment vectors. The rotation-option
+integrity scan also passes at every ratio. Runtime generation retains an unresolved slot's raw
+extraction while reporting it to the user, so unresolved data is not substituted with a different
+catalog animation.
 
-Continuation work should determine why the literal doubled-frame Q3/Q4 extractions are not
+Continuation work should determine why the literal doubled-frame Q3/Q4/Q5 extractions are not
 recognized by the normal VTG/QTR matcher. Do not replace them with a nearest catalog animation,
 silently canonicalize their authored frames, add a hidden rotation index, or introduce a recovery
 lookup. The generated animation must remain the literal edited cycle demonstrated by the supplied
-URLs. Cyclic phase comparison and the unrotated-before-rotated order are intentional domain rules
-and should remain in place while the underlying extraction or matching semantics are corrected.
+URLs. Cyclic phase comparison and exact-before-transition-derived precedence are intentional domain
+rules and should remain in place while the underlying extraction or matching semantics are
+corrected.

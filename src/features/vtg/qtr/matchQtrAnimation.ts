@@ -22,6 +22,7 @@ import {
   getVtgPatternOrientations,
   supportsVtgPatternOrientation,
   vtgBeats,
+  vtgTransitionInitialTurnsOffsets,
 } from '@/features/vtg/types'
 import {
   doubleAnimationPlayback,
@@ -37,7 +38,10 @@ const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5
 
 type QtrCandidateMatch = Omit<QtrPatternMatch, 'bpm' | 'scale'> & { subdivided?: boolean }
 
-type QtrCandidateCache = ReadonlyMap<string, readonly QtrCandidateMatch[]>
+interface QtrCandidateCache {
+  exact: ReadonlyMap<string, readonly QtrCandidateMatch[]>
+  transitionTurns: ReadonlyMap<string, readonly QtrCandidateMatch[]>
+}
 
 const candidateCaches = new Map<
   VtgSpeedRatio,
@@ -63,7 +67,8 @@ const buildCandidateCache = (
   speedRatio: VtgSpeedRatio,
   orientation: NonNullable<QtrPatternSelection['orientation']>,
 ) => {
-  const candidates = new Map<string, QtrCandidateMatch[]>()
+  const exactCandidates = new Map<string, QtrCandidateMatch[]>()
+  const transitionTurnsCandidates = new Map<string, QtrCandidateMatch[]>()
 
   for (const column of ruleNumbers) {
     for (const row of ruleNumbers) {
@@ -121,7 +126,7 @@ const buildCandidateCache = (
 
                 const finalTransforms = { swapProps, reversePlane }
                 addCandidate(
-                  candidates,
+                  exactCandidates,
                   createFinalTransformedVtgAnimationSignature(playback, finalTransforms),
                   candidate,
                 )
@@ -129,10 +134,20 @@ const buildCandidateCache = (
                 const subdivided = doubleAnimationPlayback(playback)
                 if (subdivided) {
                   addCandidate(
-                    candidates,
+                    exactCandidates,
                     createFinalTransformedVtgAnimationSignature(subdivided, finalTransforms),
                     { ...candidate, subdivided: true },
                   )
+                  for (const initialTurnsOffset of vtgTransitionInitialTurnsOffsets) {
+                    addCandidate(
+                      transitionTurnsCandidates,
+                      createFinalTransformedVtgAnimationSignature(subdivided, {
+                        ...finalTransforms,
+                        initialTurnsOffset,
+                      }),
+                      { ...candidate, subdivided: true, initialTurnsOffset },
+                    )
+                  }
                 }
               }
             }
@@ -143,6 +158,7 @@ const buildCandidateCache = (
   }
 
   const speedRatioCaches = candidateCaches.get(speedRatio) ?? new Map()
+  const candidates = { exact: exactCandidates, transitionTurns: transitionTurnsCandidates }
   speedRatioCaches.set(orientation, candidates)
   candidateCaches.set(speedRatio, speedRatioCaches)
   return candidates
@@ -184,8 +200,16 @@ export const findQtrPatternMatches = (
   const signature = createVtgAnimationSignature(matchingAnimation)
   if (!signature) return []
 
-  return getMatchingOrientations(speedRatio, rotationFilter)
-    .flatMap((orientation) => getCandidateCache(speedRatio, orientation).get(signature) ?? [])
+  const caches = getMatchingOrientations(speedRatio, rotationFilter).map((orientation) =>
+    getCandidateCache(speedRatio, orientation),
+  )
+  const exactMatches = caches.flatMap(({ exact }) => exact.get(signature) ?? [])
+  const candidates =
+    exactMatches.length > 0 || alternating !== undefined
+      ? exactMatches
+      : caches.flatMap(({ transitionTurns }) => transitionTurns.get(signature) ?? [])
+
+  return candidates
     .filter((candidate) => !alternating || candidate.subdivided)
     .map((candidate) => {
       const { subdivided, ...match } = candidate
@@ -209,14 +233,11 @@ const startingBeat = (match: QtrPatternMatch) => match.beat ?? 1
 
 const playbackTransformationCount = (match: QtrPatternMatch) => Number(match.transition === true)
 
-// Added odd-ratio rotations overlap some established zero-degree cells. Keep the established
-// interpretation when it exists, and use rotated candidates only for signatures it cannot cover.
-const preferUnrotatedOddRatioMatches = (
+// Rotation is the final pattern comparison. Keep an equivalent zero-degree interpretation when
+// one exists, and use rotated candidates only for signatures the unrotated catalog cannot cover.
+const preferUnrotatedMatches = (
   matches: readonly QtrPatternMatch[],
 ): readonly QtrPatternMatch[] => {
-  const speedRatio = matches[0]?.speedRatio
-  if (speedRatio !== '1:1' && speedRatio !== '1:3' && speedRatio !== '1:5') return matches
-
   const unrotated = matches.filter((match) => (match.orientation ?? 0) === 0)
   return unrotated.length > 0 ? unrotated : matches
 }
@@ -233,7 +254,7 @@ export const findQtrPatternMatch = (
   preferences?: QtrPatternMatchPreferences,
   rotationFilter?: VtgPatternRotationFilter,
 ): QtrPatternMatch | undefined =>
-  [...preferUnrotatedOddRatioMatches(findQtrPatternMatches(animation, rotationFilter))].sort(
+  [...preferUnrotatedMatches(findQtrPatternMatches(animation, rotationFilter))].sort(
     (first, second) => {
       if (preferences) {
         const preferenceDifference =

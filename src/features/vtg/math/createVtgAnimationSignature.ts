@@ -7,12 +7,17 @@ const normalizePlane = (angle: number) => {
   return Object.is(normalized, -0) ? 0 : normalized
 }
 
-const trackSignature = (frames: readonly AnimData[], reverseInitialPlane = false) => {
+const trackSignature = (
+  frames: readonly AnimData[],
+  reverseInitialPlane = false,
+  initialTurnsOffset = 0,
+) => {
   let inheritedTurns = 0
   let inheritedArc = 0
 
   return frames.map((frame, frameIndex) => {
     inheritedTurns = frame.turns ?? inheritedTurns
+    if (frameIndex === 0) inheritedTurns += initialTurnsOffset
     inheritedArc = frame.arc ?? inheritedArc
     const plane = frame.plane ?? 0
     const axis = frame.axis ?? plane
@@ -39,6 +44,7 @@ export const createFinalTransformedVtgAnimationSignature = (
   transforms: {
     swapProps: boolean
     reversePlane: boolean
+    initialTurnsOffset?: number
   },
 ): string | undefined => {
   if (animation.props.length !== 2) return undefined
@@ -47,7 +53,9 @@ export const createFinalTransformedVtgAnimationSignature = (
     animation.props.map((_, outputIndex) => {
       const sourceIndex = transforms.swapProps ? 1 - outputIndex : outputIndex
       const source = animation.props[sourceIndex]
-      return source ? trackSignature(source.anim, transforms.reversePlane) : undefined
+      return source
+        ? trackSignature(source.anim, transforms.reversePlane, transforms.initialTurnsOffset)
+        : undefined
     }),
   )
 }

@@ -131,6 +131,12 @@ export const useConceptsStore = defineStore(
         return
       }
 
+      const selectedPath =
+        selectedQuickSlot.value === null
+          ? undefined
+          : quickSlotPaths.value[selectedQuickSlot.value - 1]
+      if (selectedPath?.split('?', 2)[1]?.split('#', 1)[0] === query) return
+
       const matchingIndex = quickSlotPaths.value.findIndex(
         (quickSlotPath) => quickSlotPath?.split('?', 2)[1]?.split('#', 1)[0] === query,
       )

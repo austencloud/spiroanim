@@ -17,10 +17,7 @@ const createQtrAnimation = (selection: QtrPatternSelection) => {
   return animation
 }
 
-const canonicalOddRatioMatches = (matches: readonly QtrPatternMatch[]) => {
-  const speedRatio = matches[0]?.speedRatio
-  if (speedRatio !== '1:1' && speedRatio !== '1:3' && speedRatio !== '1:5') return matches
-
+const canonicalRotationMatches = (matches: readonly QtrPatternMatch[]) => {
   const unrotated = matches.filter((match) => (match.orientation ?? 0) === 0)
   return unrotated.length > 0 ? unrotated : matches
 }
@@ -239,7 +236,7 @@ describe('Qtr animation matching', () => {
         reversePlane: selection.reversePlane,
       }
       const animation = createQtrAnimation({ ...selection, transitionBeats: 5 })
-      const matches = canonicalOddRatioMatches(findQtrPatternMatches(animation))
+      const matches = canonicalRotationMatches(findQtrPatternMatches(animation))
       const preferenceDifference = (match: (typeof matches)[number]) =>
         Number(match.swapProps !== preferences.swapProps) +
         Number(match.reversePlane !== preferences.reversePlane)

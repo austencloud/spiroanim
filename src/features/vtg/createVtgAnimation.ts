@@ -8,6 +8,10 @@ import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadabl
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
+import {
+  applyVtgInitialTurnsPlayback,
+  withVtgInitialTurnsOffsetBeat,
+} from '@/features/vtg/math/applyVtgInitialTurnsOffset'
 import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import { alternatePatternPlayback } from '@/math/animation/alternatePatternPlayback'
 import { applyPatternPropVisibility } from '@/features/concepts/patternPropVisibility'
@@ -124,10 +128,14 @@ export const createVtgAnimation = (
   }
 
   const oriented = applyPatternInitialArcRotation(animation, selection.orientation)
-  const completed = applyVtgPlaybackControls(oriented, selection)
-  return completed
-    ? applyPatternPropColors(applyPatternFinalTransforms(completed, selection), selection)
-    : undefined
+  const completed = applyVtgPlaybackControls(oriented, withVtgInitialTurnsOffsetBeat(selection))
+  if (!completed || (selection.transition && selection.initialTurnsOffset !== undefined)) {
+    return undefined
+  }
+
+  const transformed = applyPatternFinalTransforms(completed, selection)
+  const playback = applyVtgInitialTurnsPlayback(transformed, selection)
+  return playback ? applyPatternPropColors(playback, selection) : undefined
 }
 
 /**

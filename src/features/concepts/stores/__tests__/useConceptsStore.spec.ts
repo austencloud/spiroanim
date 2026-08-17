@@ -200,6 +200,23 @@ describe('useConceptsStore', () => {
     app.unmount()
   })
 
+  it('keeps the selected Quick Slot when more than one slot has the same animation', () => {
+    const { app, store } = mountStore()
+    store.restoreQuickSlots()
+    store.quickSlotPaths = [
+      '/play-vtg?r=duplicate&v=6',
+      '/play-vtg?r=unique&v=6',
+      '/play-vtg?r=duplicate&v=6',
+      null,
+    ]
+    store.selectedQuickSlot = 3
+
+    store.selectQuickSlotForPath('/play-time?r=duplicate&v=6')
+
+    expect(store.selectedQuickSlot).toBe(3)
+    app.unmount()
+  })
+
   it('hydrates the Quick Slot count and selected slot', () => {
     localStorage.setItem(
       'sa-concepts',

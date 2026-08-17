@@ -13,21 +13,33 @@ import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 
 const queryFrom = (query: string) => Object.fromEntries(new URLSearchParams(query))
 
+const findMatchKind = (
+  animation: Parameters<typeof findVtgPatternMatch>[0],
+  rotationFilter: Parameters<typeof findVtgPatternMatch>[2],
+) => {
+  const matches = [
+    findVtgPatternMatch(animation, undefined, rotationFilter),
+    findQtrPatternMatch(animation, undefined, rotationFilter),
+  ].filter((match) => match !== undefined)
+
+  if (matches.some((match) => match.initialTurnsOffset === undefined)) return 'exact'
+  return matches.length > 0 ? 'transitionTurns' : false
+}
+
 const selectDetectableAnimations = (
   candidateGroups: ReturnType<typeof createVtgTransitionQuickSlotAnimationCandidates>,
 ) => {
   if (!candidateGroups) throw new Error('Expected Quick Slot candidate groups')
-  return resolveVtgTransitionQuickSlotAnimations(
-    candidateGroups,
-    (animation, rotationFilter) =>
-      findVtgPatternMatch(animation, undefined, rotationFilter) !== undefined ||
-      findQtrPatternMatch(animation, undefined, rotationFilter) !== undefined,
-  ).then((resolution) => {
-    if (resolution.status !== 'matched') {
-      throw new Error(`Expected Quick Slot ${resolution.slot} to match`)
-    }
-    return resolution.animations
-  })
+  return resolveVtgTransitionQuickSlotAnimations(candidateGroups, findMatchKind).then(
+    (resolution) => {
+      if (resolution.status !== 'matched') {
+        const slots =
+          resolution.status === 'partial' ? resolution.unmatchedSlots.join(', ') : resolution.slot
+        throw new Error(`Expected Quick Slot ${slots} to match`)
+      }
+      return resolution.animations
+    },
+  )
 }
 
 describe('createVtgTransitionQuickSlotAnimations', () => {
@@ -198,7 +210,7 @@ describe('createVtgTransitionQuickSlotAnimations', () => {
     expect(createVtgTransitionQuickSlotAnimationCandidates(animation)).toBeUndefined()
   })
 
-  it('does not substitute an unmatched extraction into a Quick Slot', async () => {
+  it('retains raw extractions when no cyclic phase matches', async () => {
     const animation = createDefaultVtgAnimation({
       reference: '5-1',
       speedRatio: '1:3',
@@ -210,6 +222,10 @@ describe('createVtgTransitionQuickSlotAnimations', () => {
 
     await expect(
       resolveVtgTransitionQuickSlotAnimations(candidateGroups, () => false),
-    ).resolves.toEqual({ status: 'unmatched', slot: 2 })
+    ).resolves.toEqual({
+      status: 'partial',
+      animations: candidateGroups.map((candidates) => candidates[0]),
+      unmatchedSlots: [2, 3, 4, 5],
+    })
   })
 })

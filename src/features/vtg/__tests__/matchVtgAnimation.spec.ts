@@ -27,10 +27,7 @@ const createAnimation = (selection: VtgPatternSelection) => {
   return animation
 }
 
-const canonicalOddRatioMatches = (matches: readonly VtgPatternMatch[]) => {
-  const speedRatio = matches[0]?.speedRatio
-  if (speedRatio !== '1:1' && speedRatio !== '1:3' && speedRatio !== '1:5') return matches
-
+const canonicalRotationMatches = (matches: readonly VtgPatternMatch[]) => {
   const unrotated = matches.filter((match) => (match.orientation ?? 0) === 0)
   return unrotated.length > 0 ? unrotated : matches
 }
@@ -212,7 +209,7 @@ describe('VTG animation matching', () => {
           for (const beat of [1, 2, 3, 4] as const) {
             const reference = createCellReference(column, row)
             const animation = createAnimation({ reference, speedRatio, beat })
-            const matches = canonicalOddRatioMatches(findVtgPatternMatches(animation))
+            const matches = canonicalRotationMatches(findVtgPatternMatches(animation))
             const lowestBeat = Math.min(...matches.map((candidate) => candidate.beat ?? 1))
             const match = findVtgPatternMatch(animation)
 
@@ -242,7 +239,7 @@ describe('VTG animation matching', () => {
             transition: true,
           } as const satisfies VtgPatternSelection
           const animation = createAnimation({ ...selection, transitionBeats: 5 })
-          const matches = canonicalOddRatioMatches(findVtgPatternMatches(animation))
+          const matches = canonicalRotationMatches(findVtgPatternMatches(animation))
           const preferenceDifference = (match: VtgPatternMatch) =>
             Number(match.swapProps !== swapProps) + Number(match.reversePlane !== reversePlane)
           const lowestPreferenceDifference = Math.min(...matches.map(preferenceDifference))
@@ -275,7 +272,7 @@ describe('VTG animation matching', () => {
             false,
           )
           const animation = await codec.decodeVer(query)
-          const matches = canonicalOddRatioMatches(findVtgPatternMatches(animation))
+          const matches = canonicalRotationMatches(findVtgPatternMatches(animation))
           const lowestBeat = Math.min(...matches.map((candidate) => candidate.beat ?? 1))
           const match = findVtgPatternMatch(animation)
 

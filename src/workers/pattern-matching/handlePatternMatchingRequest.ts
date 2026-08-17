@@ -25,10 +25,16 @@ export const matchVtgPatternRequest = async ({
   }
 
   const vtgMatch = findVtgPatternMatch(animation, preferences, rotationFilter)
-  if (vtgMatch) return { status: 'matched', source: 'vtg', match: vtgMatch }
-
   const { findQtrPatternMatch } = await import('@/features/vtg/qtr/matchQtrAnimation')
   const qtrMatch = findQtrPatternMatch(animation, preferences, rotationFilter)
+
+  if (vtgMatch && vtgMatch.initialTurnsOffset === undefined) {
+    return { status: 'matched', source: 'vtg', match: vtgMatch }
+  }
+  if (qtrMatch && qtrMatch.initialTurnsOffset === undefined) {
+    return { status: 'matched', source: 'qtr', match: qtrMatch }
+  }
+  if (vtgMatch) return { status: 'matched', source: 'vtg', match: vtgMatch }
   return qtrMatch ? { status: 'matched', source: 'qtr', match: qtrMatch } : { status: 'unmatched' }
 }
 

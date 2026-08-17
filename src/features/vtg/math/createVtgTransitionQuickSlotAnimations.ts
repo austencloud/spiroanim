@@ -12,13 +12,19 @@ export type VtgTransitionQuickSlotCandidateGroups = readonly (readonly RootDataF
 
 export type VtgTransitionQuickSlotResolution =
   | { status: 'matched'; animations: readonly RootDataFinal[] }
+  | {
+      status: 'partial'
+      animations: readonly RootDataFinal[]
+      unmatchedSlots: readonly number[]
+    }
   | { status: 'invalid'; slot: number }
-  | { status: 'unmatched'; slot: number }
 
 type VtgTransitionQuickSlotMatcher = (
   animation: RootDataFinal,
   rotationFilter: VtgPatternRotationFilter,
-) => boolean | Promise<boolean>
+) => VtgTransitionQuickSlotMatchKind | false | Promise<VtgTransitionQuickSlotMatchKind | false>
+
+export type VtgTransitionQuickSlotMatchKind = 'exact' | 'transitionTurns'
 
 const cloneAnimation = (animation: RootDataFinal): RootDataFinal => ({
   ...animation,
@@ -129,15 +135,17 @@ export const createVtgTransitionQuickSlotAnimationCandidates = (
 }
 
 /**
- * Resolves every generated slot through the same pattern matcher used by Concepts. A complete
- * result is returned only when all four extracted cycles have a recognized phase. Rotation is
- * deliberately the final comparison tier.
+ * Resolves every generated slot through the same pattern matcher used by Concepts. Rotation is
+ * deliberately the final comparison tier. When no phase is recognized, the raw extraction is
+ * retained so one unknown pattern cannot prevent the complete transition set from being created;
+ * the partial result identifies every such slot to the UI.
  */
 export const resolveVtgTransitionQuickSlotAnimations = async (
   candidateGroups: VtgTransitionQuickSlotCandidateGroups,
   matches: VtgTransitionQuickSlotMatcher,
 ): Promise<VtgTransitionQuickSlotResolution> => {
   const animations: RootDataFinal[] = []
+  const unmatchedSlots: number[] = []
 
   for (const [slotIndex, candidates] of candidateGroups.entries()) {
     const firstCandidate = candidates[0]
@@ -148,19 +156,28 @@ export const resolveVtgTransitionQuickSlotAnimations = async (
     }
 
     let matched: RootDataFinal | undefined
-    for (const rotationFilter of ['unrotated', 'rotated'] as const) {
-      for (const candidate of candidates) {
-        if (await matches(candidate, rotationFilter)) {
-          matched = candidate
-          break
+    for (const matchKind of ['exact', 'transitionTurns'] as const) {
+      for (const rotationFilter of ['unrotated', 'rotated'] as const) {
+        for (const candidate of candidates) {
+          if ((await matches(candidate, rotationFilter)) === matchKind) {
+            matched = candidate
+            break
+          }
         }
+        if (matched) break
       }
       if (matched) break
     }
 
-    if (!matched) return { status: 'unmatched', slot: slotIndex + 1 }
-    animations.push(matched)
+    if (matched) {
+      animations.push(matched)
+    } else {
+      animations.push(firstCandidate)
+      unmatchedSlots.push(slotIndex + 1)
+    }
   }
 
-  return { status: 'matched', animations }
+  return unmatchedSlots.length > 0
+    ? { status: 'partial', animations, unmatchedSlots }
+    : { status: 'matched', animations }
 }

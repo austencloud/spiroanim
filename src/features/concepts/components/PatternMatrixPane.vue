@@ -288,6 +288,7 @@ import type {
   VtgRuleSpec,
   VtgPatternSelection,
   VtgPatternOrientation,
+  VtgTransitionInitialTurnsOffset,
   VtgTransitionBeats,
 } from '@/features/vtg/types'
 import {
@@ -363,6 +364,8 @@ const isAnti = ref(false)
 const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
 const orientation = ref<VtgPatternOrientation>(getDefaultVtgPatternOrientation(speedRatio.value))
+const initialTurnsOffset = ref<VtgTransitionInitialTurnsOffset>()
+const initialTurnsOffsetBeat = ref<VtgBeat>()
 const transition = ref(false)
 const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
 const transitionQuad = ref(false)
@@ -423,13 +426,23 @@ const createQSlots = async () => {
   try {
     const resolution = await resolveVtgTransitionQuickSlotAnimations(
       candidateGroups,
-      async (animation, rotationFilter) =>
-        (await matchPattern({ animation, preferences, rotationFilter })).status === 'matched',
+      async (animation, rotationFilter) => {
+        const result = await matchPattern({ animation, preferences, rotationFilter })
+        if (result.status !== 'matched') return false
+        return result.match.initialTurnsOffset === undefined ? 'exact' : 'transitionTurns'
+      },
     )
-    if (resolution.status !== 'matched') {
-      quickSlotCreationError.value = `Quick Slot ${resolution.slot} does not match a known pattern. Your current Quick Slots were not changed.`
-      console.warn(`VTG Quick Slot ${resolution.slot} did not resolve to a known pattern.`)
+    if (resolution.status === 'invalid') {
+      quickSlotCreationError.value = `Quick Slot ${resolution.slot} could not be generated. Your current Quick Slots were not changed.`
+      console.warn(`VTG Quick Slot ${resolution.slot} could not be generated.`)
       return
+    }
+    if (resolution.status === 'partial') {
+      const slotLabel = resolution.unmatchedSlots.map((slot) => `Q${slot}`).join(', ')
+      quickSlotCreationError.value = `${slotLabel} did not match a known pattern. The generated pattern${resolution.unmatchedSlots.length === 1 ? ' was' : 's were'} still added.`
+      console.warn(
+        `VTG Quick Slot${resolution.unmatchedSlots.length === 1 ? '' : 's'} ${resolution.unmatchedSlots.join(', ')} did not resolve to a known pattern; the generated extraction${resolution.unmatchedSlots.length === 1 ? ' was' : 's were'} used.`,
+      )
     }
     emit('quickSlotsCreate', resolution.animations)
   } catch (error) {
@@ -440,10 +453,20 @@ const createQSlots = async () => {
 }
 
 let suppressPatternEmit = false
+let patternEmitSuppressionOwner = 0
 let hydrationVersion = 0
 let lastEmittedSelection: VtgPatternSelection | QtrPatternSelection | undefined
 let componentMounted = false
 let initialAnimationHandled = false
+
+const beginPatternEmitSuppression = () => {
+  suppressPatternEmit = true
+  return ++patternEmitSuppressionOwner
+}
+
+const releasePatternEmitSuppression = (owner: number) => {
+  if (owner === patternEmitSuppressionOwner) suppressPatternEmit = false
+}
 
 const columnRuleNumbers = [1, 2, 3, 4, 5, 6] as const
 const leftRuleNumbers = [1, 2, 3, 4, 5, 6] as const
@@ -476,6 +499,12 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       ...(shape.value === 'box' ? { shape: shape.value } : undefined),
       ...(beat.value === 1 ? undefined : { beat: beat.value }),
       ...(transition.value ? { transition: true } : undefined),
+      ...(initialTurnsOffset.value === undefined
+        ? undefined
+        : {
+            initialTurnsOffset: initialTurnsOffset.value,
+            initialTurnsOffsetBeat: initialTurnsOffsetBeat.value,
+          }),
       ...(supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0
         ? { orientation: orientation.value }
         : undefined),
@@ -515,6 +544,12 @@ const rotationSelection = computed<VtgPatternSelection | QtrPatternSelection | u
     ...(transition.value && transitionQuad.value && transitionSecond.value
       ? { transitionSecond: true }
       : undefined),
+    ...(initialTurnsOffset.value === undefined
+      ? undefined
+      : {
+          initialTurnsOffset: initialTurnsOffset.value,
+          initialTurnsOffsetBeat: initialTurnsOffsetBeat.value,
+        }),
   }
   return isQtr.value ? { ...baseSelection, quarters: 1 } : baseSelection
 })
@@ -531,6 +566,17 @@ const retainAvailableOrientation = () => {
 }
 
 watch(availablePatternOrientations, retainAvailableOrientation, { flush: 'sync' })
+
+watch(
+  transition,
+  (enabled) => {
+    if (enabled && !suppressPatternEmit) {
+      initialTurnsOffset.value = undefined
+      initialTurnsOffsetBeat.value = undefined
+    }
+  },
+  { flush: 'sync' },
+)
 
 const isTileHighlighted = (tile: VtgMatrixTile) =>
   selectedCell.value !== undefined &&
@@ -562,6 +608,10 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (transition.value && transitionQuad.value && transitionSecond.value) {
     baseSelection.transitionSecond = true
   }
+  if (initialTurnsOffset.value !== undefined) {
+    baseSelection.initialTurnsOffset = initialTurnsOffset.value
+    baseSelection.initialTurnsOffsetBeat = initialTurnsOffsetBeat.value
+  }
   if (supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0) {
     baseSelection.orientation = orientation.value
   }
@@ -588,6 +638,10 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
 }
 
 const selectTile = (tile: VtgMatrixTile) => {
+  if (tile.reference !== selectedCellReference.value) {
+    initialTurnsOffset.value = undefined
+    initialTurnsOffsetBeat.value = undefined
+  }
   const isReselectedSpinToggleCell =
     tile.reference === selectedCellReference.value && isSpinToggleCell(tile.reference)
 
@@ -642,7 +696,7 @@ const toggleSpinDirection = (tile: VtgMatrixTile) => {
 
 const resetPatternControls = async () => {
   const tile = matrixTiles.value.find(({ reference }) => reference === selectedCellReference.value)
-  suppressPatternEmit = true
+  const suppressionOwner = beginPatternEmitSuppression()
   conceptsStore.resetPatternControls()
   isQtr.value = false
   isAnti.value = false
@@ -651,9 +705,11 @@ const resetPatternControls = async () => {
   transition.value = false
   transitionQuad.value = false
   transitionSecond.value = false
+  initialTurnsOffset.value = undefined
+  initialTurnsOffsetBeat.value = undefined
   orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
   await nextTick()
-  suppressPatternEmit = false
+  releasePatternEmitSuppression(suppressionOwner)
   if (tile !== undefined) emitPatternSelection(tile)
 }
 
@@ -668,6 +724,8 @@ watch(
     transitionBeats,
     transitionQuad,
     transitionSecond,
+    initialTurnsOffset,
+    initialTurnsOffsetBeat,
     orientation,
     bpm,
     scale,
@@ -690,6 +748,7 @@ watch(
     )
     if (tile !== undefined) emitPatternSelection(tile)
   },
+  { flush: 'sync' },
 )
 
 watch(
@@ -739,7 +798,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   if (result.status === 'unchanged') return
 
   const match = result.status === 'matched' ? result.match : undefined
-  suppressPatternEmit = true
+  const suppressionOwner = beginPatternEmitSuppression()
 
   if (match) {
     const tile = matrixTiles.value.find(({ reference }) => reference === match.reference)
@@ -754,6 +813,9 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     transitionBeats.value = match.transitionBeats ?? vtgDefaultTransitionBeats
     transitionQuad.value = match.transitionQuad ?? false
     transitionSecond.value = match.transitionSecond ?? false
+    initialTurnsOffset.value = match.initialTurnsOffset
+    initialTurnsOffsetBeat.value =
+      match.initialTurnsOffset === undefined ? undefined : (match.beat ?? 1)
     if (supportsVtgPatternOrientation(match.speedRatio)) {
       orientation.value = match.orientation ?? 0
     }
@@ -784,20 +846,17 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     transitionBeats.value = vtgDefaultTransitionBeats
     transitionQuad.value = false
     transitionSecond.value = false
+    initialTurnsOffset.value = undefined
+    initialTurnsOffsetBeat.value = undefined
     orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
   }
 
-  // Suppression only protects the control writes above through their watcher flush. A newer
-  // hydration may start before this callback runs, but it must not prevent this suppression from
-  // being released or subsequent option changes will be ignored indefinitely.
-  void nextTick(() => {
-    suppressPatternEmit = false
-  })
+  releasePatternEmitSuppression(suppressionOwner)
 }
 
 const selectInitialRandomPattern = () => {
   hydrationVersion++
-  suppressPatternEmit = true
+  const suppressionOwner = beginPatternEmitSuppression()
   selectedCell.value = undefined
   conceptsStore.resetPatternControls()
   isAnti.value = false
@@ -807,12 +866,12 @@ const selectInitialRandomPattern = () => {
   transitionBeats.value = vtgDefaultTransitionBeats
   transitionQuad.value = false
   transitionSecond.value = false
+  initialTurnsOffset.value = undefined
+  initialTurnsOffsetBeat.value = undefined
   orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
   selectRandomTile()
 
-  void nextTick(() => {
-    suppressPatternEmit = false
-  })
+  releasePatternEmitSuppression(suppressionOwner)
 }
 
 const syncPatternControls = () => {
@@ -1054,6 +1113,8 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   leftPropColor,
   rightPropColor,
   orientation,
+  initialTurnsOffset,
+  initialTurnsOffsetBeat,
   pairedLayout: usesPairedPreviewLayout,
 })
 

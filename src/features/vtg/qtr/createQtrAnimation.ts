@@ -8,6 +8,10 @@ import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { hasFixedVtgPatternShape } from '@/features/vtg/data/vtgPatternCatalog'
+import {
+  applyVtgInitialTurnsPlayback,
+  withVtgInitialTurnsOffsetBeat,
+} from '@/features/vtg/math/applyVtgInitialTurnsOffset'
 
 const normalizeArc = (arc: number): number => ((arc % 360) + 360) % 360
 const propIndices = [0, 1] as const
@@ -77,6 +81,8 @@ export const removeQtrArcs = (
 const withoutFinalTransforms = ({
   swapProps: _swapProps,
   reversePlane: _reversePlane,
+  initialTurnsOffset: _initialTurnsOffset,
+  initialTurnsOffsetBeat: _initialTurnsOffsetBeat,
   ...selection
 }: QtrPatternSelection): QtrPatternSelection => selection
 
@@ -119,9 +125,14 @@ export const createQtrAnimation = (
 
   const completed = applyVtgPlaybackControls(
     transformQtrAnimation(animation, getSelectedQtrMode(selection), 1),
-    selection,
+    withVtgInitialTurnsOffsetBeat(selection),
   )
-  return completed ? applyQtrFinalTransforms(completed, selection) : undefined
+  if (!completed || (selection.transition && selection.initialTurnsOffset !== undefined)) {
+    return undefined
+  }
+
+  const transformed = applyQtrFinalTransforms(completed, selection)
+  return applyVtgInitialTurnsPlayback(transformed, selection)
 }
 
 export const createDefaultQtrAnimation = (
@@ -130,8 +141,13 @@ export const createDefaultQtrAnimation = (
   const base = createDefaultQtrBaseAnimation(selection)
   if (!base) return undefined
 
-  const completed = applyVtgPlaybackControls(base, selection)
-  return completed ? applyQtrFinalTransforms(completed, selection) : undefined
+  const completed = applyVtgPlaybackControls(base, withVtgInitialTurnsOffsetBeat(selection))
+  if (!completed || (selection.transition && selection.initialTurnsOffset !== undefined)) {
+    return undefined
+  }
+
+  const transformed = applyQtrFinalTransforms(completed, selection)
+  return applyVtgInitialTurnsPlayback(transformed, selection)
 }
 
 export const createQtrPreviewAnimation = (
