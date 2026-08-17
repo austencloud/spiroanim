@@ -98,6 +98,29 @@ describe('useConceptsStore', () => {
     app.unmount()
   })
 
+  it('replaces the current Quick Slots with an empty unselected set', () => {
+    const { app, store } = mountStore()
+    store.restoreQuickSlots()
+    store.quickSlotPaths[1] = '/play-vtg?r=stored&v=6'
+    store.selectedQuickSlot = 2
+
+    expect(store.replaceQuickSlotsWithEmpty(5)).toBe(true)
+    expect(store.quickSlotCount).toBe(5)
+    expect(store.quickSlotPaths).toEqual([null, null, null, null, null])
+    expect(store.selectedQuickSlot).toBeNull()
+    expect(store.replaceQuickSlotsWithEmpty(-1)).toBe(false)
+    expect(store.quickSlotCount).toBe(5)
+
+    const replacement = ['/play-vtg?r=one&v=6', null, '/play-edit?r=three&v=6']
+    store.selectedQuickSlot = 1
+    expect(store.replaceQuickSlots(replacement)).toBe(true)
+    expect(store.quickSlotCount).toBe(3)
+    expect(store.quickSlotPaths).toEqual(replacement)
+    expect(store.quickSlotPaths).not.toBe(replacement)
+    expect(store.selectedQuickSlot).toBeNull()
+    app.unmount()
+  })
+
   it('saves, overwrites, and loads named Quick Slot sets by stable ID', () => {
     const { app, store } = mountStore()
     store.restoreQuickSlots()

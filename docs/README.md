@@ -14,6 +14,7 @@ details.
   compilation, worker ownership, move offsets, and safe compaction.
 - [`SHIFT.md`](./SHIFT.md) - Shift eligibility, endpoint warnings, reconstruction, durations,
   timeline selections, seams, and regression coverage.
+- [`TIMELINE.md`](./TIMELINE.md) - responsive thumbnail columns and persistent column adjustment.
 - [`QUERY_STRING_FORMAT.md`](./QUERY_STRING_FORMAT.md) - versioned URL schemas, packing, sparse
   encoding, defaults, decoder tolerance, and compatibility requirements.
 - [`QUERY_STATE_AND_HISTORY.md`](./QUERY_STATE_AND_HISTORY.md) - ROOT/URL synchronization and
@@ -23,6 +24,8 @@ details.
 
 - [`VTG_AND_QUARTER_SPACING.md`](./VTG_AND_QUARTER_SPACING.md) - VTG and integrated QTR controls,
   builders, transforms, matching, relationship classification, and headers.
+- [`QUICK_SLOTS.md`](./QUICK_SLOTS.md) - persisted animation slots, route and pane semantics,
+  touch interaction, Timeline placement, and named sets.
 - [`EIGHT_STEP.md`](./EIGHT_STEP.md) - Eight Step source pages, per-cell frame derivation, curve
   families, Swap/180° behavior, matching, and compiled-geometry validation.
 - [`QUARTER_SPACE_TECH.md`](./QUARTER_SPACE_TECH.md) - QST catalog data, position analysis,
@@ -46,9 +49,11 @@ details.
 | An editor slider, field, or property panel        | `PROPERTY_CONTROLS.md`         |
 | Frame inheritance, compilation, or worker inputs  | `ANIMATION_FRAME_MODEL.md`     |
 | The Shift operation                               | `SHIFT.md`                     |
+| Timeline layout and columns                       | `TIMELINE.md`                  |
 | Encoded URL fields, ranges, bits, or versions     | `QUERY_STRING_FORMAT.md`       |
 | URL hydration, replacement, undo, or redo         | `QUERY_STATE_AND_HISTORY.md`   |
 | VTG or Quarter Spacing controls and relationships | `VTG_AND_QUARTER_SPACING.md`   |
+| Quick Slot persistence, routing, or named sets    | `QUICK_SLOTS.md`               |
 | Eight Step definitions, transforms, or matching   | `EIGHT_STEP.md`                |
 | Quarter Space Tech catalog and diagrams           | `QUARTER_SPACE_TECH.md`        |
 | Public routes or search metadata                  | `SEO.md` and `PRERENDERING.md` |

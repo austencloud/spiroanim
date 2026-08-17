@@ -62,6 +62,7 @@
         @pattern-select="applyConceptPattern"
         @quick-slot-apply="applyQuickSlotFromView($event, 'concepts')"
         @quick-slot-save="saveCurrentPatternToQuickSlot"
+        @quick-slots-create="saveAnimationsToQuickSlots"
       />
     </div>
     <AppNavigationMenu />
@@ -108,7 +109,7 @@ import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { mdiFilterOff } from '@mdi/js'
 
 useScrollSelectScale()
-const { animationReady, saveCurrentPatternToQuickSlot } = useMainRoute() // Handles updates to route path and query
+const { animationReady, saveCurrentPatternToQuickSlot, saveAnimationsToQuickSlots } = useMainRoute() // Handles updates to route path and query
 useSpiroAnimKeyboard()
 
 const { viewWidth, viewHeight, viewLeft, viewTop, isLandscape } = storeToRefs(useViewportStore())

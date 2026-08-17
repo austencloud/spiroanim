@@ -13,6 +13,8 @@ The authoritative implementations are:
 - `src/features/vtg/data/vtgPlayerSettings.ts` for numeric controls and rendering settings.
 - `src/features/vtg/data/vtgPatternCatalog.ts` for the VTG pattern catalog and builder inputs.
 - `src/features/vtg/math/` for VTG building, matching, and relationship classification.
+- `src/features/vtg/math/createVtgTransitionQuickSlotAnimations.ts` for reciprocal-transition
+  Quick Slot extraction and cyclic phase candidates.
 - `src/features/vtg/qtr/` for the VTG-owned QTR transforms, matching, labels, and frame-derived
   headers, with the shared QTR contracts in `src/features/vtg/types.ts`.
 - The shared Concepts store for the selected concept, Quick Slots, QTR mode, Speed Ratio, Swap,
@@ -31,12 +33,10 @@ applicable values remain unchanged when switching panels. Persisted selections f
 Quarter Spacing panel migrate to VTG with QTR enabled. Legacy Quarter Spacing routes do the same and
 then canonicalize to the VTG route.
 
-The Quick Slots control appears above the concept selector and defaults to four slots with Q1
-selected. Adding or removing a slot and selecting Q1, Q2, Q3, and so on currently changes only the
-control state. The slot count and selected slot persist in the shared Concepts store, the count
-cannot fall below one, and removing the selected last slot selects the new last slot. When the
-controls exceed the available width, the slots use the same shared balanced-row layout behavior as
-QST pagination. Quick Slot tooltips are explicitly disabled on touch devices.
+The Quick Slots control appears above the concept selector and is also available inside Timeline
+and Editor. Slots persist complete animation paths, update only after animation changes, and can be
+saved as named sets. Their interaction, startup, routing, and Timeline placement contracts are
+documented in [`QUICK_SLOTS.md`](./QUICK_SLOTS.md).
 
 Scale, Thick, Spacing, and BPM appear below the Starting Beat and transition controls in VTG. Each
 slider gesture is one undo step. The sliders begin a query
@@ -94,18 +94,40 @@ also pattern-defining and distinguishes cells whose hand paths coincide but whos
 not. Equivalent positive and negative angles are normalized before comparison. Root Distance is not
 part of the pattern signature, so a distance mismatch does not by itself stop a match. Candidate
 indexes derive shifted and doubled variants incrementally from each base pattern and are built only
-for the active concept unless fallback matching is required.
+for the active concept.
 
 When several control combinations produce the same authored pattern, matching tries every Starting
 Beat position before changing the current Swap, 180-degree, or Qtr mode. The lowest Starting Beat is
 used only to break a tie between candidates that preserve the same current transform controls.
+At odd ratios, added nonzero rotations are a last-resort canonical match: an available unrotated
+candidate wins before a rotated candidate. Transition Quick Slot generation applies the stronger
+phase-first rule described below and exhausts unrotated VTG and QTR phases before rotated phases.
+The matcher and selector use the same canonical orientation list. Even ratios retain their
+established orientation semantics.
 
-Pattern recovery runs in the shared, lazily created application-level pattern-matching worker. The
+The rotation selector is also canonicalized at the pattern-family level. Availability checks all
+four Starting Beats and is invariant under the selected Beat, Swap, and 180-degree controls. A
+rotation is omitted when it is beat-equivalent to the unrotated pattern family. Shape and QTR remain
+inputs because they change the pattern before the final rotation comparison.
+
+For ordinary 1:3 Diamond VTG, every cell currently canonicalizes to `0°`. The deterministic
+exceptions are mode-dependent:
+
+| Mode        | Cells whose rotation selector remains enabled                               |
+| ----------- | --------------------------------------------------------------------------- |
+| Box VTG     | `1-6`, `2-5`, `5-2`, `5-6`, `6-1`, `6-5`                                    |
+| QTR Diamond | `1-5`, `1-6`, `2-6`, `5-1`, `5-2`, `5-5`, `5-6`, `6-1`, `6-2`, `6-5`, `6-6` |
+| QTR Box     | `1-5`, `2-6`, `5-1`, `5-5`, `6-2`, `6-6`                                    |
+
+This difference is expected from rotation-last canonicalization and is not by itself evidence that
+the Quarter Placement relationships are incomplete.
+
+Pattern matching runs in the shared, lazily created application-level pattern-matching worker. The
 worker remains available for as long as a mounted Concepts pane has VTG, Eight Step, or QST selected,
 preserving generated candidate indexes across animation changes. Hiding the Concepts pane or
 selecting TKA starts a 30-second idle period. Returning to a matching concept during that period
 cancels the pending shutdown, and a worker request is never interrupted. VTG requests include the
-merged QTR fallback. TKA does not use this worker. Responses are versioned by the requesting pane so
+merged QTR matching result. TKA does not use this worker. Responses are versioned by the requesting pane so
 an older result cannot overwrite newer animation data or a user interaction.
 
 ## Starting beat, QTR, and 45-degree transitions
@@ -149,6 +171,22 @@ Matching does not precompute the extended transition animations. Their derived f
 used to recover the internally subdivided base cycle; the
 remaining extended frames are treated as the transition produced by this control. Both the in-memory
 form and the URL form with trailing inherited frames omitted are recognized.
+
+When a reciprocal transition is detected, the orange QSlots button can replace the current slots
+with five generated animations. It warns only when Quick Slots are enabled and at least one current
+slot is populated. The replacement leaves every slot unselected.
+
+The first generated slot is the complete detected transition. The next four correspond to the four
+relationship-change segments. Each segment is shifted to its transition boundary, reduced to its
+first two authored frames, and padded with inherited frames to the doubled base-cycle length. The
+raw extraction is considered first, followed by every cyclic phase. Generation asks the matcher to
+accept an unrotated phase before considering rotated matching; it does not change prop direction to
+manufacture a match. This phase-first rule is what allows edited doubled-frame extracts to resolve
+without making rotation the primary explanation.
+
+Quick Slot generation is atomic. All four extracted cycles must resolve through the normal matcher
+before any slot is replaced. An unresolved phase leaves the existing set unchanged and displays the
+slot number that failed; it is never replaced with an arbitrary candidate animation.
 
 ## Diamond and Box
 
@@ -206,7 +244,10 @@ An unrotated matrix classifies the destination rule relationship. A 90-degree pa
 swaps the horizontal and vertical rule axes, so the same classifier uses the source relationship.
 This transposes the logical relationship matrix without a cell-label map; for example, rotated
 `2-1` corresponds to unrotated `1-2`. Both directions retain the real path axes when deriving Same
-or Opposite. At 1:2 and 1:4, the rotation selector is ordered `0°`, `90°`, `-90°`, then `180°`.
+or Opposite. At 1:2 and 1:4, the rotation selector retains both quarter-turn directions. At 1:1,
+1:3, and 1:5, `-90°` and `90°` resolve to the same quarter-turn class after beat, Swap, and 180
+matching, so only the canonical positive `90°` value is generated and matched. There is no legacy
+`-90°` recovery path. The 1:1 and 1:5 sets retain `180°`; 1:3 does not require it.
 The 180-degree orientation rotates the starting arcs by a half-turn but does not swap the matrix or
 header axes, so it retains the destination relationship checkpoint and established matrix layout.
 
@@ -285,7 +326,39 @@ Changes in this area should cover the applicable behavior:
 - Player-only Paths, Hands, and Arms settings remaining separate from thumbnails.
 - Pattern building, matching, Swap, 180°, Diamond/Box, fixed-shape cells, starting-beat shifts,
   Internal transition subdivision, reciprocal QTR/VTG transitions, speed ratios, and both Qtr modes.
+- Phase-first transition Quick Slot extraction and rotation-last matching/canonicalization.
 - Relationship classifications derived from compiled geometry, including the `6-3` `QO/QS`
   reference.
 - Header labels, tooltip availability, dividers, colors, and prop placement.
 - Full generated patterns through query encode/decode when serialized fields change.
+
+The broad 45-transition catalog scan is intentionally opt-in because it evaluates 6,480 generated
+source selections and takes substantially longer than a focused unit test. Run it with
+`npm run audit:vtg-45-trans`. It is not discovered by `npm run test:unit` and is not part of the
+normal build.
+
+### Known 45-transition audit findings
+
+The current base odd-ratio audit covers every matrix cell, all four Starting Beats, transition
+lengths 2 through 6, and the normal, Quad-first, and Quad-second transition modes. Its rotation
+family check passes, but 5,392 of the 6,480 source selections stop at an unresolved extraction:
+
+| Ratio | First unresolved generated slot | Source selections |
+| ----- | ------------------------------- | ----------------- |
+| 1:1   | Q3                              | 1,600             |
+| 1:1   | Q4                              | 256               |
+| 1:3   | Q3                              | 1,680             |
+| 1:5   | Q3                              | 1,600             |
+| 1:5   | Q4                              | 256               |
+
+These are source-selection counts, not a count of every unresolved generated slot: atomic
+resolution stops at the first unresolved slot for each selection. The result proves that the old
+`candidates[0]` substitution masked a broad Q3/Q4 semantic gap rather than isolated animation-data
+exceptions. That substitution must not be restored.
+
+Continuation work should determine why the literal doubled-frame Q3/Q4 extractions are not
+recognized by the normal VTG/QTR matcher. Do not replace them with a nearest catalog animation,
+silently canonicalize their authored frames, add a hidden rotation index, or introduce a recovery
+lookup. The generated animation must remain the literal edited cycle demonstrated by the supplied
+URLs. Cyclic phase comparison and the unrotated-before-rotated order are intentional domain rules
+and should remain in place while the underlying extraction or matching semantics are corrected.

@@ -90,10 +90,24 @@ export const useConceptsStore = defineStore(
       }
     }
 
-    const restoreQuickSlots = () => {
-      quickSlotCount.value = restoredQuickSlotCount
-      quickSlotPaths.value = createEmptyQuickSlots(restoredQuickSlotCount)
+    const replaceQuickSlots = (paths: readonly (string | null)[]) => {
+      if (!paths.every((path) => path === null || (typeof path === 'string' && path.length > 0))) {
+        return false
+      }
+
+      quickSlotCount.value = paths.length
+      quickSlotPaths.value = [...paths]
       selectedQuickSlot.value = null
+      return true
+    }
+
+    const replaceQuickSlotsWithEmpty = (count: number) => {
+      if (!Number.isSafeInteger(count) || count < 0) return false
+      return replaceQuickSlots(createEmptyQuickSlots(count))
+    }
+
+    const restoreQuickSlots = () => {
+      replaceQuickSlotsWithEmpty(restoredQuickSlotCount)
     }
 
     const saveCurrentQuickSlot = (path: string) => {
@@ -206,6 +220,8 @@ export const useConceptsStore = defineStore(
       resetPatternControls,
       addQuickSlot,
       removeQuickSlot,
+      replaceQuickSlots,
+      replaceQuickSlotsWithEmpty,
       restoreQuickSlots,
       saveCurrentQuickSlot,
       clearQuickSlot,

@@ -44,8 +44,9 @@
             v-model.number="orientation"
             aria-label="Rotate wall plane by the selected angle"
             :data-role="`${concept}-orientation`"
+            :disabled="orientationOptions.length === 1"
           >
-            <option v-for="option in vtgPatternOrientations" :key="option" :value="option">
+            <option v-for="option in orientationOptions" :key="option" :value="option">
               {{ option }}°
             </option>
           </select>
@@ -60,7 +61,16 @@ import AppTooltip from '@/components/AppTooltip.vue'
 import { vtgBeats, vtgPatternOrientations } from '@/features/vtg/types'
 import type { VtgBeat, VtgPatternOrientation } from '@/features/vtg/types'
 
-defineProps<{ concept: 'vtg' | 'qtr'; showOrientation?: boolean }>()
+withDefaults(
+  defineProps<{
+    concept: 'vtg' | 'qtr'
+    showOrientation?: boolean
+    orientationOptions?: readonly VtgPatternOrientation[]
+  }>(),
+  {
+    orientationOptions: () => vtgPatternOrientations,
+  },
+)
 
 const beat = defineModel<VtgBeat>('beat', { required: true })
 const qtr = defineModel<boolean>('qtr', { required: true })
@@ -142,6 +152,14 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
 
 .pattern-playback-controls__orientation select {
   block-size: calc(1.2em + 2 * var(--space-1) + 2px);
+}
+
+.pattern-playback-controls__orientation select:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  opacity: 0.65;
 }
 
 .pattern-playback-controls__beats input:focus-visible + span,

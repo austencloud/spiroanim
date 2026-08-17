@@ -10,6 +10,7 @@ import type {
   QtrPatternSelection,
   VtgPatternMatch,
   VtgPatternMatchPreferences,
+  VtgPatternRotationFilter,
   VtgPatternSelection,
 } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
@@ -17,6 +18,7 @@ import type { RootDataFinal } from '@/types/AnimTypes'
 export interface VtgPatternMatchRequest {
   animation: RootDataFinal
   preferences: VtgPatternMatchPreferences & Pick<QtrPatternMatchPreferences, 'quarters'>
+  rotationFilter?: VtgPatternRotationFilter
   lastSelection?: VtgPatternSelection | QtrPatternSelection
 }
 

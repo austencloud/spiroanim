@@ -2,24 +2,35 @@ import type { AnimData, RootDataFinal } from '@/types/AnimTypes'
 import { reverseAngle } from '@/math/animation/AngleFunc'
 import { rootCompile } from '@/math/animation/AnimFunc'
 
-const normalizePlane = (angle: number | undefined) => {
-  if (angle === undefined) return null
+const normalizePlane = (angle: number) => {
   const normalized = ((angle % 360) + 360) % 360
   return Object.is(normalized, -0) ? 0 : normalized
 }
 
-const frameSignature = (frame: AnimData, reversePlane = false) => [
-  frame.turns ?? null,
-  frame.arc ?? null,
-  normalizePlane(reversePlane ? reverseAngle(frame.plane ?? 0) : frame.plane),
-  normalizePlane(reversePlane && frame.axis !== undefined ? reverseAngle(frame.axis) : frame.axis),
-]
+const trackSignature = (frames: readonly AnimData[], reverseInitialPlane = false) => {
+  let inheritedTurns = 0
+  let inheritedArc = 0
+
+  return frames.map((frame, frameIndex) => {
+    inheritedTurns = frame.turns ?? inheritedTurns
+    inheritedArc = frame.arc ?? inheritedArc
+    const plane = frame.plane ?? 0
+    const axis = frame.axis ?? plane
+    const reversePlane = reverseInitialPlane && frameIndex === 0
+
+    return [
+      inheritedTurns,
+      inheritedArc,
+      normalizePlane(reversePlane ? reverseAngle(plane) : plane),
+      normalizePlane(reversePlane ? reverseAngle(axis) : axis),
+    ]
+  })
+}
 
 export const createVtgAnimationSignature = (animation: RootDataFinal): string | undefined => {
   if (animation.props.length !== 2) return undefined
-  return JSON.stringify(
-    animation.props.map((prop) => prop.anim.map((frame) => frameSignature(frame))),
-  )
+
+  return JSON.stringify(animation.props.map((prop) => trackSignature(prop.anim)))
 }
 
 /** Produces the same signature as applying shared final transforms without cloning the animation. */
@@ -36,9 +47,7 @@ export const createFinalTransformedVtgAnimationSignature = (
     animation.props.map((_, outputIndex) => {
       const sourceIndex = transforms.swapProps ? 1 - outputIndex : outputIndex
       const source = animation.props[sourceIndex]
-      return source?.anim.map((frame, frameIndex) =>
-        frameSignature(frame, frameIndex === 0 && transforms.reversePlane),
-      )
+      return source ? trackSignature(source.anim, transforms.reversePlane) : undefined
     }),
   )
 }

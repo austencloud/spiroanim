@@ -205,6 +205,7 @@
           v-model:qtr="isQtr"
           v-model:orientation="orientation"
           concept="vtg"
+          :orientation-options="availablePatternOrientations"
           :show-orientation="supportsVtgPatternOrientation(speedRatio)"
         >
           <template #before-controls>
@@ -218,7 +219,17 @@
           v-model:beats="transitionBeats"
           v-model:quad="transitionQuad"
           v-model:second="transitionSecond"
+          :q-slots-warning-required="hasPopulatedQuickSlots"
+          @q-slots="createQSlots"
         />
+        <p
+          v-if="quickSlotCreationError"
+          class="vtg-transition-quick-slot-error"
+          data-role="vtg-transition-qslots-error"
+          role="alert"
+        >
+          {{ quickSlotCreationError }}
+        </p>
         <p
           v-if="showStaticPropsTransitionNote"
           class="vtg-transition-static-note"
@@ -281,10 +292,16 @@ import type {
 } from '@/features/vtg/types'
 import {
   supportsVtgPatternOrientation,
-  vtgDefaultPatternOrientation,
+  getDefaultVtgPatternOrientation,
+  getVtgPatternOrientations,
   vtgDefaultTransitionBeats,
   vtgSpeedRatios,
 } from '@/features/vtg/types'
+import {
+  createVtgTransitionQuickSlotAnimationCandidates,
+  resolveVtgTransitionQuickSlotAnimations,
+} from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import { getUniqueVtgPatternOrientations } from '@/features/vtg/math/getUniqueVtgPatternOrientations'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import { toColor } from '@/utils/UtilFunc'
@@ -320,6 +337,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   patternSelect: [selection: ConceptPatternSelection]
+  quickSlotsCreate: [animations: readonly RootDataFinal[]]
 }>()
 
 const speedRatios = vtgSpeedRatios
@@ -344,11 +362,17 @@ const {
 const isAnti = ref(false)
 const shape = ref<PatternShape>('diamond')
 const beat = ref<VtgBeat>(1)
-const orientation = ref<VtgPatternOrientation>(vtgDefaultPatternOrientation)
+const orientation = ref<VtgPatternOrientation>(getDefaultVtgPatternOrientation(speedRatio.value))
 const transition = ref(false)
 const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
 const transitionQuad = ref(false)
 const transitionSecond = ref(false)
+const quickSlotCreationError = ref<string>()
+const hasPopulatedQuickSlots = computed(
+  () =>
+    conceptsStore.quickSlotCount > 0 &&
+    conceptsStore.quickSlotPaths.some((path) => typeof path === 'string'),
+)
 const showStaticPropsTransitionNote = computed(() => transition.value && speedRatio.value === '1:1')
 const usesPairedPreviewLayout = computed(
   () => speedRatio.value === '1:2' || speedRatio.value === '1:4',
@@ -384,6 +408,36 @@ const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
   }
 })
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
+
+const createQSlots = async () => {
+  quickSlotCreationError.value = undefined
+  if (!props.animation) return
+  const candidateGroups = createVtgTransitionQuickSlotAnimationCandidates(props.animation)
+  if (!candidateGroups) return
+
+  const preferences = {
+    swapProps: swapProps.value,
+    reversePlane: reversePlane.value,
+    quarters: 1 as const,
+  }
+  try {
+    const resolution = await resolveVtgTransitionQuickSlotAnimations(
+      candidateGroups,
+      async (animation, rotationFilter) =>
+        (await matchPattern({ animation, preferences, rotationFilter })).status === 'matched',
+    )
+    if (resolution.status !== 'matched') {
+      quickSlotCreationError.value = `Quick Slot ${resolution.slot} does not match a known pattern. Your current Quick Slots were not changed.`
+      console.warn(`VTG Quick Slot ${resolution.slot} did not resolve to a known pattern.`)
+      return
+    }
+    emit('quickSlotsCreate', resolution.animations)
+  } catch (error) {
+    quickSlotCreationError.value =
+      'Quick Slots could not be created. Your current Quick Slots were not changed.'
+    console.warn('VTG Quick Slot normalization failed.', error)
+  }
+}
 
 let suppressPatternEmit = false
 let hydrationVersion = 0
@@ -442,6 +496,41 @@ const selectedCellReference = computed<VtgCellReference | undefined>(() => {
   const cell = selectedCell.value
   return cell ? createCellReference(cell.column, cell.row) : undefined
 })
+
+const rotationSelection = computed<VtgPatternSelection | QtrPatternSelection | undefined>(() => {
+  const reference = selectedCellReference.value
+  if (!reference) return undefined
+
+  const baseSelection: VtgPatternSelection = {
+    reference,
+    speedRatio: speedRatio.value,
+    ...(spinToggleCells.has(reference) ? { isAnti: isAnti.value } : undefined),
+    ...(shape.value === 'box' ? { shape: shape.value } : undefined),
+    ...(beat.value === 1 ? undefined : { beat: beat.value }),
+    ...(transition.value ? { transition: true } : undefined),
+    ...(transition.value && transitionBeats.value !== vtgDefaultTransitionBeats
+      ? { transitionBeats: transitionBeats.value }
+      : undefined),
+    ...(transition.value && transitionQuad.value ? { transitionQuad: true } : undefined),
+    ...(transition.value && transitionQuad.value && transitionSecond.value
+      ? { transitionSecond: true }
+      : undefined),
+  }
+  return isQtr.value ? { ...baseSelection, quarters: 1 } : baseSelection
+})
+
+const availablePatternOrientations = computed<readonly VtgPatternOrientation[]>(() => {
+  const selection = rotationSelection.value
+  return selection
+    ? getUniqueVtgPatternOrientations(selection)
+    : getVtgPatternOrientations(speedRatio.value)
+})
+
+const retainAvailableOrientation = () => {
+  if (!availablePatternOrientations.value.includes(orientation.value)) orientation.value = 0
+}
+
+watch(availablePatternOrientations, retainAvailableOrientation, { flush: 'sync' })
 
 const isTileHighlighted = (tile: VtgMatrixTile) =>
   selectedCell.value !== undefined &&
@@ -507,6 +596,7 @@ const selectTile = (tile: VtgMatrixTile) => {
     row: tile.row,
   }
   if (isReselectedSpinToggleCell) isAnti.value = !isAnti.value
+  retainAvailableOrientation()
   emitPatternSelection(tile)
 }
 
@@ -546,6 +636,7 @@ const selectColumn = (column: VtgRuleNumber) => {
 
 const toggleSpinDirection = (tile: VtgMatrixTile) => {
   isAnti.value = !isAnti.value
+  retainAvailableOrientation()
   emitPatternSelection(tile)
 }
 
@@ -560,7 +651,7 @@ const resetPatternControls = async () => {
   transition.value = false
   transitionQuad.value = false
   transitionSecond.value = false
-  orientation.value = vtgDefaultPatternOrientation
+  orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
   await nextTick()
   suppressPatternEmit = false
   if (tile !== undefined) emitPatternSelection(tile)
@@ -599,6 +690,16 @@ watch(
     )
     if (tile !== undefined) emitPatternSelection(tile)
   },
+)
+
+watch(
+  speedRatio,
+  (nextSpeedRatio, previousSpeedRatio) => {
+    if (orientation.value === getDefaultVtgPatternOrientation(previousSpeedRatio)) {
+      orientation.value = getDefaultVtgPatternOrientation(nextSpeedRatio)
+    }
+  },
+  { flush: 'sync' },
 )
 
 const matchPattern = async (request: Parameters<PatternMatchingClient['matchVtg']>[0]) => {
@@ -683,7 +784,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     transitionBeats.value = vtgDefaultTransitionBeats
     transitionQuad.value = false
     transitionSecond.value = false
-    orientation.value = vtgDefaultPatternOrientation
+    orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
   }
 
   // Suppression only protects the control writes above through their watcher flush. A newer
@@ -706,7 +807,7 @@ const selectInitialRandomPattern = () => {
   transitionBeats.value = vtgDefaultTransitionBeats
   transitionQuad.value = false
   transitionSecond.value = false
-  orientation.value = vtgDefaultPatternOrientation
+  orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
   selectRandomTile()
 
   void nextTick(() => {
@@ -1118,6 +1219,22 @@ defineExpose({
   text-align: center;
   background: color-mix(in srgb, var(--color-status-warning) 10%, var(--color-surface));
   border: 1px solid color-mix(in srgb, var(--color-status-warning) 48%, var(--color-border));
+  border-inline-start-width: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.vtg-transition-quick-slot-error {
+  box-sizing: border-box;
+  width: min(calc(100% - var(--space-2)), 45rem);
+  padding: var(--space-2) var(--space-3);
+  margin: 0 auto;
+  color: var(--color-text);
+  font-size: clamp(0.6875rem, 2.7cqi, 0.8125rem);
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  background: color-mix(in srgb, var(--color-status-warning) 14%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-status-warning) 58%, var(--color-border));
   border-inline-start-width: 3px;
   border-radius: var(--radius-sm);
 }

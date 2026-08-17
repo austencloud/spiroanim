@@ -30,13 +30,26 @@ export const vtgTransitionBeats = [6, 5, 4, 3, 2] as const
 export type VtgTransitionBeats = (typeof vtgTransitionBeats)[number]
 export const vtgPatternOrientations = [-90, 0, 90, 180] as const
 export type VtgPatternOrientation = (typeof vtgPatternOrientations)[number]
+// Odd-ratio 45 Trans audits found that -90 and 90 always identify the same quarter-turn class once
+// beat, Swap, and 180 are considered. Positive 90 is the canonical quarter turn for odd ratios.
+const vtgOddPatternOrientations = [0, 90, 180] as const
+// The same audit found no 1:3 extraction that required the half turn.
+const vtg1to3PatternOrientations = [0, 90] as const
+export const getVtgPatternOrientations = (
+  speedRatio: VtgSpeedRatio,
+): readonly VtgPatternOrientation[] =>
+  speedRatio === '1:3'
+    ? vtg1to3PatternOrientations
+    : speedRatio === '1:1' || speedRatio === '1:5'
+      ? vtgOddPatternOrientations
+      : vtgPatternOrientations
 export const vtgDefaultPatternOrientation = -90 satisfies VtgPatternOrientation
 export const supportsVtgPatternOrientation = (speedRatio: VtgSpeedRatio) =>
-  speedRatio === '1:2' || speedRatio === '1:4'
+  getVtgPatternOrientations(speedRatio).length > 1
 export const getDefaultVtgPatternOrientation = (
   speedRatio: VtgSpeedRatio,
 ): VtgPatternOrientation =>
-  supportsVtgPatternOrientation(speedRatio) ? vtgDefaultPatternOrientation : 0
+  speedRatio === '1:2' || speedRatio === '1:4' ? vtgDefaultPatternOrientation : 0
 export const vtgDefaultTransitionBeats = 4 satisfies VtgTransitionBeats
 
 export interface VtgPatternSelection
@@ -79,6 +92,7 @@ export interface VtgPatternMatch {
 }
 
 export type VtgPatternMatchPreferences = Pick<VtgPatternMatch, 'swapProps' | 'reversePlane'>
+export type VtgPatternRotationFilter = 'unrotated' | 'rotated'
 
 export const qtrModes = [1, 2] as const
 export type QtrMode = (typeof qtrModes)[number]

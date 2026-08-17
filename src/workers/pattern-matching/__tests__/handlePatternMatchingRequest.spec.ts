@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
+import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
 import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { useBaseQS } from '@/services/query/createBaseQS'
+import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import {
   matchEightStepPatternRequest,
   matchQstPatternRequest,
@@ -58,6 +61,54 @@ describe('handlePatternMatchingRequest', () => {
       status: 'matched',
       source: 'qtr',
       match: { reference: '3-4', speedRatio: '1:5', quarters: 1, reversePlane: true },
+    })
+  })
+
+  it('detects the supplied rotated 1:3 pattern as QTR', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const animation = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew08Yk11Y&p0=Q__.gU0_____s.5E0wm.......&m0=_1_mxqv__&p1=N__.g__tyw3_s.5L_s8w3.......&c=_i_bhq&v=6',
+        ),
+      ),
+    )
+
+    await expect(
+      matchVtgPatternRequest({
+        animation,
+        preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+        rotationFilter: 'unrotated',
+      }),
+    ).resolves.toEqual({ status: 'unmatched' })
+
+    await expect(
+      matchVtgPatternRequest({
+        animation,
+        preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+        rotationFilter: 'rotated',
+      }),
+    ).resolves.toEqual({
+      status: 'matched',
+      source: 'qtr',
+      match: {
+        reference: '6-4',
+        speedRatio: '1:3',
+        quarters: 1,
+        isAnti: false,
+        swapProps: false,
+        reversePlane: false,
+        orientation: 90,
+        beat: 4,
+        shape: 'box',
+        bpm: 40,
+        scale: 0.8,
+      },
     })
   })
 

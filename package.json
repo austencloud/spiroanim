@@ -8,6 +8,7 @@
     "build": "run-s build-only type-check",
     "preview": "vite preview",
     "test:unit": "vitest",
+    "audit:vtg-45-trans": "vitest run --config vitest.audit.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:codex": "node scripts/run-playwright-codex.mjs e2e",
     "test:pwa": "run-s build-only test:pwa:only",

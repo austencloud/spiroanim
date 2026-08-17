@@ -210,6 +210,9 @@ export function useMainRoute() {
     conceptsStore.saveCurrentQuickSlot(createQuickSlotAnimationPath(ROOT.value))
   }
 
+  const saveAnimationsToQuickSlots = (animations: readonly RootDataFinal[]) =>
+    conceptsStore.replaceQuickSlots(animations.map(createQuickSlotAnimationPath))
+
   const animationQueryFromPath = (animationPath: string | null | undefined) =>
     animationPath?.split('?', 2)[1]?.split('#', 1)[0]
   let lastObservedAnimationQuery = animationQueryFromPath(createQuickSlotAnimationPath(ROOT.value))
@@ -363,5 +366,6 @@ export function useMainRoute() {
   return {
     animationReady: readonly(animationReady),
     saveCurrentPatternToQuickSlot,
+    saveAnimationsToQuickSlots,
   }
 }

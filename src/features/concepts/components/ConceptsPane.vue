@@ -46,6 +46,7 @@
       :animation-ready="animationReady"
       :pattern-matcher="patternMatcher"
       @pattern-select="emit('patternSelect', $event)"
+      @quick-slots-create="emit('quickSlotsCreate', $event)"
     />
     <EightStepPane
       v-else-if="selectedConcept === '8stp'"
@@ -90,6 +91,7 @@ const emit = defineEmits<{
   patternSelect: [selection: ConceptPatternSelection]
   quickSlotApply: [path: string]
   quickSlotSave: [slot: number]
+  quickSlotsCreate: [animations: readonly RootDataFinal[]]
 }>()
 
 const conceptsStore = useConceptsStore()

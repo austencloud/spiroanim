@@ -33,6 +33,15 @@ When several props are selected, eligibility and reconstruction are calculated f
 before any root data is changed. The UI applies the results atomically; an invalid selected range
 prevents the operation for all selected props.
 
+The Manage panel exposes a Times slider and an Apply button. Times ranges from `1` through the
+smallest selected target's available interval count (`frame count - 1`). Its value survives
+component remounts through the non-persisted editor properties store, but does not survive an app
+reload. If the available range shrinks, the value is clamped to the new maximum.
+
+Applying more than one shift repeats the same compiled reconstruction against the result of the
+previous repetition. The complete multi-shift operation is enclosed in one query-history group, so
+Undo restores the state from before the first repetition in one step.
+
 ## Closed-loop reconstruction
 
 For aligned endpoints, let the original compiled states be:
@@ -136,4 +145,5 @@ Shift tests cover:
 - Timeline-range shifting and restoration of its selection times.
 - Sparse raw output.
 - Atomic multi-prop behavior.
+- Repeated shifts, dynamic Times limits, and one undo step for the complete operation.
 - A two-prop VTG pattern through query-string encode/decode.

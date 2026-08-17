@@ -9,8 +9,9 @@ import type {
   VtgPatternSelection,
   VtgRuleNumber,
 } from '@/features/vtg/types'
-import { vtgPatternOrientations, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
+import { getVtgPatternOrientations, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
 import { useBaseQS } from '@/services/query/createBaseQS'
+import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
@@ -26,11 +27,21 @@ const createAnimation = (selection: VtgPatternSelection) => {
   return animation
 }
 
+const canonicalOddRatioMatches = (matches: readonly VtgPatternMatch[]) => {
+  const speedRatio = matches[0]?.speedRatio
+  if (speedRatio !== '1:1' && speedRatio !== '1:3' && speedRatio !== '1:5') return matches
+
+  const unrotated = matches.filter((match) => (match.orientation ?? 0) === 0)
+  return unrotated.length > 0 ? unrotated : matches
+}
+
 describe('VTG animation matching', () => {
   it.each(['1:2', '1:4'] as const)(
     'recognizes every nonzero initial arc rotation after a beat shift at %s',
     (speedRatio) => {
-      for (const orientation of vtgPatternOrientations.filter((option) => option !== 0)) {
+      for (const orientation of getVtgPatternOrientations(speedRatio).filter(
+        (option) => option !== 0,
+      )) {
         const selection = {
           reference: '5-1',
           speedRatio,
@@ -39,6 +50,24 @@ describe('VTG animation matching', () => {
         } as const satisfies VtgPatternSelection
 
         expect(findVtgPatternMatch(createAnimation(selection))).toMatchObject(selection)
+      }
+    },
+  )
+
+  it.each(['1:1', '1:3', '1:5'] as const)(
+    'recognizes animations using every added rotation at %s',
+    (speedRatio) => {
+      for (const orientation of getVtgPatternOrientations(speedRatio).filter(
+        (option) => option !== 0,
+      )) {
+        const animation = createAnimation({
+          reference: '5-1',
+          speedRatio,
+          orientation,
+          beat: 3,
+        })
+
+        expect(findVtgPatternMatch(animation)).toMatchObject({ speedRatio })
       }
     },
   )
@@ -183,7 +212,7 @@ describe('VTG animation matching', () => {
           for (const beat of [1, 2, 3, 4] as const) {
             const reference = createCellReference(column, row)
             const animation = createAnimation({ reference, speedRatio, beat })
-            const matches = findVtgPatternMatches(animation)
+            const matches = canonicalOddRatioMatches(findVtgPatternMatches(animation))
             const lowestBeat = Math.min(...matches.map((candidate) => candidate.beat ?? 1))
             const match = findVtgPatternMatch(animation)
 
@@ -213,7 +242,7 @@ describe('VTG animation matching', () => {
             transition: true,
           } as const satisfies VtgPatternSelection
           const animation = createAnimation({ ...selection, transitionBeats: 5 })
-          const matches = findVtgPatternMatches(animation)
+          const matches = canonicalOddRatioMatches(findVtgPatternMatches(animation))
           const preferenceDifference = (match: VtgPatternMatch) =>
             Number(match.swapProps !== swapProps) + Number(match.reversePlane !== reversePlane)
           const lowestPreferenceDifference = Math.min(...matches.map(preferenceDifference))
@@ -246,7 +275,7 @@ describe('VTG animation matching', () => {
             false,
           )
           const animation = await codec.decodeVer(query)
-          const matches = findVtgPatternMatches(animation)
+          const matches = canonicalOddRatioMatches(findVtgPatternMatches(animation))
           const lowestBeat = Math.min(...matches.map((candidate) => candidate.beat ?? 1))
           const match = findVtgPatternMatch(animation)
 
@@ -366,5 +395,53 @@ describe('VTG animation matching', () => {
     animation.props[0]!.anim[0]!.axis = 45
 
     expect(findVtgPatternMatch(animation)).toBeUndefined()
+  })
+
+  it('recognizes the generated QSlot through the established 180 transform', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const query = Object.fromEntries(
+      new URLSearchParams(
+        'r=Ew08Yk11Y&p0=Q__.5E0wmHj_s._____w3.......&m0=_1_mxqv__&p1=N__.g_______s.5E0wm.......&c=_i_bhq&v=6',
+      ),
+    )
+    const animation = codec.decodeQS(query)
+    expect(findVtgPatternMatch(animation)).toMatchObject({
+      reference: '6-6',
+      speedRatio: '1:3',
+      shape: 'box',
+      swapProps: false,
+      reversePlane: true,
+      beat: 4,
+    })
+    expect(codec.encodeQS(animation, false)).toEqual(query)
+  })
+
+  it('recognizes an omitted zero plane in the supplied Frame 1 reverse example', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const query = Object.fromEntries(
+      new URLSearchParams(
+        'r=Ew08kk11Y&p0=N__.5L_xM___s.blE...&m0=_1_mxqv__&p1=Q__.gZE_____s.bn_xM...&c=_i_bhq&v=6',
+      ),
+    )
+    const animation = codec.decodeQS(query)
+
+    expect(findVtgPatternMatch(animation)).toMatchObject({
+      reference: '6-6',
+      speedRatio: '1:3',
+      shape: 'box',
+      swapProps: true,
+      reversePlane: true,
+    })
+    expect(codec.encodeQS(animation, false)).toEqual(query)
   })
 })

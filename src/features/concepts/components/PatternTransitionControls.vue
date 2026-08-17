@@ -67,18 +67,84 @@
         </label>
       </template>
     </AppTooltip>
+
+    <AppTooltip text="Use the detected 45-degree transition with Quick Slots">
+      <template #activator="{ props: activatorProps }">
+        <button
+          v-bind="activatorProps"
+          type="button"
+          class="pattern-transition-controls__button"
+          :class="{ 'pattern-transition-controls__button--available': transition }"
+          :disabled="!transition"
+          aria-label="Use the detected 45-degree transition with Quick Slots"
+          data-role="vtg-transition-qslots"
+          @click="requestQSlots"
+        >
+          QSlots
+        </button>
+      </template>
+    </AppTooltip>
+
+    <BaseDialog
+      v-model="qSlotsWarningOpen"
+      class="qslots-warning"
+      title="Use QSlots?"
+      close-label="Close QSlots warning"
+    >
+      <p><strong>Are you sure?</strong> This will replace your current Quick Slots.</p>
+      <label class="qslots-warning__choice">
+        <input v-model="skipQSlotsWarningChoice" type="checkbox" />
+        <span>Do not show again</span>
+      </label>
+      <div class="qslots-warning__actions">
+        <button type="button" class="qslots-warning__cancel" @click="cancelQSlots">Cancel</button>
+        <button type="button" class="qslots-warning__proceed" @click="confirmQSlots">
+          Continue
+        </button>
+      </div>
+    </BaseDialog>
   </fieldset>
 </template>
 
 <script setup lang="ts">
 import AppTooltip from '@/components/AppTooltip.vue'
+import BaseDialog from '@/components/ui/BaseDialog.vue'
 import { vtgTransitionBeats } from '@/features/vtg/types'
 import type { VtgTransitionBeats } from '@/features/vtg/types'
 
+const { qSlotsWarningRequired = false } = defineProps<{ qSlotsWarningRequired?: boolean }>()
+const emit = defineEmits<{ qSlots: [] }>()
 const transition = defineModel<boolean>('transition', { required: true })
 const transitionBeats = defineModel<VtgTransitionBeats>('beats', { required: true })
 const quad = defineModel<boolean>('quad', { required: true })
 const second = defineModel<boolean>('second', { required: true })
+const qSlotsWarningOpen = ref(false)
+const skipQSlotsWarningChoice = ref(false)
+const suppressQSlotsWarning = ref(false)
+
+const performQSlots = () => emit('qSlots')
+
+const requestQSlots = () => {
+  if (!transition.value) return
+  if (!qSlotsWarningRequired || suppressQSlotsWarning.value) {
+    performQSlots()
+    return
+  }
+
+  skipQSlotsWarningChoice.value = false
+  qSlotsWarningOpen.value = true
+}
+
+const cancelQSlots = () => {
+  qSlotsWarningOpen.value = false
+  skipQSlotsWarningChoice.value = false
+}
+
+const confirmQSlots = () => {
+  suppressQSlotsWarning.value = skipQSlotsWarningChoice.value
+  qSlotsWarningOpen.value = false
+  performQSlots()
+}
 </script>
 
 <style scoped>
@@ -115,6 +181,7 @@ const second = defineModel<boolean>('second', { required: true })
 }
 
 .pattern-transition-controls__button--active,
+.pattern-transition-controls__button--available,
 .pattern-transition-controls select,
 .pattern-transition-controls__option input:checked + span {
   color: var(--color-on-action-primary);
@@ -166,5 +233,59 @@ const second = defineModel<boolean>('second', { required: true })
   white-space: nowrap;
   border: 0;
   clip-path: inset(50%);
+}
+
+:deep(.qslots-warning .base-dialog__body) {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.qslots-warning p {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.qslots-warning__choice {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  font-weight: 700;
+}
+
+.qslots-warning__choice input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--color-action-primary);
+}
+
+.qslots-warning__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
+.qslots-warning__actions button {
+  min-height: 2.75rem;
+  padding-inline: var(--space-4);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 750;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.qslots-warning__actions .qslots-warning__proceed {
+  color: var(--color-on-action-primary);
+  background: var(--color-action-primary);
+  border-color: var(--color-action-primary);
+}
+
+.qslots-warning__actions button:focus-visible,
+.qslots-warning__choice input:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
 }
 </style>

@@ -4,6 +4,7 @@
     :animation-ready="animationReady"
     :pattern-matcher="patternMatcher"
     @pattern-select="forwardSelection"
+    @quick-slots-create="emit('quickSlotsCreate', $event)"
   />
 </template>
 
@@ -24,6 +25,7 @@ withDefaults(
 
 const emit = defineEmits<{
   patternSelect: [selection: ConceptPatternSelection]
+  quickSlotsCreate: [animations: readonly RootDataFinal[]]
 }>()
 
 const forwardSelection = (selection: ConceptPatternSelection) => {

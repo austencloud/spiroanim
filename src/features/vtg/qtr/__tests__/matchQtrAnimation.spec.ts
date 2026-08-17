@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { findQtrPatternMatch, findQtrPatternMatches } from '@/features/vtg/qtr/matchQtrAnimation'
-import type { QtrPatternSelection } from '@/features/vtg/types'
-import { vtgPatternOrientations, vtgTransitionBeats } from '@/features/vtg/types'
+import type { QtrPatternMatch, QtrPatternSelection } from '@/features/vtg/types'
+import { getVtgPatternOrientations, vtgTransitionBeats } from '@/features/vtg/types'
 import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
@@ -17,11 +17,21 @@ const createQtrAnimation = (selection: QtrPatternSelection) => {
   return animation
 }
 
+const canonicalOddRatioMatches = (matches: readonly QtrPatternMatch[]) => {
+  const speedRatio = matches[0]?.speedRatio
+  if (speedRatio !== '1:1' && speedRatio !== '1:3' && speedRatio !== '1:5') return matches
+
+  const unrotated = matches.filter((match) => (match.orientation ?? 0) === 0)
+  return unrotated.length > 0 ? unrotated : matches
+}
+
 describe('Qtr animation matching', () => {
   it.each(['1:2', '1:4'] as const)(
     'recognizes every nonzero initial arc rotation after a beat shift at %s',
     (speedRatio) => {
-      for (const orientation of vtgPatternOrientations.filter((option) => option !== 0)) {
+      for (const orientation of getVtgPatternOrientations(speedRatio).filter(
+        (option) => option !== 0,
+      )) {
         const selection = {
           reference: '5-1',
           speedRatio,
@@ -31,6 +41,25 @@ describe('Qtr animation matching', () => {
         } as const satisfies QtrPatternSelection
 
         expect(findQtrPatternMatch(createQtrAnimation(selection))).toMatchObject(selection)
+      }
+    },
+  )
+
+  it.each(['1:1', '1:3', '1:5'] as const)(
+    'recognizes QTR animations using every added rotation at %s',
+    (speedRatio) => {
+      for (const orientation of getVtgPatternOrientations(speedRatio).filter(
+        (option) => option !== 0,
+      )) {
+        const animation = createQtrAnimation({
+          reference: '5-1',
+          speedRatio,
+          quarters: 1,
+          orientation,
+          beat: 3,
+        })
+
+        expect(findQtrPatternMatch(animation)).toMatchObject({ speedRatio, quarters: 1 })
       }
     },
   )
@@ -210,7 +239,7 @@ describe('Qtr animation matching', () => {
         reversePlane: selection.reversePlane,
       }
       const animation = createQtrAnimation({ ...selection, transitionBeats: 5 })
-      const matches = findQtrPatternMatches(animation)
+      const matches = canonicalOddRatioMatches(findQtrPatternMatches(animation))
       const preferenceDifference = (match: (typeof matches)[number]) =>
         Number(match.swapProps !== preferences.swapProps) +
         Number(match.reversePlane !== preferences.reversePlane)

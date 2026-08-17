@@ -30,6 +30,9 @@ const mountRoute = async (path: string, initialAnimation?: RootDataFinal) => {
   let saveCurrentPatternToQuickSlot:
     | ReturnType<typeof useMainRoute>['saveCurrentPatternToQuickSlot']
     | undefined
+  let saveAnimationsToQuickSlots:
+    | ReturnType<typeof useMainRoute>['saveAnimationsToQuickSlots']
+    | undefined
   const app = createApp(
     defineComponent({
       setup() {
@@ -37,6 +40,7 @@ const mountRoute = async (path: string, initialAnimation?: RootDataFinal) => {
         const routeState = useMainRoute()
         animationReady = routeState.animationReady
         saveCurrentPatternToQuickSlot = routeState.saveCurrentPatternToQuickSlot
+        saveAnimationsToQuickSlots = routeState.saveAnimationsToQuickSlots
         return () => h('div')
       },
     }),
@@ -48,10 +52,12 @@ const mountRoute = async (path: string, initialAnimation?: RootDataFinal) => {
   await nextTick()
   if (!animationReady) throw new Error('Main route state was not created')
   if (!saveCurrentPatternToQuickSlot) throw new Error('Quick Slot saver was not created')
+  if (!saveAnimationsToQuickSlots) throw new Error('Quick Slot batch saver was not created')
 
   return {
     animationReady,
     saveCurrentPatternToQuickSlot,
+    saveAnimationsToQuickSlots,
     router,
     paneStore: useMainPaneStore(pinia),
     conceptsStore: useConceptsStore(pinia),
@@ -269,6 +275,28 @@ describe('useMainRoute', () => {
     expect(conceptsStore.quickSlotPaths[1]).toMatch(
       new RegExp(`^${saved.replace('/', '\\/')}\\?r=`),
     )
+  })
+
+  it('saves generated animations as an unselected Quick Slot set', async () => {
+    const first = createLoadedAnimation()
+    const second = createDefaultVtgAnimation({
+      reference: '3-3',
+      speedRatio: '1:3',
+      transition: true,
+    })
+    if (!second) throw new Error('Expected a supported VTG transition')
+    const { conceptsStore, saveAnimationsToQuickSlots } = await mountRoute('/play-vtg', first)
+    conceptsStore.restoreQuickSlots()
+    conceptsStore.selectedQuickSlot = 2
+
+    expect(saveAnimationsToQuickSlots([first, second])).toBe(true)
+
+    expect(conceptsStore.quickSlotCount).toBe(2)
+    expect(conceptsStore.quickSlotPaths).toHaveLength(2)
+    expect(conceptsStore.quickSlotPaths.every((path) => path?.startsWith('/play-vtg?r='))).toBe(
+      true,
+    )
+    expect(conceptsStore.selectedQuickSlot).toBeNull()
   })
 
   it('does not rewrite a selected Quick Slot when only the pane route changes', async () => {

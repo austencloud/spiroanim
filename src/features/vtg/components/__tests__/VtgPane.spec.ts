@@ -6,6 +6,9 @@ import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { findVtgPatternMatches } from '@/features/vtg/matchVtgAnimation'
+import { createVtgTransitionQuickSlotAnimationCandidates } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import { findQtrPatternMatches } from '@/features/vtg/qtr/matchQtrAnimation'
 import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
 import { useQSMainStore } from '@/stores/useQSMainStore'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
@@ -141,7 +144,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
     expect(wrapper.findAll('[data-role="vtg-rule-card"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
-    expect(wrapper.findAll('button')).toHaveLength(51)
+    expect(wrapper.findAll('button')).toHaveLength(55)
     expect(wrapper.findAll('[data-role="vtg-divider"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--large')).toHaveLength(24)
@@ -281,6 +284,55 @@ describe('VtgPane', () => {
       expect(sideHeaders.findAll('[data-role="vtg-divider"]')).toHaveLength(6)
     },
   )
+
+  it.each(['1:1', '1:3', '1:5'] as const)(
+    'disables beat-equivalent rotations while retaining the zero-degree default at %s',
+    async (speedRatio) => {
+      const wrapper = mount(VtgPane)
+      await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await nextTick()
+
+      const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+      expect(rotate.element.value).toBe('0')
+      expect(rotate.element.disabled).toBe(true)
+      expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°'])
+    },
+  )
+
+  it('disables rotation at zero when the selected pattern has no unique rotated result', async () => {
+    const wrapper = mount(VtgPane)
+    await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('input[value="1:1"]').setValue()
+
+    const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+    await rotate.setValue('90')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat-2"]').setValue()
+
+    expect(rotate.element.value).toBe('0')
+    expect(rotate.element.disabled).toBe(true)
+    expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°'])
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      { reference: '1-2', speedRatio: '1:1', beat: 2 },
+    ])
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
+
+    expect(rotate.element.value).toBe('0')
+    expect(rotate.element.disabled).toBe(true)
+    expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°'])
+  })
+
+  it('disables rotation for a default 1:3 cell whose quarter turns are canonical elsewhere', async () => {
+    const wrapper = mount(VtgPane)
+    await wrapper.get('[data-cell-reference="2-1"]').trigger('click')
+
+    const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+    expect(rotate.element.value).toBe('0')
+    expect(rotate.element.disabled).toBe(true)
+    expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°'])
+  })
 
   it.each([
     ['1:1', 'TOG IN rule 1'],
@@ -481,7 +533,7 @@ describe('VtgPane', () => {
   })
 
   it.each(['1:2', '1:4'] as const)(
-    'defaults rotation to -90 degrees at %s and emits all selector options',
+    'defaults rotation to -90 degrees at %s and emits its unique selector options',
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
@@ -491,12 +543,7 @@ describe('VtgPane', () => {
       const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
       expect(rotate.attributes('aria-label')).toBe('Rotate wall plane by the selected angle')
       expect(rotate.element.value).toBe('-90')
-      expect(rotate.findAll('option').map((option) => option.text())).toEqual([
-        '-90°',
-        '0°',
-        '90°',
-        '180°',
-      ])
+      expect(rotate.findAll('option').map((option) => option.text())).toEqual(['-90°', '0°', '90°'])
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
         { reference: '5-1', speedRatio, orientation: -90 },
       ])
@@ -504,9 +551,16 @@ describe('VtgPane', () => {
       await rotate.setValue('0')
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([{ reference: '5-1', speedRatio }])
 
+      await wrapper.get('[data-cell-reference="6-6"]').trigger('click')
+      expect(rotate.findAll('option').map((option) => option.text())).toEqual([
+        '-90°',
+        '0°',
+        '90°',
+        '180°',
+      ])
       await rotate.setValue('180')
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-        { reference: '5-1', speedRatio, orientation: 180 },
+        { reference: '6-6', speedRatio, isAnti: false, orientation: 180 },
       ])
     },
   )
@@ -773,6 +827,10 @@ describe('VtgPane', () => {
     const wrapper = mount(VtgPane)
     await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
 
+    const qSlots = wrapper.get<HTMLButtonElement>('[data-role="vtg-transition-qslots"]')
+    expect(qSlots.element.disabled).toBe(true)
+    expect(qSlots.text()).toBe('QSlots')
+
     expect(
       wrapper.get<HTMLSelectElement>('[data-role="vtg-transition-beats"]').element.disabled,
     ).toBe(true)
@@ -803,6 +861,8 @@ describe('VtgPane', () => {
     expect(quad.element.type).toBe('checkbox')
     expect(selector.element.disabled).toBe(false)
     expect(quad.element.disabled).toBe(false)
+    expect(qSlots.element.disabled).toBe(false)
+    expect(qSlots.classes()).toContain('pattern-transition-controls__button--available')
     expect(quad.element.checked).toBe(false)
     expect(quad.element.nextElementSibling?.textContent).toBe('Quad')
     const disabledSecond = wrapper.get<HTMLInputElement>('[data-role="vtg-transition-second"]')
@@ -844,6 +904,159 @@ describe('VtgPane', () => {
     expect(selector.element.disabled).toBe(true)
     expect(quad.element.disabled).toBe(true)
     expect(second.element.disabled).toBe(true)
+    expect(qSlots.element.disabled).toBe(true)
+  })
+
+  it('creates five transition QSlots and warns only before replacing populated slots', async () => {
+    const store = useConceptsStore()
+    const animation = createDefaultVtgAnimation({
+      reference: '1-1',
+      speedRatio: '1:3',
+      transition: true,
+      transitionBeats: 5,
+      transitionQuad: true,
+    })
+    if (!animation) throw new Error('Expected a supported VTG transition')
+    const savedPaths = Array.from(
+      { length: 5 },
+      (_unused, index) => `/play-vtg?r=transition-${index + 1}&v=6`,
+    )
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        onQuickSlotsCreate: (animations: readonly RootDataFinal[]) => {
+          expect(animations).toHaveLength(5)
+          store.replaceQuickSlots(savedPaths)
+        },
+      },
+    })
+    await vi.waitFor(() => {
+      expect(
+        wrapper.get<HTMLButtonElement>('[data-role="vtg-transition-qslots"]').element.disabled,
+      ).toBe(false)
+    })
+
+    const qSlots = wrapper.get('[data-role="vtg-transition-qslots"]')
+    await qSlots.trigger('click')
+
+    const warning = wrapper.get<HTMLDialogElement>('.qslots-warning')
+    expect(warning.element.open).toBe(false)
+    await vi.waitFor(() => expect(store.quickSlotCount).toBe(5))
+    expect(store.quickSlotPaths).toEqual(savedPaths)
+    expect(store.selectedQuickSlot).toBeNull()
+    expect(wrapper.emitted('quickSlotsCreate')).toHaveLength(1)
+
+    await qSlots.trigger('click')
+    expect(warning.element.open).toBe(true)
+    expect(warning.text()).toContain('Are you sure?')
+    expect(warning.text()).toContain('Do not show again')
+
+    await wrapper.get('.qslots-warning__cancel').trigger('click')
+    expect(warning.element.open).toBe(false)
+    expect(store.quickSlotPaths).toEqual(savedPaths)
+    expect(store.selectedQuickSlot).toBeNull()
+
+    await qSlots.trigger('click')
+    await wrapper.get<HTMLInputElement>('.qslots-warning__choice input').setValue(true)
+    await wrapper.get('.qslots-warning__proceed').trigger('click')
+    await nextTick()
+    expect(warning.element.open).toBe(false)
+    expect(store.quickSlotCount).toBe(5)
+    expect(store.quickSlotPaths).toEqual(savedPaths)
+    expect(store.selectedQuickSlot).toBeNull()
+
+    await qSlots.trigger('click')
+    expect(warning.element.open).toBe(false)
+    expect(store.quickSlotPaths).toEqual(savedPaths)
+  })
+
+  it('checks every unrotated transition phase before accepting a rotated QSlot match', async () => {
+    const animation = createDefaultVtgAnimation({
+      reference: '1-1',
+      speedRatio: '1:3',
+      transition: true,
+      transitionBeats: 5,
+      transitionQuad: true,
+    })
+    if (!animation) throw new Error('Expected a supported VTG transition')
+
+    const candidateGroups = createVtgTransitionQuickSlotAnimationCandidates(animation)
+    const thirdSlotCandidates = candidateGroups?.[2]
+    if (!thirdSlotCandidates) throw new Error('Expected candidates for the third Quick Slot')
+
+    const hasUnrotatedMatch = (candidate: RootDataFinal) =>
+      [...findVtgPatternMatches(candidate), ...findQtrPatternMatches(candidate)].some(
+        (match) => (match.orientation ?? 0) === 0,
+      )
+    expect(hasUnrotatedMatch(thirdSlotCandidates[0]!)).toBe(false)
+    const expectedThirdSlot = thirdSlotCandidates.find(hasUnrotatedMatch)
+    expect(expectedThirdSlot).toBeDefined()
+
+    let createdSlots: readonly RootDataFinal[] | undefined
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        onQuickSlotsCreate: (animations: readonly RootDataFinal[]) => {
+          createdSlots = animations
+        },
+      },
+    })
+    await vi.waitFor(() => {
+      expect(
+        wrapper.get<HTMLButtonElement>('[data-role="vtg-transition-qslots"]').element.disabled,
+      ).toBe(false)
+    })
+
+    await wrapper.get('[data-role="vtg-transition-qslots"]').trigger('click')
+    await vi.waitFor(() => expect(createdSlots).toHaveLength(5))
+
+    expect(createdSlots?.[2]).toEqual(expectedThirdSlot)
+  })
+
+  it('leaves Quick Slots unchanged when a transition extraction is unmatched', async () => {
+    const store = useConceptsStore()
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const animation = createDefaultVtgAnimation({
+      reference: '5-1',
+      speedRatio: '1:3',
+      transition: true,
+      transitionBeats: 3,
+      transitionQuad: true,
+      transitionSecond: true,
+    })
+    if (!animation) throw new Error('Expected a supported VTG transition')
+    const sourceMatch = findVtgPatternMatches(animation)[0]
+    if (!sourceMatch) throw new Error('Expected the source transition to match')
+    const patternMatcher: PatternMatchingClient = {
+      matchVtg: vi
+        .fn<PatternMatchingClient['matchVtg']>()
+        .mockResolvedValueOnce({ status: 'matched', source: 'vtg', match: sourceMatch })
+        .mockResolvedValue({ status: 'unmatched' }),
+      matchEightStep: vi
+        .fn<PatternMatchingClient['matchEightStep']>()
+        .mockResolvedValue({ status: 'unmatched' }),
+      matchQst: vi
+        .fn<PatternMatchingClient['matchQst']>()
+        .mockResolvedValue({ status: 'unmatched' }),
+    }
+    const wrapper = mount(VtgPane, { props: { animation, patternMatcher } })
+
+    await vi.waitFor(() => {
+      expect(
+        wrapper.get<HTMLButtonElement>('[data-role="vtg-transition-qslots"]').element.disabled,
+      ).toBe(false)
+    })
+    await wrapper.get('[data-role="vtg-transition-qslots"]').trigger('click')
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-transition-qslots-error"]').text()).toContain(
+        'Quick Slot 2',
+      )
+    })
+
+    expect(store.quickSlotCount).toBe(0)
+    expect(wrapper.emitted('quickSlotsCreate')).toBeUndefined()
+    expect(warning).toHaveBeenCalledWith('VTG Quick Slot 2 did not resolve to a known pattern.')
+    warning.mockRestore()
   })
 
   it('hydrates a detected experimental transition timing', async () => {
@@ -868,6 +1081,9 @@ describe('VtgPane', () => {
       expect(
         wrapper.get<HTMLInputElement>('[data-role="vtg-transition-second"]').element.checked,
       ).toBe(true)
+      expect(
+        wrapper.get<HTMLButtonElement>('[data-role="vtg-transition-qslots"]').element.disabled,
+      ).toBe(false)
     })
   })
 
