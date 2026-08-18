@@ -58,12 +58,22 @@
         ref="cConcepts"
         :animation="ROOT"
         :animation-ready="animationReady"
+        :builder-active="paneStore.isPaneHijacked"
         data-type="concepts"
         data-role="concepts-view"
         @pattern-select="applyConceptPattern"
+        @pattern-preview="previewConceptPattern"
+        @customize="applyBuilderCustomization"
         @quick-slot-apply="applyQuickSlotFromView($event, 'concepts')"
         @quick-slot-save="saveCurrentPatternToQuickSlot"
         @quick-slots-create="saveAnimationsToQuickSlots"
+        @builder-open="toggleBuilder"
+      />
+      <BuilderPane
+        v-if="viewVisible.builder"
+        ref="cBuilder"
+        data-type="builder"
+        data-role="builder-pane-view"
       />
     </div>
     <AppNavigationMenu />
@@ -89,8 +99,12 @@ import Player from '@/components/SpiroAnim/AnimPlayer.vue'
 import Editor from '@/components/SpiroAnim/AnimEditor.vue'
 import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
+import BuilderPane from '@/features/builder/components/BuilderPane.vue'
 import { applyConceptPattern as createConceptPattern } from '@/features/concepts/applyConceptPattern'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
+import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
+import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
+import type { VtgPatternSelection } from '@/features/vtg/types'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useScrollSelectScale } from '@/composables/useScrollSelectScale'
@@ -123,7 +137,7 @@ const playerStore = usePlayerStore('main')
 const conceptsStore = useConceptsStore()
 const qsStore = useQSMainStore()
 const queryVersionStore = useQueryVersionStore()
-const { ROOT } = playerStore.raw()
+const { ROOT, CURRENT } = playerStore.raw()
 const { ETIMES, PTIMES, UTIMES } = storeToRefs(playerStore)
 const { pSELECTED, showFullTimeline } = storeToRefs(usePropertiesStore('main'))
 const { registerComponentEl } = paneStore
@@ -136,6 +150,7 @@ const {
   eEditor,
   eTimeline,
   eConcepts,
+  eBuilder,
   eLeft,
   eRight,
   eHidden,
@@ -182,12 +197,14 @@ const cPlayer = ref<ComponentPublicInstance>()
 const cEditor = ref<ComponentPublicInstance>()
 const cTimeline = ref<ComponentPublicInstance>()
 const cConcepts = ref<ComponentPublicInstance>()
+const cBuilder = ref<ComponentPublicInstance>()
 
 // Supply root elements from components to Pane Store
 registerComponentEl(cPlayer, ePlayer)
 registerComponentEl(cEditor, eEditor)
 registerComponentEl(cTimeline, eTimeline)
 registerComponentEl(cConcepts, eConcepts)
+registerComponentEl(cBuilder, eBuilder)
 
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
   const animation = createConceptPattern(ROOT.value, selection)
@@ -195,6 +212,25 @@ const applyConceptPattern = (selection: ConceptPatternSelection) => {
     ROOT.value = animation
     playerStore.cameraReset = Symbol()
   }
+}
+
+const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
+  ROOT.value = applyVtgCustomization(ROOT.value, selection as VtgPatternSelection)
+}
+
+const previewConceptPattern = (selection: ConceptPatternSelection) => {
+  if (!paneStore.isPaneHijacked) return
+  const animation = createConceptPattern(ROOT.value, selection)
+  if (!animation) return
+
+  playerStore.setPlaybackOverride(toVtgBuilderDisplayAnimation(animation, conceptsStore.scale))
+  CURRENT.value = 0
+  playerStore.PLAYING = true
+}
+
+const toggleBuilder = () => {
+  if (paneStore.isPaneHijacked) paneStore.exitPaneHijack()
+  else paneStore.hijackOppositePane('builder', 'concepts')
 }
 
 const applyQuickSlot = async (path: string): Promise<boolean> => {

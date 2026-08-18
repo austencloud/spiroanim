@@ -38,6 +38,7 @@
   --color-action-primary: var(--palette-blue-600);
   --color-on-action-primary: var(--palette-neutral-0);
   --color-status-success: var(--palette-green-700);
+  --color-status-error: var(--palette-red-800);
   --color-pattern-mode-active: color-mix(
     in srgb,
     var(--color-action-primary) 55%,

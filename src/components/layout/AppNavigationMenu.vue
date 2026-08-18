@@ -230,11 +230,12 @@ const fullscreenLabel = computed(() =>
   isFullscreen.value ? 'Exit Full Screen' : 'Enter Full Screen',
 )
 const playerStore = usePlayerStore('main')
-const { COMPILED, ROOT } = playerStore.raw()
+const { PLAYBACK_COMPILED } = playerStore.raw()
 const {
-  ASPECT,
+  PLAYBACK_ASPECT,
   CANVAS_DIM,
-  MAX,
+  PLAYBACK_MAX,
+  PLAYBACK_ROOT,
   TRACER,
   imageExportRequest,
   videoExportRequest,
@@ -263,8 +264,8 @@ const imageExportFeatureAvailability = computed<ImageExportFeatureAvailability>(
     Object.fromEntries(
       imageExportFeatures.map((feature) => [
         feature,
-        COMPILED.value[feature] === true ||
-          COMPILED.value.props?.some((prop) => prop[feature] === true) === true,
+        PLAYBACK_COMPILED.value[feature] === true ||
+          PLAYBACK_COMPILED.value.props?.some((prop) => prop[feature] === true) === true,
       ]),
     ) as ImageExportFeatureAvailability,
 )
@@ -287,7 +288,7 @@ function openExportImageDialog() {
   closeMenu()
   exportImageDialog.value?.open(
     CANVAS_DIM.value,
-    ASPECT.value,
+    PLAYBACK_ASPECT.value,
     imageExportFeatureAvailability.value,
   )
 }
@@ -316,16 +317,20 @@ function openResetDialog() {
 
 function openExportVideoDialog() {
   closeMenu()
-  void exportVideoDialog.value?.open(videoExportAvailable.value, CANVAS_DIM.value, ASPECT.value)
+  void exportVideoDialog.value?.open(
+    videoExportAvailable.value,
+    CANVAS_DIM.value,
+    PLAYBACK_ASPECT.value,
+  )
 }
 
 function startVideoExport(settings: Omit<VideoExportSettings, 'durationMs' | 'playbackSpeed'>) {
-  const playbackSpeed = ROOT.value.speed > 0 ? ROOT.value.speed : 1
+  const playbackSpeed = PLAYBACK_ROOT.value.speed > 0 ? PLAYBACK_ROOT.value.speed : 1
   videoExportRequest.value = {
     id: Symbol(),
     settings: {
       ...settings,
-      durationMs: videoExportDurationMs(MAX.value, playbackSpeed),
+      durationMs: videoExportDurationMs(PLAYBACK_MAX.value, playbackSpeed),
       playbackSpeed,
     },
   }

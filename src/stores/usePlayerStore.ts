@@ -53,12 +53,26 @@ export const usePlayerStore = (id: string) => {
           }),
         ),
 
+        // Optional session-only animation rendered by the Player without replacing ROOT.
+        PLAYBACK_OVERRIDE: shallowRef<RootDataFinal>(),
+
         // Pre-compiled data which gets sent to the worker
         COMPILED: shallowRef<RootDataCompiled>({} as RootDataCompiled),
+        PLAYBACK_COMPILED: shallowRef<RootDataCompiled>({} as RootDataCompiled),
       }
 
       const v = {
         raw: () => r,
+
+        PLAYBACK_ROOT: computed(() => r.PLAYBACK_OVERRIDE.value ?? r.ROOT.value),
+        PLAYBACK_OVERRIDE_ACTIVE: computed(() => r.PLAYBACK_OVERRIDE.value !== undefined),
+
+        setPlaybackOverride: (animation: RootDataFinal) => {
+          r.PLAYBACK_OVERRIDE.value = animation
+        },
+        clearPlaybackOverride: () => {
+          r.PLAYBACK_OVERRIDE.value = undefined
+        },
 
         INDEX: ref(0), //         current combined Unique Time index
         EINDEX: computed(() => {
@@ -71,6 +85,7 @@ export const usePlayerStore = (id: string) => {
         }), //                    current displayed frame-set index
 
         MAX: ref(0), //           max milliseconds
+        PLAYBACK_MAX: ref(0), //  max milliseconds for ROOT or its temporary Player override
         SELECTION: ref(false), // Whether progress bar works as a selection, or position
         COUNT: ref(0), //         Max setting when selection is enabled
         SELECTED: ref([0, 0]), // Current selection
@@ -92,9 +107,10 @@ export const usePlayerStore = (id: string) => {
           // NOTE: Aspect is calculated by width / height (therefor not stored here)
         }),
 
-        // if [x]/[0] is NaN, meaning second value is 0, causes UI to use max width/height
-        // Player uses maximum available width / height, and timeline displays with 4:3
+        // [x]/[0] is NaN, causing the relevant canvas to use its maximum width and height.
+        // ASPECT follows editable ROOT; PLAYBACK_ASPECT follows the temporary override when active.
         ASPECT: ref<[number, number]>([0, 0]),
+        PLAYBACK_ASPECT: ref<[number, number]>([0, 0]),
         CANVAS_DIM: ref({ width: 0, height: 0 }),
 
         freeCamera: ref(false), // Persisted manual camera ownership mode
@@ -129,8 +145,6 @@ export const usePlayerStore = (id: string) => {
         if (v.MAX.value < 0)
           // In case only one pattern is set
           v.MAX.value = 0
-        if (v.MAX.value < r.CURRENT.value) r.CURRENT.value = v.MAX.value
-
         // Update aspect ratio
         if (r.ROOT.value.aspectx == 0 || r.ROOT.value.aspecty == 0) {
           v.ASPECT.value[0] = 0
@@ -138,6 +152,26 @@ export const usePlayerStore = (id: string) => {
         } else {
           v.ASPECT.value[0] = r.ROOT.value.aspectx
           v.ASPECT.value[1] = r.ROOT.value.aspecty
+        }
+      })
+
+      // Compile the animation currently owned by the Player. Clearing the override makes this
+      // computed source point directly back to the latest ROOT without copying or replacing it.
+      watchImmediate(v.PLAYBACK_ROOT, (animation) => {
+        const compiled = rootCompile(animation)
+        r.PLAYBACK_COMPILED.value = compiled
+
+        const propTimes = PROPTIMES(compiled)
+        const motionTimes = MOTIONTIMES(compiled)
+        const cameraTimes = CAMERATIMES(compiled)
+        const times = UNQTIMES([...propTimes, ...motionTimes, cameraTimes])
+        v.PLAYBACK_MAX.value = Math.max(times.at(-1) ?? 0, 0)
+        if (v.PLAYBACK_MAX.value < r.CURRENT.value) r.CURRENT.value = v.PLAYBACK_MAX.value
+
+        if (animation.aspectx === 0 || animation.aspecty === 0) {
+          v.PLAYBACK_ASPECT.value = [0, 0]
+        } else {
+          v.PLAYBACK_ASPECT.value = [animation.aspectx, animation.aspecty]
         }
       })
 

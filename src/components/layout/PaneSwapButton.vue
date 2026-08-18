@@ -6,6 +6,7 @@
         class="pane-swap-button"
         type="button"
         :aria-label="label"
+        :disabled="disabled"
         @click.prevent="emit('click')"
       >
         <BaseIcon :path="icon" />
@@ -21,6 +22,7 @@ import AppTooltip from '@/components/AppTooltip.vue'
 defineProps<{
   label: string
   icon: string
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -44,6 +46,12 @@ const emit = defineEmits<{
 
 .pane-swap-button:hover {
   color: var(--color-text);
+}
+
+.pane-swap-button:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+  opacity: 0.45;
 }
 
 .pane-swap-button:focus-visible {

@@ -9,7 +9,7 @@ import { createPaneStore } from '@/stores/createPaneStore'
  * Example:
  * <PlayerComponent ref="ePlayer" data-type="player" />
  */
-export const viewKeysMain = ['player', 'editor', 'timeline', 'concepts'] as const
+export const viewKeysMain = ['player', 'editor', 'timeline', 'concepts', 'builder'] as const
 
 /**
  * Defines the available panes that views can be moved between.
@@ -94,4 +94,5 @@ export const useMainPaneStore = createPaneStore(
   {
     vtg: 'concepts',
   },
+  ['builder'],
 )

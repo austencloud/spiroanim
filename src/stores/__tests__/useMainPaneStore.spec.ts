@@ -32,13 +32,14 @@ describe('useMainPaneStore', () => {
   it('exports the view and pane keys with their default assignments', () => {
     const { app, store } = mountStore()
 
-    expect(viewKeysMain).toEqual(['player', 'editor', 'timeline', 'concepts'])
+    expect(viewKeysMain).toEqual(['player', 'editor', 'timeline', 'concepts', 'builder'])
     expect(paneKeysMain).toEqual(['left', 'right', 'hidden'])
     expect(store.parents).toEqual({
       player: 'left',
       editor: 'hidden',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
 
     app.unmount()
@@ -54,6 +55,7 @@ describe('useMainPaneStore', () => {
       editor: 'left',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
     app.unmount()
   })
@@ -68,6 +70,7 @@ describe('useMainPaneStore', () => {
       editor: 'hidden',
       timeline: 'hidden',
       concepts: 'left',
+      builder: 'hidden',
     })
     app.unmount()
   })
@@ -99,6 +102,7 @@ describe('useMainPaneStore', () => {
       editor: false,
       timeline: false,
       concepts: true,
+      builder: false,
     })
 
     store.paneVisible.left = false
@@ -123,6 +127,7 @@ describe('useMainPaneStore', () => {
       editor: 'left',
       timeline: 'right',
       concepts: 'hidden',
+      builder: 'hidden',
     })
     expect(store.paneVisible.left).toBe(true)
     expect(store.paneVisible.right).toBe(true)
@@ -144,7 +149,29 @@ describe('useMainPaneStore', () => {
       editor: 'hidden',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
+    app.unmount()
+  })
+
+  it('hijacks the pane opposite Concepts and restores its displaced view', async () => {
+    const { app, store } = mountStore()
+    const originalParents = { ...store.parents }
+
+    expect(store.hijackOppositePane('builder', 'concepts')).toBe(true)
+    await nextTick()
+    expect(store.parents).toEqual(originalParents)
+    expect(store.hijackedPane).toBe('left')
+    expect(store.viewVisible.builder).toBe(true)
+    expect(store.viewVisible.player).toBe(false)
+    expect(store.isPaneHijacked).toBe(true)
+
+    store.exitPaneHijack()
+    await nextTick()
+    expect(store.parents).toEqual(originalParents)
+    expect(store.viewVisible.player).toBe(true)
+    expect(store.viewVisible.builder).toBe(false)
+    expect(store.isPaneHijacked).toBe(false)
     app.unmount()
   })
 })

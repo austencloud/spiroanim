@@ -37,4 +37,15 @@ describe('PaneSwapButton', () => {
     expect(wrapper.emitted('click')).toHaveLength(1)
     wrapper.unmount()
   })
+
+  it('does not emit while disabled', async () => {
+    const wrapper = mount(PaneSwapButton, {
+      props: { label: 'Swap Views', icon: 'M0 0', disabled: true },
+    })
+
+    const button = wrapper.get<HTMLButtonElement>('button')
+    expect(button.element.disabled).toBe(true)
+    await button.trigger('click')
+    expect(wrapper.emitted('click')).toBeUndefined()
+  })
 })

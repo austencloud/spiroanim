@@ -7,6 +7,7 @@ import {
   createVtgTransitionQuickSlotAnimationCandidates,
   createVtgTransitionPreviewAnimations,
   getVtgTransitionPreviewBeatCount,
+  resizeVtgTransitionPatternPreview,
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { findQtrPatternMatch } from '@/features/vtg/qtr/matchQtrAnimation'
@@ -45,6 +46,82 @@ const selectDetectableAnimations = (
 }
 
 describe('createVtgTransitionQuickSlotAnimations', () => {
+  it('grows and shrinks a working preview with trailing inherited frames', () => {
+    const source = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!source) throw new Error('Expected a supported VTG pattern')
+
+    const shorter = resizeVtgTransitionPatternPreview(source, 0, 2)
+    const longer = resizeVtgTransitionPatternPreview(source, 0, 6)
+    if (!shorter || !longer) throw new Error('Expected the full pattern to resize')
+
+    expect(source.props[0]?.anim).toHaveLength(9)
+    expect(shorter.props[0]?.anim).toHaveLength(5)
+    expect(longer.props[0]?.anim).toHaveLength(13)
+    expect(getVtgTransitionPreviewBeatCount(shorter)).toBe(2)
+    expect(getVtgTransitionPreviewBeatCount(longer)).toBe(6)
+    expect(longer.props[0]?.anim.slice(9)).toEqual([{}, {}, {}, {}])
+  })
+
+  it('resizes one region in the full pattern and regenerates every following preview', () => {
+    const source = createDefaultVtgAnimation({
+      reference: '5-1',
+      speedRatio: '1:3',
+      transition: true,
+      transitionBeats: 5,
+      transitionQuad: true,
+      transitionSecond: true,
+    })
+    if (!source) throw new Error('Expected a supported VTG transition')
+    const before = createVtgTransitionPreviewAnimations(source)
+    if (!before) throw new Error('Expected transition previews')
+    const beforeCounts = before.map(getVtgTransitionPreviewBeatCount)
+
+    const updated = resizeVtgTransitionPatternPreview(source, 0, beforeCounts[0]! + 0.5)
+    if (!updated) throw new Error('Expected the full pattern to resize')
+    const after = createVtgTransitionPreviewAnimations(updated)
+    if (!after) throw new Error('Expected updated transition previews')
+
+    expect(updated.props[0]!.anim.length).toBe(source.props[0]!.anim.length + 1)
+    expect(after.map(getVtgTransitionPreviewBeatCount)).toEqual([
+      beforeCounts[0]! + 0.5,
+      ...beforeCounts.slice(1),
+    ])
+  })
+
+  it('resizes the supplied short appended pieces without modifying or merging neighbors', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const queries = [
+      'r=Ew08Yk11Y&p0=Q__.bn___w3_q.5L_sRw3....._ZEvF......_ZEsR......_ZEvF......_ZEsR.5GQvFw3.......&m0=_1_mxqv__&p1=N__.bg0__Hj_q.5E0sRHj....._ZEvF......_ZEsR......_ZEvF......_ZEsR.5GQvFHj.......&c=_f_bhq&v=6',
+      'r=Ew08Yk11Y&p0=Q__.bn___w3_q.5L_sRw3....._ZEvF......_ZEsR......_ZEvF......_ZEsR..5JEs8.......&m0=_1_mxqv__&p1=N__.bg0__Hj_q.5E0sRHj....._ZEvF......_ZEsR......_ZEvF......_ZEsR..5JEs8.......&c=_f_bhq&v=6',
+    ]
+
+    for (const [queryIndex, query] of queries.entries()) {
+      const animation = codec.decodeQS(queryFrom(query))
+      const before = createVtgTransitionPreviewAnimations(animation)
+      if (!before) throw new Error('Expected supplied transition previews')
+      const beforeCounts = before.map(getVtgTransitionPreviewBeatCount)
+      const targetBeatCount = queryIndex === 0 ? 0.5 : 1
+      const targetIndex = beforeCounts.lastIndexOf(targetBeatCount)
+      expect(targetIndex).toBeGreaterThanOrEqual(0)
+
+      const nextBeatCount = targetBeatCount === 0.5 ? 1 : 0.5
+      const updated = resizeVtgTransitionPatternPreview(animation, targetIndex, nextBeatCount)
+      if (!updated) throw new Error('Expected supplied preview to resize')
+      const after = createVtgTransitionPreviewAnimations(updated)
+      if (!after) throw new Error('Expected resized transition previews')
+
+      expect(after).toHaveLength(before.length)
+      expect(after.map(getVtgTransitionPreviewBeatCount)).toEqual(
+        beforeCounts.map((count, index) => (index === targetIndex ? nextBeatCount : count)),
+      )
+    }
+  })
+
   it('creates more than four previews when either prop contains additional relationships', async () => {
     const version = await loadSpiroAnimQSVersion(6)
     const codec = await useSpiroAnimQS(

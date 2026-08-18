@@ -86,6 +86,42 @@ describe('usePlayerStore', () => {
     expect(store.MAX).toBe(2000)
   })
 
+  it('temporarily plays an override and points back to the latest root when cleared', async () => {
+    const store = usePlayerStore('test-playback-override')
+    const runtime = store.raw()
+    const initialRoot = runtime.ROOT.value
+    const override = {
+      ...initialRoot,
+      bpm: 60,
+      aspectx: 4,
+      aspecty: 3,
+      props: [{ anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }], motion: [] }],
+    }
+
+    store.setPlaybackOverride(override)
+    await nextTick()
+
+    expect(store.PLAYBACK_OVERRIDE_ACTIVE).toBe(true)
+    expect(store.PLAYBACK_ROOT).toBe(override)
+    expect(runtime.ROOT.value).toBe(initialRoot)
+    expect(runtime.COMPILED.value.props).toEqual([])
+    expect(runtime.PLAYBACK_COMPILED.value.props).toHaveLength(1)
+    expect(store.PLAYBACK_MAX).toBe(2000)
+    expect(store.PLAYBACK_ASPECT).toEqual([4, 3])
+
+    const latestRoot = { ...initialRoot, bpm: 90 }
+    runtime.ROOT.value = latestRoot
+    await nextTick()
+    expect(store.PLAYBACK_ROOT).toBe(override)
+
+    store.clearPlaybackOverride()
+    await nextTick()
+
+    expect(store.PLAYBACK_OVERRIDE_ACTIVE).toBe(false)
+    expect(store.PLAYBACK_ROOT).toBe(latestRoot)
+    expect(runtime.PLAYBACK_COMPILED.value.bpm).toBe(90)
+  })
+
   it('loads the original settings key without restoring legacy ORBIT data', () => {
     localStorage.setItem(
       'sa-player-test-load',

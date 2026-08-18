@@ -3,8 +3,12 @@
     :animation="animation"
     :animation-ready="animationReady"
     :pattern-matcher="patternMatcher"
+    :builder-active="builderActive"
     @pattern-select="forwardSelection"
+    @pattern-preview="emit('patternPreview', $event)"
+    @customize="emit('customize', $event)"
     @quick-slots-create="emit('quickSlotsCreate', $event)"
+    @builder-open="emit('builderOpen')"
   />
 </template>
 
@@ -19,13 +23,17 @@ withDefaults(
     animation?: RootDataFinal
     animationReady?: boolean
     patternMatcher?: PatternMatchingClient
+    builderActive?: boolean
   }>(),
-  { animationReady: true },
+  { animationReady: true, builderActive: false },
 )
 
 const emit = defineEmits<{
   patternSelect: [selection: ConceptPatternSelection]
+  patternPreview: [selection: ConceptPatternSelection]
+  customize: [selection: ConceptPatternSelection]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
+  builderOpen: []
 }>()
 
 const forwardSelection = (selection: ConceptPatternSelection) => {

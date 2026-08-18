@@ -6,6 +6,26 @@ import PlayerProgress from '@/components/SpiroAnim/player/PlayerProgress.vue'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 describe('PlayerProgress', () => {
+  it('provides a centered compact layout that follows live player resizing', async () => {
+    const dimensions = reactive({ width: 320, height: 180 })
+    const wrapper = mount(PlayerProgress, {
+      props: { store: 'progress-compact', compact: true },
+      slots: { play: '<button>Play</button>', mode: '<button>Mode</button>' },
+      global: { provide: { dim: dimensions } },
+    })
+
+    expect(wrapper.get('.slider').classes()).toContain('slider--compact')
+    expect(wrapper.text()).toContain('Play')
+    expect(wrapper.text()).not.toContain('Mode')
+    expect((wrapper.get('.slider').element as HTMLElement).style.width).toBe('320px')
+    expect(wrapper.findAll('.slider-control')).toHaveLength(2)
+
+    dimensions.width = 480
+    await nextTick()
+
+    expect((wrapper.get('.slider').element as HTMLElement).style.width).toBe('480px')
+  })
+
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())

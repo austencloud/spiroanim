@@ -56,6 +56,7 @@ export function createPaneStore<
   hiddenPane: Hidden,
   defaults?: Partial<Record<Exclude<Panes[number], Hidden>, Views[number]>>,
   legacyViewKeys?: Readonly<Record<string, Views[number]>>,
+  nonRotatingViewKeys: readonly Views[number][] = [],
 ) {
   // Type of individual view name (e.g. 'player' | 'editor')
   type ElementType = Views[number]
@@ -118,7 +119,14 @@ export function createPaneStore<
         const type = el.dataset.type as ElementType
         if (!viewKeys.includes(type)) return
 
-        const targetPane = parents.value[type] as PaneKey
+        const activeHijack = paneHijack.value
+        const hijackInsertion = activeHijack?.view === type
+        const targetPane = hijackInsertion ? activeHijack.pane : (parents.value[type] as PaneKey)
+
+        if (hijackInsertion) {
+          panes.value[targetPane]?.appendChild(el)
+          return
+        }
 
         // Hide any other view currently assigned to the same pane
         for (const view of viewKeys) {
@@ -149,7 +157,7 @@ export function createPaneStore<
         // Rotate through the queue to find the next valid view
         for (let i = 1; i <= viewKeys.length; i++) {
           const next = viewKeys[(currentIndex + i) % viewKeys.length] as ElementType
-          if (!used.has(next)) {
+          if (!used.has(next) && !nonRotatingViewKeys.includes(next)) {
             if (currentView) parents.value[currentView] = hiddenPane
             parents.value[next] = pane
             parents.value = { ...parents.value } // Trigger shallow watchers
@@ -197,6 +205,25 @@ export function createPaneStore<
       const paneVisible = ref<Record<VisiblePaneKey, boolean>>(
         Object.fromEntries(paneKeys.map((key) => [key, true])) as Record<VisiblePaneKey, boolean>,
       )
+      const paneHijack = ref<{ view: ElementType; pane: VisiblePaneKey }>()
+
+      const hijackOppositePane = (hijackView: ElementType, sourceView: ElementType): boolean => {
+        if (!nonRotatingViewKeys.includes(hijackView) || paneHijack.value) return false
+        const sourcePane = parents.value[sourceView]
+        if (sourcePane === hiddenPane) return false
+
+        const targetPane = paneKeys.find(
+          (pane): pane is VisiblePaneKey => pane !== hiddenPane && pane !== sourcePane,
+        )
+        if (targetPane === undefined) return false
+
+        paneHijack.value = { view: hijackView, pane: targetPane }
+        return true
+      }
+
+      const exitPaneHijack = () => {
+        paneHijack.value = undefined
+      }
 
       // Track visibility in the store scope so it survives component unmounts and remounts.
       const viewVisible = computed<Record<ElementType, boolean>>(() => {
@@ -205,6 +232,14 @@ export function createPaneStore<
           const key = view as ElementType
           const pane = parents.value[key]
           visibility[key] = pane !== hiddenPane && paneVisible.value[pane as VisiblePaneKey]
+        }
+        const activeHijack = paneHijack.value
+        if (activeHijack) {
+          for (const view of viewKeys) {
+            const key = view as ElementType
+            if (parents.value[key] === activeHijack.pane) visibility[key] = false
+          }
+          visibility[activeHijack.view] = paneVisible.value[activeHijack.pane]
         }
         return visibility
       })
@@ -215,6 +250,10 @@ export function createPaneStore<
         ...paneRefs,
         paneVisible,
         viewVisible: readonly(viewVisible),
+        hijackedPane: computed(() => paneHijack.value?.pane),
+        isPaneHijacked: computed(() => paneHijack.value !== undefined),
+        hijackOppositePane,
+        exitPaneHijack,
         rotatePane,
         setViewInPane,
         registerComponentEl,

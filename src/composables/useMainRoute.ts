@@ -63,7 +63,7 @@ export function useMainRoute() {
 
   const paneStore = useMainPaneStore()
   const { rotatePane, setViewInPane } = paneStore
-  const { parents } = storeToRefs(paneStore)
+  const { parents, isPaneHijacked } = storeToRefs(paneStore)
   const conceptsStore = useConceptsStore()
   const { selectedConcept, qtrEnabled, selectedQuickSlot, quickSlotPaths } =
     storeToRefs(conceptsStore)
@@ -218,6 +218,8 @@ export function useMainRoute() {
   let lastObservedAnimationQuery = animationQueryFromPath(createQuickSlotAnimationPath(ROOT.value))
 
   const updatePath = () => {
+    if (isPaneHijacked.value) return
+
     let newPath: string | null = null
     const left = findKeyByValue(parents.value, 'left')
     const right = findKeyByValue(parents.value, 'right')

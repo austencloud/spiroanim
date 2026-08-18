@@ -1,5 +1,5 @@
 <template>
-  <div class="slider" :style="sliderStyle">
+  <div class="slider" :class="{ 'slider--compact': compact }" :style="sliderStyle">
     <div class="slider-control"><slot name="play" /></div>
     <div class="slider-track">
       <template v-if="SELECTION">
@@ -61,7 +61,8 @@
         />
       </template>
     </div>
-    <div class="slider-control"><slot name="mode" /></div>
+    <div v-if="!compact" class="slider-control"><slot name="mode" /></div>
+    <div v-else class="slider-control" aria-hidden="true" />
   </div>
 </template>
 
@@ -70,11 +71,22 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 
 const props = defineProps<{
   store: string
+  compact?: boolean
 }>()
 
 const playerStore = usePlayerStore(props.store)
 const { CURRENT } = playerStore.raw()
-const { PLAYING, UPDATE, SELECTION, SELECTED, COUNT, MAX, ETIMES } = storeToRefs(playerStore)
+const {
+  PLAYING,
+  UPDATE,
+  SELECTION,
+  SELECTED,
+  COUNT,
+  MAX,
+  PLAYBACK_MAX,
+  PLAYBACK_OVERRIDE_ACTIVE,
+  ETIMES,
+} = storeToRefs(playerStore)
 
 const dim = inject<Readonly<{ width: number; height: number }>>('dim')
 
@@ -84,8 +96,11 @@ let updatingSelection = false
 const selectionHandles = ref<[number, number]>([SELECTED.value[0] ?? 0, SELECTED.value[1] ?? 0])
 let previousSelection: [number, number] = [...selectionHandles.value]
 
-// Switches MAX between COUNT and MAX
-const max = computed(() => (SELECTION.value ? COUNT.value : MAX.value))
+// Selection uses frame indices; normal playback uses the active animation's duration.
+const playbackMax = computed(() =>
+  PLAYBACK_OVERRIDE_ACTIVE.value ? PLAYBACK_MAX.value : MAX.value,
+)
+const max = computed(() => (SELECTION.value ? COUNT.value : playbackMax.value))
 
 // Informs the PLAYER we've made modifications
 const update = (/*val: number | [number, number]*/) => {
@@ -182,7 +197,7 @@ const selectionFillStyle = computed<CSSProperties>(() => {
 })
 
 const positionFillStyle = computed<CSSProperties>(() => {
-  const maximum = Math.max(MAX.value, 0)
+  const maximum = Math.max(playbackMax.value, 0)
   const current = Math.min(Math.max(CURRENT.value, 0), maximum)
   const currentPercent = maximum === 0 ? 0 : (current / maximum) * 100
 
@@ -193,9 +208,9 @@ const positionFillStyle = computed<CSSProperties>(() => {
 })
 
 const sliderStyle = computed<CSSProperties>(() => ({
-  width: `${Math.max((dim?.width ?? 0) - 34, 0)}px`,
+  width: `${Math.max((dim?.width ?? 0) - (props.compact ? 0 : 34), 0)}px`,
   position: 'absolute',
-  bottom: 'var(--space-workspace-bottom-offset)',
+  bottom: props.compact ? 'var(--space-2)' : 'var(--space-workspace-bottom-offset)',
   right: '0px',
 }))
 </script>
@@ -207,6 +222,11 @@ const sliderStyle = computed<CSSProperties>(() => ({
   gap: var(--space-2);
   align-items: center;
   color: var(--color-action-primary);
+}
+
+.slider--compact {
+  box-sizing: border-box;
+  padding-inline: var(--space-2);
 }
 
 .slider-control {

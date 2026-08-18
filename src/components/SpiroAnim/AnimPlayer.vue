@@ -1,9 +1,10 @@
 <template>
   <div :style="containerStyle" data-role="player-container">
     <canvas ref="eCanvas" :style="canvasStyle" />
-    <Controls :store="props.store" :editor-visible="props.editorVisible" />
-    <span class="fps">{{ fps }}</span>
-    <AppTooltip class="aspect-tooltip" placement="bottom">
+    <PlayerMinimalControls v-if="minimal" :store="props.store" />
+    <Controls v-else :store="props.store" :editor-visible="props.editorVisible" />
+    <span v-if="!minimal" class="fps">{{ fps }}</span>
+    <AppTooltip v-if="!minimal" class="aspect-tooltip" placement="bottom">
       <template #activator="{ props: tooltipProps }">
         <span v-bind="tooltipProps" class="aspect">
           <span :style="{ color: aspect.color.value }">{{ aspectLabel.ratioText }}</span>
@@ -37,6 +38,7 @@
 
 <script setup lang="ts">
 import Controls from './player/PlayerControls.vue'
+import PlayerMinimalControls from './player/PlayerMinimalControls.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
 
 import { useViewportStore } from '@/stores/useViewportStore'
@@ -63,16 +65,19 @@ const props = withDefaults(
     dim: { width: number; height: number; perc: number }
     store?: string
     editorVisible?: boolean
+    minimal?: boolean
   }>(),
   {
     store: 'main',
     editorVisible: false,
+    minimal: false,
   },
 )
 
 // Dimensions provided by parent component
-const dim: Readonly<typeof props.dim> = readonly(props.dim)
-provide('dim', dim) // Provide to child components
+const dim = reactive({ ...props.dim })
+watchEffect(() => Object.assign(dim, props.dim))
+provide('dim', readonly(dim)) // Provide reactive dimensions to child components
 
 // Create worker and message channel
 const worker = new Worker(new URL('@/workers/AnimWorker.ts', import.meta.url), { type: 'module' })
@@ -86,7 +91,7 @@ const { isVisible } = storeToRefs(useViewportStore())
 const { pFRAMES } = storeToRefs(usePropertiesStore(props.store))
 
 const playerStore = usePlayerStore(props.store)
-const { COMPILED, CURRENT, FPS } = playerStore.raw()
+const { PLAYBACK_COMPILED, CURRENT, FPS } = playerStore.raw()
 const {
   SELECTION,
   SELECTED,
@@ -94,7 +99,7 @@ const {
   PLAYING,
   TRACER,
   ETIMES,
-  ASPECT,
+  PLAYBACK_ASPECT,
   CANVAS_DIM,
   imageExportRequest,
   videoExportRequest,
@@ -113,7 +118,7 @@ const canvasDim = reactive({
 })
 
 // Calculates the aspect ratio from values in the store
-const aspectRatio = computed(() => ASPECT.value[0] / ASPECT.value[1])
+const aspectRatio = computed(() => PLAYBACK_ASPECT.value[0] / PLAYBACK_ASPECT.value[1])
 
 // Mode: 0 = none, 1 = limited by height, 2 = limited by width
 const canvasMode = ref<0 | 1 | 2>(0)
@@ -145,7 +150,7 @@ watchEffect(() => {
 
 onMounted(() => {
   // Shared orbit logic
-  useAnimWorkerCamera(msgChnl, canvasDim, props.store, eCanvas)
+  useAnimWorkerCamera(msgChnl, canvasDim, props.store, eCanvas, !props.minimal)
 
   const colorScheme = matchMedia('(prefers-color-scheme: dark)')
   const updateCameraGuides = () => {
@@ -192,7 +197,7 @@ onMounted(() => {
   })()
 
   // Send data NOW, and when it updates
-  watchImmediate(COMPILED, (data) => {
+  watchImmediate(PLAYBACK_COMPILED, (data) => {
     send('data', toRaw(data))
     send('jump', CURRENT.value)
   })
@@ -250,7 +255,7 @@ onMounted(() => {
 
   // Register canvas click or touchend
   const prefersTouch = matchMedia('(pointer: coarse)').matches
-  useEventListener(eCanvas, prefersTouch ? 'touchend' : 'click', canvasClick)
+  if (!props.minimal) useEventListener(eCanvas, prefersTouch ? 'touchend' : 'click', canvasClick)
 })
 
 async function exportImage(requestId: symbol, settings: ImageExportSettings) {

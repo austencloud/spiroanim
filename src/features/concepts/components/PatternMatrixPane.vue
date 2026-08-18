@@ -38,6 +38,7 @@
       </fieldset>
 
       <PatternTransformControls
+        v-if="!builderActive"
         confirm-reset
         :reverse-label="isQtr ? 'Flip' : '180°'"
         :reverse-description="
@@ -133,7 +134,9 @@
                 :data-board-row="tile.boardRow"
                 :data-cell-reference="tile.reference"
                 data-role="vtg-tile"
+                :draggable="builderActive"
                 @click="selectTile(tile)"
+                @dragstart="startBuilderDrag(tile, $event)"
               >
                 <span class="vtg-tile__label">
                   <span class="vtg-tile__label-text">{{ tile.label }}</span>
@@ -201,6 +204,7 @@
     <ConceptAnimationControls :animation="animation">
       <template #before-controls="{ beginSliderHistory, endSliderHistory }">
         <PatternPlaybackControls
+          v-if="!builderActive"
           v-model:beat="beat"
           v-model:qtr="isQtr"
           v-model:orientation="orientation"
@@ -216,25 +220,27 @@
         </PatternPlaybackControls>
       </template>
       <template #between-controls>
-        <PatternTransitionControls
-          v-model:transition="transition"
-          v-model:beats="transitionBeats"
-          v-model:quad="transitionQuad"
-          v-model:second="transitionSecond"
-          :q-slots-warning-required="hasPopulatedQuickSlots"
-          @q-slots="createQSlots"
-        />
-        <p class="vtg-transition-support" data-role="vtg-transition-support">
-          {{ preparedTransitionPattern?.supported ? 'Supported' : 'Not supported' }}
-        </p>
-        <VtgTransitionPreviews
-          v-if="transitionPreviewAnimations"
-          :key="transitionPreviewAnimations.length"
-          :animations="transitionPreviewAnimations"
-          :refresh-key="transitionPreviewRefreshKey"
-        />
+        <template v-if="!builderActive">
+          <PatternTransitionControls
+            v-model:transition="transition"
+            v-model:beats="transitionBeats"
+            v-model:quad="transitionQuad"
+            v-model:second="transitionSecond"
+            :q-slots-warning-required="hasPopulatedQuickSlots"
+            @q-slots="createQSlots"
+          />
+        </template>
+        <label class="vtg-pattern-builder-button">
+          <input
+            type="checkbox"
+            :checked="builderActive"
+            data-role="vtg-pattern-builder"
+            @change="emit('builderOpen')"
+          />
+          <span>Pattern Builder</span>
+        </label>
         <p
-          v-if="quickSlotCreationError"
+          v-if="!builderActive && quickSlotCreationError"
           class="vtg-transition-quick-slot-error"
           data-role="vtg-transition-qslots-error"
           role="alert"
@@ -242,7 +248,7 @@
           {{ quickSlotCreationError }}
         </p>
         <p
-          v-if="showStaticPropsTransitionNote"
+          v-if="!builderActive && showStaticPropsTransitionNote"
           class="vtg-transition-static-note"
           data-role="vtg-transition-static-note"
         >
@@ -271,10 +277,10 @@ import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
+import { builderPatternDragType } from '@/features/builder/types'
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/vtg/qtr/data/qtrLabels'
 import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
-import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
 import {
   pairedPatternPreviewReferences,
   patternPreviewReferences,
@@ -312,11 +318,9 @@ import {
 } from '@/features/vtg/types'
 import {
   createVtgTransitionQuickSlotAnimationCandidates,
-  createVtgTransitionPreviewAnimations,
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { getUniqueVtgPatternOrientations } from '@/features/vtg/math/getUniqueVtgPatternOrientations'
-import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import { toColor } from '@/utils/UtilFunc'
@@ -344,15 +348,20 @@ const props = withDefaults(
     animation?: RootDataFinal
     animationReady?: boolean
     patternMatcher?: PatternMatchingClient
+    builderActive?: boolean
   }>(),
   {
     animationReady: true,
+    builderActive: false,
   },
 )
 
 const emit = defineEmits<{
   patternSelect: [selection: ConceptPatternSelection]
+  patternPreview: [selection: ConceptPatternSelection]
+  customize: [selection: ConceptPatternSelection]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
+  builderOpen: []
 }>()
 
 const speedRatios = vtgSpeedRatios
@@ -391,17 +400,6 @@ const hasPopulatedQuickSlots = computed(
     conceptsStore.quickSlotPaths.some((path) => typeof path === 'string'),
 )
 const showStaticPropsTransitionNote = computed(() => transition.value && speedRatio.value === '1:1')
-const preparedTransitionPattern = computed(() =>
-  props.animation === undefined ? undefined : prepareVtg45TransitionPattern(props.animation),
-)
-const transitionPreviewAnimations = computed(() => {
-  const prepared = preparedTransitionPattern.value
-  return prepared?.supported ? createVtgTransitionPreviewAnimations(prepared.pattern) : undefined
-})
-// Match the table thumbnails: timing and player-only rendering controls do not change stills.
-const transitionPreviewRefreshKey = computed(() =>
-  [scale.value, spacing.value, leftPropColor.value, rightPropColor.value].join('|'),
-)
 const usesPairedPreviewLayout = computed(
   () => speedRatio.value === '1:2' || speedRatio.value === '1:4',
 )
@@ -538,10 +536,34 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
 const getTileDescription = (tile: VtgMatrixTile) => tile.description
 
 const selectedCell = ref<VtgCellAddress>()
+const matchedBuilderControlKey = ref<string>()
+const patternControlKey = computed(() =>
+  JSON.stringify([
+    speedRatio.value,
+    isAnti.value,
+    swapProps.value,
+    reversePlane.value,
+    shape.value,
+    beat.value,
+    transition.value,
+    transitionBeats.value,
+    transitionQuad.value,
+    transitionSecond.value,
+    initialTurnsOffset.value,
+    initialTurnsOffsetBeat.value,
+    orientation.value,
+    activeQtrMode.value,
+  ]),
+)
 
-const selectedCellReference = computed<VtgCellReference | undefined>(() => {
+const matchedCellReference = computed<VtgCellReference | undefined>(() => {
   const cell = selectedCell.value
   return cell ? createCellReference(cell.column, cell.row) : undefined
+})
+
+const selectedCellReference = computed<VtgCellReference | undefined>(() => {
+  if (props.builderActive) return undefined
+  return matchedCellReference.value
 })
 
 const rotationSelection = computed<VtgPatternSelection | QtrPatternSelection | undefined>(() => {
@@ -607,6 +629,7 @@ watch(
 )
 
 const isTileHighlighted = (tile: VtgMatrixTile) =>
+  !props.builderActive &&
   selectedCell.value !== undefined &&
   (tile.column === selectedCell.value.column || tile.row === selectedCell.value.row)
 
@@ -614,26 +637,30 @@ const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(re
 const isBottomSpinToggleCell = (reference: VtgCellReference) =>
   reference === '5-6' || reference === '6-6'
 
-const emitPatternSelection = (tile: VtgMatrixTile) => {
+const createPatternSelection = (
+  tile: VtgMatrixTile,
+  reference: VtgCellReference = tile.reference,
+): VtgPatternSelection | QtrPatternSelection => {
   if (!suppressPatternEmit) hydrationVersion++
 
   const baseSelection: VtgPatternSelection = {
-    reference: tile.reference,
+    reference,
     speedRatio: speedRatio.value,
   }
-  if (isSpinToggleCell(tile.reference)) baseSelection.isAnti = isAnti.value
+  if (isSpinToggleCell(reference)) baseSelection.isAnti = isAnti.value
   if (swapProps.value) baseSelection.swapProps = true
   if (reversePlane.value) baseSelection.reversePlane = true
   if (shape.value === 'box') baseSelection.shape = shape.value
   if (beat.value !== 1) baseSelection.beat = beat.value
-  if (transition.value) baseSelection.transition = true
-  if (transition.value && transitionBeats.value !== vtgDefaultTransitionBeats) {
+  const includeTransition = transition.value && !props.builderActive
+  if (includeTransition) baseSelection.transition = true
+  if (includeTransition && transitionBeats.value !== vtgDefaultTransitionBeats) {
     baseSelection.transitionBeats = transitionBeats.value
   }
-  if (transition.value && transitionQuad.value) {
+  if (includeTransition && transitionQuad.value) {
     baseSelection.transitionQuad = true
   }
-  if (transition.value && transitionQuad.value && transitionSecond.value) {
+  if (includeTransition && transitionQuad.value && transitionSecond.value) {
     baseSelection.transitionSecond = true
   }
   if (initialTurnsOffset.value !== undefined) {
@@ -661,11 +688,40 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   const selection: ConceptPatternSelection = isQtr.value
     ? { ...baseSelection, quarters: 1 }
     : baseSelection
+  return selection
+}
+
+const emitPatternSelection = (tile: VtgMatrixTile) => {
+  if (props.builderActive) return
+  const selection = createPatternSelection(tile)
   lastEmittedSelection = selection
   emit('patternSelect', selection)
 }
 
+const renderedReferenceForTile = (tile: VtgMatrixTile) =>
+  usesPairedPreviewLayout.value
+    ? createCellReference(
+        tile.column % 2 === 0 ? ((tile.column - 1) as VtgRuleNumber) : tile.column,
+        tile.row,
+      )
+    : tile.reference
+
+const startBuilderDrag = (tile: VtgMatrixTile, event: DragEvent) => {
+  if (!props.builderActive || !event.dataTransfer) return
+  // Paired-ratio thumbnails span an odd/even cell pair. Dragging either half must send the odd
+  // reference whose animation is actually rendered across that thumbnail.
+  const renderedReference = renderedReferenceForTile(tile)
+  const selection = createPatternSelection(tile, renderedReference)
+  event.dataTransfer.effectAllowed = 'copy'
+  event.dataTransfer.setData(builderPatternDragType, JSON.stringify(selection))
+  event.dataTransfer.setData('text/plain', `VTG ${renderedReference}`)
+}
+
 const selectTile = (tile: VtgMatrixTile) => {
+  if (props.builderActive) {
+    emit('patternPreview', createPatternSelection(tile, renderedReferenceForTile(tile)))
+    return
+  }
   if (tile.reference !== selectedCellReference.value) {
     initialTurnsOffset.value = undefined
     initialTurnsOffsetBeat.value = undefined
@@ -717,6 +773,7 @@ const selectColumn = (column: VtgRuleNumber) => {
 }
 
 const toggleSpinDirection = (tile: VtgMatrixTile) => {
+  if (props.builderActive) return
   isAnti.value = !isAnti.value
   retainAvailableOrientation()
   emitPatternSelection(tile)
@@ -755,6 +812,19 @@ watch(
     initialTurnsOffset,
     initialTurnsOffsetBeat,
     orientation,
+    activeQtrMode,
+  ],
+  () => {
+    if (suppressPatternEmit || props.builderActive) return
+
+    const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
+    if (tile !== undefined) emitPatternSelection(tile)
+  },
+  { flush: 'sync' },
+)
+
+watch(
+  [
     bpm,
     scale,
     thick,
@@ -766,15 +836,15 @@ watch(
     rightPropVisible,
     leftPropColor,
     rightPropColor,
-    activeQtrMode,
   ],
   () => {
     if (suppressPatternEmit) return
 
-    const tile = matrixTiles.value.find(
-      ({ reference }) => reference === selectedCellReference.value,
-    )
-    if (tile !== undefined) emitPatternSelection(tile)
+    const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
+    if (tile !== undefined) {
+      if (props.builderActive) emit('customize', createPatternSelection(tile))
+      else emitPatternSelection(tile)
+    }
   },
   { flush: 'sync' },
 )
@@ -864,8 +934,10 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
         ? defaultPatternPropColors[1]
         : COLORS[animation.props[1].color]
     isQtr.value = result.status === 'matched' && result.source === 'qtr'
+    matchedBuilderControlKey.value = patternControlKey.value
   } else {
     selectedCell.value = undefined
+    matchedBuilderControlKey.value = undefined
     isQtr.value = false
     isAnti.value = false
     shape.value = 'diamond'
@@ -903,7 +975,7 @@ const selectInitialRandomPattern = () => {
 }
 
 const syncPatternControls = () => {
-  if (!componentMounted || !props.animationReady || !props.animation) return
+  if (!componentMounted || props.builderActive || !props.animationReady || !props.animation) return
 
   if (props.animation.props.length === 0) {
     if (initialAnimationHandled) return
@@ -918,6 +990,25 @@ const syncPatternControls = () => {
 }
 
 watch([() => props.animationReady, () => props.animation], syncPatternControls)
+
+watch(
+  () => props.builderActive,
+  (active) => {
+    hydrationVersion++
+    if (active) {
+      if (selectedCell.value) matchedBuilderControlKey.value = patternControlKey.value
+      const suppressionOwner = beginPatternEmitSuppression()
+      isQtr.value = false
+      shape.value = 'diamond'
+      orientation.value = 0
+      nextTick(() => releasePatternEmitSuppression(suppressionOwner))
+      return
+    }
+
+    syncPatternControls()
+  },
+  { immediate: true },
+)
 
 const createSplitDiagram = (
   firstLargeEnd: VtgPropPlacement['largeEnd'],
@@ -1312,12 +1403,83 @@ defineExpose({
   border-radius: var(--radius-sm);
 }
 
-.vtg-transition-support {
-  margin: var(--space-1) auto 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-concept-control);
-  font-weight: 700;
-  text-align: center;
+.vtg-pattern-builder-button {
+  display: flex;
+  width: max-content;
+  margin: var(--space-2) auto 0;
+  cursor: pointer;
+}
+
+.vtg-pattern-builder-button input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vtg-pattern-builder-button span {
+  position: relative;
+  display: flex;
+  min-width: 10.5rem;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  overflow: hidden;
+  color: var(--color-text);
+  font: inherit;
+  font-size: clamp(0.875rem, 3cqi, 1rem);
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  background:
+    linear-gradient(
+      115deg,
+      color-mix(in srgb, var(--color-action-primary) 16%, transparent),
+      transparent 42%
+    ),
+    var(--color-surface);
+  border: 2px solid color-mix(in srgb, var(--color-action-primary) 52%, var(--color-border));
+  border-radius: var(--radius-md);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent),
+    var(--shadow-sm);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-transform: uppercase;
+}
+
+.vtg-pattern-builder-button span::before {
+  width: 0.75rem;
+  height: 0.75rem;
+  content: '';
+  border: 2px solid var(--color-action-primary);
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 2px var(--color-surface);
+  transform: rotate(45deg);
+}
+
+.vtg-pattern-builder-button:hover span {
+  color: var(--color-action-primary);
+  border-color: var(--color-action-primary);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 16%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-action-primary) 25%, transparent),
+    var(--shadow-sm);
+}
+
+.vtg-pattern-builder-button input:checked + span {
+  color: var(--color-on-action-primary);
+  background: var(--color-action-primary);
+  border-color: var(--color-action-primary);
+}
+
+.vtg-pattern-builder-button input:checked + span::before {
+  background: var(--color-on-action-primary);
+  border-color: var(--color-on-action-primary);
+  box-shadow: inset 0 0 0 2px var(--color-action-primary);
+}
+
+.vtg-pattern-builder-button input:focus-visible + span {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
 }
 
 .vtg-transition-quick-slot-error {

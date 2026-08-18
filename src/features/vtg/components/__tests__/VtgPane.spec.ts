@@ -2187,4 +2187,79 @@ describe('VtgPane', () => {
 
     await expectNineMorePreviews(() => reportAllBlankDimensions(80, 76))
   })
+
+  it('keeps Builder table controls non-mutating while exposing cells as drag sources', async () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const wrapper = mount(VtgPane, { props: { animation } })
+    await vi.waitFor(() => {
+      expect(wrapper.find('.vtg-tile--selected').attributes('data-cell-reference')).toBe('1-1')
+    })
+    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
+    await wrapper.get('[data-role="vtg-transition"]').trigger('click')
+    const patternSelectionsBeforeBuilder = wrapper.emitted('patternSelect')?.length ?? 0
+    await wrapper.setProps({ builderActive: true })
+    const tile = wrapper.get<HTMLButtonElement>('[data-cell-reference="1-1"]')
+    expect(tile.attributes('draggable')).toBe('true')
+    expect(wrapper.find('.vtg-tile--selected').exists()).toBe(false)
+    expect(wrapper.find('.vtg-tile--highlighted').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-swap"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-reverse"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(false)
+
+    await tile.trigger('click')
+    expect(tile.attributes('aria-pressed')).toBe('false')
+    expect(wrapper.emitted('patternSelect')?.length ?? 0).toBe(patternSelectionsBeforeBuilder)
+    expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-1',
+      speedRatio: '1:2',
+      swapProps: true,
+    })
+    expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).not.toHaveProperty('transition')
+    expect(wrapper.find('.vtg-tile--selected').exists()).toBe(false)
+
+    await wrapper.get('[data-cell-reference="2-1"]').trigger('click')
+    expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-1',
+      speedRatio: '1:2',
+      swapProps: true,
+    })
+
+    const dragData = new Map<string, string>()
+    await tile.trigger('dragstart', {
+      dataTransfer: {
+        effectAllowed: 'none',
+        setData: (type: string, value: string) => dragData.set(type, value),
+      },
+    })
+    expect(dragData.get('application/x-spiroanim-pattern')).toContain('"reference":"1-1"')
+    expect(JSON.parse(dragData.get('application/x-spiroanim-pattern') ?? '{}')).not.toHaveProperty(
+      'transition',
+    )
+
+    const pairedDragData = new Map<string, string>()
+    await wrapper.get('[data-cell-reference="2-1"]').trigger('dragstart', {
+      dataTransfer: {
+        effectAllowed: 'none',
+        setData: (type: string, value: string) => pairedDragData.set(type, value),
+      },
+    })
+    expect(JSON.parse(pairedDragData.get('application/x-spiroanim-pattern') ?? '{}')).toMatchObject(
+      {
+        reference: '1-1',
+        speedRatio: '1:2',
+        swapProps: true,
+      },
+    )
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').setValue(9)
+    expect(wrapper.emitted('patternSelect')?.length ?? 0).toBe(patternSelectionsBeforeBuilder)
+    expect(wrapper.emitted('customize')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-1',
+      speedRatio: '1:2',
+      thick: 9,
+    })
+  })
 })

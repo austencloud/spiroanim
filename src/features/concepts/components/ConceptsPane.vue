@@ -12,6 +12,7 @@
     >
       <select
         v-model="selectedConcept"
+        :disabled="builderActive"
         class="concepts-pane__selector"
         aria-label="Concept"
         data-role="concept-selector"
@@ -45,8 +46,12 @@
       :animation="animation"
       :animation-ready="animationReady"
       :pattern-matcher="patternMatcher"
+      :builder-active="builderActive"
       @pattern-select="emit('patternSelect', $event)"
+      @pattern-preview="emit('patternPreview', $event)"
+      @customize="emit('customize', $event)"
       @quick-slots-create="emit('quickSlotsCreate', $event)"
+      @builder-open="emit('builderOpen')"
     />
     <EightStepPane
       v-else-if="selectedConcept === '8stp'"
@@ -82,21 +87,25 @@ import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { isTouchDevice } from '@/utils/device'
 
-defineProps<{
+const props = defineProps<{
   animation?: RootDataFinal
   animationReady?: boolean
+  builderActive?: boolean
 }>()
 
 const emit = defineEmits<{
   patternSelect: [selection: ConceptPatternSelection]
+  patternPreview: [selection: ConceptPatternSelection]
+  customize: [selection: ConceptPatternSelection]
   quickSlotApply: [path: string]
   quickSlotSave: [slot: number]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
+  builderOpen: []
 }>()
 
 const conceptsStore = useConceptsStore()
 const { quickSlotCount, selectedConcept } = storeToRefs(conceptsStore)
-const usesPatternMatching = computed(() => selectedConcept.value !== 'tka')
+const usesPatternMatching = computed(() => selectedConcept.value !== 'tka' && !props.builderActive)
 const patternMatcher = usePatternMatchingClient(usesPatternMatching)
 
 const createQuickSlots = () => {

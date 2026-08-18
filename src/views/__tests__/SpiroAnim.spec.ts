@@ -62,7 +62,8 @@ describe('SpiroAnim view', () => {
     })
     await router.push('/play-time')
     await router.isReady()
-    const playerRoot = usePlayerStore('main').raw().ROOT
+    const playerStore = usePlayerStore('main')
+    const playerRoot = playerStore.raw().ROOT
     const initialAnimation = createVtgAnimation(playerRoot.value, {
       reference: '1-1',
       speedRatio: '1:3',
@@ -110,6 +111,88 @@ describe('SpiroAnim view', () => {
     expect(wrapper.find('button[aria-label="Show Full Timeline"]').exists()).toBe(false)
 
     const paneStore = useMainPaneStore()
+    paneStore.setViewInPane('concepts', 'right')
+    await flushPromises()
+    const routeBeforeHijack = router.currentRoute.value.fullPath
+    const pathBeforeHijack = router.currentRoute.value.path
+    expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
+    await flushPromises()
+    expect(wrapper.find('[data-role="player-view"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-transition-support-error"]').exists()).toBe(false)
+    wrapper.get('[data-role="builder-player"]')
+    playerStore.PLAYING = false
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', cancelable: true }))
+    expect(playerStore.PLAYING).toBe(true)
+    const dragData = new Map<string, string>()
+    const dataTransfer = {
+      effectAllowed: 'none',
+      dropEffect: 'none',
+      setData: (type: string, value: string) => dragData.set(type, value),
+      getData: (type: string) => dragData.get(type) ?? '',
+    }
+    const frameCountBeforeDrop = playerRoot.value.props[0]!.anim.length
+    await wrapper.get('[data-cell-reference="5-2"]').trigger('dragstart', { dataTransfer })
+    await wrapper
+      .get('[data-role="vtg-transition-preview-drop-target"]')
+      .trigger('drop', { dataTransfer })
+    await flushPromises()
+    expect(playerRoot.value.props[0]!.anim).toHaveLength(frameCountBeforeDrop + 8)
+    expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('4')
+    await wrapper.get('button[aria-label="Increase Builder Columns"]').trigger('click')
+    expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('5')
+    expect(
+      wrapper
+        .get<HTMLElement>('[data-role="vtg-transition-previews"]')
+        .element.style.getPropertyValue('--vtg-transition-preview-columns'),
+    ).toBe('5')
+    const durationSlider = wrapper.get<HTMLInputElement>(
+      '[data-role="vtg-transition-preview-beats"]',
+    )
+    const frameCountBeforeResize = playerRoot.value.props[0]!.anim.length
+    await durationSlider.trigger('pointerdown')
+    await durationSlider.setValue(String(Number(durationSlider.element.value) + 0.5))
+    await durationSlider.trigger('pointerup')
+    await flushPromises()
+    expect(playerRoot.value.props[0]!.anim).toHaveLength(frameCountBeforeResize + 1)
+    expect(Number(durationSlider.element.max)).toBe(Number(durationSlider.element.value) + 2)
+    await durationSlider.trigger('pointerdown')
+    await durationSlider.setValue(durationSlider.element.max)
+    await durationSlider.trigger('pointerup')
+    await flushPromises()
+    expect(playerRoot.value.props[0]!.anim).toHaveLength(frameCountBeforeResize + 5)
+    expect(router.currentRoute.value.path).toBe(pathBeforeHijack)
+    expect(router.currentRoute.value.fullPath).not.toBe(routeBeforeHijack)
+    const routeAfterBuilderEdit = router.currentRoute.value.fullPath
+    expect(
+      wrapper.get('[data-role="builder-pane-view"]').element.closest('[data-role="left-pane"]'),
+    ).toBe(wrapper.get('[data-role="left-pane"]').element)
+    expect(wrapper.findAll('button[aria-label="Swap Views"]')).toHaveLength(0)
+    expect(wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').element.disabled).toBe(
+      true,
+    )
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-pattern-builder"]').element.checked).toBe(
+      true,
+    )
+    expect(router.currentRoute.value.fullPath).toBe(routeAfterBuilderEdit)
+
+    await wrapper.get('[data-role="vtg-pattern-builder"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-role="builder-pane-view"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="player-view"]').exists()).toBe(true)
+    expect(wrapper.findAll('button[aria-label="Swap Views"]')).toHaveLength(2)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-pattern-builder"]').element.checked).toBe(
+      false,
+    )
+    expect(router.currentRoute.value.fullPath).toBe(routeAfterBuilderEdit)
+
+    expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
+    await flushPromises()
+    await wrapper.get('button[aria-label="Exit Pattern Builder"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-role="builder-pane-view"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="player-view"]').exists()).toBe(true)
+    expect(router.currentRoute.value.fullPath).toBe(routeAfterBuilderEdit)
+
     paneStore.setViewInPane('editor', 'right')
     await flushPromises()
     expect(propertiesStore.showFullTimeline).toBe(false)
