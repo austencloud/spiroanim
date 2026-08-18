@@ -16,10 +16,10 @@ const describeCell = (reference: VtgCellReference) => {
 describe('describeVtgBuilderMotion', () => {
   it('expands the compact motion code into a Builder tooltip', () => {
     expect(describeVtgBuilderMotionLabel('AI/SO')).toBe(
-      'Props: Anti / In Spin\nDirection: Same / Opposite',
+      'Spin: Anti / In\nDirection: Same / Opposite',
     )
     expect(describeVtgBuilderMotionLabel('AA/OS')).toBe(
-      'Props: Anti / Anti Spin\nDirection: Opposite / Same',
+      'Spin: Anti / Anti\nDirection: Opposite / Same',
     )
   })
 

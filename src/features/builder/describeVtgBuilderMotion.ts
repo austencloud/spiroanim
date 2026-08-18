@@ -19,7 +19,7 @@ export const describeVtgBuilderMotionLabel = (label: VtgBuilderMotionLabel): str
     throw new Error(`Invalid Builder motion label ${label}`)
   }
 
-  return `Props: ${spinDescription(firstSpin)} / ${spinDescription(secondSpin)} Spin\nDirection: ${directionDescription(firstDirection)} / ${directionDescription(secondDirection)}`
+  return `Spin: ${spinDescription(firstSpin)} / ${spinDescription(secondSpin)}\nDirection: ${directionDescription(firstDirection)} / ${directionDescription(secondDirection)}`
 }
 
 type DirectionVector = readonly [number, number, number]
