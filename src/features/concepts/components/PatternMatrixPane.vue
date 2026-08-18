@@ -2,7 +2,10 @@
   <section
     ref="paneElement"
     class="vtg-pane"
-    :class="{ 'vtg-pane--touch': touchDevice }"
+    :class="{
+      'vtg-pane--touch': touchDevice,
+      'vtg-pane--builder-active': builderActive,
+    }"
     aria-labelledby="vtg-pane-title"
     data-role="vtg-pane"
     :data-blank-width="blankWidth"
@@ -579,10 +582,9 @@ const matchedCellReference = computed<VtgCellReference | undefined>(() => {
   return cell ? createCellReference(cell.column, cell.row) : undefined
 })
 
-const selectedCellReference = computed<VtgCellReference | undefined>(() => {
-  if (props.builderActive) return undefined
-  return matchedCellReference.value
-})
+const selectedCellReference = computed<VtgCellReference | undefined>(
+  () => matchedCellReference.value,
+)
 
 const rotationSelection = computed<VtgPatternSelection | QtrPatternSelection | undefined>(() => {
   const reference = selectedCellReference.value
@@ -673,7 +675,6 @@ watch(
 )
 
 const isTileHighlighted = (tile: VtgMatrixTile) =>
-  !props.builderActive &&
   selectedCell.value !== undefined &&
   (tile.column === selectedCell.value.column || tile.row === selectedCell.value.row)
 
@@ -750,6 +751,22 @@ const renderedReferenceForTile = (tile: VtgMatrixTile) =>
         tile.row,
       )
     : tile.reference
+
+const emitBuilderPreview = (tile?: VtgMatrixTile) => {
+  if (!props.builderActive) return
+  const activeTile =
+    tile ??
+    matrixTiles.value.find(
+      (candidate) =>
+        candidate.column === selectedCell.value?.column && candidate.row === selectedCell.value?.row,
+    )
+  if (!activeTile) return
+
+  emit(
+    'patternPreview',
+    createPatternSelection(activeTile, renderedReferenceForTile(activeTile)),
+  )
+}
 
 const startBuilderDrag = (tile: VtgMatrixTile, event: DragEvent) => {
   if (!props.builderActive || !event.dataTransfer) return
@@ -845,7 +862,11 @@ const selectTile = (tile: VtgMatrixTile) => {
     return
   }
   if (props.builderActive) {
-    emit('patternPreview', createPatternSelection(tile, renderedReferenceForTile(tile)))
+    const suppressionOwner = beginPatternEmitSuppression()
+    selectedCell.value = { column: tile.column, row: tile.row }
+    retainAvailableOrientation()
+    releasePatternEmitSuppression(suppressionOwner)
+    emitBuilderPreview(tile)
     return
   }
   if (tile.reference !== selectedCellReference.value) {
@@ -899,14 +920,20 @@ const selectColumn = (column: VtgRuleNumber) => {
 }
 
 const toggleSpinDirection = (tile: VtgMatrixTile) => {
-  if (props.builderActive) return
+  const suppressionOwner = props.builderActive ? beginPatternEmitSuppression() : undefined
   isAnti.value = !isAnti.value
   retainAvailableOrientation()
-  emitPatternSelection(tile)
+  if (suppressionOwner !== undefined) {
+    releasePatternEmitSuppression(suppressionOwner)
+    emitBuilderPreview(tile)
+  } else emitPatternSelection(tile)
 }
 
 const resetPatternControls = async () => {
-  const tile = matrixTiles.value.find(({ reference }) => reference === selectedCellReference.value)
+  const activeReference = props.builderActive
+    ? matchedCellReference.value
+    : selectedCellReference.value
+  const tile = matrixTiles.value.find(({ reference }) => reference === activeReference)
   const suppressionOwner = beginPatternEmitSuppression()
   conceptsStore.resetPatternControls()
   isQtr.value = false
@@ -922,7 +949,10 @@ const resetPatternControls = async () => {
   orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
   await nextTick()
   releasePatternEmitSuppression(suppressionOwner)
-  if (tile !== undefined) emitPatternSelection(tile)
+  if (tile !== undefined) {
+    if (props.builderActive) emitBuilderPreview(tile)
+    else emitPatternSelection(tile)
+  }
 }
 
 watch(
@@ -986,8 +1016,9 @@ watch(
 
     const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
     if (tile !== undefined) {
-      if (props.builderActive) emit('customize', createPatternSelection(tile))
-      else emitPatternSelection(tile)
+      if (props.builderActive) {
+        emit('customize', createPatternSelection(tile, renderedReferenceForTile(tile)))
+      } else emitPatternSelection(tile)
     }
   },
   { flush: 'sync' },
@@ -1007,6 +1038,15 @@ watch(
     if (suppressPatternEmit || props.builderActive) return
     const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
     if (tile !== undefined) emitPatternSelection(tile)
+  },
+  { flush: 'sync' },
+)
+
+watch(
+  [matchedCellReference, patternControlKey],
+  () => {
+    if (!props.builderActive || suppressPatternEmit || ratioOrientationChangeActive) return
+    emitBuilderPreview()
   },
   { flush: 'sync' },
 )
@@ -1732,8 +1772,8 @@ defineExpose({
   white-space: nowrap;
 }
 
-.vtg-pane--touch .vtg-tile {
-  touch-action: pan-y;
+.vtg-pane--touch.vtg-pane--builder-active .vtg-tile {
+  touch-action: none;
 }
 
 .vtg-tile-grid > .vtg-tile-tooltip {

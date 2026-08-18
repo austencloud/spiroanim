@@ -215,6 +215,7 @@ const applyConceptPattern = (selection: ConceptPatternSelection) => {
 }
 
 const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
+  if (playerStore.PLAYBACK_PREVIEW_ACTIVE) playerStore.endPlaybackPreview()
   ROOT.value = applyVtgCustomization(ROOT.value, selection as VtgPatternSelection)
 }
 

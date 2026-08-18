@@ -2252,10 +2252,11 @@ describe('VtgPane', () => {
     await wrapper.get('[data-role="vtg-transition"]').trigger('click')
     const patternSelectionsBeforeBuilder = wrapper.emitted('patternSelect')?.length ?? 0
     await wrapper.setProps({ builderActive: true })
+    await nextTick()
     const tile = wrapper.get<HTMLButtonElement>('[data-cell-reference="1-1"]')
     expect(tile.attributes('draggable')).toBe('true')
-    expect(wrapper.find('.vtg-tile--selected').exists()).toBe(false)
-    expect(wrapper.find('.vtg-tile--highlighted').exists()).toBe(false)
+    expect(wrapper.get('.vtg-tile--selected').attributes('data-cell-reference')).toBe('1-1')
+    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
     expect(wrapper.find('[data-role="vtg-swap"]').exists()).toBe(false)
     const reverse = wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]')
     expect(reverse.attributes('aria-label')).toBe('Rotate floor plane by 180 degrees')
@@ -2263,9 +2264,15 @@ describe('VtgPane', () => {
     expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(false)
 
+    const previewsBeforeReverse = wrapper.emitted('patternPreview')?.length ?? 0
     await reverse.setValue(true)
+    expect(wrapper.emitted('patternPreview')).toHaveLength(previewsBeforeReverse + 1)
+    expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-1',
+      reversePlane: true,
+    })
     await tile.trigger('click')
-    expect(tile.attributes('aria-pressed')).toBe('false')
+    expect(tile.attributes('aria-pressed')).toBe('true')
     expect(wrapper.emitted('patternSelect')?.length ?? 0).toBe(patternSelectionsBeforeBuilder)
     expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
       reference: '1-1',
@@ -2274,14 +2281,23 @@ describe('VtgPane', () => {
       reversePlane: true,
     })
     expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).not.toHaveProperty('transition')
-    expect(wrapper.find('.vtg-tile--selected').exists()).toBe(false)
+    expect(wrapper.get('.vtg-tile--selected').attributes('data-cell-reference')).toBe('1-1')
 
     await wrapper.get('[data-cell-reference="2-1"]').trigger('click')
+    expect(wrapper.get('.vtg-tile--selected').attributes('data-cell-reference')).toBe('2-1')
+    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
     expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
       reference: '1-1',
       speedRatio: '1:2',
       swapProps: true,
     })
+    await reverse.setValue(false)
+    expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-1',
+      speedRatio: '1:2',
+      swapProps: true,
+    })
+    expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).not.toHaveProperty('reversePlane')
 
     const dragData = new Map<string, string>()
     await tile.trigger('dragstart', {
@@ -2310,6 +2326,7 @@ describe('VtgPane', () => {
       },
     )
 
+    const previewsBeforeCustomize = wrapper.emitted('patternPreview')?.length ?? 0
     await wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').setValue(9)
     expect(wrapper.emitted('patternSelect')?.length ?? 0).toBe(patternSelectionsBeforeBuilder)
     expect(wrapper.emitted('customize')?.at(-1)?.[0]).toMatchObject({
@@ -2317,5 +2334,6 @@ describe('VtgPane', () => {
       speedRatio: '1:2',
       thick: 9,
     })
+    expect(wrapper.emitted('patternPreview')).toHaveLength(previewsBeforeCustomize)
   })
 })
