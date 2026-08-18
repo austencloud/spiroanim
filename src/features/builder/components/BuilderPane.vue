@@ -124,7 +124,14 @@
             minimal
             :dim="miniPlayerDimensions"
           />
-          <div v-if="PLAYBACK_PREVIEW_ACTIVE" class="builder-pane__player-revert">
+          <div
+            v-if="PLAYBACK_PREVIEW_ACTIVE"
+            class="builder-pane__player-revert"
+            :class="{
+              'builder-pane__player-revert--left': hijackedPane === 'right',
+              'builder-pane__player-revert--right': hijackedPane !== 'right',
+            }"
+          >
             <AppTooltip :text="`Return to the loaded pattern (${remainingSeconds}s remaining)`">
               <template #activator="{ props: tooltipProps }">
                 <button
@@ -200,6 +207,7 @@ import { useBuilderPaneStore } from '@/features/builder/stores/useBuilderPaneSto
 import { useSplitterStore } from '@/stores/useSplitterStore'
 
 const paneStore = useMainPaneStore()
+const { hijackedPane } = storeToRefs(paneStore)
 const builderPaneStore = useBuilderPaneStore()
 const { setViewInPane } = builderPaneStore
 const { parents, paneVisible, ePlayer, eThumbnails, eTop, eBottom, eHidden } =
@@ -493,9 +501,17 @@ const exit = () => {
 
 .builder-pane__player-revert {
   position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
+  top: 50%;
   z-index: 2;
+  transform: translateY(-50%);
+}
+
+.builder-pane__player-revert--left {
+  left: var(--space-2);
+}
+
+.builder-pane__player-revert--right {
+  right: var(--space-2);
 }
 
 .builder-pane__player-revert-button {
