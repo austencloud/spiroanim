@@ -33,7 +33,7 @@ describe('VtgTransitionPreviews', () => {
 
     await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
 
-    expect(wrapper.emitted('patternPreview')).toEqual([[animation]])
+    expect(wrapper.emitted('patternPreview')).toEqual([[animation, 0]])
     expect(wrapper.get('.vtg-transition-previews__label').text()).toBe('TS/TS')
     expect(
       wrapper.get('button[aria-label="Preview pattern 1"]').attributes('aria-describedby'),

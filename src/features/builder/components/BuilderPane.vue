@@ -363,12 +363,18 @@ const builderDisplayAnimation = computed(() =>
   toVtgBuilderDisplayAnimation(ROOT.value, scale.value),
 )
 watchImmediate(builderDisplayAnimation, playerStore.setPlaybackOverride)
-const previewPattern = (animation: RootDataFinal) => {
+const previewedPatternIndex = ref<number>()
+watch(PLAYBACK_PREVIEW_ACTIVE, (active) => {
+  if (!active) previewedPatternIndex.value = undefined
+})
+const previewPattern = (animation: RootDataFinal, index: number) => {
+  previewedPatternIndex.value = index
   playerStore.startPlaybackPreview(toVtgBuilderDisplayAnimation(animation, scale.value))
 }
 
 const applyBuilderPatternUpdate = (updated: RootDataFinal, current?: number) => {
   if (PLAYBACK_PREVIEW_ACTIVE.value) playerStore.endPlaybackPreview()
+  previewedPatternIndex.value = undefined
   ROOT.value = updated
   if (current !== undefined) CURRENT.value = current
 }
@@ -403,9 +409,19 @@ const deletePreview = (index: number) => {
   const updated = removeVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
   if (updated !== undefined) applyBuilderPatternUpdate(updated)
 }
-const reversePreview = (index: number) => {
+const reversePreview = async (index: number) => {
+  const restartPreview = PLAYBACK_PREVIEW_ACTIVE.value && previewedPatternIndex.value === index
   const updated = reverseVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
-  if (updated !== undefined) applyBuilderPatternUpdate(updated)
+  if (updated === undefined) return
+
+  applyBuilderPatternUpdate(updated)
+  if (!restartPreview) return
+
+  // Let the main Builder override and extracted thumbnails update first so the refreshed
+  // temporary preview remains the final playback override.
+  await nextTick()
+  const updatedPreview = resizedPreviewAnimations.value?.[index]
+  if (updatedPreview) previewPattern(updatedPreview, index)
 }
 const previewRefreshKey = computed(() =>
   [

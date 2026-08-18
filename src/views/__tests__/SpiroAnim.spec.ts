@@ -150,6 +150,15 @@ describe('SpiroAnim view', () => {
     expect(playerStore.raw().CURRENT.value).toBe(0)
     expect(playerStore.PLAYING).toBe(false)
 
+    await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
+    playerStore.raw().CURRENT.value = 500
+    await wrapper.findAll('[data-role="vtg-transition-preview-reverse"]')[0]!.trigger('click')
+    await flushPromises()
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
+    expect(playerStore.raw().CURRENT.value).toBe(0)
+    expect(wrapper.find('[data-role="builder-preview-countdown"]').exists()).toBe(true)
+    playerStore.endPlaybackPreview()
+
     playerStore.setPlaybackOverride(playerRoot.value)
     playerStore.raw().CURRENT.value = 0
     await nextTick()

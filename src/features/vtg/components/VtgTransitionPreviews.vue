@@ -158,7 +158,7 @@ const emit = defineEmits<{
   patternDrop: [drop: BuilderPatternDrop]
   patternDelete: [index: number]
   patternReverse: [index: number]
-  patternPreview: [animation: RootDataFinal]
+  patternPreview: [animation: RootDataFinal, index: number]
 }>()
 const dragActive = ref(false)
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
@@ -268,7 +268,7 @@ const previewPattern = (index: number) => {
   if (touchDevice)
     revealedDeleteIndex.value = revealedDeleteIndex.value === index ? undefined : index
   const animation = props.animations[index]
-  if (animation) emit('patternPreview', animation)
+  if (animation) emit('patternPreview', animation, index)
 }
 const { width } = useElementSize(previewGrid)
 const dimensions = reactive<ConceptPreviewDimensions[]>(
