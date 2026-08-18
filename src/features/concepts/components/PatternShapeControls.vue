@@ -50,7 +50,9 @@ const tilted = computed({
 }
 
 .pattern-shape-controls label > span {
+  box-sizing: border-box;
   display: grid;
+  block-size: var(--size-concept-control-block);
   padding-block: var(--space-1);
   padding-inline: var(--space-concept-control-inline);
   color: var(--color-text);

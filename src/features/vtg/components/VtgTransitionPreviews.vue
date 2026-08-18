@@ -10,7 +10,10 @@
       v-for="(url, index) in previewUrls"
       :key="index"
       class="vtg-transition-previews__item"
-      :class="{ 'vtg-transition-previews__item--drag-over': dragOverIndex === index }"
+      :class="{
+        'vtg-transition-previews__item--drag-over': dragOverIndex === index,
+        'vtg-transition-previews__item--delete-revealed': revealedDeleteIndex === index,
+      }"
       :data-preview-index="index"
       @dragenter.prevent="dragOverIndex = index"
       @dragover.prevent="allowPatternDrop"
@@ -21,6 +24,8 @@
         class="vtg-transition-previews__visual"
         type="button"
         :aria-label="`Preview pattern ${index + 1}`"
+        :aria-controls="touchDevice ? `vtg-transition-preview-delete-${index}` : undefined"
+        :aria-expanded="touchDevice ? revealedDeleteIndex === index : undefined"
         @click="previewPattern(index)"
       >
         <img
@@ -31,6 +36,7 @@
         />
       </button>
       <button
+        :id="`vtg-transition-preview-delete-${index}`"
         class="vtg-transition-previews__delete"
         type="button"
         :aria-label="`Delete pattern ${index + 1}`"
@@ -91,6 +97,13 @@ import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDis
 import { vtgThickControl } from '@/features/vtg/data/vtgPlayerSettings'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import { mdiTrashCanOutline } from '@mdi/js'
+import { isTouchDevice } from '@/utils/device'
+import {
+  builderPatternPointerDropEvent,
+  builderPatternPointerEndEvent,
+  builderPatternPointerMoveEvent,
+} from '@/features/builder/patternPointerDrag'
+import type { BuilderPatternPointerDetail } from '@/features/builder/patternPointerDrag'
 
 const props = withDefaults(
   defineProps<{
@@ -114,6 +127,8 @@ const emit = defineEmits<{
   patternPreview: [animation: RootDataFinal]
 }>()
 const dragActive = ref(false)
+const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
+const revealedDeleteIndex = ref<number>()
 useEventListener(typeof document === 'undefined' ? null : document, 'dragstart', () => {
   dragActive.value = true
 })
@@ -145,6 +160,45 @@ const dropPattern = (previewIndex: number, event: DragEvent) => {
     // Ignore drag data from outside the Pattern Builder.
   }
 }
+const pointerDropIndex = (clientX: number, clientY: number) => {
+  const target = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>(
+    '[data-preview-index]',
+  )
+  if (!target || !previewGrid.value?.contains(target)) return undefined
+  const index = Number(target.dataset.previewIndex)
+  return Number.isInteger(index) ? index : undefined
+}
+const handlePointerMove = (event: Event) => {
+  const detail = (event as CustomEvent<BuilderPatternPointerDetail>).detail
+  dragActive.value = true
+  dragOverIndex.value = pointerDropIndex(detail.clientX, detail.clientY)
+}
+const handlePointerDrop = (event: Event) => {
+  const detail = (event as CustomEvent<BuilderPatternPointerDetail>).detail
+  const previewIndex = pointerDropIndex(detail.clientX, detail.clientY)
+  if (previewIndex !== undefined) emit('patternDrop', { previewIndex, selection: detail.selection })
+  dragActive.value = false
+  dragOverIndex.value = undefined
+}
+const endPointerDrag = () => {
+  dragActive.value = false
+  dragOverIndex.value = undefined
+}
+useEventListener(
+  touchDevice && typeof document !== 'undefined' ? document : null,
+  builderPatternPointerMoveEvent,
+  handlePointerMove,
+)
+useEventListener(
+  touchDevice && typeof document !== 'undefined' ? document : null,
+  builderPatternPointerDropEvent,
+  handlePointerDrop,
+)
+useEventListener(
+  touchDevice && typeof document !== 'undefined' ? document : null,
+  builderPatternPointerEndEvent,
+  endPointerDrag,
+)
 const minimumBeatCount = (index: number) =>
   Math.max(0.5, (props.initialBeatCounts[index] ?? 0.5) - 2)
 const maximumBeatCount = (index: number) => Math.min(8, (props.initialBeatCounts[index] ?? 8) + 2)
@@ -153,6 +207,8 @@ const updateBeatCount = (index: number, event: Event) => {
     emit('beatChange', index, event.target.valueAsNumber)
 }
 const previewPattern = (index: number) => {
+  if (touchDevice)
+    revealedDeleteIndex.value = revealedDeleteIndex.value === index ? undefined : index
   const animation = props.animations[index]
   if (animation) emit('patternPreview', animation)
 }
@@ -187,6 +243,10 @@ watch([width, () => props.columns], ([gridWidth]) => {
   requestPreviews()
 })
 watch([() => props.animations, () => props.refreshKey], requestPreviews)
+watch(
+  () => props.animations,
+  () => (revealedDeleteIndex.value = undefined),
+)
 </script>
 
 <style scoped>
@@ -258,10 +318,17 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   place-items: center;
 }
 
-.vtg-transition-previews__item:hover .vtg-transition-previews__delete,
+.vtg-transition-previews__item--delete-revealed .vtg-transition-previews__delete,
 .vtg-transition-previews__delete:focus-visible {
   opacity: 1;
   pointer-events: auto;
+}
+
+@media (hover: hover) {
+  .vtg-transition-previews__item:hover .vtg-transition-previews__delete {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .vtg-transition-previews__delete:focus-visible {

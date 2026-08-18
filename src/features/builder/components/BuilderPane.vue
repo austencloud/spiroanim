@@ -209,6 +209,13 @@ watchImmediate(builderDisplayAnimation, playerStore.setPlaybackOverride)
 const previewPattern = (animation: RootDataFinal) => {
   playerStore.startPlaybackPreview(toVtgBuilderDisplayAnimation(animation, scale.value))
 }
+
+const applyBuilderPatternUpdate = (updated: RootDataFinal, current?: number) => {
+  if (PLAYBACK_PREVIEW_ACTIVE.value) playerStore.endPlaybackPreview()
+  ROOT.value = updated
+  if (current !== undefined) CURRENT.value = current
+}
+
 const acceptPatternDrop = (drop: BuilderPatternDrop) => {
   const previewCount = resizedPreviewAnimations.value?.length
   if (previewCount === undefined || !isVtgPatternSelection(drop.selection)) return
@@ -229,17 +236,15 @@ const acceptPatternDrop = (drop: BuilderPatternDrop) => {
       ? 0
       : (PROPTIMES(rootCompile(updated))[0]?.[insertedStartFrame] ?? 0)
 
-  if (PLAYBACK_PREVIEW_ACTIVE.value) playerStore.endPlaybackPreview()
-  ROOT.value = updated
-  CURRENT.value = insertedStartMS
+  applyBuilderPatternUpdate(updated, insertedStartMS)
 }
 const updatePreviewBeatCount = (index: number, beatCount: number) => {
   const updated = resizeVtgTransitionPatternPreview(preparedPattern.value.pattern, index, beatCount)
-  if (updated !== undefined) ROOT.value = updated
+  if (updated !== undefined) applyBuilderPatternUpdate(updated)
 }
 const deletePreview = (index: number) => {
   const updated = removeVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
-  if (updated !== undefined) ROOT.value = updated
+  if (updated !== undefined) applyBuilderPatternUpdate(updated)
 }
 const previewRefreshKey = computed(() =>
   [
@@ -258,7 +263,7 @@ const previewRefreshKey = computed(() =>
 
 const undo = () => {
   const previous = qsStore.undoQS()
-  if (previous !== undefined) ROOT.value = previous
+  if (previous !== undefined) applyBuilderPatternUpdate(previous)
 }
 
 const { beginHistoryGroup, endHistoryGroup } = qsStore

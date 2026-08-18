@@ -65,6 +65,7 @@ export interface VtgPatternSelection
   shape?: PatternShape
   beat?: VtgBeat
   transition?: boolean
+  transitionAfterBeat?: boolean
   transitionBeats?: VtgTransitionBeats
   transitionQuad?: boolean
   transitionSecond?: boolean
@@ -88,6 +89,7 @@ export interface VtgPatternMatch {
   shape?: PatternShape
   beat?: VtgBeat
   transition?: boolean
+  transitionAfterBeat?: boolean
   transitionBeats?: VtgTransitionBeats
   transitionQuad?: boolean
   transitionSecond?: boolean

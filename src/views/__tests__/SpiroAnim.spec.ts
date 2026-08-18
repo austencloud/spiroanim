@@ -191,10 +191,17 @@ describe('SpiroAnim view', () => {
       '[data-role="vtg-transition-preview-beats"]',
     )
     const frameCountBeforeResize = playerRoot.value.props[0]!.anim.length
+    playerStore.PLAYING = false
+    await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
+    await flushPromises()
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
     await durationSlider.trigger('pointerdown')
     await durationSlider.setValue(String(Number(durationSlider.element.value) + 0.5))
     await durationSlider.trigger('pointerup')
     await flushPromises()
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
+    expect(playerStore.raw().CURRENT.value).toBe(0)
+    expect(playerStore.PLAYING).toBe(false)
     expect(playerRoot.value.props[0]!.anim).toHaveLength(frameCountBeforeResize + 1)
     expect(Number(durationSlider.element.max)).toBe(Number(durationSlider.element.value) + 2)
     await durationSlider.trigger('pointerdown')
@@ -202,6 +209,14 @@ describe('SpiroAnim view', () => {
     await durationSlider.trigger('pointerup')
     await flushPromises()
     expect(playerRoot.value.props[0]!.anim).toHaveLength(frameCountBeforeResize + 5)
+    await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
+    await flushPromises()
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
+    await wrapper.get('button[aria-label="Delete pattern 1"]').trigger('click')
+    await flushPromises()
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
+    expect(playerStore.raw().CURRENT.value).toBe(0)
+    expect(playerStore.PLAYING).toBe(false)
     expect(router.currentRoute.value.path).toBe(pathBeforeHijack)
     expect(router.currentRoute.value.fullPath).not.toBe(routeBeforeHijack)
     const routeAfterBuilderEdit = router.currentRoute.value.fullPath

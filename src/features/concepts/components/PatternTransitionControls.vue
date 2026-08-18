@@ -1,33 +1,49 @@
 <template>
   <fieldset class="pattern-transition-controls" data-role="vtg-transition-controls">
-    <legend class="pattern-transition-controls__visually-hidden">45 degree transition</legend>
+    <legend class="pattern-transition-controls__visually-hidden">Transition mode</legend>
 
-    <AppTooltip text="Apply the reciprocal 45-degree transition">
+    <AppTooltip text="Apply reciprocal transitions after each completed beat interval">
       <template #activator="{ props: activatorProps }">
-        <button
-          v-bind="activatorProps"
-          type="button"
-          class="pattern-transition-controls__button"
-          :class="{ 'pattern-transition-controls__button--active': transition }"
-          :aria-pressed="transition"
-          data-role="vtg-transition"
-          @click="transition = !transition"
-        >
-          45° Trans'
-        </button>
+        <label v-bind="activatorProps" class="pattern-transition-controls__option">
+          <input
+            type="radio"
+            name="vtg-transition-mode"
+            :checked="transition && afterBeat"
+            aria-label="Apply transitions after each completed beat interval"
+            data-role="vtg-transition"
+            @click="selectTransitionMode(true)"
+          />
+          <span>Trans'</span>
+        </label>
       </template>
     </AppTooltip>
 
-    <AppTooltip text="Choose the beat interval between 45-degree transitions">
+    <AppTooltip text="Apply reciprocal transitions at the 45-degree points">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps" class="pattern-transition-controls__option">
+          <input
+            type="radio"
+            name="vtg-transition-mode"
+            :checked="transition && !afterBeat"
+            aria-label="Apply transitions at the 45-degree points"
+            data-role="vtg-transition-45"
+            @click="selectTransitionMode(false)"
+          />
+          <span>45°</span>
+        </label>
+      </template>
+    </AppTooltip>
+
+    <AppTooltip text="Choose the beat interval between transitions">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps" class="pattern-transition-controls__beats">
           <span class="pattern-transition-controls__visually-hidden">
-            45 degree transition beats
+            Transition beats
           </span>
           <select
             v-model.number="transitionBeats"
             :disabled="!transition"
-            aria-label="Choose the beat interval between 45-degree transitions"
+            aria-label="Choose the beat interval between transitions"
             data-role="vtg-transition-beats"
           >
             <option v-for="option in vtgTransitionBeats" :key="option" :value="option">
@@ -53,14 +69,14 @@
       </template>
     </AppTooltip>
 
-    <AppTooltip text="Start the 45-degree Quad transition with the second prop">
+    <AppTooltip text="Start the Quad transition with the second prop">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps" class="pattern-transition-controls__option">
           <input
             v-model="second"
             type="checkbox"
             :disabled="!transition || !quad"
-            aria-label="Start the 45-degree Quad transition with the second prop"
+            aria-label="Start the Quad transition with the second prop"
             data-role="vtg-transition-second"
           />
           <span>Second</span>
@@ -68,15 +84,14 @@
       </template>
     </AppTooltip>
 
-    <AppTooltip text="Use the detected 45-degree transition with Quick Slots">
+    <AppTooltip text="Use the detected transition with Quick Slots">
       <template #activator="{ props: activatorProps }">
         <button
           v-bind="activatorProps"
           type="button"
           class="pattern-transition-controls__button"
-          :class="{ 'pattern-transition-controls__button--available': transition }"
           :disabled="!transition"
-          aria-label="Use the detected 45-degree transition with Quick Slots"
+          aria-label="Use the detected transition with Quick Slots"
           data-role="vtg-transition-qslots"
           @click="requestQSlots"
         >
@@ -115,6 +130,7 @@ import type { VtgTransitionBeats } from '@/features/vtg/types'
 const { qSlotsWarningRequired = false } = defineProps<{ qSlotsWarningRequired?: boolean }>()
 const emit = defineEmits<{ qSlots: [] }>()
 const transition = defineModel<boolean>('transition', { required: true })
+const afterBeat = defineModel<boolean>('afterBeat', { required: true })
 const transitionBeats = defineModel<VtgTransitionBeats>('beats', { required: true })
 const quad = defineModel<boolean>('quad', { required: true })
 const second = defineModel<boolean>('second', { required: true })
@@ -123,6 +139,16 @@ const skipQSlotsWarningChoice = ref(false)
 const suppressQSlotsWarning = ref(false)
 
 const performQSlots = () => emit('qSlots')
+
+const selectTransitionMode = (nextAfterBeat: boolean) => {
+  if (transition.value && afterBeat.value === nextAfterBeat) {
+    transition.value = false
+    return
+  }
+
+  afterBeat.value = nextAfterBeat
+  transition.value = true
+}
 
 const requestQSlots = () => {
   if (!transition.value) return
@@ -154,7 +180,7 @@ const confirmQSlots = () => {
   display: flex;
   width: min(100%, 45rem);
   min-width: var(--size-concept-content-min-width);
-  padding: 0 var(--space-concept-control-row-inline);
+  padding: 0 var(--space-1);
   margin: 0 auto;
   border: 0;
   gap: var(--space-1);
@@ -164,8 +190,10 @@ const confirmQSlots = () => {
 .pattern-transition-controls__button,
 .pattern-transition-controls select,
 .pattern-transition-controls__option span {
+  box-sizing: border-box;
   display: grid;
-  min-width: 2.75rem;
+  block-size: var(--size-concept-control-block);
+  min-width: 2.25rem;
   padding-block: var(--space-1);
   padding-inline: var(--space-concept-control-inline);
   color: var(--color-text);
@@ -180,17 +208,11 @@ const confirmQSlots = () => {
   place-items: center;
 }
 
-.pattern-transition-controls__button--active,
-.pattern-transition-controls__button--available,
 .pattern-transition-controls select,
 .pattern-transition-controls__option input:checked + span {
   color: var(--color-on-action-primary);
   background: var(--color-transition-mode-active);
   border-color: var(--color-transition-mode-active-border);
-}
-
-.pattern-transition-controls select {
-  block-size: calc(1.2em + 2 * var(--space-1) + 2px);
 }
 
 .pattern-transition-controls__button:disabled,

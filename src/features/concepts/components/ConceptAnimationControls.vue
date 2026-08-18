@@ -494,6 +494,10 @@ onBeforeUnmount(endSliderHistory)
 }
 
 .concept-button-rows {
+  --space-concept-control-inline: clamp(2px, 1.5cqi, var(--space-2));
+  --font-size-concept-control: clamp(0.625rem, 3cqi, 0.875rem);
+
+  container-type: inline-size;
   display: grid;
   margin-block-start: 2px;
   row-gap: var(--space-1);

@@ -64,6 +64,7 @@ export const applyVtgPlaybackControls = (
     | 'beat'
     | 'transition'
     | 'transitionBeats'
+    | 'transitionAfterBeat'
     | 'transitionQuad'
     | 'transitionSecond'
     | 'swapProps'
@@ -84,6 +85,7 @@ export const applyVtgPlaybackControls = (
     selection.transitionBeats ?? vtgDefaultTransitionBeats,
     playbackPropIndex,
     selection.transitionQuad,
+    selection.transitionAfterBeat,
   )
 }
 

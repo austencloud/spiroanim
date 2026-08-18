@@ -119,7 +119,9 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
 
 .pattern-playback-controls__qtr > span,
 .pattern-playback-controls__orientation select {
+  box-sizing: border-box;
   display: grid;
+  block-size: var(--size-concept-control-block);
   min-width: 2rem;
   padding-block: var(--space-1);
   padding-inline: var(--space-concept-control-inline);
@@ -144,10 +146,6 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
   color: var(--color-on-action-primary);
   background: var(--color-pattern-mode-active);
   border-color: var(--color-pattern-mode-active-border);
-}
-
-.pattern-playback-controls__orientation select {
-  block-size: calc(1.2em + 2 * var(--space-1) + 2px);
 }
 
 .pattern-playback-controls__orientation select:disabled {

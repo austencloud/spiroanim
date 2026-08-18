@@ -240,6 +240,7 @@ const findQtrPatternMatchesInternal = (
       ? {
           transition: true,
           transitionBeats: alternating.transitionBeats,
+          ...(alternating.transitionAfterBeat ? { transitionAfterBeat: true } : undefined),
           ...(alternating.transitionQuad ? { transitionQuad: true } : undefined),
           ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
         }

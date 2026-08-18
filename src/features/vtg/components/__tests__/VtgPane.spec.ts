@@ -157,7 +157,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
     expect(wrapper.findAll('[data-role="vtg-rule-card"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
-    expect(wrapper.findAll('button')).toHaveLength(55)
+    expect(wrapper.findAll('button')).toHaveLength(54)
     expect(wrapper.findAll('[data-role="vtg-divider"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--large')).toHaveLength(24)
@@ -717,14 +717,24 @@ describe('VtgPane', () => {
       const quarters = qtrEnabled ? 1 : undefined
       const wrapper = await mountVtgPane(qtrEnabled)
       const beat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat"]`)
-      const transition = wrapper.get<HTMLButtonElement>(`[data-role="${concept}-transition"]`)
+      const transition = wrapper.get<HTMLInputElement>(`[data-role="${concept}-transition"]`)
+      const transition45 = wrapper.get<HTMLInputElement>(
+        `[data-role="${concept}-transition-45"]`,
+      )
 
       expect(beat.element.type).toBe('range')
       expect(beat.attributes()).toMatchObject({ min: '1', max: '4.5', step: '0.5' })
       expect(beat.element.value).toBe('1')
       expect(beat.element.nextElementSibling?.textContent).toBe('1')
-      expect(transition.text()).toBe("45° Trans'")
-      expect(transition.attributes('aria-pressed')).toBe('false')
+      expect(transition.element.type).toBe('radio')
+      expect(transition.element.nextElementSibling?.textContent).toBe("Trans'")
+      expect(transition45.element.nextElementSibling?.textContent).toBe('45°')
+      expect(
+        transition.element.compareDocumentPosition(transition45.element) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+      expect(transition.element.checked).toBe(false)
+      expect(transition45.element.checked).toBe(false)
 
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
       const initialLabels = wrapper.findAll('[data-role="vtg-tile"]').map((tile) => tile.text())
@@ -734,7 +744,7 @@ describe('VtgPane', () => {
       )
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]').element.value).toBe('40')
       await transition.trigger('click')
-      expect(transition.attributes('aria-pressed')).toBe('true')
+      expect(transition.element.checked).toBe(true)
       expect(wrapper.emitted('patternSelect')).toEqual([
         [
           {
@@ -757,13 +767,14 @@ describe('VtgPane', () => {
             speedRatio: '1:3',
             beat: 3,
             transition: true,
+            transitionAfterBeat: true,
             ...(quarters === undefined ? {} : { quarters }),
           },
         ],
       ])
 
       await transition.trigger('click')
-      expect(transition.attributes('aria-pressed')).toBe('false')
+      expect(transition.element.checked).toBe(false)
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
         {
           reference: '5-1',
@@ -772,6 +783,20 @@ describe('VtgPane', () => {
           ...(quarters === undefined ? {} : { quarters }),
         },
       ])
+
+      await transition45.trigger('click')
+      expect(transition45.element.checked).toBe(true)
+      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+        {
+          reference: '5-1',
+          speedRatio: '1:3',
+          beat: 3,
+          transition: true,
+          ...(quarters === undefined ? {} : { quarters }),
+        },
+      ])
+      await transition45.trigger('click')
+      expect(transition45.element.checked).toBe(false)
       wrapper.unmount()
     }
   })
@@ -853,6 +878,7 @@ describe('VtgPane', () => {
     const qSlots = wrapper.get<HTMLButtonElement>('[data-role="vtg-transition-qslots"]')
     expect(qSlots.element.disabled).toBe(true)
     expect(qSlots.text()).toBe('QSlots')
+    expect(qSlots.attributes('aria-label')).toBe('Use the detected transition with Quick Slots')
 
     expect(
       wrapper.get<HTMLSelectElement>('[data-role="vtg-transition-beats"]').element.disabled,
@@ -865,13 +891,13 @@ describe('VtgPane', () => {
     ).toBe(true)
     await wrapper.get('[data-role="vtg-transition"]').trigger('click')
 
-    const transition = wrapper.get<HTMLButtonElement>('[data-role="vtg-transition"]')
+    const transition = wrapper.get<HTMLInputElement>('[data-role="vtg-transition"]')
     const selector = wrapper.get<HTMLSelectElement>('[data-role="vtg-transition-beats"]')
     const quad = wrapper.get<HTMLInputElement>('[data-role="vtg-transition-quad"]')
     const right = wrapper.get<HTMLInputElement>('[data-role="vtg-right"]')
     expect(selector.element.value).toBe('4')
     expect(selector.attributes('aria-label')).toBe(
-      'Choose the beat interval between 45-degree transitions',
+      'Choose the beat interval between transitions',
     )
     expect(selector.element.closest('label')?.getAttribute('aria-describedby')).toBeTruthy()
     expect(selector.findAll('option').map((option) => option.text())).toEqual([
@@ -885,7 +911,7 @@ describe('VtgPane', () => {
     expect(selector.element.disabled).toBe(false)
     expect(quad.element.disabled).toBe(false)
     expect(qSlots.element.disabled).toBe(false)
-    expect(qSlots.classes()).toContain('pattern-transition-controls__button--available')
+    expect(qSlots.classes()).not.toContain('pattern-transition-controls__button--available')
     expect(quad.element.checked).toBe(false)
     expect(quad.element.nextElementSibling?.textContent).toBe('Quad')
     const disabledSecond = wrapper.get<HTMLInputElement>('[data-role="vtg-transition-second"]')
@@ -906,7 +932,7 @@ describe('VtgPane', () => {
     expect(second.element.nextElementSibling?.textContent).toBe('Second')
     const secondTooltipId = second.element.closest('label')?.getAttribute('aria-describedby')
     expect(secondTooltipId).toBeTruthy()
-    expect(second.attributes('aria-label')).toContain('Quad')
+    expect(second.attributes('aria-label')).toBe('Start the Quad transition with the second prop')
     expect(
       quad.element.compareDocumentPosition(second.element) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
@@ -917,6 +943,7 @@ describe('VtgPane', () => {
         reference: '5-1',
         speedRatio: '1:3',
         transition: true,
+        transitionAfterBeat: true,
         transitionBeats: 3,
         transitionQuad: true,
         transitionSecond: true,
@@ -1589,7 +1616,9 @@ describe('VtgPane', () => {
         example.authoredSwap,
       )
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(false)
-      expect(wrapper.get('[data-role="vtg-transition"]').attributes('aria-pressed')).toBe('true')
+      expect(
+        wrapper.get<HTMLInputElement>('[data-role="vtg-transition-45"]').element.checked,
+      ).toBe(true)
       wrapper.unmount()
     }
   })

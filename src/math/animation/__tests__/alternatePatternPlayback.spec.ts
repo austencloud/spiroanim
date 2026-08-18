@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
+import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import { findQtrPatternMatch } from '@/features/vtg/qtr/matchQtrAnimation'
-import { createVtgAnimationSignature } from '@/features/vtg/math/createVtgAnimationSignature'
 import type { QtrPatternSelection } from '@/features/vtg/types'
 import { vtgSpeedRatios } from '@/features/vtg/types'
 import {
@@ -12,12 +13,13 @@ import {
 } from '@/math/animation/alternatePatternPlayback'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv5'
+import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 
 describe('alternatePatternPlayback', () => {
   const createDoubledQtrAnimation = (selection: QtrPatternSelection) =>
     createDefaultQtrAnimation(selection)
 
-  it('transitions both props together four times by default', () => {
+  it('transitions both props at each interval boundary by default', () => {
     const base = createDoubledQtrAnimation({
       reference: '1-1',
       speedRatio: '1:3',
@@ -82,6 +84,7 @@ describe('alternatePatternPlayback', () => {
         transitionBeats,
         transitionQuad: false,
         transitionSecond: false,
+        transitionAfterBeat: false,
       })
     },
   )
@@ -104,6 +107,40 @@ describe('alternatePatternPlayback', () => {
       transitionBeats: 3,
       transitionQuad: true,
       transitionSecond: true,
+      transitionAfterBeat: false,
+    })
+  })
+
+  it('generates Quad transitions immediately after each completed interval', async () => {
+    const animation = createDefaultVtgAnimation({
+      reference: '2-2',
+      speedRatio: '1:2',
+      orientation: -90,
+      transition: true,
+      transitionAfterBeat: true,
+      transitionBeats: 3,
+      transitionQuad: true,
+    })
+    if (!animation) throw new Error('Expected a VTG Quad transition')
+    expect(findVtgPatternMatch(animation)).toMatchObject({
+      reference: '2-2',
+      transition: true,
+      transitionAfterBeat: true,
+    })
+
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    expect(codec.encodeQS(animation, false)).toEqual({
+      r: 'Ew08Yk11Y',
+      p0: 'Q__.mBE_____q.5JEsR......_ZEvF............_ZEsR.....',
+      m0: '_1_mxqv__',
+      p1: 'N__.07______q.5L_sR............_ZEvF...........',
+      c: '_f_bhq',
+      v: '6',
     })
   })
 
@@ -118,7 +155,7 @@ describe('alternatePatternPlayback', () => {
     expect(analyzeAlternatingPatternPlayback(base)).toBeUndefined()
   })
 
-  it('matches the supplied hand-authored QTR 1-1 transition', async () => {
+  it('matches the supplied legacy boundary-timed QTR transition', async () => {
     const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 5)
     const suppliedQuery = {
       r: 'Ew09Aj11Y',
@@ -145,6 +182,9 @@ describe('alternatePatternPlayback', () => {
       transitionQuad: true,
     })
     if (!generated) throw new Error('Expected generated transition')
-    expect(createVtgAnimationSignature(generated)).toBe(createVtgAnimationSignature(animation))
+    expect(generated.props[0]?.anim[10]).toMatchObject({ plane: 180 })
+    expect(generated.props[1]?.anim[20]).toMatchObject({ plane: 180 })
+    expect(generated.props[0]?.anim[30]).toMatchObject({ plane: 180 })
+    expect(generated.props[1]?.anim[40]).toMatchObject({ plane: 180 })
   })
 })

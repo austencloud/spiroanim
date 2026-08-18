@@ -2,6 +2,7 @@
   <section
     ref="paneElement"
     class="vtg-pane"
+    :class="{ 'vtg-pane--touch': touchDevice }"
     aria-labelledby="vtg-pane-title"
     data-role="vtg-pane"
     :data-blank-width="blankWidth"
@@ -134,9 +135,14 @@
                 :data-board-row="tile.boardRow"
                 :data-cell-reference="tile.reference"
                 data-role="vtg-tile"
-                :draggable="builderActive"
+                :draggable="builderActive && !touchDevice"
                 @click="selectTile(tile)"
                 @dragstart="startBuilderDrag(tile, $event)"
+                @pointerdown="startBuilderPointerDrag(tile, $event)"
+                @pointermove="moveBuilderPointerDrag"
+                @pointerup="finishBuilderPointerDrag"
+                @pointercancel="cancelBuilderPointerDrag"
+                @lostpointercapture="cancelBuilderPointerDrag"
               >
                 <span class="vtg-tile__label">
                   <span class="vtg-tile__label-text">{{ tile.label }}</span>
@@ -223,6 +229,7 @@
         <template v-if="!builderActive">
           <PatternTransitionControls
             v-model:transition="transition"
+            v-model:after-beat="transitionAfterBeat"
             v-model:beats="transitionBeats"
             v-model:quad="transitionQuad"
             v-model:second="transitionSecond"
@@ -277,6 +284,12 @@ import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
+import {
+  builderPatternPointerDropEvent,
+  builderPatternPointerEndEvent,
+  builderPatternPointerMoveEvent,
+  createBuilderPatternPointerEvent,
+} from '@/features/builder/patternPointerDrag'
 import { builderPatternDragType } from '@/features/builder/types'
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/vtg/qtr/data/qtrLabels'
 import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
@@ -323,6 +336,7 @@ import {
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import { toColor } from '@/utils/UtilFunc'
+import { isTouchDevice } from '@/utils/device'
 import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
 interface BlankDimensions {
@@ -364,6 +378,7 @@ const emit = defineEmits<{
 }>()
 
 const speedRatios = vtgSpeedRatios
+const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 const conceptsStore = useConceptsStore()
 const {
   speedRatio,
@@ -389,6 +404,7 @@ const orientation = ref<VtgPatternOrientation>(getDefaultVtgPatternOrientation(s
 const initialTurnsOffset = ref<VtgTransitionInitialTurnsOffset>()
 const initialTurnsOffsetBeat = ref<VtgBeat>()
 const transition = ref(false)
+const transitionAfterBeat = ref(false)
 const transitionBeats = ref<VtgTransitionBeats>(vtgDefaultTransitionBeats)
 const transitionQuad = ref(false)
 const transitionSecond = ref(false)
@@ -515,6 +531,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       ...(shape.value === 'box' ? { shape: shape.value } : undefined),
       ...(beat.value === 1 ? undefined : { beat: beat.value }),
       ...(transition.value ? { transition: true } : undefined),
+      ...(transition.value && transitionAfterBeat.value ? { transitionAfterBeat: true } : undefined),
       ...(initialTurnsOffset.value === undefined
         ? undefined
         : {
@@ -546,6 +563,7 @@ const patternControlKey = computed(() =>
     shape.value,
     beat.value,
     transition.value,
+    transitionAfterBeat.value,
     transitionBeats.value,
     transitionQuad.value,
     transitionSecond.value,
@@ -577,6 +595,7 @@ const rotationSelection = computed<VtgPatternSelection | QtrPatternSelection | u
     ...(shape.value === 'box' ? { shape: shape.value } : undefined),
     ...(beat.value === 1 ? undefined : { beat: beat.value }),
     ...(transition.value ? { transition: true } : undefined),
+    ...(transition.value && transitionAfterBeat.value ? { transitionAfterBeat: true } : undefined),
     ...(transition.value && transitionBeats.value !== vtgDefaultTransitionBeats
       ? { transitionBeats: transitionBeats.value }
       : undefined),
@@ -679,6 +698,7 @@ const createPatternSelection = (
   if (beat.value !== 1) baseSelection.beat = beat.value
   const includeTransition = transition.value && !props.builderActive
   if (includeTransition) baseSelection.transition = true
+  if (includeTransition && transitionAfterBeat.value) baseSelection.transitionAfterBeat = true
   if (includeTransition && transitionBeats.value !== vtgDefaultTransitionBeats) {
     baseSelection.transitionBeats = transitionBeats.value
   }
@@ -742,7 +762,88 @@ const startBuilderDrag = (tile: VtgMatrixTile, event: DragEvent) => {
   event.dataTransfer.setData('text/plain', `VTG ${renderedReference}`)
 }
 
+const pointerDragThreshold = 10
+let builderPointerDrag:
+  | {
+      pointerId: number
+      startX: number
+      startY: number
+      selection: ConceptPatternSelection
+      active: boolean
+    }
+  | undefined
+let suppressBuilderPointerClick = false
+
+const startBuilderPointerDrag = (tile: VtgMatrixTile, event: PointerEvent) => {
+  suppressBuilderPointerClick = false
+  if (
+    !props.builderActive ||
+    !touchDevice ||
+    event.pointerType === 'mouse' ||
+    event.button !== 0 ||
+    !event.isPrimary
+  )
+    return
+
+  builderPointerDrag = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    selection: createPatternSelection(tile, renderedReferenceForTile(tile)),
+    active: false,
+  }
+  ;(event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId)
+}
+
+const moveBuilderPointerDrag = (event: PointerEvent) => {
+  const drag = builderPointerDrag
+  if (!drag || drag.pointerId !== event.pointerId) return
+  if (
+    !drag.active &&
+    Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < pointerDragThreshold
+  )
+    return
+
+  drag.active = true
+  event.preventDefault()
+  document.dispatchEvent(
+    createBuilderPatternPointerEvent(builderPatternPointerMoveEvent, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      selection: drag.selection,
+    }),
+  )
+}
+
+const finishBuilderPointerDrag = (event: PointerEvent) => {
+  const drag = builderPointerDrag
+  if (!drag || drag.pointerId !== event.pointerId) return
+  if (drag.active) {
+    event.preventDefault()
+    suppressBuilderPointerClick = true
+    document.dispatchEvent(
+      createBuilderPatternPointerEvent(builderPatternPointerDropEvent, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+        selection: drag.selection,
+      }),
+    )
+  }
+  builderPointerDrag = undefined
+  document.dispatchEvent(new Event(builderPatternPointerEndEvent))
+}
+
+const cancelBuilderPointerDrag = (event: PointerEvent) => {
+  if (builderPointerDrag?.pointerId !== event.pointerId) return
+  builderPointerDrag = undefined
+  document.dispatchEvent(new Event(builderPatternPointerEndEvent))
+}
+
 const selectTile = (tile: VtgMatrixTile) => {
+  if (suppressBuilderPointerClick) {
+    suppressBuilderPointerClick = false
+    return
+  }
   if (props.builderActive) {
     emit('patternPreview', createPatternSelection(tile, renderedReferenceForTile(tile)))
     return
@@ -813,6 +914,7 @@ const resetPatternControls = async () => {
   shape.value = 'diamond'
   beat.value = 1
   transition.value = false
+  transitionAfterBeat.value = false
   transitionQuad.value = false
   transitionSecond.value = false
   initialTurnsOffset.value = undefined
@@ -840,6 +942,24 @@ watch(
   ],
   () => {
     if (suppressPatternEmit || ratioOrientationChangeActive || props.builderActive) return
+
+    const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
+    if (tile !== undefined) emitPatternSelection(tile)
+  },
+  { flush: 'sync' },
+)
+
+watch(
+  transitionAfterBeat,
+  () => {
+    if (
+      !transition.value ||
+      suppressPatternEmit ||
+      ratioOrientationChangeActive ||
+      props.builderActive
+    ) {
+      return
+    }
 
     const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
     if (tile !== undefined) emitPatternSelection(tile)
@@ -940,6 +1060,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     shape.value = match.shape ?? 'diamond'
     beat.value = match.beat ?? 1
     transition.value = match.transition ?? false
+    transitionAfterBeat.value = match.transitionAfterBeat ?? false
     transitionBeats.value = match.transitionBeats ?? vtgDefaultTransitionBeats
     transitionQuad.value = match.transitionQuad ?? false
     transitionSecond.value = match.transitionSecond ?? false
@@ -975,6 +1096,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     shape.value = 'diamond'
     beat.value = 1
     transition.value = false
+    transitionAfterBeat.value = false
     transitionBeats.value = vtgDefaultTransitionBeats
     transitionQuad.value = false
     transitionSecond.value = false
@@ -995,6 +1117,7 @@ const selectInitialRandomPattern = () => {
   shape.value = 'diamond'
   beat.value = 1
   transition.value = false
+  transitionAfterBeat.value = false
   transitionBeats.value = vtgDefaultTransitionBeats
   transitionQuad.value = false
   transitionSecond.value = false
@@ -1607,6 +1730,10 @@ defineExpose({
   line-height: 1;
   text-rendering: geometricPrecision;
   white-space: nowrap;
+}
+
+.vtg-pane--touch .vtg-tile {
+  touch-action: pan-y;
 }
 
 .vtg-tile-grid > .vtg-tile-tooltip {

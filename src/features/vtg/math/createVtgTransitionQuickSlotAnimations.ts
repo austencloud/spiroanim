@@ -445,11 +445,17 @@ export const createVtgTransitionQuickSlotAnimationCandidates = (
     animation,
     extractedPatternSourceFrameCount,
   )
+  const firstRelationshipChangeFrame = relationshipChangeFrames[0]
+  if (firstRelationshipChangeFrame === undefined) return undefined
+  // Legacy transitions place the relationship on an even interval boundary and extraction begins
+  // on the following frame. Current transitions place it on the odd frame immediately after that
+  // boundary, so that frame is already the equivalent extraction origin.
+  const legacyBoundaryOffset = firstRelationshipChangeFrame % doublePlaybackMultiplier === 0 ? 1 : 0
   const segmentShiftCounts = [
     0,
     ...relationshipChangeFrames
       .slice(0, transitionSegmentCount - 1)
-      .map((frameIndex) => frameIndex + 1),
+      .map((frameIndex) => frameIndex + legacyBoundaryOffset),
   ]
   if (segmentShiftCounts.length !== transitionSegmentCount) return undefined
 
