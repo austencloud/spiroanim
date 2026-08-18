@@ -950,8 +950,10 @@ const resetPatternControls = async () => {
   await nextTick()
   releasePatternEmitSuppression(suppressionOwner)
   if (tile !== undefined) {
-    if (props.builderActive) emitBuilderPreview(tile)
-    else emitPatternSelection(tile)
+    if (props.builderActive) {
+      emit('customize', createPatternSelection(tile, renderedReferenceForTile(tile)))
+      emitBuilderPreview(tile)
+    } else emitPatternSelection(tile)
   }
 }
 

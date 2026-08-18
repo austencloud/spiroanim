@@ -2335,5 +2335,15 @@ describe('VtgPane', () => {
       thick: 9,
     })
     expect(wrapper.emitted('patternPreview')).toHaveLength(previewsBeforeCustomize)
+
+    const customizationsBeforeReset = wrapper.emitted('customize')?.length ?? 0
+    const previewsBeforeReset = wrapper.emitted('patternPreview')?.length ?? 0
+    await wrapper.get('[data-role="vtg-reset"]').trigger('click')
+    await nextTick()
+    await wrapper.get('.pattern-reset-dialog__confirm').trigger('click')
+    await nextTick()
+    expect(wrapper.emitted('customize')).toHaveLength(customizationsBeforeReset + 1)
+    expect(wrapper.emitted('customize')?.at(-1)?.[0]).not.toHaveProperty('thick')
+    expect(wrapper.emitted('patternPreview')).toHaveLength(previewsBeforeReset + 1)
   })
 })
