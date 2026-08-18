@@ -1,7 +1,7 @@
 <template>
   <fieldset class="concept-pattern-options vtg-pattern-options">
     <legend class="concept-controls__visually-hidden">Pattern options</legend>
-    <AppTooltip text="Exchange the completed left and right animation tracks">
+    <AppTooltip v-if="showSwap" text="Exchange the completed left and right animation tracks">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps">
           <input
@@ -72,12 +72,14 @@ const props = withDefaults(
     reverseLabel?: string
     reverseDescription?: string
     confirmReset?: boolean
+    showSwap?: boolean
   }>(),
   {
     rolePrefix: 'vtg',
     reverseLabel: '180°',
     reverseDescription: 'Rotate floor plane by 180 degrees',
     confirmReset: false,
+    showSwap: true,
   },
 )
 

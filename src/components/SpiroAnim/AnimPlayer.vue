@@ -173,6 +173,9 @@ onMounted(() => {
     // Otherwise update it locally
     else CURRENT.value = val
   })
+  on('playbackComplete', () => {
+    if (playerStore.PLAYBACK_PREVIEW_ACTIVE) playerStore.endPlaybackPreview()
+  })
 
   // Receive frames per second every 1000ms when animating
   on('fps', (val) => (FPS.value = val))

@@ -96,9 +96,13 @@ describe('SpiroAnim view', () => {
     expect(containerStyle.width).toBe('412px')
     expect(containerStyle.height).toBe('760px')
     expect(wrapper.get('[data-role="left-pane"]').text()).toContain('Player')
+    expect(
+      (wrapper.get('[data-role="left-pane"]').element as HTMLElement).style.overflowAnchor,
+    ).toBe('none')
     const rightPane = wrapper.get('[data-role="right-pane"]')
     expect(rightPane.text()).toContain('Timeline')
     expect((rightPane.element as HTMLElement).style.overflowY).toBe('hidden')
+    expect((rightPane.element as HTMLElement).style.overflowAnchor).toBe('none')
     expect(wrapper.text()).not.toContain('Editor')
     expect(wrapper.findAll('button[aria-label="Swap Views"]')).toHaveLength(2)
     const showAllTimelineProps = wrapper.get('button[aria-label="Show Full Timeline"]')
@@ -117,9 +121,38 @@ describe('SpiroAnim view', () => {
     const pathBeforeHijack = router.currentRoute.value.path
     expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
     await flushPromises()
+    rightPane.element.scrollTop = 63
+    paneStore.exitPaneHijack()
+    await flushPromises()
+    expect(rightPane.element.scrollTop).toBe(0)
+    expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
+    await flushPromises()
     expect(wrapper.find('[data-role="player-view"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-transition-support-error"]').exists()).toBe(false)
     wrapper.get('[data-role="builder-player"]')
+    playerStore.PLAYING = false
+    await wrapper.get('[data-cell-reference="5-2"]').trigger('click')
+    await flushPromises()
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
+    expect(playerStore.PLAYING).toBe(true)
+    expect(playerStore.raw().CURRENT.value).toBe(0)
+    await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
+    await flushPromises()
+    expect(playerStore.raw().CURRENT.value).toBe(0)
+    const countdown = wrapper.get('[data-role="builder-preview-countdown"]')
+    const previewMaximum = playerStore.PLAYBACK_MAX
+    playerStore.raw().CURRENT.value = Math.max(previewMaximum - 1_100, 0)
+    await nextTick()
+    expect(countdown.text()).toBe('2')
+    expect(countdown.attributes('aria-label')).toContain('2 seconds remaining')
+    await countdown.trigger('click')
+    expect(wrapper.find('[data-role="builder-preview-countdown"]').exists()).toBe(false)
+    expect(playerStore.raw().CURRENT.value).toBe(0)
+    expect(playerStore.PLAYING).toBe(false)
+
+    playerStore.setPlaybackOverride(playerRoot.value)
+    playerStore.raw().CURRENT.value = 0
+    await nextTick()
     playerStore.PLAYING = false
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', cancelable: true }))
     expect(playerStore.PLAYING).toBe(true)
@@ -131,12 +164,21 @@ describe('SpiroAnim view', () => {
       getData: (type: string) => dragData.get(type) ?? '',
     }
     const frameCountBeforeDrop = playerRoot.value.props[0]!.anim.length
+    const insertedStartMS = playerStore.MAX
+    playerStore.PLAYING = false
+    await wrapper.get('[data-cell-reference="5-2"]').trigger('click')
+    await flushPromises()
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
+    expect(playerStore.PLAYING).toBe(true)
     await wrapper.get('[data-cell-reference="5-2"]').trigger('dragstart', { dataTransfer })
     await wrapper
       .get('[data-role="vtg-transition-preview-drop-target"]')
       .trigger('drop', { dataTransfer })
     await flushPromises()
     expect(playerRoot.value.props[0]!.anim).toHaveLength(frameCountBeforeDrop + 8)
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
+    expect(playerStore.raw().CURRENT.value).toBe(insertedStartMS)
+    expect(playerStore.PLAYING).toBe(false)
     expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('4')
     await wrapper.get('button[aria-label="Increase Builder Columns"]').trigger('click')
     expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('5')

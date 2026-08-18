@@ -137,7 +137,7 @@ const playerStore = usePlayerStore('main')
 const conceptsStore = useConceptsStore()
 const qsStore = useQSMainStore()
 const queryVersionStore = useQueryVersionStore()
-const { ROOT, CURRENT } = playerStore.raw()
+const { ROOT } = playerStore.raw()
 const { ETIMES, PTIMES, UTIMES } = storeToRefs(playerStore)
 const { pSELECTED, showFullTimeline } = storeToRefs(usePropertiesStore('main'))
 const { registerComponentEl } = paneStore
@@ -223,15 +223,33 @@ const previewConceptPattern = (selection: ConceptPatternSelection) => {
   const animation = createConceptPattern(ROOT.value, selection)
   if (!animation) return
 
-  playerStore.setPlaybackOverride(toVtgBuilderDisplayAnimation(animation, conceptsStore.scale))
-  CURRENT.value = 0
-  playerStore.PLAYING = true
+  playerStore.startPlaybackPreview(toVtgBuilderDisplayAnimation(animation, conceptsStore.scale))
 }
 
 const toggleBuilder = () => {
   if (paneStore.isPaneHijacked) paneStore.exitPaneHijack()
   else paneStore.hijackOppositePane('builder', 'concepts')
 }
+
+watch(
+  () => paneStore.isPaneHijacked,
+  async () => {
+    await nextTick()
+    const conceptsPane = parents.value.concepts
+    const pane =
+      conceptsPane === 'left' ? eLeft.value : conceptsPane === 'right' ? eRight.value : undefined
+    if (!pane) return
+
+    // Changing Builder controls above the focused toggle can make Chromium scroll an
+    // overflow-hidden pane to retain the focus position. Reset that inaccessible offset after
+    // the DOM update and once more after layout settles.
+    pane.scrollTop = 0
+    requestAnimationFrame(() => {
+      pane.scrollTop = 0
+    })
+  },
+  { flush: 'post' },
+)
 
 const applyQuickSlot = async (path: string): Promise<boolean> => {
   const conceptRoute = findConceptForPath(path)
@@ -393,6 +411,7 @@ const leftStyle = computed<CSSProperties>(() => ({
   flex: flexLeft.value,
   position: 'relative',
   overflow: 'hidden',
+  'overflow-anchor': 'none',
 }))
 
 const rightStyle = computed<CSSProperties>(() => ({
@@ -400,6 +419,7 @@ const rightStyle = computed<CSSProperties>(() => ({
   position: 'relative',
   'overflow-x': 'auto',
   'overflow-y': 'hidden',
+  'overflow-anchor': 'none',
 }))
 </script>
 

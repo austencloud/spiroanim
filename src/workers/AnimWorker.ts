@@ -621,6 +621,7 @@ function animate(time: number | undefined = undefined, render: boolean | undefin
 
     // Prevent playing out of bounds
     else if (unqTimes.length > 0 && MS > unqTimes[unqTimes.length - 1]!) {
+      send('playbackComplete', undefined)
       jump(0)
       skip = true
     }

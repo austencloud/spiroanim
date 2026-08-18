@@ -102,6 +102,12 @@ export interface AnimBridgeMap {
     arg: number
   }
 
+  // Emitted immediately before full-animation playback loops to its starting position.
+  // Worker -> Main
+  playbackComplete: {
+    arg: void
+  }
+
   // FPS sent back to main every 1000ms
   // Worker -> Main
   fps: {

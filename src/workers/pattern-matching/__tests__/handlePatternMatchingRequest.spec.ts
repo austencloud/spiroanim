@@ -8,12 +8,21 @@ import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import {
+  getUniqueVtgPatternOrientationsRequest,
   matchEightStepPatternRequest,
   matchQstPatternRequest,
   matchVtgPatternRequest,
 } from '@/workers/pattern-matching/handlePatternMatchingRequest'
 
 describe('handlePatternMatchingRequest', () => {
+  it('resolves unique VTG orientations through the worker request handler', async () => {
+    await expect(
+      getUniqueVtgPatternOrientationsRequest({
+        selection: { reference: '5-1', speedRatio: '1:2' },
+      }),
+    ).resolves.toEqual([0])
+  })
+
   it('matches VTG and preserves a selection that produced the animation', async () => {
     const selection = {
       reference: '2-2',

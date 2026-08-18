@@ -57,17 +57,18 @@
           minimal
           :dim="miniPlayerDimensions"
         />
-        <div v-if="PLAYBACK_OVERRIDE_ACTIVE" class="builder-pane__player-revert">
-          <AppTooltip text="Return to the loaded pattern">
+        <div v-if="PLAYBACK_PREVIEW_ACTIVE" class="builder-pane__player-revert">
+          <AppTooltip :text="`Return to the loaded pattern (${remainingSeconds}s remaining)`">
             <template #activator="{ props: tooltipProps }">
               <button
                 v-bind="tooltipProps"
                 class="builder-pane__player-revert-button"
                 type="button"
-                aria-label="Return player to loaded pattern"
-                @click="playerStore.clearPlaybackOverride"
+                :aria-label="`Return player to loaded pattern, ${remainingSeconds} seconds remaining`"
+                data-role="builder-preview-countdown"
+                @click="playerStore.endPlaybackPreview"
               >
-                <BaseIcon :path="mdiBackupRestore" :size="36" />
+                {{ remainingSeconds }}
               </button>
             </template>
           </AppTooltip>
@@ -114,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { mdiBackupRestore, mdiMinus, mdiPlus, mdiUndoVariant } from '@mdi/js'
+import { mdiMinus, mdiPlus, mdiUndoVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
@@ -144,12 +145,18 @@ import {
 } from '@/features/builder/appendVtgBuilderPattern'
 import { isVtgPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
+import { rootCompile } from '@/math/animation/AnimFunc'
+import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
+import { PROPTIMES } from '@/math/animation/PlayerFunc'
 
 const paneStore = useMainPaneStore()
 const playerStore = usePlayerStore('main')
 const qsStore = useQSMainStore()
 const { ROOT, CURRENT } = playerStore.raw()
-const { PLAYBACK_OVERRIDE_ACTIVE } = storeToRefs(playerStore)
+const { PLAYBACK_MAX, PLAYBACK_PREVIEW_ACTIVE } = storeToRefs(playerStore)
+const remainingSeconds = computed(() =>
+  Math.max(0, Math.ceil((PLAYBACK_MAX.value - CURRENT.value) / 1000)),
+)
 const miniPlayerHost = ref<HTMLElement>()
 const { width: miniPlayerWidth, height: miniPlayerHeight } = useElementSize(miniPlayerHost)
 const miniPlayerDimensions = computed(() => ({
@@ -200,9 +207,7 @@ const builderDisplayAnimation = computed(() =>
 )
 watchImmediate(builderDisplayAnimation, playerStore.setPlaybackOverride)
 const previewPattern = (animation: RootDataFinal) => {
-  playerStore.setPlaybackOverride(toVtgBuilderDisplayAnimation(animation, scale.value))
-  CURRENT.value = 0
-  playerStore.PLAYING = true
+  playerStore.startPlaybackPreview(toVtgBuilderDisplayAnimation(animation, scale.value))
 }
 const acceptPatternDrop = (drop: BuilderPatternDrop) => {
   const previewCount = resizedPreviewAnimations.value?.length
@@ -212,7 +217,21 @@ const acceptPatternDrop = (drop: BuilderPatternDrop) => {
     drop.previewIndex === previewCount
       ? appendVtgBuilderPattern(preparedPattern.value.pattern, drop.selection)
       : insertVtgBuilderPattern(preparedPattern.value.pattern, drop.selection, drop.previewIndex)
-  if (updated) ROOT.value = updated
+  if (!updated) return
+
+  const sliceStarts = [
+    0,
+    ...findExplicitPlaneOrTurnsFrameIndices(updated, 2).map((frameIndex) => frameIndex - 1),
+  ]
+  const insertedStartFrame = sliceStarts[drop.previewIndex]
+  const insertedStartMS =
+    insertedStartFrame === undefined
+      ? 0
+      : (PROPTIMES(rootCompile(updated))[0]?.[insertedStartFrame] ?? 0)
+
+  if (PLAYBACK_PREVIEW_ACTIVE.value) playerStore.endPlaybackPreview()
+  ROOT.value = updated
+  CURRENT.value = insertedStartMS
 }
 const updatePreviewBeatCount = (index: number, beatCount: number) => {
   const updated = resizeVtgTransitionPatternPreview(preparedPattern.value.pattern, index, beatCount)
@@ -257,11 +276,11 @@ const endSliderHistory = () => {
 }
 onBeforeUnmount(() => {
   endSliderHistory()
-  playerStore.clearPlaybackOverride()
+  playerStore.endPlaybackPreview()
 })
 
 const exit = () => {
-  playerStore.clearPlaybackOverride()
+  playerStore.endPlaybackPreview()
   paneStore.exitPaneHijack()
 }
 </script>
@@ -364,6 +383,9 @@ const exit = () => {
   height: 3rem;
   padding: 0;
   color: var(--color-action-primary);
+  font: inherit;
+  font-size: var(--font-size-control);
+  font-weight: 800;
   cursor: pointer;
   background: color-mix(in srgb, var(--color-surface) 72%, transparent);
   border: 1px solid var(--color-border);

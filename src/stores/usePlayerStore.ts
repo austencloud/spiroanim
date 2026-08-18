@@ -60,18 +60,35 @@ export const usePlayerStore = (id: string) => {
         COMPILED: shallowRef<RootDataCompiled>({} as RootDataCompiled),
         PLAYBACK_COMPILED: shallowRef<RootDataCompiled>({} as RootDataCompiled),
       }
+      const playbackPreviewRestorePlaying = ref<boolean>()
 
       const v = {
         raw: () => r,
 
         PLAYBACK_ROOT: computed(() => r.PLAYBACK_OVERRIDE.value ?? r.ROOT.value),
         PLAYBACK_OVERRIDE_ACTIVE: computed(() => r.PLAYBACK_OVERRIDE.value !== undefined),
+        PLAYBACK_PREVIEW_ACTIVE: computed(() => playbackPreviewRestorePlaying.value !== undefined),
 
         setPlaybackOverride: (animation: RootDataFinal) => {
           r.PLAYBACK_OVERRIDE.value = animation
         },
         clearPlaybackOverride: () => {
           r.PLAYBACK_OVERRIDE.value = undefined
+        },
+        startPlaybackPreview: (animation: RootDataFinal) => {
+          if (playbackPreviewRestorePlaying.value === undefined)
+            playbackPreviewRestorePlaying.value = v.PLAYING.value
+          r.PLAYBACK_OVERRIDE.value = animation
+          r.CURRENT.value = 0
+          v.PLAYING.value = true
+        },
+        endPlaybackPreview: () => {
+          r.PLAYBACK_OVERRIDE.value = undefined
+          const restorePlaying = playbackPreviewRestorePlaying.value
+          if (restorePlaying === undefined) return
+          r.CURRENT.value = 0
+          v.PLAYING.value = restorePlaying
+          playbackPreviewRestorePlaying.value = undefined
         },
 
         INDEX: ref(0), //         current combined Unique Time index

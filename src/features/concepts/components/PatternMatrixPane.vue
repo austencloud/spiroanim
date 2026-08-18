@@ -38,8 +38,8 @@
       </fieldset>
 
       <PatternTransformControls
-        v-if="!builderActive"
         confirm-reset
+        :show-swap="!builderActive"
         :reverse-label="isQtr ? 'Flip' : '180°'"
         :reverse-description="
           isQtr
@@ -320,7 +320,6 @@ import {
   createVtgTransitionQuickSlotAnimationCandidates,
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
-import { getUniqueVtgPatternOrientations } from '@/features/vtg/math/getUniqueVtgPatternOrientations'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import { toColor } from '@/utils/UtilFunc'
@@ -474,6 +473,7 @@ let hydrationVersion = 0
 let lastEmittedSelection: VtgPatternSelection | QtrPatternSelection | undefined
 let componentMounted = false
 let initialAnimationHandled = false
+let ratioOrientationChangeActive = false
 
 const beginPatternEmitSuppression = () => {
   suppressPatternEmit = true
@@ -594,22 +594,47 @@ const rotationSelection = computed<VtgPatternSelection | QtrPatternSelection | u
   return isQtr.value ? { ...baseSelection, quarters: 1 } : baseSelection
 })
 
-const availablePatternOrientations = computed<readonly VtgPatternOrientation[]>(() => {
-  const selection = rotationSelection.value
-  const available = selection
-    ? getUniqueVtgPatternOrientations(selection)
-    : getVtgPatternOrientations(speedRatio.value)
-  if (
-    available.includes(orientation.value) ||
-    !getVtgPatternOrientations(speedRatio.value).includes(orientation.value)
-  ) {
-    return available
+const availablePatternOrientations = ref<readonly VtgPatternOrientation[]>(
+  getVtgPatternOrientations(speedRatio.value),
+)
+let orientationResolutionVersion = 0
+
+const resolvePatternOrientations = async (
+  selection: VtgPatternSelection | QtrPatternSelection,
+) => {
+  if (props.patternMatcher) {
+    return props.patternMatcher.getUniqueVtgPatternOrientations({ selection })
   }
 
-  return getVtgPatternOrientations(speedRatio.value).filter(
-    (candidate) => candidate === orientation.value || available.includes(candidate),
-  )
-})
+  const { getUniqueVtgPatternOrientationsRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return getUniqueVtgPatternOrientationsRequest({ selection })
+}
+
+watch(
+  [rotationSelection, speedRatio],
+  async ([selection, currentSpeedRatio]) => {
+    const version = ++orientationResolutionVersion
+    const allOrientations = getVtgPatternOrientations(currentSpeedRatio)
+    availablePatternOrientations.value = allOrientations
+    if (!selection) return
+
+    try {
+      const available = await resolvePatternOrientations(selection)
+      if (version !== orientationResolutionVersion) return
+      availablePatternOrientations.value = available.includes(orientation.value)
+        ? available
+        : allOrientations.filter(
+            (candidate) => candidate === orientation.value || available.includes(candidate),
+          )
+    } catch (error) {
+      if (version === orientationResolutionVersion) {
+        console.warn('VTG pattern rotation matching failed.', error)
+      }
+    }
+  },
+  { immediate: true },
+)
 
 const retainAvailableOrientation = () => {
   if (!availablePatternOrientations.value.includes(orientation.value)) orientation.value = 0
@@ -800,7 +825,6 @@ const resetPatternControls = async () => {
 
 watch(
   [
-    speedRatio,
     swapProps,
     reversePlane,
     shape,
@@ -815,7 +839,7 @@ watch(
     activeQtrMode,
   ],
   () => {
-    if (suppressPatternEmit || props.builderActive) return
+    if (suppressPatternEmit || ratioOrientationChangeActive || props.builderActive) return
 
     const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
     if (tile !== undefined) emitPatternSelection(tile)
@@ -852,9 +876,17 @@ watch(
 watch(
   speedRatio,
   (nextSpeedRatio, previousSpeedRatio) => {
-    if (orientation.value === getDefaultVtgPatternOrientation(previousSpeedRatio)) {
-      orientation.value = getDefaultVtgPatternOrientation(nextSpeedRatio)
+    ratioOrientationChangeActive = true
+    try {
+      if (orientation.value === getDefaultVtgPatternOrientation(previousSpeedRatio)) {
+        orientation.value = getDefaultVtgPatternOrientation(nextSpeedRatio)
+      }
+    } finally {
+      ratioOrientationChangeActive = false
     }
+    if (suppressPatternEmit || props.builderActive) return
+    const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
+    if (tile !== undefined) emitPatternSelection(tile)
   },
   { flush: 'sync' },
 )

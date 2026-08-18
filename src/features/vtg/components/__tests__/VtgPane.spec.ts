@@ -1,4 +1,4 @@
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -10,7 +10,11 @@ import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { findVtgPatternMatches } from '@/features/vtg/matchVtgAnimation'
 import { createVtgTransitionQuickSlotAnimationCandidates } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { findQtrPatternMatches } from '@/features/vtg/qtr/matchQtrAnimation'
-import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
+import type {
+  QtrPatternSelection,
+  VtgPatternSelection,
+  VtgSpeedRatio,
+} from '@/features/vtg/types'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { useQSMainStore } from '@/stores/useQSMainStore'
@@ -35,6 +39,12 @@ const mountVtgPane = async (qtrEnabled = false) => {
     await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(true)
   }
   return wrapper
+}
+
+const selectSpeedRatio = async (wrapper: VueWrapper, speedRatio: VtgSpeedRatio) => {
+  await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+  await flushPromises()
+  await nextTick()
 }
 
 class FakeResizeObserver {
@@ -257,7 +267,7 @@ describe('VtgPane', () => {
     expect(options[2]?.element.checked).toBe(true)
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:3')
 
-    await options[4]?.setValue()
+    await selectSpeedRatio(wrapper, '1:5')
 
     expect(options[4]?.element.checked).toBe(true)
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:5')
@@ -268,7 +278,7 @@ describe('VtgPane', () => {
     'hides top-header labels, diagrams, and dividers at %s while retaining left-header details',
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
-      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await selectSpeedRatio(wrapper, speedRatio)
 
       const columnHeaders = wrapper.get('[data-role="vtg-column-headers"]')
       const sideHeaders = wrapper.get('[data-role="vtg-sidebar"]')
@@ -292,10 +302,11 @@ describe('VtgPane', () => {
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
-      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await selectSpeedRatio(wrapper, speedRatio)
       await nextTick()
 
       const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+      await vi.waitFor(() => expect(rotate.element.disabled).toBe(true))
       expect(rotate.element.value).toBe('0')
       expect(rotate.element.disabled).toBe(true)
       expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°'])
@@ -305,11 +316,13 @@ describe('VtgPane', () => {
   it('disables rotation at zero when the selected pattern has no unique rotated result', async () => {
     const wrapper = mount(VtgPane)
     await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
-    await wrapper.get<HTMLInputElement>('input[value="1:1"]').setValue()
+    await selectSpeedRatio(wrapper, '1:1')
 
     const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+    await vi.waitFor(() => expect(rotate.element.disabled).toBe(true))
     await rotate.setValue('90')
     await wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').setValue(2)
+    await vi.waitFor(() => expect(rotate.element.disabled).toBe(true))
 
     expect(rotate.element.value).toBe('0')
     expect(rotate.element.disabled).toBe(true)
@@ -331,6 +344,7 @@ describe('VtgPane', () => {
     await wrapper.get('[data-cell-reference="2-1"]').trigger('click')
 
     const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+    await vi.waitFor(() => expect(rotate.element.disabled).toBe(true))
     expect(rotate.element.value).toBe('0')
     expect(rotate.element.disabled).toBe(true)
     expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°'])
@@ -344,7 +358,7 @@ describe('VtgPane', () => {
     'maps the %s top headers by physical column',
     async (speedRatio, firstHeaderLabel) => {
       const wrapper = mount(VtgPane)
-      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await selectSpeedRatio(wrapper, speedRatio)
 
       const headers = wrapper.findAll(
         '[data-role="vtg-column-headers"] [data-role="vtg-rule-card"]',
@@ -461,7 +475,7 @@ describe('VtgPane', () => {
   it('includes the selected speed ratio in each pattern request', async () => {
     const wrapper = mount(VtgPane)
 
-    await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
+    await selectSpeedRatio(wrapper, '1:5')
     await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
 
     expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '1-6', speedRatio: '1:5' }]])
@@ -471,7 +485,8 @@ describe('VtgPane', () => {
     const wrapper = mount(VtgPane)
 
     await wrapper.get('[data-cell-reference="3-4"]').trigger('click')
-    await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
+    await selectSpeedRatio(wrapper, '1:5')
+    await vi.waitFor(() => expect(wrapper.emitted('patternSelect')).toHaveLength(2))
 
     expect(wrapper.emitted('patternSelect')).toEqual([
       [{ reference: '3-4', speedRatio: '1:3' }],
@@ -539,8 +554,8 @@ describe('VtgPane', () => {
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
-      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
-      await nextTick()
+      await selectSpeedRatio(wrapper, speedRatio)
+      await vi.waitFor(() => expect(wrapper.emitted('patternSelect')).toHaveLength(2))
 
       const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
       expect(rotate.attributes('aria-label')).toBe('Rotate wall plane by the selected angle')
@@ -549,14 +564,17 @@ describe('VtgPane', () => {
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
         { reference: '5-1', speedRatio, orientation: -90 },
       ])
+      expect(wrapper.emitted('patternSelect')).toHaveLength(2)
 
       await rotate.setValue('0')
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([{ reference: '5-1', speedRatio }])
 
       await wrapper.get('[data-cell-reference="6-6"]').trigger('click')
       const selectedOrientation = speedRatio === '1:2' ? 180 : 90
-      expect(rotate.findAll('option').map((option) => option.text())).toEqual(
-        speedRatio === '1:2' ? ['-90°', '0°', '180°'] : ['0°', '90°'],
+      const expectedOptions =
+        speedRatio === '1:2' ? ['-90°', '0°', '180°'] : ['0°', '90°']
+      await vi.waitFor(() =>
+        expect(rotate.findAll('option').map((option) => option.text())).toEqual(expectedOptions),
       )
       await rotate.setValue(String(selectedOrientation))
       expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
@@ -568,11 +586,16 @@ describe('VtgPane', () => {
   it('remembers Rotate while switching between supported ratios', async () => {
     const wrapper = mount(VtgPane)
     await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
-    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+    await selectSpeedRatio(wrapper, '1:2')
 
     const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
     await rotate.setValue('0')
-    await wrapper.get<HTMLInputElement>('input[value="1:4"]').setValue()
+    await selectSpeedRatio(wrapper, '1:4')
+    await vi.waitFor(() =>
+      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+        { reference: '5-1', speedRatio: '1:4' },
+      ]),
+    )
 
     expect(rotate.element.value).toBe('0')
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
@@ -582,7 +605,7 @@ describe('VtgPane', () => {
 
   it('transposes relationship labels when rotation switches between zero and ninety degrees', async () => {
     const wrapper = mount(VtgPane)
-    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+    await selectSpeedRatio(wrapper, '1:2')
 
     const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
     const firstRowSecondColumn = () =>
@@ -761,8 +784,8 @@ describe('VtgPane', () => {
         const wrapper = await mountVtgPane(qtrEnabled)
         await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
 
+        await selectSpeedRatio(wrapper, speedRatio)
         const ratio = wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`)
-        await ratio.setValue()
 
         expect(ratio.element.checked).toBe(true)
         expect(
@@ -787,7 +810,7 @@ describe('VtgPane', () => {
           wrapper.get<HTMLInputElement>('[data-role="vtg-transition-quad"]').element.disabled,
         ).toBe(false)
 
-        await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
+        await selectSpeedRatio(wrapper, '1:5')
         expect(wrapper.find(`[data-role="${concept}-double"]`).exists()).toBe(false)
         expect(
           wrapper.get<HTMLButtonElement>(`[data-role="${concept}-transition"]`).element.disabled,
@@ -803,7 +826,7 @@ describe('VtgPane', () => {
     const wrapper = mount(VtgPane)
 
     for (const speedRatio of ['1:1', '1:2', '1:3', '1:4', '1:5'] as const) {
-      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await selectSpeedRatio(wrapper, speedRatio)
       expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(true)
       expect(wrapper.get<HTMLButtonElement>('[data-role="vtg-transition"]').element.disabled).toBe(
         false,
@@ -812,13 +835,13 @@ describe('VtgPane', () => {
 
     await wrapper.get('[data-role="vtg-transition"]').trigger('click')
 
-    await wrapper.get<HTMLInputElement>('input[value="1:1"]').setValue()
+    await selectSpeedRatio(wrapper, '1:1')
     expect(wrapper.get('[data-role="vtg-transition-static-note"]').text()).toBe(
       'Some or all of these 45° Transitions may only work with Static Props in the current ratio selection.',
     )
 
     for (const speedRatio of ['1:2', '1:3', '1:4', '1:5'] as const) {
-      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await selectSpeedRatio(wrapper, speedRatio)
       expect(wrapper.find('[data-role="vtg-transition-static-note"]').exists()).toBe(false)
     }
   })
@@ -1025,6 +1048,7 @@ describe('VtgPane', () => {
     const sourceMatch = findVtgPatternMatches(animation)[0]
     if (!sourceMatch) throw new Error('Expected the source transition to match')
     const patternMatcher: PatternMatchingClient = {
+      getUniqueVtgPatternOrientations: async () => [0],
       matchVtg: vi
         .fn<PatternMatchingClient['matchVtg']>()
         .mockResolvedValueOnce({ status: 'matched', source: 'vtg', match: sourceMatch })
@@ -1172,7 +1196,7 @@ describe('VtgPane', () => {
     const wrapper = mount(VtgPane)
     await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
     await wrapper.get('[data-role="vtg-spin-toggle"]').trigger('click')
-    await wrapper.get<HTMLInputElement>('input[value="1:5"]').setValue()
+    await selectSpeedRatio(wrapper, '1:5')
     await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(0.7)
@@ -1483,6 +1507,7 @@ describe('VtgPane', () => {
       .mockReturnValueOnce(first.promise)
       .mockReturnValueOnce(second.promise)
     const patternMatcher: PatternMatchingClient = {
+      getUniqueVtgPatternOrientations: async () => [0],
       matchVtg,
       matchEightStep: async () => ({ status: 'unmatched' }),
       matchQst: async () => ({ status: 'unmatched' }),
@@ -1879,7 +1904,7 @@ describe('VtgPane', () => {
     expect(columnRule().classes()).toContain('vtg-rule-card--vertical')
     expect(sideRule().classes()).toContain('vtg-rule-card--horizontal')
 
-    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+    await selectSpeedRatio(wrapper, '1:2')
 
     expect(columnRule().classes()).toContain('vtg-rule-card--horizontal')
     expect(sideRule().classes()).toContain('vtg-rule-card--vertical')
@@ -1899,7 +1924,7 @@ describe('VtgPane', () => {
     'adds the %s rotation 180-degree left-header flip to the top 180-degree control',
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
-      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await selectSpeedRatio(wrapper, speedRatio)
       await wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').setValue('180')
 
       const sideRule = wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
@@ -1914,7 +1939,7 @@ describe('VtgPane', () => {
 
   it('uses the -90-degree option to flip rotated left header elements vertically', async () => {
     const wrapper = mount(VtgPane)
-    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+    await selectSpeedRatio(wrapper, '1:2')
 
     const sideSplitRule = wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]')
     const sideSplitProps = sideSplitRule.findAll<HTMLElement>('[data-role="vtg-prop"]')
@@ -1946,7 +1971,7 @@ describe('VtgPane', () => {
     'uses 180 degrees to flip horizontal left headers at $speedRatio when rotation is zero',
     async ({ speedRatio, columnDividerPosition, columnPropPositions }) => {
       const wrapper = mount(VtgPane)
-      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await selectSpeedRatio(wrapper, speedRatio)
       if (speedRatio === '1:2' || speedRatio === '1:4') {
         await wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').setValue('0')
       }
@@ -2076,7 +2101,7 @@ describe('VtgPane', () => {
       await settlePreviewRendering()
 
       const before = countWorkerMessages('data')
-      await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+      await selectSpeedRatio(wrapper, speedRatio)
       await nextTick()
       reportAllBlankDimensions(72, 68)
       await settlePreviewRendering()
@@ -2113,7 +2138,7 @@ describe('VtgPane', () => {
   it('applies Rotate directly without changing the paired layout', async () => {
     const wrapper = mount(VtgPane)
     await settlePreviewRendering()
-    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+    await selectSpeedRatio(wrapper, '1:2')
     await nextTick()
     reportAllBlankDimensions(72, 68)
     await settlePreviewRendering()
@@ -2160,9 +2185,7 @@ describe('VtgPane', () => {
     await settlePreviewRendering()
     expect(countWorkerMessages('data')).toBe(beforeBpm)
 
-    await expectNineMorePreviews(() =>
-      wrapper.get<HTMLInputElement>('input[value="1:1"]').setValue(),
-    )
+    await expectNineMorePreviews(() => selectSpeedRatio(wrapper, '1:1'))
     const beforeSpinChange = countWorkerMessages('data')
     await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
     await wrapper.get('[data-role="vtg-spin-toggle"]').trigger('click')
@@ -2195,7 +2218,7 @@ describe('VtgPane', () => {
     await vi.waitFor(() => {
       expect(wrapper.find('.vtg-tile--selected').attributes('data-cell-reference')).toBe('1-1')
     })
-    await wrapper.get<HTMLInputElement>('input[value="1:2"]').setValue()
+    await selectSpeedRatio(wrapper, '1:2')
     await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
     await wrapper.get('[data-role="vtg-transition"]').trigger('click')
     const patternSelectionsBeforeBuilder = wrapper.emitted('patternSelect')?.length ?? 0
@@ -2205,10 +2228,13 @@ describe('VtgPane', () => {
     expect(wrapper.find('.vtg-tile--selected').exists()).toBe(false)
     expect(wrapper.find('.vtg-tile--highlighted').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-swap"]').exists()).toBe(false)
-    expect(wrapper.find('[data-role="vtg-reverse"]').exists()).toBe(false)
+    const reverse = wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]')
+    expect(reverse.attributes('aria-label')).toBe('Rotate floor plane by 180 degrees')
+    expect(wrapper.find('[data-role="vtg-reset"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(false)
 
+    await reverse.setValue(true)
     await tile.trigger('click')
     expect(tile.attributes('aria-pressed')).toBe('false')
     expect(wrapper.emitted('patternSelect')?.length ?? 0).toBe(patternSelectionsBeforeBuilder)
@@ -2216,6 +2242,7 @@ describe('VtgPane', () => {
       reference: '1-1',
       speedRatio: '1:2',
       swapProps: true,
+      reversePlane: true,
     })
     expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).not.toHaveProperty('transition')
     expect(wrapper.find('.vtg-tile--selected').exists()).toBe(false)

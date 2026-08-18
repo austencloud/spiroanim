@@ -1,4 +1,5 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { alignCompiledRelationshipDirection } from '@/math/animation/alignCompiledRelationshipDirection'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import {
   shiftAnimationFrameRange,
@@ -278,8 +279,14 @@ export const removeVtgTransitionPatternPreview = (
     const secondVariants = swapTracks ? firstPropVariants : secondPropVariants
     for (const firstTrack of firstVariants) {
       for (const secondTrack of secondVariants) {
-        const candidate = buildCandidate([firstTrack, secondTrack])
-        if (!candidate) continue
+        const rawCandidate = buildCandidate([firstTrack, secondTrack])
+        if (!rawCandidate) continue
+        const candidate = alignCompiledRelationshipDirection(
+          rawCandidate,
+          startFrameIndex + 1,
+          followingPreview,
+          1,
+        )
         const score = scoreCandidate(candidate)
         if (score <= rigidShapeMatchTolerance) return candidate
         if (!bestCandidate || score < bestScore) {

@@ -5,7 +5,16 @@ import type {
   QstPatternMatchResult,
   VtgPatternMatchRequest,
   VtgPatternMatchResult,
+  VtgPatternOrientationsRequest,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
+
+export const getUniqueVtgPatternOrientationsRequest = async ({
+  selection,
+}: VtgPatternOrientationsRequest) => {
+  const { getUniqueVtgPatternOrientations } =
+    await import('@/features/vtg/math/getUniqueVtgPatternOrientations')
+  return getUniqueVtgPatternOrientations(selection)
+}
 
 export const matchVtgPatternRequest = async ({
   animation,

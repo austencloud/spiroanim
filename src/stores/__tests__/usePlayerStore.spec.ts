@@ -122,6 +122,33 @@ describe('usePlayerStore', () => {
     expect(runtime.PLAYBACK_COMPILED.value.bpm).toBe(90)
   })
 
+  it('restores position and play state after a temporary playback preview', async () => {
+    const store = usePlayerStore('test-playback-preview')
+    const runtime = store.raw()
+    const firstPreview = { ...runtime.ROOT.value, bpm: 60 }
+    const secondPreview = { ...runtime.ROOT.value, bpm: 90 }
+    store.PLAYING = false
+    runtime.CURRENT.value = 750
+
+    store.startPlaybackPreview(firstPreview)
+    expect(store.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
+    expect(store.PLAYBACK_ROOT).toBe(firstPreview)
+    expect(store.PLAYING).toBe(true)
+    expect(runtime.CURRENT.value).toBe(0)
+
+    store.startPlaybackPreview(secondPreview)
+    expect(store.PLAYBACK_ROOT).toBe(secondPreview)
+
+    runtime.CURRENT.value = 500
+    store.endPlaybackPreview()
+    await nextTick()
+
+    expect(store.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
+    expect(store.PLAYBACK_OVERRIDE_ACTIVE).toBe(false)
+    expect(store.PLAYING).toBe(false)
+    expect(runtime.CURRENT.value).toBe(0)
+  })
+
   it('loads the original settings key without restoring legacy ORBIT data', () => {
     localStorage.setItem(
       'sa-player-test-load',

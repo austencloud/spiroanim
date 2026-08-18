@@ -16,8 +16,116 @@ import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExpli
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
+import type { AnimDataCompiled } from '@/types/AnimTypes'
+import { Vector3 } from 'three'
+
+const relativeTravelDirection = (
+  first: readonly AnimDataCompiled[],
+  second: readonly AnimDataCompiled[],
+  startIndex: number,
+  targetIndex: number,
+) => {
+  const signedAxis = (frames: readonly AnimDataCompiled[]) => {
+    if (!frames[startIndex]) throw new Error('Expected a compiled transition start frame')
+    const target = frames[targetIndex]!
+    return new Vector3().fromArray(target.posx).multiplyScalar(Math.sign(target.arc) || 1).normalize()
+  }
+  return Math.sign(signedAxis(first).dot(signedAxis(second)))
+}
 
 describe('appendVtgBuilderPattern', () => {
+  it('preserves compiled travel direction when appending same-direction Anti patterns', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const decode = (query: string) => codec.decodeQS(Object.fromEntries(new URLSearchParams(query)))
+    const current = decode(
+      'r=Ew09Ak11Y&p0=Q__.biQs8___s.5JEwm.......&m0=_1_mxqv__&p1=N__.biQxM___s.5L_s8.......&c=_i_bhq&v=6',
+    )
+    const cell = decode(
+      'r=Ew09Ak11Y&p0=Q__.biQ_____s.5JEs8.......&m0=_1_mxqv__&p1=N__.biQ_____s.5JEs8.......&c=_i_bhq&v=6',
+    )
+    const selection = findVtgPatternMatch(cell)
+    if (!selection) throw new Error('Expected exact 1:3 cell 1-1 match')
+    const result = appendVtgBuilderPattern(current, selection)
+    if (!result) throw new Error('Expected appended exact pattern')
+    const compiledCell = rootCompile(cell)
+    const compiledResult = rootCompile(result)
+    const appendStart = current.props[0]!.anim.length
+    expect(
+      relativeTravelDirection(
+        compiledResult.props[0]!.anim,
+        compiledResult.props[1]!.anim,
+        appendStart - 1,
+        appendStart,
+      ),
+    ).toBe(
+      relativeTravelDirection(
+        compiledCell.props[0]!.anim,
+        compiledCell.props[1]!.anim,
+        0,
+        1,
+      ),
+    )
+    expect(compiledResult.props.map((prop) => prop.anim[appendStart]?.turns)).toEqual(
+      compiledCell.props.map((prop) => prop.anim[1]?.turns),
+    )
+    expect(compiledResult.props.map((prop) => prop.anim[appendStart]?.arc)).toEqual(
+      compiledCell.props.map((prop) => prop.anim[1]?.arc),
+    )
+  })
+
+  it.each([
+    {
+      name: 'opposite-direction source',
+      query:
+        'r=Ew09Ak11Y&p0=Q__.biQ_____s.5JEs8.......&m0=_1_mxqv__&p1=N__.blE_____s.5JEs8.......&c=_i_bhq&v=6',
+    },
+    {
+      name: 'same-direction source',
+      query:
+        'r=Ew09Ak11Y&p0=Q__.biQ_____s.5JEs8.......&m0=_1_mxqv__&p1=N__.biQ_____s.5JEs8.......&c=_i_bhq&v=6',
+    },
+  ])('preserves relative prop travel from a dragged $name', async ({ query }) => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const decode = (value: string) =>
+      codec.decodeQS(Object.fromEntries(new URLSearchParams(value)))
+    const current = decode(
+      'r=Ew09Ak11Y&p0=Q__.biQs8___s.5JEwm.......&m0=_1_mxqv__&p1=N__.biQxM___s.5L_s8.......&c=_i_bhq&v=6',
+    )
+    const source = decode(query)
+    const selection = findVtgPatternMatch(source)
+    if (!selection) throw new Error('Expected the dragged source to match a VTG pattern')
+    const result = appendVtgBuilderPattern(current, selection)
+    if (!result) throw new Error('Expected cell 1-1 to append')
+
+    const compiledSource = rootCompile(source)
+    const compiledResult = rootCompile(result)
+    const appendTarget = current.props[0]!.anim.length
+    expect(
+      relativeTravelDirection(
+        compiledResult.props[0]!.anim,
+        compiledResult.props[1]!.anim,
+        appendTarget - 1,
+        appendTarget,
+      ),
+    ).toBe(
+      relativeTravelDirection(
+        compiledSource.props[0]!.anim,
+        compiledSource.props[1]!.anim,
+        0,
+        1,
+      ),
+    )
+  })
   it('creates the initial Builder pattern when dropping onto an empty animation', () => {
     const template = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     if (!template) throw new Error('Expected a supported VTG pattern')
@@ -46,13 +154,7 @@ describe('appendVtgBuilderPattern', () => {
     expect(result.props.map((prop) => prop.anim.length)).toEqual(
       current.props.map((prop) => prop.anim.length + 8),
     )
-    const appendStart = current.props[0]!.anim.length
-    const compiledSource = rootCompile(source)
-    result.props.forEach((prop, index) => {
-      const expectedPlane = Math.abs(compiledSource.props[index]!.anim[0]!.plane) === 180 ? 180 : 0
-      expect(prop.anim[appendStart]?.plane).toBe(expectedPlane)
-      expect(prop.anim.at(-1)).toEqual({})
-    })
+    result.props.forEach((prop) => expect(prop.anim.at(-1)).toEqual({}))
     const previews = createVtgTransitionPreviewAnimations(result)
     expect(previews).toHaveLength(2)
     expect(previews?.map((preview) => preview.props[0]!.anim.length)).toEqual([9, 9])
@@ -148,11 +250,29 @@ describe('appendVtgBuilderPattern', () => {
         )
         const beforeRelationship = compiledBefore.props[propIndex]!.anim[insertionIndex]!
         const afterRelationship = compiledAfter.props[propIndex]!.anim[insertionIndex + 8]!
-        expect({ arc: afterRelationship.arc, turns: afterRelationship.turns }).toEqual({
+        expect({
+          arc: afterRelationship.arc,
+          turns: afterRelationship.turns,
+        }).toEqual({
           arc: beforeRelationship.arc,
           turns: beforeRelationship.turns,
         })
       })
+      expect(
+        relativeTravelDirection(
+          compiledAfter.props[0]!.anim,
+          compiledAfter.props[1]!.anim,
+          insertionIndex + 7,
+          insertionIndex + 8,
+        ),
+      ).toBe(
+        relativeTravelDirection(
+          compiledBefore.props[0]!.anim,
+          compiledBefore.props[1]!.anim,
+          insertionIndex - 1,
+          insertionIndex,
+        ),
+      )
     },
   )
 
@@ -247,12 +367,20 @@ describe('appendVtgBuilderPattern', () => {
     )
 
     const result = removeVtgTransitionPatternPreview(source, 1)
-
-    expect(result && codec.encodeQS(result, false)).toEqual(
-      Object.fromEntries(
-        new URLSearchParams(
-          'r=Ew08Yn11Y&p0=Q__.myQ_____q.5JEsR.....5E0vF......_ZEsR......&m0=_1_mxqv__&p1=N__.05E_____q.5L_sR.....5L_vF............_ZEsR&c=_f_bhq&v=6',
-        ),
+    const before = createVtgTransitionPreviewAnimations(source)?.[2]
+    const after = result ? createVtgTransitionPreviewAnimations(result)?.[1] : undefined
+    if (!before || !after) throw new Error('Expected the following preview before and after delete')
+    expect(findVtgPatternMatch(after)).toMatchObject(findVtgPatternMatch(before)!)
+    const compiledBefore = rootCompile(before)
+    const compiledAfter = rootCompile(after)
+    expect(
+      relativeTravelDirection(compiledAfter.props[0]!.anim, compiledAfter.props[1]!.anim, 0, 1),
+    ).toBe(
+      relativeTravelDirection(
+        compiledBefore.props[0]!.anim,
+        compiledBefore.props[1]!.anim,
+        0,
+        1,
       ),
     )
   })
