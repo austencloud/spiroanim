@@ -1,4 +1,5 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { PROPTIMES } from '@/math/animation/PlayerFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 import { createMessageChannel } from '@/workers/createMessageChannel'
@@ -15,6 +16,7 @@ interface UseConceptPreviewRendererOptions<Reference extends string> {
   label: string
   partialIndexes?: readonly number[]
   activeIndexes?: Readonly<Ref<readonly number[]>>
+  frame?: 'first' | 'final'
 }
 
 const isBlobUrl = (url: string) => url.startsWith('blob:')
@@ -30,6 +32,7 @@ export const useConceptPreviewRenderer = <Reference extends string>({
   label,
   partialIndexes = [],
   activeIndexes,
+  frame = 'first',
 }: UseConceptPreviewRendererOptions<Reference>) => {
   const previewUrls = ref<string[]>(Array.from({ length: references.length }, () => ''))
 
@@ -108,10 +111,13 @@ export const useConceptPreviewRenderer = <Reference extends string>({
             near: 0.1,
             far: 1000,
           })
-          channel.send('data', rootCompile(animation))
+          const compiled = rootCompile(animation)
+          channel.send('data', compiled)
 
           try {
-            const urls = await channel.call('reqimgs', [{ index: 0, time: 0 }])
+            const propTimes = PROPTIMES(compiled)[0]
+            const time = frame === 'final' ? (propTimes?.at(-1) ?? 0) : 0
+            const urls = await channel.call('reqimgs', [{ index: 0, time }])
             const nextUrl = urls[0]
             if (!nextUrl) continue
 

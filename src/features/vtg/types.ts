@@ -5,10 +5,7 @@ import type { PatternPropSpacingSelection } from '@/features/concepts/patternPro
 import type { PatternPropColorSelection } from '@/features/concepts/patternPropColors'
 export type VtgRuleNumber = 1 | 2 | 3 | 4 | 5 | 6
 
-/**
- * VTG matrix references use the top-header number first, followed by the
- * left-header number. For example, `1-5` is their intersection.
- */
+/** VTG matrix references are presented as row first, then column. */
 export type VtgCellReference = `${VtgRuleNumber}-${VtgRuleNumber}`
 export type VtgTimingCode = 'S' | 'T' | 'Q'
 export type VtgDirectionCode = 'S' | 'O'

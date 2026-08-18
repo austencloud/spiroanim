@@ -8,12 +8,14 @@ import {
   createVtgTransitionPreviewAnimations,
   getVtgTransitionPreviewBeatCount,
   resizeVtgTransitionPatternPreview,
+  reverseVtgTransitionPatternPreview,
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { findQtrPatternMatch } from '@/features/vtg/qtr/matchQtrAnimation'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
+import { rootCompile } from '@/math/animation/AnimFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 
@@ -46,6 +48,41 @@ const selectDetectableAnimations = (
 }
 
 describe('createVtgTransitionQuickSlotAnimations', () => {
+  it('reverses both prop planes for one segment and its immediate successor', () => {
+    const source = createDefaultVtgAnimation({
+      reference: '5-1',
+      speedRatio: '1:3',
+      transition: true,
+      transitionQuad: true,
+      transitionSecond: true,
+    })
+    if (!source) throw new Error('Expected a supported VTG transition')
+
+    const starts = [
+      0,
+      ...findExplicitPlaneOrTurnsFrameIndices(source, 2).map((frameIndex) => frameIndex - 1),
+    ]
+    const updated = reverseVtgTransitionPatternPreview(source, 1)
+    if (!updated) throw new Error('Expected the preview direction to reverse')
+    const before = rootCompile(source)
+    const after = rootCompile(updated)
+    const changedFrames = [starts[1]! + 1, starts[2]! + 1]
+
+    for (const propIndex of [0, 1]) {
+      for (const frameIndex of changedFrames) {
+        expect(
+          Math.abs(
+            after.props[propIndex]!.anim[frameIndex]!.plane -
+              before.props[propIndex]!.anim[frameIndex]!.plane,
+          ),
+        ).toBe(180)
+      }
+      expect(after.props[propIndex]!.anim[starts[3]! + 1]!.plane).toBe(
+        before.props[propIndex]!.anim[starts[3]! + 1]!.plane,
+      )
+    }
+  })
+
   it('grows and shrinks a working preview with trailing inherited frames', () => {
     const source = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     if (!source) throw new Error('Expected a supported VTG pattern')

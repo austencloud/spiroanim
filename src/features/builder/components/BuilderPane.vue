@@ -72,11 +72,24 @@
             :scale="scale"
             @pattern-drop="acceptPatternDrop"
             @pattern-delete="deletePreview"
+            @pattern-reverse="reversePreview"
             @pattern-preview="previewPattern"
             @beat-change="updatePreviewBeatCount"
             @slider-start="beginSliderHistory"
             @slider-end="endSliderHistory"
           />
+
+          <div class="builder-pane__qslots">
+            <QuickSlotsAction
+              tooltip="Use the current Builder pattern with Quick Slots"
+              label="Load to Quick Slots"
+              data-role="builder-qslots"
+              :disabled="!preparedPattern.supported || !resizedPreviewAnimations"
+              :warning-required="hasPopulatedQuickSlots"
+              @q-slots="createBuilderQSlots"
+            />
+            <p v-if="quickSlotCreationError" role="alert">{{ quickSlotCreationError }}</p>
+          </div>
 
           <p class="builder-pane__development-warning" role="note">
             Pattern Builder is under active development. Features and generated patterns may change.
@@ -175,6 +188,7 @@ import AppTooltip from '@/components/AppTooltip.vue'
 import PaneSplitter from '@/components/layout/PaneSplitter.vue'
 import PaneSwapButton from '@/components/layout/PaneSwapButton.vue'
 import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
+import QuickSlotsAction from '@/features/concepts/components/QuickSlotsAction.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import {
   MAX_BUILDER_COLUMNS,
@@ -186,6 +200,8 @@ import {
   getVtgTransitionPreviewBeatCount,
   resizeVtgTransitionPatternPreview,
   removeVtgTransitionPatternPreview,
+  reverseVtgTransitionPatternPreview,
+  resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
@@ -205,6 +221,10 @@ import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExpli
 import { PROPTIMES } from '@/math/animation/PlayerFunc'
 import { useBuilderPaneStore } from '@/features/builder/stores/useBuilderPaneStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
+import { usePatternMatchingClient } from '@/features/concepts/composables/usePatternMatchingWorker'
+import { createBuilderQuickSlotCandidates } from '@/features/builder/createBuilderQuickSlotCandidates'
+
+const emit = defineEmits<{ quickSlotsCreate: [animations: readonly RootDataFinal[]] }>()
 
 const paneStore = useMainPaneStore()
 const { hijackedPane } = storeToRefs(paneStore)
@@ -267,6 +287,7 @@ const { qsHistory } = storeToRefs(qsStore)
 const builderSettingsStore = useBuilderSettingsStore()
 const { columns } = storeToRefs(builderSettingsStore)
 const { decreaseColumns, increaseColumns } = builderSettingsStore
+const conceptsStore = useConceptsStore()
 const {
   bpm,
   scale,
@@ -278,8 +299,13 @@ const {
   rightPropVisible,
   leftPropColor,
   rightPropColor,
-} = storeToRefs(useConceptsStore())
+} = storeToRefs(conceptsStore)
 const canUndo = computed(() => qsHistory.value.length > 1)
+const hasPopulatedQuickSlots = computed(
+  () =>
+    conceptsStore.quickSlotCount > 0 &&
+    conceptsStore.quickSlotPaths.some((path) => typeof path === 'string'),
+)
 const isEmptyPattern = computed(() => ROOT.value.props.length === 0)
 const preparedPattern = computed(() => prepareVtg45TransitionPattern(ROOT.value))
 const previewAnimations = computed(() =>
@@ -301,6 +327,38 @@ watch(
   { immediate: true },
 )
 const resizedPreviewAnimations = previewAnimations
+const patternMatcher = usePatternMatchingClient(computed(() => true))
+const quickSlotCreationError = ref<string>()
+const createBuilderQSlots = async () => {
+  quickSlotCreationError.value = undefined
+  const previews = resizedPreviewAnimations.value
+  if (!preparedPattern.value.supported || !previews) return
+
+  try {
+    const resolution = await resolveVtgTransitionQuickSlotAnimations(
+      createBuilderQuickSlotCandidates(ROOT.value, previews),
+      async (animation, rotationFilter) => {
+        const result = await patternMatcher.matchVtg({
+          animation,
+          preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+          rotationFilter,
+        })
+        if (result.status !== 'matched') return false
+        return result.match.initialTurnsOffset === undefined ? 'exact' : 'transitionTurns'
+      },
+    )
+    if (resolution.status === 'partial') {
+      console.warn(
+        `Builder Quick Slot${resolution.unmatchedSlots.length === 1 ? '' : 's'} ${resolution.unmatchedSlots.join(', ')} did not resolve to a known pattern; the generated extraction${resolution.unmatchedSlots.length === 1 ? ' was' : 's were'} used.`,
+      )
+    }
+    emit('quickSlotsCreate', resolution.animations)
+  } catch (error) {
+    quickSlotCreationError.value =
+      'Quick Slots could not be created. Your current Quick Slots were not changed.'
+    console.warn('Builder Quick Slot normalization failed.', error)
+  }
+}
 const builderDisplayAnimation = computed(() =>
   toVtgBuilderDisplayAnimation(ROOT.value, scale.value),
 )
@@ -343,6 +401,10 @@ const updatePreviewBeatCount = (index: number, beatCount: number) => {
 }
 const deletePreview = (index: number) => {
   const updated = removeVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
+  if (updated !== undefined) applyBuilderPatternUpdate(updated)
+}
+const reversePreview = (index: number) => {
+  const updated = reverseVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
   if (updated !== undefined) applyBuilderPatternUpdate(updated)
 }
 const previewRefreshKey = computed(() =>
@@ -555,6 +617,21 @@ const exit = () => {
   border: 1px solid color-mix(in srgb, var(--color-status-warning) 55%, var(--color-border));
   border-inline-start-width: 3px;
   border-radius: var(--radius-sm);
+}
+
+.builder-pane__qslots {
+  display: grid;
+  margin-block-start: var(--space-4);
+  gap: var(--space-2);
+  place-items: center;
+}
+
+.builder-pane__qslots p {
+  margin: 0;
+  color: var(--color-status-error);
+  font-size: var(--font-size-concept-control);
+  font-weight: 700;
+  text-align: center;
 }
 
 .builder-pane__controls {

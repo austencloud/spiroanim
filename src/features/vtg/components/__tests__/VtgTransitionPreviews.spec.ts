@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
-import { rootFinal } from '@/math/animation/PlayerFunc'
+import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import {
   builderPatternPointerDropEvent,
   builderPatternPointerMoveEvent,
@@ -12,25 +12,8 @@ import {
 const device = vi.hoisted(() => ({ touch: false }))
 vi.mock('@/utils/device', () => ({ isTouchDevice: () => device.touch }))
 
-const animation = rootFinal({
-  bpm: 120,
-  prop: 0,
-  color: 0,
-  guides: false,
-  paths: true,
-  travel: false,
-  hands: true,
-  arms: false,
-  visible: true,
-  nodes: true,
-  anchors: true,
-  smooth: true,
-  props: [],
-  aspectx: 16,
-  aspecty: 9,
-  distance: 22,
-  thick: 4,
-})
+const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+if (!animation) throw new Error('Expected a supported VTG pattern')
 
 describe('VtgTransitionPreviews', () => {
   beforeEach(() => {
@@ -51,6 +34,14 @@ describe('VtgTransitionPreviews', () => {
     await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
 
     expect(wrapper.emitted('patternPreview')).toEqual([[animation]])
+    expect(wrapper.get('.vtg-transition-previews__label').text()).toBe('TS/TS')
+    expect(
+      wrapper.get('button[aria-label="Preview pattern 1"]').attributes('aria-describedby'),
+    ).toBeTruthy()
+
+    await wrapper.get('button[aria-label="Reverse direction of pattern 1"]').trigger('click')
+    expect(wrapper.emitted('patternReverse')).toEqual([[0]])
+    expect(wrapper.emitted('patternPreview')).toHaveLength(1)
 
     await wrapper.get('button[aria-label="Delete pattern 1"]').trigger('click')
     expect(wrapper.emitted('patternDelete')).toEqual([[0]])
@@ -80,6 +71,25 @@ describe('VtgTransitionPreviews', () => {
 
     await previews[1]!.trigger('click')
     expect(items[1]!.classes()).not.toContain('vtg-transition-previews__item--delete-revealed')
+  })
+
+  it('labels a half-beat thumbnail without changing the supplied animation', () => {
+    const shortAnimation = {
+      ...animation,
+      props: animation.props.map((prop) => ({ ...prop, anim: prop.anim.slice(0, 2) })),
+    }
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [shortAnimation],
+        refreshKey: 'short-label',
+        initialBeatCounts: [0.5],
+        beatCounts: [0.5],
+        scale: 1,
+      },
+    })
+
+    expect(wrapper.get('.vtg-transition-previews__label').text()).toMatch(/^[TSQ][SO]\/[TSQ][SO]$/)
+    expect(shortAnimation.props.every((prop) => prop.anim.length === 2)).toBe(true)
   })
 
   it('accepts a pointer drag drop on touch devices', async () => {

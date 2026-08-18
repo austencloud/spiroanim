@@ -131,7 +131,7 @@ describe('SpiroAnim view', () => {
     expect(wrapper.find('[data-role="vtg-transition-support-error"]').exists()).toBe(false)
     wrapper.get('[data-role="builder-player"]')
     playerStore.PLAYING = false
-    await wrapper.get('[data-cell-reference="5-2"]').trigger('click')
+    await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
     await flushPromises()
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
     expect(playerStore.PLAYING).toBe(true)
@@ -166,11 +166,11 @@ describe('SpiroAnim view', () => {
     const frameCountBeforeDrop = playerRoot.value.props[0]!.anim.length
     const insertedStartMS = playerStore.MAX
     playerStore.PLAYING = false
-    await wrapper.get('[data-cell-reference="5-2"]').trigger('click')
+    await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
     await flushPromises()
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
     expect(playerStore.PLAYING).toBe(true)
-    await wrapper.get('[data-cell-reference="5-2"]').trigger('dragstart', { dataTransfer })
+    await wrapper.get('[data-cell-reference="1-2"]').trigger('dragstart', { dataTransfer })
     await wrapper
       .get('[data-role="vtg-transition-preview-drop-target"]')
       .trigger('drop', { dataTransfer })
@@ -180,15 +180,21 @@ describe('SpiroAnim view', () => {
     expect(playerStore.raw().CURRENT.value).toBe(insertedStartMS)
     expect(playerStore.PLAYING).toBe(false)
     expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('4')
+    const builderQSlots = wrapper.get('[data-role="builder-qslots"]')
+    const builderWarning = wrapper.get('.builder-pane__development-warning')
+    expect(
+      builderQSlots.element.compareDocumentPosition(builderWarning.element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     const builderView = wrapper.get('[data-role="builder-pane-view"]')
     const builderTopPane = builderView.get('[data-role="top-pane"]')
     const builderBottomPane = builderView.get('[data-role="bottom-pane"]')
     expect(
-      wrapper.get('[data-role="builder-player"]').element.closest('[data-role="top-pane"]'),
-    ).toBe(builderTopPane.element)
-    expect(
-      wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="bottom-pane"]'),
+      wrapper.get('[data-role="builder-player"]').element.closest('[data-role="bottom-pane"]'),
     ).toBe(builderBottomPane.element)
+    expect(
+      wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="top-pane"]'),
+    ).toBe(builderTopPane.element)
     expect(
       wrapper
         .get('[aria-label="Builder Columns"]')
@@ -197,11 +203,11 @@ describe('SpiroAnim view', () => {
     await wrapper.get('button[aria-label="Swap Builder Views"]').trigger('click')
     await flushPromises()
     expect(
-      wrapper.get('[data-role="builder-player"]').element.closest('[data-role="bottom-pane"]'),
-    ).toBe(builderBottomPane.element)
-    expect(
-      wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="top-pane"]'),
+      wrapper.get('[data-role="builder-player"]').element.closest('[data-role="top-pane"]'),
     ).toBe(builderTopPane.element)
+    expect(
+      wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="bottom-pane"]'),
+    ).toBe(builderBottomPane.element)
     await wrapper.get('button[aria-label="Increase Builder Columns"]').trigger('click')
     expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('5')
     expect(
@@ -372,17 +378,17 @@ describe('SpiroAnim view', () => {
     })
 
     const expectedOneToThree = createVtgAnimation(playerRoot.value, {
-      reference: '6-2',
+      reference: '1-1',
       speedRatio: '1:3',
       bpm: 60,
     })
     await wrapper.get<HTMLInputElement>('input[value="1:3"]').setValue()
-    await wrapper.get('[data-cell-reference="6-2"]').trigger('click')
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
 
     expect(playerRoot.value).toEqual(expectedOneToThree)
 
     const expectedQuarter = createQtrAnimation(playerRoot.value, {
-      reference: '6-2',
+      reference: '1-1',
       speedRatio: '1:3',
       quarters: 1,
       bpm: 60,
@@ -393,7 +399,7 @@ describe('SpiroAnim view', () => {
     expect(playerRoot.value).toEqual(expectedQuarter)
 
     const expectedVtgAgain = createVtgAnimation(playerRoot.value, {
-      reference: '6-2',
+      reference: '1-1',
       speedRatio: '1:3',
       bpm: 60,
     })

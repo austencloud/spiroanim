@@ -93,8 +93,8 @@ const createPatternBuilders = (
 }
 
 /**
- * A VTG reference stores the column first and row second. Every cell in a row
- * shares the same first animation frame for each prop. Continuations are the
+ * VTG cells are numbered row first in the interface. Every cell in a row shares
+ * the same first animation frame for each prop. Continuations are the
  * canonical doubled 1:3 data; the builder derives only their turns for other ratios.
  * Only the four special cells define explicit Spin/Anti variants.
  */

@@ -74,6 +74,7 @@
         ref="cBuilder"
         data-type="builder"
         data-role="builder-pane-view"
+        @quick-slots-create="saveAnimationsToQuickSlots"
       />
     </div>
     <AppNavigationMenu />

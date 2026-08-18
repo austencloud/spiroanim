@@ -33,7 +33,7 @@ interface UseVtgPreviewsOptions {
   orientation: Ref<VtgPatternOrientation>
   initialTurnsOffset: Ref<VtgTransitionInitialTurnsOffset | undefined>
   initialTurnsOffsetBeat: Ref<VtgBeat | undefined>
-  pairedLayout: Readonly<Ref<boolean>>
+  activeReferences: Readonly<Ref<readonly VtgCellReference[]>>
 }
 
 export const pairedPatternPreviewReferences = [1, 2, 3, 4, 5, 6].flatMap((row) =>
@@ -44,6 +44,13 @@ export const patternPreviewReferences = pairedPatternPreviewReferences.filter((r
   const row = Number(reference.split('-')[1])
   return row % 2 === 1
 })
+
+export const builderPatternPreviewReferences = [
+  '1-1',
+  '3-1',
+  '1-6',
+  '3-6',
+] as const satisfies readonly VtgCellReference[]
 
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 const spinPreviewIndexes = pairedPatternPreviewReferences.flatMap((reference, index) =>
@@ -66,13 +73,12 @@ export const usePatternPreviews = ({
   orientation,
   initialTurnsOffset,
   initialTurnsOffsetBeat,
-  pairedLayout,
+  activeReferences,
 }: UseVtgPreviewsOptions) => {
   const activePreviewIndexes = computed(() => {
-    const references = pairedLayout.value
-      ? pairedPatternPreviewReferences
-      : patternPreviewReferences
-    return references.map((reference) => pairedPatternPreviewReferences.indexOf(reference))
+    return activeReferences.value.map((reference) =>
+      pairedPatternPreviewReferences.indexOf(reference),
+    )
   })
 
   const buildSelection = (
@@ -131,7 +137,7 @@ export const usePatternPreviews = ({
       orientation,
       initialTurnsOffset,
       initialTurnsOffsetBeat,
-      pairedLayout,
+      activeReferences,
     ],
     renderer.requestPreviews,
   )

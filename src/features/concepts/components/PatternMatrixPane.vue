@@ -98,18 +98,18 @@
           v-for="rule in displayedSideRules"
           :key="`side-${rule.number}`"
           :labels="rule.labels"
-          :display-labels="isQtr ? qtrSideRuleLabels[rule.number] : undefined"
+          :display-labels="isQtr ? qtrSideRuleLabels[rule.sourceNumber ?? rule.number] : undefined"
           :number="rule.number"
           :diagram="rule.diagram"
           :description="rule.description"
           :orientation="sideHeaderOrientation"
-          :accent="rule.number === selectedCell?.row"
+          :accent="(rule.sourceNumber ?? rule.number) === selectedCell?.row"
           :show-divider="!isQtr"
           :prop-colors="isQtr ? vtgHeaderPropColors : undefined"
           :tooltip-disabled="isQtr"
           :reversed="sideHeaderReversed"
           :mirror-props="!isQtr"
-          @select="selectRow(rule.number)"
+          @select="selectRow(rule.sourceNumber ?? rule.number)"
         />
       </div>
 
@@ -120,6 +120,14 @@
             :key="tile.reference"
             class="vtg-tile-tooltip"
             :text="getTileDescription(tile)"
+            :style="
+              builderActive
+                ? {
+                    gridColumn: String(tile.column),
+                    gridRow: tile.row === 6 ? '2' : '1',
+                  }
+                : undefined
+            "
           >
             <template #activator="{ props: activatorProps }">
               <button
@@ -132,11 +140,11 @@
                   'vtg-tile--paired-left': usesPairedPreviewLayout && tile.column % 2 === 1,
                   'vtg-tile--paired-right': usesPairedPreviewLayout && tile.column % 2 === 0,
                 }"
-                :aria-label="`${tile.label}, cell ${tile.reference}`"
+                :aria-label="`${tile.label}, cell ${displayCellReference(tile)}`"
                 :aria-pressed="tile.reference === selectedCellReference"
                 :data-board-column="tile.boardColumn"
                 :data-board-row="tile.boardRow"
-                :data-cell-reference="tile.reference"
+                :data-cell-reference="displayCellReference(tile)"
                 data-role="vtg-tile"
                 :draggable="builderActive && !touchDevice"
                 @click="selectTile(tile)"
@@ -294,10 +302,18 @@ import {
   createBuilderPatternPointerEvent,
 } from '@/features/builder/patternPointerDrag'
 import { builderPatternDragType } from '@/features/builder/types'
+import {
+  describeVtgBuilderMotion,
+  describeVtgBuilderMotionLabel,
+  type VtgBuilderMotionLabel,
+} from '@/features/builder/describeVtgBuilderMotion'
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/vtg/qtr/data/qtrLabels'
+import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
+import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import {
+  builderPatternPreviewReferences,
   pairedPatternPreviewReferences,
   patternPreviewReferences,
   usePatternPreviews,
@@ -348,7 +364,7 @@ interface BlankDimensions {
 }
 
 interface VtgMatrixTile {
-  label: VtgPatternLabel
+  label: VtgPatternLabel | VtgBuilderMotionLabel
   description: string
   column: VtgRuleNumber
   row: VtgRuleNumber
@@ -419,9 +435,11 @@ const hasPopulatedQuickSlots = computed(
 )
 const showStaticPropsTransitionNote = computed(() => transition.value && speedRatio.value === '1:1')
 const usesPairedPreviewLayout = computed(
-  () => speedRatio.value === '1:2' || speedRatio.value === '1:4',
+  () => props.builderActive || speedRatio.value === '1:2' || speedRatio.value === '1:4',
 )
-const hideColumnHeaderDetails = computed(() => isQtr.value || usesPairedPreviewLayout.value)
+const hideColumnHeaderDetails = computed(
+  () => isQtr.value || speedRatio.value === '1:2' || speedRatio.value === '1:4',
+)
 const usesQuarterTurnHeaderLayout = computed(
   () =>
     supportsVtgPatternOrientation(speedRatio.value) &&
@@ -524,34 +542,58 @@ const matrixAddresses: readonly VtgMatrixAddress[] = leftRuleNumbers.flatMap(
 )
 
 const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
-  matrixAddresses.map((address) => {
-    const baseSelection: VtgPatternSelection = {
-      reference: address.reference,
-      speedRatio: speedRatio.value,
-      ...(spinToggleCells.has(address.reference) ? { isAnti: isAnti.value } : undefined),
-      ...(swapProps.value ? { swapProps: true } : undefined),
-      ...(reversePlane.value ? { reversePlane: true } : undefined),
-      ...(shape.value === 'box' ? { shape: shape.value } : undefined),
-      ...(beat.value === 1 ? undefined : { beat: beat.value }),
-      ...(transition.value ? { transition: true } : undefined),
-      ...(transition.value && transitionAfterBeat.value ? { transitionAfterBeat: true } : undefined),
-      ...(initialTurnsOffset.value === undefined
-        ? undefined
-        : {
-            initialTurnsOffset: initialTurnsOffset.value,
-            initialTurnsOffsetBeat: initialTurnsOffsetBeat.value,
-          }),
-      ...(supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0
-        ? { orientation: orientation.value }
-        : undefined),
-    }
-    const selection: VtgPatternSelection | QtrPatternSelection = isQtr.value
-      ? { ...baseSelection, quarters: 1 }
-      : baseSelection
+  matrixAddresses
+    .filter(
+      (address) =>
+        !props.builderActive || ((address.row === 1 || address.row === 6) && address.column <= 4),
+    )
+    .map((address) => {
+      const baseSelection: VtgPatternSelection = {
+        reference: address.reference,
+        speedRatio: speedRatio.value,
+        ...(spinToggleCells.has(address.reference) ? { isAnti: isAnti.value } : undefined),
+        ...(swapProps.value ? { swapProps: true } : undefined),
+        ...(reversePlane.value ? { reversePlane: true } : undefined),
+        ...(shape.value === 'box' ? { shape: shape.value } : undefined),
+        ...(beat.value === 1 ? undefined : { beat: beat.value }),
+        ...(transition.value ? { transition: true } : undefined),
+        ...(transition.value && transitionAfterBeat.value
+          ? { transitionAfterBeat: true }
+          : undefined),
+        ...(initialTurnsOffset.value === undefined
+          ? undefined
+          : {
+              initialTurnsOffset: initialTurnsOffset.value,
+              initialTurnsOffsetBeat: initialTurnsOffsetBeat.value,
+            }),
+        ...(supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0
+          ? { orientation: orientation.value }
+          : undefined),
+      }
+      const selection: VtgPatternSelection | QtrPatternSelection = isQtr.value
+        ? { ...baseSelection, quarters: 1 }
+        : baseSelection
 
-    return { ...address, ...describePatternSelectionRelationships(selection) }
-  }),
+      const relationships = describePatternSelectionRelationships(selection)
+      if (!props.builderActive) return { ...address, ...relationships }
+
+      const animation = isQtr.value
+        ? createDefaultQtrAnimation(selection as QtrPatternSelection)
+        : createDefaultVtgAnimation(selection as VtgPatternSelection)
+      if (!animation) throw new Error(`Missing Builder animation for ${selection.reference}`)
+
+      const label = describeVtgBuilderMotion(animation)
+      return {
+        ...address,
+        ...relationships,
+        label,
+        description: describeVtgBuilderMotionLabel(label),
+      }
+    }),
 )
+
+const displayCellReference = (tile: VtgMatrixTile): string =>
+  props.builderActive ? `${tile.row === 6 ? 2 : tile.row}-${tile.column}` : tile.reference
 
 const getTileDescription = (tile: VtgMatrixTile) => tile.description
 
@@ -620,9 +662,7 @@ const availablePatternOrientations = ref<readonly VtgPatternOrientation[]>(
 )
 let orientationResolutionVersion = 0
 
-const resolvePatternOrientations = async (
-  selection: VtgPatternSelection | QtrPatternSelection,
-) => {
+const resolvePatternOrientations = async (selection: VtgPatternSelection | QtrPatternSelection) => {
   if (props.patternMatcher) {
     return props.patternMatcher.getUniqueVtgPatternOrientations({ selection })
   }
@@ -745,12 +785,14 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
 }
 
 const renderedReferenceForTile = (tile: VtgMatrixTile) =>
-  usesPairedPreviewLayout.value
-    ? createCellReference(
-        tile.column % 2 === 0 ? ((tile.column - 1) as VtgRuleNumber) : tile.column,
-        tile.row,
-      )
-    : tile.reference
+  props.builderActive
+    ? tile.reference
+    : usesPairedPreviewLayout.value
+      ? createCellReference(
+          tile.column % 2 === 0 ? ((tile.column - 1) as VtgRuleNumber) : tile.column,
+          tile.row,
+        )
+      : tile.reference
 
 const emitBuilderPreview = (tile?: VtgMatrixTile) => {
   if (!props.builderActive) return
@@ -758,7 +800,8 @@ const emitBuilderPreview = (tile?: VtgMatrixTile) => {
     tile ??
     matrixTiles.value.find(
       (candidate) =>
-        candidate.column === selectedCell.value?.column && candidate.row === selectedCell.value?.row,
+        candidate.column === selectedCell.value?.column &&
+        candidate.row === selectedCell.value?.row,
     )
   if (!activeTile) return
 
@@ -858,9 +901,13 @@ const selectTile = (tile: VtgMatrixTile) => {
     suppressBuilderPointerClick = false
     return
   }
+  const isReselectedSpinToggleCell =
+    tile.reference === selectedCellReference.value && isSpinToggleCell(tile.reference)
+
   if (props.builderActive) {
     const suppressionOwner = beginPatternEmitSuppression()
     selectedCell.value = { column: tile.column, row: tile.row }
+    if (isReselectedSpinToggleCell) isAnti.value = !isAnti.value
     retainAvailableOrientation()
     releasePatternEmitSuppression(suppressionOwner)
     emitBuilderPreview(tile)
@@ -870,9 +917,6 @@ const selectTile = (tile: VtgMatrixTile) => {
     initialTurnsOffset.value = undefined
     initialTurnsOffsetBeat.value = undefined
   }
-  const isReselectedSpinToggleCell =
-    tile.reference === selectedCellReference.value && isSpinToggleCell(tile.reference)
-
   selectedCell.value = {
     column: tile.column,
     row: tile.row,
@@ -1319,7 +1363,8 @@ const displayedColumnRules = computed(() => {
       ? swappedColumnRuleNumbers
       : columnRuleNumbers
 
-  return columnRuleNumbers.map((column, index) => {
+  const displayedColumns = props.builderActive ? columnRuleNumbers.slice(0, 4) : columnRuleNumbers
+  return displayedColumns.map((column, index) => {
     const ruleNumber = ruleNumbers[index]
     const rule = columnRules.find((candidate) => candidate.number === ruleNumber)
     if (!rule) throw new Error(`Missing VTG column header rule ${ruleNumber}`)
@@ -1374,7 +1419,15 @@ const quarterDiagramOptions = computed(() => ({
   reversePlane: reversePlane.value,
 }))
 
-const displayedSideRules = computed<readonly VtgRuleSpec[]>(() => {
+type DisplayedSideRule = VtgRuleSpec & { sourceNumber?: VtgRuleNumber }
+
+const displayedSideRules = computed<readonly DisplayedSideRule[]>(() => {
+  if (props.builderActive) {
+    const first = sideRules[0]
+    const sixth = sideRules[5]
+    if (!first || !sixth) throw new Error('Missing compact Builder side rules')
+    return [first, { ...sixth, number: 2, sourceNumber: 6 }]
+  }
   if (!isQtr.value) return sideRules
 
   return sideRules.map((rule) => ({
@@ -1393,9 +1446,11 @@ const blankDimensions = reactive<BlankDimensions[]>(
   pairedPatternPreviewReferences.map(() => ({ width: 0, height: 0 })),
 )
 const displayedPreviews = computed(() => {
-  const references = usesPairedPreviewLayout.value
-    ? pairedPatternPreviewReferences
-    : patternPreviewReferences
+  const references = props.builderActive
+    ? builderPatternPreviewReferences
+    : usesPairedPreviewLayout.value
+      ? pairedPatternPreviewReferences
+      : patternPreviewReferences
 
   return references.map((reference) => {
     const [columnText, rowText] = reference.split('-')
@@ -1406,9 +1461,11 @@ const displayedPreviews = computed(() => {
     return {
       reference,
       rendererIndex,
-      style: usesPairedPreviewLayout.value
-        ? { gridColumn: `${column} / span 2`, gridRow: `${row}` }
-        : { gridColumn: `${column + 1}`, gridRow: `${row + 1}` },
+      style: props.builderActive
+        ? { gridColumn: `${column} / span 2`, gridRow: row === 6 ? '2' : '1' }
+        : usesPairedPreviewLayout.value
+          ? { gridColumn: `${column} / span 2`, gridRow: `${row}` }
+          : { gridColumn: `${column + 1}`, gridRow: `${row + 1}` },
     }
   })
 })
@@ -1428,7 +1485,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   orientation,
   initialTurnsOffset,
   initialTurnsOffsetBeat,
-  pairedLayout: usesPairedPreviewLayout,
+  activeReferences: computed(() => displayedPreviews.value.map(({ reference }) => reference)),
 })
 
 let blankObserver: ResizeObserver | undefined
@@ -1713,6 +1770,33 @@ defineExpose({
   grid-template-rows: repeat(7, minmax(0, 1fr));
   gap: 0.65%;
   padding: 0.65%;
+}
+
+.vtg-pane--builder-active .vtg-board {
+  aspect-ratio: 5 / 3;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+}
+
+.vtg-pane--builder-active .vtg-column-headers {
+  grid-column: 2 / span 4;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.vtg-pane--builder-active .vtg-sidebar {
+  grid-row: 2 / span 2;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.vtg-pane--builder-active .vtg-matrix {
+  grid-row: 2 / span 2;
+  grid-column: 2 / span 4;
+}
+
+.vtg-pane--builder-active .vtg-tile-grid,
+.vtg-pane--builder-active .vtg-blank-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
 .vtg-sidebar {

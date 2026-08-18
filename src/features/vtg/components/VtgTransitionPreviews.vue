@@ -20,20 +20,38 @@
       @dragleave="leavePatternDrop(index, $event)"
       @drop.prevent="dropPattern(index, $event)"
     >
-      <button
-        class="vtg-transition-previews__visual"
-        type="button"
-        :aria-label="`Preview pattern ${index + 1}`"
-        :aria-controls="touchDevice ? `vtg-transition-preview-delete-${index}` : undefined"
-        :aria-expanded="touchDevice ? revealedDeleteIndex === index : undefined"
-        @click="previewPattern(index)"
+      <BaseTooltip
+        class="vtg-transition-previews__tooltip"
+        :text="previewRelationships[index]?.description"
       >
-        <img
-          v-if="url"
-          class="vtg-transition-previews__image"
-          :src="url"
-          :alt="`45 Trans pattern ${index + 1}`"
-        />
+        <template #activator="{ props: tooltipProps }">
+          <button
+            v-bind="tooltipProps"
+            class="vtg-transition-previews__visual"
+            type="button"
+            :aria-label="`Preview pattern ${index + 1}`"
+            :aria-controls="touchDevice ? `vtg-transition-preview-delete-${index}` : undefined"
+            :aria-expanded="touchDevice ? revealedDeleteIndex === index : undefined"
+            @click="previewPattern(index)"
+          >
+            <img
+              v-if="url"
+              class="vtg-transition-previews__image"
+              :src="url"
+              :alt="`45 Trans pattern ${index + 1}`"
+            />
+            <span class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>
+          </button>
+        </template>
+      </BaseTooltip>
+      <button
+        class="vtg-transition-previews__reverse"
+        type="button"
+        :aria-label="`Reverse direction of pattern ${index + 1}`"
+        data-role="vtg-transition-preview-reverse"
+        @click.stop="emit('patternReverse', index)"
+      >
+        <BaseIcon :path="mdiRotate3dVariant" :size="18" />
       </button>
       <button
         :id="`vtg-transition-preview-delete-${index}`"
@@ -107,9 +125,11 @@ import { builderPatternDragType } from '@/features/builder/types'
 import type { BuilderPatternDrop } from '@/features/builder/types'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
+import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { vtgThickControl } from '@/features/vtg/data/vtgPlayerSettings'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
-import { mdiTrashCanOutline } from '@mdi/js'
+import BaseTooltip from '@/components/ui/BaseTooltip.vue'
+import { mdiRotate3dVariant, mdiTrashCanOutline } from '@mdi/js'
 import { isTouchDevice } from '@/utils/device'
 import {
   builderPatternPointerDropEvent,
@@ -137,11 +157,28 @@ const emit = defineEmits<{
   sliderEnd: []
   patternDrop: [drop: BuilderPatternDrop]
   patternDelete: [index: number]
+  patternReverse: [index: number]
   patternPreview: [animation: RootDataFinal]
 }>()
 const dragActive = ref(false)
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 const revealedDeleteIndex = ref<number>()
+const animationForRelationshipLabel = (animation: RootDataFinal): RootDataFinal => ({
+  ...animation,
+  props: animation.props.map((prop) => ({
+    ...prop,
+    anim:
+      prop.anim.length >= 3
+        ? prop.anim
+        : [...prop.anim, ...Array.from({ length: 3 - prop.anim.length }, () => ({}))],
+  })),
+})
+const previewRelationships = computed(() =>
+  props.animations.map((animation) =>
+    describePatternRelationships(animationForRelationshipLabel(animation)),
+  ),
+)
+const previewLabels = computed(() => previewRelationships.value.map(({ label }) => label))
 const pointerPosition = ref<{ x: number; y: number; reference: string }>()
 useEventListener(typeof document === 'undefined' ? null : document, 'dragstart', () => {
   dragActive.value = true
@@ -175,9 +212,9 @@ const dropPattern = (previewIndex: number, event: DragEvent) => {
   }
 }
 const pointerDropIndex = (clientX: number, clientY: number) => {
-  const target = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>(
-    '[data-preview-index]',
-  )
+  const target = document
+    .elementFromPoint(clientX, clientY)
+    ?.closest<HTMLElement>('[data-preview-index]')
   if (!target || !previewGrid.value?.contains(target)) return undefined
   const index = Number(target.dataset.previewIndex)
   return Number.isInteger(index) ? index : undefined
@@ -253,6 +290,7 @@ const { previewUrls, requestPreviews } = useConceptPreviewRenderer({
     }
   },
   label: 'VTG 45 Trans',
+  frame: 'final',
 })
 
 watch([width, () => props.columns], ([gridWidth]) => {
@@ -337,6 +375,11 @@ watch(
   border-radius: var(--radius-sm);
 }
 
+.vtg-transition-previews__tooltip {
+  display: flex;
+  width: 100%;
+}
+
 .vtg-transition-previews__visual:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
@@ -377,7 +420,62 @@ watch(
   outline-offset: 2px;
 }
 
+.vtg-transition-previews__reverse {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+  z-index: 2;
+  display: grid;
+  padding: var(--space-1);
+  color: var(--color-text);
+  cursor: pointer;
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  pointer-events: none;
+  place-items: center;
+}
+
+.vtg-transition-previews__item--delete-revealed .vtg-transition-previews__reverse,
+.vtg-transition-previews__reverse:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vtg-transition-previews__reverse:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .vtg-transition-previews__item:hover .vtg-transition-previews__reverse {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.vtg-transition-previews__label {
+  position: absolute;
+  bottom: var(--space-1);
+  left: 50%;
+  z-index: 1;
+  padding-inline: var(--space-1);
+  color: var(--color-text);
+  font-size: var(--font-size-concept-control);
+  font-weight: 800;
+  line-height: 1.4;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  border-radius: var(--radius-sm);
+  transform: translateX(-50%);
+}
+
 .vtg-transition-previews--drag-active .vtg-transition-previews__delete {
+  display: none;
+}
+
+.vtg-transition-previews--drag-active .vtg-transition-previews__reverse {
   display: none;
 }
 

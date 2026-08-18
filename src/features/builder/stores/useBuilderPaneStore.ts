@@ -9,7 +9,7 @@ export const useBuilderPaneStore = createPaneStore(
   builderPaneKeys,
   'hidden',
   {
-    top: 'player',
-    bottom: 'thumbnails',
+    top: 'thumbnails',
+    bottom: 'player',
   },
 )

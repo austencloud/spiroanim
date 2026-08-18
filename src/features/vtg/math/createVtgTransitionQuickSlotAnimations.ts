@@ -130,6 +130,46 @@ export const resizeVtgTransitionPatternPreview = (
   }
 }
 
+const reversedTravelPlane = (plane: number): number =>
+  ((((plane + 180 + 180) % 360) + 360) % 360) - 180
+
+/** Reverses one Builder segment and carries the plane correction into its successor. */
+export const reverseVtgTransitionPatternPreview = (
+  animation: RootDataFinal,
+  previewIndex: number,
+): RootDataFinal | undefined => {
+  const firstProp = animation.props[0]
+  if (!firstProp || animation.props.some((prop) => prop.anim.length !== firstProp.anim.length)) {
+    return undefined
+  }
+
+  const relationshipChangeFrames = findExplicitPlaneOrTurnsFrameIndices(
+    animation,
+    extractedPatternSourceFrameCount,
+  )
+  const sliceStarts = [0, ...relationshipChangeFrames.map((frameIndex) => frameIndex - 1)]
+  const selectedStart = sliceStarts[previewIndex]
+  if (selectedStart === undefined) return undefined
+
+  const movementFrameIndices = [selectedStart + 1]
+  const nextStart = sliceStarts[previewIndex + 1]
+  if (nextStart !== undefined) movementFrameIndices.push(nextStart + 1)
+
+  const compiled = rootCompile(animation)
+  return {
+    ...animation,
+    props: animation.props.map((prop, propIndex) => ({
+      ...prop,
+      anim: prop.anim.map((frame, frameIndex) => {
+        if (!movementFrameIndices.includes(frameIndex)) return { ...frame }
+        const effectivePlane = compiled.props[propIndex]?.anim[frameIndex]?.plane
+        if (effectivePlane === undefined) return { ...frame }
+        return { ...frame, plane: reversedTravelPlane(effectivePlane) }
+      }),
+    })),
+  }
+}
+
 /** Removes one Builder preview while preserving the authored relationship that follows it. */
 export const removeVtgTransitionPatternPreview = (
   animation: RootDataFinal,
