@@ -762,10 +762,7 @@ const emitBuilderPreview = (tile?: VtgMatrixTile) => {
     )
   if (!activeTile) return
 
-  emit(
-    'patternPreview',
-    createPatternSelection(activeTile, renderedReferenceForTile(activeTile)),
-  )
+  emit('patternPreview', createPatternSelection(activeTile))
 }
 
 const startBuilderDrag = (tile: VtgMatrixTile, event: DragEvent) => {
@@ -951,7 +948,7 @@ const resetPatternControls = async () => {
   releasePatternEmitSuppression(suppressionOwner)
   if (tile !== undefined) {
     if (props.builderActive) {
-      emit('customize', createPatternSelection(tile, renderedReferenceForTile(tile)))
+      emit('customize', createPatternSelection(tile))
       emitBuilderPreview(tile)
     } else emitPatternSelection(tile)
   }
@@ -1019,7 +1016,7 @@ watch(
     const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
     if (tile !== undefined) {
       if (props.builderActive) {
-        emit('customize', createPatternSelection(tile, renderedReferenceForTile(tile)))
+        emit('customize', createPatternSelection(tile))
       } else emitPatternSelection(tile)
     }
   },

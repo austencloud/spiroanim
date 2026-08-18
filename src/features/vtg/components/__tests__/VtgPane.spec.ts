@@ -2287,13 +2287,13 @@ describe('VtgPane', () => {
     expect(wrapper.get('.vtg-tile--selected').attributes('data-cell-reference')).toBe('2-1')
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
     expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
-      reference: '1-1',
+      reference: '2-1',
       speedRatio: '1:2',
       swapProps: true,
     })
     await reverse.setValue(false)
     expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
-      reference: '1-1',
+      reference: '2-1',
       speedRatio: '1:2',
       swapProps: true,
     })
@@ -2330,7 +2330,7 @@ describe('VtgPane', () => {
     await wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').setValue(9)
     expect(wrapper.emitted('patternSelect')?.length ?? 0).toBe(patternSelectionsBeforeBuilder)
     expect(wrapper.emitted('customize')?.at(-1)?.[0]).toMatchObject({
-      reference: '1-1',
+      reference: '2-1',
       speedRatio: '1:2',
       thick: 9,
     })

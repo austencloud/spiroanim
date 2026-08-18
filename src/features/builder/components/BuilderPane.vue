@@ -1,5 +1,10 @@
 <template>
-  <section class="builder-pane" data-role="builder-view" aria-labelledby="builder-pane-title">
+  <section
+    ref="builderPaneHost"
+    class="builder-pane"
+    data-role="builder-view"
+    aria-labelledby="builder-pane-title"
+  >
     <button
       class="builder-pane__exit"
       type="button"
@@ -20,105 +25,148 @@
       </AppTooltip>
     </div>
 
-    <div class="builder-pane__scroll scrollbar">
-      <header class="builder-pane__header">
-        <h1 id="builder-pane-title">Pattern Builder</h1>
-      </header>
+    <div
+      v-show="paneVisible.top"
+      ref="eTop"
+      class="builder-pane__pane"
+      data-role="top-pane"
+      :style="topStyle"
+    />
+    <div
+      v-show="paneVisible.bottom"
+      ref="eBottom"
+      class="builder-pane__pane"
+      :class="{ 'builder-pane__pane--divided': paneVisible.top && paneVisible.bottom }"
+      data-role="bottom-pane"
+      :style="bottomStyle"
+    />
 
-      <p
-        v-if="!isEmptyPattern && !preparedPattern.supported"
-        class="builder-pane__support-error"
-        data-role="vtg-transition-support-error"
-        role="alert"
+    <div v-show="false" ref="eHidden">
+      <div
+        ref="eThumbnails"
+        class="builder-pane__thumbnails"
+        data-type="thumbnails"
+        data-role="builder-thumbnails"
       >
-        Pattern not supported.
-      </p>
-      <VtgTransitionPreviews
-        v-if="resizedPreviewAnimations"
-        :key="resizedPreviewAnimations.length"
-        :animations="resizedPreviewAnimations"
-        :refresh-key="previewRefreshKey"
-        :columns="columns"
-        :initial-beat-counts="baselineBeatCounts"
-        :beat-counts="currentBeatCounts"
-        :scale="scale"
-        @pattern-drop="acceptPatternDrop"
-        @pattern-delete="deletePreview"
-        @pattern-preview="previewPattern"
-        @beat-change="updatePreviewBeatCount"
-        @slider-start="beginSliderHistory"
-        @slider-end="endSliderHistory"
-      />
+        <div class="builder-pane__scroll scrollbar">
+          <header class="builder-pane__header">
+            <h1 id="builder-pane-title">Pattern Builder</h1>
+          </header>
 
-      <div ref="miniPlayerHost" class="builder-pane__mini-player" data-role="builder-player">
-        <AnimPlayer
-          v-if="miniPlayerDimensions.width > 0 && miniPlayerDimensions.height > 0"
-          store="main"
-          minimal
-          :dim="miniPlayerDimensions"
-        />
-        <div v-if="PLAYBACK_PREVIEW_ACTIVE" class="builder-pane__player-revert">
-          <AppTooltip :text="`Return to the loaded pattern (${remainingSeconds}s remaining)`">
+          <p
+            v-if="!isEmptyPattern && !preparedPattern.supported"
+            class="builder-pane__support-error"
+            data-role="vtg-transition-support-error"
+            role="alert"
+          >
+            Pattern not supported.
+          </p>
+          <VtgTransitionPreviews
+            v-if="resizedPreviewAnimations"
+            :key="resizedPreviewAnimations.length"
+            :animations="resizedPreviewAnimations"
+            :refresh-key="previewRefreshKey"
+            :columns="columns"
+            :initial-beat-counts="baselineBeatCounts"
+            :beat-counts="currentBeatCounts"
+            :scale="scale"
+            @pattern-drop="acceptPatternDrop"
+            @pattern-delete="deletePreview"
+            @pattern-preview="previewPattern"
+            @beat-change="updatePreviewBeatCount"
+            @slider-start="beginSliderHistory"
+            @slider-end="endSliderHistory"
+          />
+
+          <p class="builder-pane__development-warning" role="note">
+            Pattern Builder is under active development. Features and generated patterns may change.
+            <br />
+            <strong>Not yet tested on MOBILE.</strong>
+          </p>
+        </div>
+
+        <div class="builder-pane__column-control" role="group" aria-label="Builder Columns">
+          <AppTooltip text="Decrease Builder Columns">
             <template #activator="{ props: tooltipProps }">
               <button
                 v-bind="tooltipProps"
-                class="builder-pane__player-revert-button"
                 type="button"
-                :aria-label="`Return player to loaded pattern, ${remainingSeconds} seconds remaining`"
-                data-role="builder-preview-countdown"
-                @click="playerStore.endPlaybackPreview"
+                aria-label="Decrease Builder Columns"
+                :disabled="columns <= MIN_BUILDER_COLUMNS"
+                @click="decreaseColumns"
               >
-                {{ remainingSeconds }}
+                <BaseIcon :path="mdiMinus" :size="20" />
+              </button>
+            </template>
+          </AppTooltip>
+          <output aria-live="polite">{{ columns }}</output>
+          <AppTooltip text="Increase Builder Columns">
+            <template #activator="{ props: tooltipProps }">
+              <button
+                v-bind="tooltipProps"
+                type="button"
+                aria-label="Increase Builder Columns"
+                :disabled="columns >= MAX_BUILDER_COLUMNS"
+                @click="increaseColumns"
+              >
+                <BaseIcon :path="mdiPlus" :size="20" />
               </button>
             </template>
           </AppTooltip>
         </div>
       </div>
 
-      <p class="builder-pane__development-warning" role="note">
-        Pattern Builder is under active development. Features and generated patterns may change.
-        <br />
-        <strong>Not yet tested on MOBILE.</strong>
-      </p>
+      <div ref="ePlayer" class="builder-pane__player" data-type="player" data-role="builder-player">
+        <div ref="miniPlayerHost" class="builder-pane__mini-player">
+          <AnimPlayer
+            v-if="miniPlayerDimensions.width > 0 && miniPlayerDimensions.height > 0"
+            store="main"
+            minimal
+            :dim="miniPlayerDimensions"
+          />
+          <div v-if="PLAYBACK_PREVIEW_ACTIVE" class="builder-pane__player-revert">
+            <AppTooltip :text="`Return to the loaded pattern (${remainingSeconds}s remaining)`">
+              <template #activator="{ props: tooltipProps }">
+                <button
+                  v-bind="tooltipProps"
+                  class="builder-pane__player-revert-button"
+                  type="button"
+                  :aria-label="`Return player to loaded pattern, ${remainingSeconds} seconds remaining`"
+                  data-role="builder-preview-countdown"
+                  @click="playerStore.endPlaybackPreview"
+                >
+                  {{ remainingSeconds }}
+                </button>
+              </template>
+            </AppTooltip>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="builder-pane__column-control" role="group" aria-label="Builder Columns">
-      <AppTooltip text="Decrease Builder Columns">
-        <template #activator="{ props: tooltipProps }">
-          <button
-            v-bind="tooltipProps"
-            type="button"
-            aria-label="Decrease Builder Columns"
-            :disabled="columns <= MIN_BUILDER_COLUMNS"
-            @click="decreaseColumns"
-          >
-            <BaseIcon :path="mdiMinus" :size="20" />
-          </button>
-        </template>
-      </AppTooltip>
-      <output aria-live="polite">{{ columns }}</output>
-      <AppTooltip text="Increase Builder Columns">
-        <template #activator="{ props: tooltipProps }">
-          <button
-            v-bind="tooltipProps"
-            type="button"
-            aria-label="Increase Builder Columns"
-            :disabled="columns >= MAX_BUILDER_COLUMNS"
-            @click="increaseColumns"
-          >
-            <BaseIcon :path="mdiPlus" :size="20" />
-          </button>
-        </template>
-      </AppTooltip>
-    </div>
+    <PaneSwapButton
+      class="builder-pane__swap"
+      label="Swap Builder Views"
+      :icon="mdiSwapVerticalBold"
+      @click="swapViews"
+    />
+    <PaneSplitter
+      data-role="splitter-builder"
+      :parent="builderDimensions"
+      :object="topDimensions"
+      :landscape="false"
+      @perc="setTopPercentage"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
-import { mdiMinus, mdiPlus, mdiUndoVariant } from '@mdi/js'
+import { mdiMinus, mdiPlus, mdiSwapVerticalBold, mdiUndoVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
+import PaneSplitter from '@/components/layout/PaneSplitter.vue'
+import PaneSwapButton from '@/components/layout/PaneSwapButton.vue'
 import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import {
@@ -148,8 +196,51 @@ import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDis
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import { PROPTIMES } from '@/math/animation/PlayerFunc'
+import { useBuilderPaneStore } from '@/features/builder/stores/useBuilderPaneStore'
+import { useSplitterStore } from '@/stores/useSplitterStore'
 
 const paneStore = useMainPaneStore()
+const builderPaneStore = useBuilderPaneStore()
+const { setViewInPane } = builderPaneStore
+const { parents, paneVisible, ePlayer, eThumbnails, eTop, eBottom, eHidden } =
+  storeToRefs(builderPaneStore)
+const splitterStore = useSplitterStore('builder', 'top', 'bottom')
+const { topWidth, topHeight, topPerc } = storeToRefs(splitterStore)
+const builderPaneHost = ref<HTMLElement>()
+const { width: builderWidth, height: builderHeight } = useElementSize(builderPaneHost)
+const builderDimensions = computed(() => ({
+  width: builderWidth.value,
+  height: builderHeight.value,
+  perc: 1,
+}))
+const topDimensions = computed(() => ({
+  width: topWidth.value,
+  height: topHeight.value,
+  perc: 1,
+}))
+const topFlex = computed(() => `0 0 ${topPerc.value}%`)
+const bottomFlex = computed(() => `0 0 ${100 - topPerc.value}%`)
+const topStyle = computed<CSSProperties>(() => ({ flex: topFlex.value }))
+const bottomStyle = computed<CSSProperties>(() => ({ flex: bottomFlex.value }))
+
+watchImmediate(topPerc, (percentage) => {
+  paneVisible.value.top = percentage > 0
+  paneVisible.value.bottom = percentage < 100
+})
+
+onMounted(() => splitterStore.trackElements(eTop.value, eBottom.value))
+
+const setTopPercentage = (percentage: number) => {
+  if (percentage < 5) percentage = 0
+  else if (percentage < 20) percentage = 20
+  else if (percentage > 95) percentage = 100
+  else if (percentage > 80) percentage = 80
+  topPerc.value = percentage
+}
+
+const swapViews = () => {
+  setViewInPane('player', parents.value.player === 'top' ? 'bottom' : 'top')
+}
 const playerStore = usePlayerStore('main')
 const qsStore = useQSMainStore()
 const { ROOT, CURRENT } = playerStore.raw()
@@ -299,6 +390,31 @@ const exit = () => {
   overflow: hidden;
   color: var(--color-text);
   background: transparent;
+  display: flex;
+  flex-direction: column;
+}
+
+.builder-pane__pane {
+  position: relative;
+  box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.builder-pane__pane--divided {
+  border-block-start: 1px solid var(--color-border);
+}
+
+.builder-pane__thumbnails,
+.builder-pane__player {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.builder-pane__thumbnails {
+  container-type: inline-size;
 }
 
 .builder-pane__scroll {
@@ -365,13 +481,13 @@ const exit = () => {
 
 .builder-pane__mini-player {
   position: relative;
-  width: min(calc(100% - var(--space-4)), 45rem);
-  height: clamp(14rem, 48cqi, 26rem);
-  margin: var(--space-4) auto 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  background: color-mix(in srgb, var(--color-surface) 30%, transparent);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   box-shadow: var(--shadow-sm);
 }
 
@@ -427,12 +543,11 @@ const exit = () => {
 
 .builder-pane__controls {
   position: absolute;
-  z-index: 2;
-  top: 2px;
-  right: 2px;
+  z-index: 3;
+  top: calc(var(--space-2) + var(--size-pane-switch-button) + var(--space-2));
+  right: calc(var(--space-2) + var(--size-editor-scrollbar));
   display: flex;
   width: max-content;
-  height: 0;
   gap: var(--space-1);
   align-items: flex-start;
 }
@@ -451,6 +566,17 @@ const exit = () => {
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   transform: translateX(-50%);
+}
+
+.builder-pane__swap {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-workspace-bottom-offset);
+  z-index: 3;
+}
+
+.builder-pane :deep(.pane-splitter) {
+  z-index: 3;
 }
 
 .builder-pane__column-control button {
@@ -503,8 +629,8 @@ const exit = () => {
 
 .builder-pane__exit {
   position: absolute;
-  bottom: var(--space-workspace-bottom-offset);
-  left: var(--space-2);
+  top: var(--space-2);
+  right: calc(var(--space-2) + var(--size-editor-scrollbar));
   z-index: 3;
   min-width: 5rem;
   min-height: var(--size-pane-switch-button);

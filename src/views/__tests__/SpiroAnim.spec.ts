@@ -180,6 +180,28 @@ describe('SpiroAnim view', () => {
     expect(playerStore.raw().CURRENT.value).toBe(insertedStartMS)
     expect(playerStore.PLAYING).toBe(false)
     expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('4')
+    const builderView = wrapper.get('[data-role="builder-pane-view"]')
+    const builderTopPane = builderView.get('[data-role="top-pane"]')
+    const builderBottomPane = builderView.get('[data-role="bottom-pane"]')
+    expect(
+      wrapper.get('[data-role="builder-player"]').element.closest('[data-role="top-pane"]'),
+    ).toBe(builderTopPane.element)
+    expect(
+      wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="bottom-pane"]'),
+    ).toBe(builderBottomPane.element)
+    expect(
+      wrapper
+        .get('[aria-label="Builder Columns"]')
+        .element.closest('[data-role="builder-thumbnails"]'),
+    ).toBe(wrapper.get('[data-role="builder-thumbnails"]').element)
+    await wrapper.get('button[aria-label="Swap Builder Views"]').trigger('click')
+    await flushPromises()
+    expect(
+      wrapper.get('[data-role="builder-player"]').element.closest('[data-role="bottom-pane"]'),
+    ).toBe(builderBottomPane.element)
+    expect(
+      wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="top-pane"]'),
+    ).toBe(builderTopPane.element)
     await wrapper.get('button[aria-label="Increase Builder Columns"]').trigger('click')
     expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('5')
     expect(
