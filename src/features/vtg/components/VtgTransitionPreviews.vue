@@ -29,16 +29,19 @@
             v-bind="tooltipProps"
             class="vtg-transition-previews__visual"
             type="button"
+            draggable="false"
             :aria-label="`Preview pattern ${index + 1}`"
             :aria-controls="touchDevice ? `vtg-transition-preview-delete-${index}` : undefined"
             :aria-expanded="touchDevice ? revealedDeleteIndex === index : undefined"
             @click="previewPattern(index)"
+            @dragstart.prevent
           >
             <img
               v-if="url"
               class="vtg-transition-previews__image"
               :src="url"
               :alt="`45 Trans pattern ${index + 1}`"
+              draggable="false"
             />
             <span class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>
           </button>

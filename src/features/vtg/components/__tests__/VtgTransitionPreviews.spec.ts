@@ -38,6 +38,9 @@ describe('VtgTransitionPreviews', () => {
     expect(
       wrapper.get('button[aria-label="Preview pattern 1"]').attributes('aria-describedby'),
     ).toBeTruthy()
+    expect(wrapper.get('button[aria-label="Preview pattern 1"]').attributes('draggable')).toBe(
+      'false',
+    )
 
     await wrapper.get('button[aria-label="Reverse direction of pattern 1"]').trigger('click')
     expect(wrapper.emitted('patternReverse')).toEqual([[0]])
