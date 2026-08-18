@@ -244,14 +244,33 @@ const findBaseVtgPatternMatches = (
 ): readonly VtgPatternMatch[] =>
   findBaseVtgCandidateMatches(animation, rotationFilter, true, stopAtFirstMatchingOrientationTier)
 
+const normalizeAuthoredHalfTurnPlanes = (animation: RootDataFinal): RootDataFinal => {
+  if (!animation.props.some((prop) => prop.anim.some((frame) => frame.plane === -180))) {
+    return animation
+  }
+
+  return {
+    ...animation,
+    props: animation.props.map((prop) => ({
+      ...prop,
+      anim: prop.anim.map((frame) => (frame.plane === -180 ? { ...frame, plane: 180 } : frame)),
+    })),
+  }
+}
+
 const findVtgPatternMatchesInternal = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
   stopAtFirstMatchingOrientationTier = false,
 ): readonly VtgPatternMatch[] => {
-  const alternating = analyzeAlternatingPatternPlayback(animation)
+  const normalizedAnimation = normalizeAuthoredHalfTurnPlanes(animation)
+  const alternating = analyzeAlternatingPatternPlayback(normalizedAnimation)
   if (!alternating) {
-    return findBaseVtgPatternMatches(animation, rotationFilter, stopAtFirstMatchingOrientationTier)
+    return findBaseVtgPatternMatches(
+      normalizedAnimation,
+      rotationFilter,
+      stopAtFirstMatchingOrientationTier,
+    )
   }
 
   return findBaseVtgCandidateMatches(

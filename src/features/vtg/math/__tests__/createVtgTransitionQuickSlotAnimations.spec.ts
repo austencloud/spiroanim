@@ -48,6 +48,33 @@ const selectDetectableAnimations = (
 }
 
 describe('createVtgTransitionQuickSlotAnimations', () => {
+  it('keeps a supplied Builder pattern matchable after reversing one segment twice', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const source = codec.decodeQS(
+      queryFrom(
+        'r=Ew08Yk11Y&p0=Q__.mBE_____q.5JEsR....._ZEvF............_ZEsR......&m0=_1_mxqv__&p1=N__.07______q.5L_sR..........._ZEvF............_ZEsR&c=_f_bhq&v=6',
+      ),
+    )
+    const once = reverseVtgTransitionPatternPreview(source, 1)
+    const twice = once && reverseVtgTransitionPatternPreview(once, 1)
+    if (!twice) throw new Error('Expected the second Builder segment to reverse twice')
+
+    expect(rootCompile(twice)).toEqual(rootCompile(source))
+    expect(findVtgPatternMatch(twice)).toBeDefined()
+
+    const legacyNegativeHalfTurn = codec.decodeQS(
+      queryFrom(
+        'r=Ew08Yk11Y&p0=Q__.mBE_____q.5JEsR....._U0vF......_WQ......_ZEsR......&m0=_1_mxqv__&p1=N__.07______q.5L_sR....._WQ......_U0vF............_ZEsR&c=_f_bhq&v=6',
+      ),
+    )
+    expect(findVtgPatternMatch(legacyNegativeHalfTurn)).toBeDefined()
+  })
+
   it('reverses both prop planes for one segment and its immediate successor', () => {
     const source = createDefaultVtgAnimation({
       reference: '5-1',

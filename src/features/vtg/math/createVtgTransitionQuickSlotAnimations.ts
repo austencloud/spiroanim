@@ -131,7 +131,7 @@ export const resizeVtgTransitionPatternPreview = (
 }
 
 const reversedTravelPlane = (plane: number): number =>
-  ((((plane + 180 + 180) % 360) + 360) % 360) - 180
+  (((plane + 180) % 360) + 360) % 360
 
 /** Reverses one Builder segment and carries the plane correction into its successor. */
 export const reverseVtgTransitionPatternPreview = (
