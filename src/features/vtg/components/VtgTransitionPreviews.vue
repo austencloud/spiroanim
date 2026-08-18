@@ -83,6 +83,19 @@
     >
       <span>Drag and drop a pattern here</span>
     </div>
+
+    <div
+      v-if="dragActive && pointerPosition"
+      class="vtg-transition-previews__pointer-drag"
+      :style="{
+        insetInlineStart: `${pointerPosition.x}px`,
+        insetBlockStart: `${pointerPosition.y}px`,
+      }"
+      data-role="vtg-pattern-pointer-drag"
+      aria-hidden="true"
+    >
+      {{ pointerPosition.reference }}
+    </div>
   </div>
 </template>
 
@@ -129,6 +142,7 @@ const emit = defineEmits<{
 const dragActive = ref(false)
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 const revealedDeleteIndex = ref<number>()
+const pointerPosition = ref<{ x: number; y: number; reference: string }>()
 useEventListener(typeof document === 'undefined' ? null : document, 'dragstart', () => {
   dragActive.value = true
 })
@@ -171,6 +185,11 @@ const pointerDropIndex = (clientX: number, clientY: number) => {
 const handlePointerMove = (event: Event) => {
   const detail = (event as CustomEvent<BuilderPatternPointerDetail>).detail
   dragActive.value = true
+  pointerPosition.value = {
+    x: detail.clientX,
+    y: detail.clientY,
+    reference: detail.selection.reference,
+  }
   dragOverIndex.value = pointerDropIndex(detail.clientX, detail.clientY)
 }
 const handlePointerDrop = (event: Event) => {
@@ -179,10 +198,12 @@ const handlePointerDrop = (event: Event) => {
   if (previewIndex !== undefined) emit('patternDrop', { previewIndex, selection: detail.selection })
   dragActive.value = false
   dragOverIndex.value = undefined
+  pointerPosition.value = undefined
 }
 const endPointerDrag = () => {
   dragActive.value = false
   dragOverIndex.value = undefined
+  pointerPosition.value = undefined
 }
 useEventListener(
   touchDevice && typeof document !== 'undefined' ? document : null,
@@ -266,6 +287,26 @@ watch(
 
 .vtg-transition-previews__item--drag-over {
   box-shadow: 0 0 0 2px var(--color-action-primary);
+}
+
+.vtg-transition-previews__pointer-drag {
+  position: fixed;
+  z-index: 1100;
+  display: grid;
+  min-width: 3rem;
+  min-height: 3rem;
+  padding: var(--space-2);
+  color: var(--color-on-action-primary);
+  font-size: var(--font-size-concept-control);
+  font-weight: 800;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--color-action-primary) 82%, transparent);
+  border: 2px solid var(--color-on-action-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  opacity: 0.9;
+  place-items: center;
+  transform: translate(-50%, -50%);
 }
 
 .vtg-transition-previews__placeholder {

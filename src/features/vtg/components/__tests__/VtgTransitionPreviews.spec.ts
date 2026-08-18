@@ -110,6 +110,7 @@ describe('VtgTransitionPreviews', () => {
     )
     await nextTick()
     expect(target.classes()).toContain('vtg-transition-previews__item--drag-over')
+    expect(wrapper.get('[data-role="vtg-pattern-pointer-drag"]').text()).toBe('1-1')
 
     document.dispatchEvent(
       createBuilderPatternPointerEvent(builderPatternPointerDropEvent, {
@@ -120,6 +121,7 @@ describe('VtgTransitionPreviews', () => {
     )
     await nextTick()
     expect(wrapper.emitted('patternDrop')).toEqual([[{ previewIndex: 0, selection }]])
+    expect(wrapper.find('[data-role="vtg-pattern-pointer-drag"]').exists()).toBe(false)
 
     Reflect.deleteProperty(document, 'elementFromPoint')
     wrapper.unmount()

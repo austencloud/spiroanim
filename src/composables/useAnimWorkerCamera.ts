@@ -28,6 +28,9 @@ export function useAnimWorkerCamera(
   )
   const controls = new OrbitControls(camera, eCanvas.value)
   controls.enabled = interactive
+  // OrbitControls claims all touch gestures when constructed, even while disabled. Minimal players
+  // are non-interactive surfaces, so allow their scroll container to own vertical touch movement.
+  if (!interactive && eCanvas.value) eCanvas.value.style.touchAction = 'pan-y'
   let interacting = false
   let acquired = false
   let acquisition = 0
