@@ -601,7 +601,6 @@ const displayCellReference = (tile: VtgMatrixTile): string =>
 const getTileDescription = (tile: VtgMatrixTile) => tile.description
 
 const selectedCell = ref<VtgCellAddress>()
-const matchedBuilderControlKey = ref<string>()
 const patternControlKey = computed(() =>
   JSON.stringify([
     speedRatio.value,
@@ -1173,10 +1172,8 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
         ? defaultPatternPropColors[1]
         : COLORS[animation.props[1].color]
     isQtr.value = result.status === 'matched' && result.source === 'qtr'
-    matchedBuilderControlKey.value = patternControlKey.value
   } else {
     selectedCell.value = undefined
-    matchedBuilderControlKey.value = undefined
     isQtr.value = false
     isAnti.value = false
     shape.value = 'diamond'
@@ -1237,8 +1234,8 @@ watch(
   (active) => {
     hydrationVersion++
     if (active) {
-      if (selectedCell.value) matchedBuilderControlKey.value = patternControlKey.value
       const suppressionOwner = beginPatternEmitSuppression()
+      selectedCell.value = undefined
       isQtr.value = false
       shape.value = 'diamond'
       orientation.value = 0
@@ -1500,7 +1497,7 @@ const observeDisplayedPreviews = () => {
     .forEach((element) => blankObserver?.observe(element))
 }
 
-watch(usesPairedPreviewLayout, () => void nextTick(observeDisplayedPreviews))
+watch(displayedPreviews, () => void nextTick(observeDisplayedPreviews))
 
 onMounted(() => {
   componentMounted = true

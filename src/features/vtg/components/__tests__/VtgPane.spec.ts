@@ -2231,6 +2231,26 @@ describe('VtgPane', () => {
     await expectNineMorePreviews(() => reportAllBlankDimensions(80, 76))
   })
 
+  it('observes and refreshes every paired-ratio thumbnail after exiting Builder', async () => {
+    useConceptsStore().speedRatio = '1:2'
+    const wrapper = mount(VtgPane, { props: { builderActive: true } })
+    await settlePreviewRendering()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(4)
+    expect(countWorkerMessages('data')).toBe(4)
+
+    await wrapper.setProps({ builderActive: false })
+    await nextTick()
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+
+    expect(countWorkerMessages('data')).toBe(22)
+  })
+
   it('keeps Builder table controls non-mutating while exposing cells as drag sources', async () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     if (!animation) throw new Error('Expected a supported VTG animation')
@@ -2250,13 +2270,13 @@ describe('VtgPane', () => {
     expect(builderLabel).toMatch(/^[AI]{2}\/[SO]{2}$/)
     expect(builderLabel).not.toBe(standardLabel)
     expect(tile.attributes('draggable')).toBe('true')
-    expect(wrapper.get('.vtg-tile--selected').attributes('data-cell-reference')).toBe('1-1')
+    expect(wrapper.find('.vtg-tile--selected').exists()).toBe(false)
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(8)
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(4)
     expect(wrapper.get('[data-role="vtg-column-headers"]').text()).not.toBe('')
     expect(wrapper.get('[data-role="vtg-sidebar"]').text()).not.toBe('')
     expect(wrapper.find('[data-role="vtg-shuffle"]').exists()).toBe(true)
-    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(5)
+    expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(0)
     expect(wrapper.find('[data-role="vtg-swap"]').exists()).toBe(false)
     const reverse = wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]')
     expect(reverse.attributes('aria-label')).toBe('Rotate floor plane by 180 degrees')
@@ -2266,11 +2286,7 @@ describe('VtgPane', () => {
 
     const previewsBeforeReverse = wrapper.emitted('patternPreview')?.length ?? 0
     await reverse.setValue(true)
-    expect(wrapper.emitted('patternPreview')).toHaveLength(previewsBeforeReverse + 1)
-    expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
-      reference: '1-1',
-      reversePlane: true,
-    })
+    expect(wrapper.emitted('patternPreview')?.length ?? 0).toBe(previewsBeforeReverse)
     await tile.trigger('click')
     expect(tile.attributes('aria-pressed')).toBe('true')
     expect(wrapper.emitted('patternSelect')?.length ?? 0).toBe(patternSelectionsBeforeBuilder)
