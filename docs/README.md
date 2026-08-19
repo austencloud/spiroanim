@@ -24,6 +24,8 @@ details.
 
 - [`VTG_AND_QUARTER_SPACING.md`](./VTG_AND_QUARTER_SPACING.md) - VTG and integrated QTR controls,
   builders, transforms, matching, relationship classification, and headers.
+- [`VTG_TIMING_RATIOS.md`](./VTG_TIMING_RATIOS.md) - mathematical definition of VTG timing ratios,
+  petals, accumulated arc, and per-segment Turns derivation.
 - [`QUICK_SLOTS.md`](./QUICK_SLOTS.md) - persisted animation slots, route and pane semantics,
   touch interaction, Timeline placement, and named sets.
 - [`EIGHT_STEP.md`](./EIGHT_STEP.md) - Eight Step source pages, per-cell frame derivation, curve
@@ -53,6 +55,7 @@ details.
 | Encoded URL fields, ranges, bits, or versions     | `QUERY_STRING_FORMAT.md`       |
 | URL hydration, replacement, undo, or redo         | `QUERY_STATE_AND_HISTORY.md`   |
 | VTG or Quarter Spacing controls and relationships | `VTG_AND_QUARTER_SPACING.md`   |
+| VTG ratio, petal, Arc, or Turns mathematics       | `VTG_TIMING_RATIOS.md`         |
 | Quick Slot persistence, routing, or named sets    | `QUICK_SLOTS.md`               |
 | Eight Step definitions, transforms, or matching   | `EIGHT_STEP.md`                |
 | Quarter Space Tech catalog and diagrams           | `QUARTER_SPACE_TECH.md`        |
