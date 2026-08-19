@@ -172,7 +172,7 @@ describe('45 Trans initial-turn matching', () => {
     for (const speedRatio of oddRatios) {
       for (const row of rules) {
         for (const column of rules) {
-          const reference: VtgCellReference = `${column}-${row}`
+          const reference: VtgCellReference = `${row}-${column}`
           for (const shape of ['diamond', 'box'] as const) {
             for (const beat of [1, 2, 3, 4] as const) {
               for (const orientation of getVtgPatternOrientations(speedRatio)) {

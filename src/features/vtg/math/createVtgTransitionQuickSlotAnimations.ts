@@ -105,9 +105,13 @@ export const reverseVtgTransitionPatternPreview = (
       ...prop,
       anim: prop.anim.map((frame, frameIndex) => {
         if (!movementFrameIndices.includes(frameIndex)) return { ...frame }
-        const effectivePlane = compiled.props[propIndex]?.anim[frameIndex]?.plane
-        if (effectivePlane === undefined) return { ...frame }
-        return { ...frame, plane: reversedTravelPlane(effectivePlane) }
+        const compiledFrame = compiled.props[propIndex]?.anim[frameIndex]
+        if (!compiledFrame) return { ...frame }
+        return {
+          ...frame,
+          plane: reversedTravelPlane(compiledFrame.plane),
+          axis: reversedTravelPlane(compiledFrame.axis),
+        }
       }),
     })),
   }

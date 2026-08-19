@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
-import { mergeConfig, defineConfig, configDefaults } from 'vitest/config'
+
+import { defineConfig, mergeConfig } from 'vitest/config'
 import { createViteConfig } from './vite.config.ts'
 
 export default mergeConfig(
@@ -7,11 +8,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'jsdom',
-      exclude: [
-        ...configDefaults.exclude,
-        'e2e/**',
-        'src/features/vtg/__tests__/exhaustiveVtgPatternDetection.spec.ts',
-      ],
+      include: ['src/features/vtg/__tests__/exhaustiveVtgPatternDetection.spec.ts'],
       root: fileURLToPath(new URL('./', import.meta.url)),
     },
   }),

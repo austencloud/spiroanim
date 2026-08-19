@@ -204,7 +204,7 @@ describe('VTG 45 transition catalog audit', () => {
       for (const speedRatio of vtgSpeedRatios) {
         for (const row of ruleNumbers) {
           for (const column of ruleNumbers) {
-            const reference: VtgCellReference = `${column}-${row}`
+            const reference: VtgCellReference = `${row}-${column}`
             for (const shape of shapes) {
               for (const beat of vtgBeats) {
                 for (const mode of transitionModes) {
@@ -323,7 +323,7 @@ describe('VTG 45 transition catalog audit', () => {
       for (const speedRatio of vtgSpeedRatios) {
         for (const row of ruleNumbers) {
           for (const column of ruleNumbers) {
-            const reference: VtgCellReference = `${column}-${row}`
+            const reference: VtgCellReference = `${row}-${column}`
             for (const shape of ['diamond', 'box'] as const) {
               for (const quarters of [false, true] as const) {
                 const selection = {

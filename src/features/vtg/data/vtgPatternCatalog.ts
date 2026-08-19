@@ -17,33 +17,26 @@ const catalog: Readonly<Partial<Record<VtgCellReference, Readonly<VtgPatternDefi
   ...vtgRowPatterns,
 }
 
-/** These source patterns have an intentional fixed shape and ignore Diamond/Box transforms. */
+/** @deprecated Retained for source compatibility; VTG no longer applies shape transforms. */
 export const vtgFixedShapeCells: ReadonlySet<VtgCellReference> = new Set([
-  '1-1',
-  '1-2',
-  '2-1',
-  '2-2',
-  '3-3',
-  '3-4',
-  '4-3',
-  '4-4',
+  '1-1', '1-2', '2-1', '2-2', '3-3', '3-4', '4-3', '4-4',
 ])
 
-/** The paired ratios intentionally allow Tilted to transform the otherwise fixed-shape cells. */
+/** @deprecated Retained for source compatibility; VTG no longer applies shape transforms. */
 export const hasFixedVtgPatternShape = (
   reference: VtgCellReference,
-  speedRatio: VtgPatternSelection['speedRatio'],
-): boolean => vtgFixedShapeCells.has(reference) && speedRatio !== '1:2' && speedRatio !== '1:4'
+  _speedRatio: VtgPatternSelection['speedRatio'],
+): boolean => vtgFixedShapeCells.has(reference)
 
 export const buildVtgPattern = (
   selection: VtgPatternSelection,
 ): VtgReadableAnimation | undefined => {
-  const buildPattern = catalog[selection.reference]?.patternsBySpeedRatio[selection.speedRatio]
-  const pattern = buildPattern?.(selection.isAnti === true)
+  const pattern = catalog[selection.reference]?.build(
+    selection.isAnti === true,
+    selection.speedRatio,
+  )
   if (pattern === undefined) return undefined
 
-  const applyBoxShape =
-    selection.shape === 'box' && !hasFixedVtgPatternShape(selection.reference, selection.speedRatio)
   const adjustedScale = getAdjustedVtgScale(
     selection.scale ?? vtgScaleControl.default,
     selection.speedRatio,
@@ -51,23 +44,15 @@ export const buildVtgPattern = (
   const applyScale = selection.scale !== undefined || adjustedScale !== vtgScaleControl.default
 
   const transformedProps =
-    applyScale || applyBoxShape
+    applyScale
       ? pattern.props.map((prop) => {
           const baseFrame = prop.anim[0]
           if (baseFrame === undefined) return prop
-
-          const initialArc = baseFrame.arc ?? 0
-          const boxArcDelta = Math.abs(baseFrame.plane ?? 0) === 180 ? -45 : 45
-          const firstContinuationArc = prop.anim[1]?.arc ?? initialArc
 
           return {
             ...prop,
             anim: prop.anim.map((frame, frameIndex) => ({
               ...frame,
-              ...(frameIndex === 0 && applyBoxShape
-                ? { arc: (initialArc + boxArcDelta + 360) % 360 }
-                : undefined),
-              ...(frameIndex === 1 && applyBoxShape ? { arc: firstContinuationArc } : undefined),
               ...(frameIndex === 0 && applyScale
                 ? { scale: toVtgInternalScale(adjustedScale) }
                 : undefined),

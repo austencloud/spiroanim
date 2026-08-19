@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { appendVtgBuilderPattern } from '@/features/builder/appendVtgBuilderPattern'
+import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import {
   createVtgTransitionQuickSlotAnimationCandidates,
@@ -49,6 +50,51 @@ const selectDetectableAnimations = (
 }
 
 describe('createVtgTransitionQuickSlotAnimations', () => {
+  it('rotates the supplied Anti portion without changing its spin classification', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const source = codec.decodeQS(
+      queryFrom(
+        'r=Ew08Yk11Y&p0=Q__.5GQvF___q._U0sR........5GQrrHj.......&m0=_1_mxqv__&p1=N__.gZEuf___q.5E0vF........5GQx3.......&c=_f_bhq&v=6',
+      ),
+    )
+    const before = createVtgTransitionPreviewAnimations(source)
+    const updated = reverseVtgTransitionPatternPreview(source, 1)
+    const after = updated ? createVtgTransitionPreviewAnimations(updated) : undefined
+
+    expect(before).toHaveLength(2)
+    expect(after).toHaveLength(2)
+    expect(after!.map((preview) => getVtgBuilderMotion(preview))).toEqual(
+      before!.map((preview) => getVtgBuilderMotion(preview)),
+    )
+
+    const starts = [
+      0,
+      ...findExplicitPlaneOrTurnsFrameIndices(source, 2).map((frameIndex) => frameIndex - 1),
+    ]
+    const targetFrameIndex = starts[1]! + 1
+    const compiledBefore = rootCompile(source)
+    const compiledAfter = rootCompile(updated!)
+    for (const propIndex of [0, 1]) {
+      expect(
+        Math.abs(
+          compiledAfter.props[propIndex]!.anim[targetFrameIndex]!.plane -
+            compiledBefore.props[propIndex]!.anim[targetFrameIndex]!.plane,
+        ),
+      ).toBe(180)
+      expect(
+        Math.abs(
+          compiledAfter.props[propIndex]!.anim[targetFrameIndex]!.axis -
+            compiledBefore.props[propIndex]!.anim[targetFrameIndex]!.axis,
+        ),
+      ).toBe(180)
+    }
+  })
+
   it('keeps a supplied Builder pattern matchable after reversing one segment twice', async () => {
     const version = await loadSpiroAnimQSVersion(6)
     const codec = await useSpiroAnimQS(

@@ -6,23 +6,16 @@ import { createQtrAnimation as createQtrAnimationForSelection } from '@/features
 import type { QtrPatternSelection } from '@/features/vtg/types'
 import { createVtgAnimation as createVtgAnimationForSelection } from '@/features/vtg/createVtgAnimation'
 import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
-import type { VtgCellReference, VtgPatternSelection } from '@/features/vtg/types'
+import type { VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import type { RootData, RootDataFinal } from '@/types/AnimTypes'
 
-const transposeSelection = <Selection extends VtgPatternSelection>(
-  selection: Selection,
-): Selection => {
-  const [column, row] = selection.reference.split('-')
-  return { ...selection, reference: `${row}-${column}` as VtgCellReference }
-}
-
 const createVtgAnimation = (current: RootDataFinal, selection: VtgPatternSelection) =>
-  createVtgAnimationForSelection(current, transposeSelection(selection))
+  createVtgAnimationForSelection(current, selection)
 
 const createQtrAnimation = (current: RootDataFinal, selection: QtrPatternSelection) =>
-  createQtrAnimationForSelection(current, transposeSelection(selection))
+  createQtrAnimationForSelection(current, selection)
 
 const createCurrentAnimation = () =>
   rootFinal({

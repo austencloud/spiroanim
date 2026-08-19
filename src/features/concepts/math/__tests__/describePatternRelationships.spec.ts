@@ -62,7 +62,7 @@ describe('describePatternRelationships', () => {
 
     for (const row of ruleNumbers) {
       for (const column of ruleNumbers) {
-        const reference: VtgCellReference = `${column}-${row}`
+        const reference: VtgCellReference = `${row}-${column}`
         const expected = expectedLabelsByRow[row][column - 1]
         if (!expected) throw new Error(`Missing expected label for ${reference}`)
 
@@ -91,7 +91,7 @@ describe('describePatternRelationships', () => {
       for (const orientation of [-90, 90] as const) {
         for (const row of ruleNumbers) {
           for (const column of ruleNumbers) {
-            const reference: VtgCellReference = `${column}-${row}`
+            const reference: VtgCellReference = `${row}-${column}`
             const expected = expectedLabelsByRow[column][row - 1]
             if (!expected) throw new Error(`Missing transposed label for ${reference}`)
 
@@ -117,7 +117,7 @@ describe('describePatternRelationships', () => {
     (speedRatio) => {
       for (const row of ruleNumbers) {
         for (const column of ruleNumbers) {
-          const reference: VtgCellReference = `${column}-${row}`
+          const reference: VtgCellReference = `${row}-${column}`
           const expected = expectedLabelsByRow[row][column - 1]
           if (!expected) throw new Error(`Missing established label for ${reference}`)
 
@@ -143,7 +143,7 @@ describe('describePatternRelationships', () => {
 
     for (const row of ruleNumbers) {
       for (const column of ruleNumbers) {
-        const reference: VtgCellReference = `${column}-${row}`
+        const reference: VtgCellReference = `${row}-${column}`
         const baseLabel = expectedLabelsByRow[row][column - 1]
         if (!baseLabel) throw new Error(`Missing expected label for ${reference}`)
         const expected = quarterLabel(baseLabel)
@@ -175,7 +175,7 @@ describe('describePatternRelationships', () => {
   it('derives every established VTG label and tooltip across supported settings', () => {
     for (const row of ruleNumbers) {
       for (const column of ruleNumbers) {
-        const reference: VtgCellReference = `${column}-${row}`
+        const reference: VtgCellReference = `${row}-${column}`
         const establishedLabel = expectedLabelsByRow[row][column - 1]
         if (!establishedLabel) throw new Error(`Missing expected label for ${reference}`)
         const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
@@ -224,7 +224,7 @@ describe('describePatternRelationships', () => {
   it('derives Quarter timing while preserving every direction comparison', () => {
     for (const row of ruleNumbers) {
       for (const column of ruleNumbers) {
-        const reference: VtgCellReference = `${column}-${row}`
+        const reference: VtgCellReference = `${row}-${column}`
         const establishedLabel = expectedLabelsByRow[row][column - 1]
         if (!establishedLabel) throw new Error(`Missing expected label for ${reference}`)
         const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)

@@ -14,7 +14,6 @@ import type {
   VtgTransitionInitialTurnsOffset,
 } from '@/features/vtg/types'
 import { supportsVtgPatternOrientation } from '@/features/vtg/types'
-import type { PatternShape } from '@/types/PatternTypes'
 import type { PatternPropColor } from '@/features/concepts/patternPropColors'
 
 interface UseVtgPreviewsOptions {
@@ -23,7 +22,6 @@ interface UseVtgPreviewsOptions {
   isAnti: Ref<boolean>
   swapProps: Ref<boolean>
   reversePlane: Ref<boolean>
-  shape: Ref<PatternShape>
   beat: Ref<VtgBeat>
   scale: Ref<number>
   spacing: Ref<number>
@@ -31,25 +29,26 @@ interface UseVtgPreviewsOptions {
   leftPropColor: Ref<PatternPropColor>
   rightPropColor: Ref<PatternPropColor>
   orientation: Ref<VtgPatternOrientation>
+  propRotationOffsets: Ref<readonly [number, number] | undefined>
   initialTurnsOffset: Ref<VtgTransitionInitialTurnsOffset | undefined>
   initialTurnsOffsetBeat: Ref<VtgBeat | undefined>
   activeReferences: Readonly<Ref<readonly VtgCellReference[]>>
 }
 
 export const pairedPatternPreviewReferences = [1, 2, 3, 4, 5, 6].flatMap((row) =>
-  [1, 3, 5].map((column) => `${column}-${row}` as VtgCellReference),
+  [1, 3, 5].map((column) => `${row}-${column}` as VtgCellReference),
 )
 
 export const patternPreviewReferences = pairedPatternPreviewReferences.filter((reference) => {
-  const row = Number(reference.split('-')[1])
+  const row = Number(reference.split('-')[0])
   return row % 2 === 1
 })
 
 export const builderPatternPreviewReferences = [
   '1-1',
-  '3-1',
-  '1-6',
-  '3-6',
+  '1-3',
+  '6-1',
+  '6-3',
 ] as const satisfies readonly VtgCellReference[]
 
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
@@ -63,7 +62,6 @@ export const usePatternPreviews = ({
   isAnti,
   swapProps,
   reversePlane,
-  shape,
   beat,
   scale,
   spacing,
@@ -71,6 +69,7 @@ export const usePatternPreviews = ({
   leftPropColor,
   rightPropColor,
   orientation,
+  propRotationOffsets,
   initialTurnsOffset,
   initialTurnsOffsetBeat,
   activeReferences,
@@ -95,7 +94,6 @@ export const usePatternPreviews = ({
     if (spinToggleCells.has(reference)) selection.isAnti = isAnti.value
     if (swapProps.value) selection.swapProps = true
     if (reversePlane.value) selection.reversePlane = true
-    if (shape.value === 'box') selection.shape = shape.value
     if (beat.value !== 1) selection.beat = beat.value
     if (initialTurnsOffset.value !== undefined) {
       selection.initialTurnsOffset = initialTurnsOffset.value
@@ -103,6 +101,9 @@ export const usePatternPreviews = ({
     }
     if (supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0) {
       selection.orientation = orientation.value
+    }
+    if (propRotationOffsets.value !== undefined) {
+      selection.propRotationOffsets = propRotationOffsets.value
     }
     return quarters.value ? { ...selection, quarters: quarters.value } : selection
   }
@@ -127,7 +128,6 @@ export const usePatternPreviews = ({
       speedRatio,
       swapProps,
       reversePlane,
-      shape,
       beat,
       scale,
       spacing,
@@ -135,6 +135,7 @@ export const usePatternPreviews = ({
       leftPropColor,
       rightPropColor,
       orientation,
+      propRotationOffsets,
       initialTurnsOffset,
       initialTurnsOffsetBeat,
       activeReferences,

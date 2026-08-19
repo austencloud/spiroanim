@@ -1,8 +1,11 @@
 # VTG Timing Ratios
 
-This document defines the working mathematics for VTG timing ratios. It records the ratio
-vocabulary independently of the current catalog and matching implementation so that future ratio
-generation and detection can be derived from motion data.
+This document defines the working mathematics and naming rules for VTG timing ratios. It records
+the ratio vocabulary independently of the current catalog and matching implementation so that
+future ratio generation and detection can be derived from motion data.
+
+VTG cell references are always written row first, then column. For example, `3-5` means row 3,
+column 5. Catalog keys, UI selections, previews, matching results, and tests all use this order.
 
 In this document, **petal** means one relative prop rotation expressed by the completed pattern.
 
@@ -15,41 +18,33 @@ For one movement segment:
 - The prop's absolute angular displacement is `Arc + Turns`.
 
 For a complete pattern, accumulated values are the sums of the segment values. A segment `Arc` may
-remain within the current 360-degree limit even when the complete pattern accumulates more than one
-circle.
+remain within the current 360-degree limit even when a preview or animation contains repeated
+segments.
 
-For example, a complete accumulated arc of 720 degrees may be represented as either:
+Timing detection uses the relative motion rate of each prop. It does not infer a larger timing from
+the accumulated arc of repeated segments.
 
-- sixteen segments with `Arc = 45`, or
-- two segments with `Arc = 360`.
+## Individual timing definition
 
-When the complete cycle is available, its accumulated arc must remain unwrapped. Normalizing 720
-degrees to 0 or 360 degrees would discard the number of completed hand circles. A shorter
-observation window can still identify a shared timing from complementary Anti-Spin and In-Spin
-rates as described below.
+A valid individual VTG timing is written as `1:n`:
 
-## Ratio definition
+- the complete timing contains one full hand or path circle;
+- Anti-Spin produces `n + 1` petals;
+- In-Spin produces `n - 1` petals.
 
-For a VTG timing ratio `a:b`:
-
-- the complete pattern contains `a` full hand or path circles;
-- Anti-Spin produces `b + 1` petals over the complete pattern;
-- In-Spin produces `b - 1` petals over the complete pattern.
-
-Therefore, the complete pattern has:
+Therefore:
 
 ```text
-Complete Arc       = 360 * a
-Anti total Turns   = -360 * (b + 1)
-In total Turns     =  360 * (b - 1)
+Complete Arc       = 360
+Anti total Turns   = -360 * (n + 1)
+In total Turns     =  360 * (n - 1)
 ```
 
-For a segment whose hand displacement is `Arc`, distribute those relative rotations evenly across
-the `a` hand circles:
+For a segment whose hand displacement is `Arc`:
 
 ```text
-Anti Turns = -Arc * (b + 1) / a
-In Turns   =  Arc * (b - 1) / a
+Anti Turns = -Arc * (n + 1)
+In Turns   =  Arc * (n - 1)
 ```
 
 The corresponding absolute prop displacement remains:
@@ -58,27 +53,15 @@ The corresponding absolute prop displacement remains:
 Absolute prop displacement = Arc + Turns
 ```
 
-## Ratios with one hand circle
-
-For `1:n`, the formulas reduce to the familiar VTG rule:
-
-```text
-Anti petals = n + 1
-In petals   = n - 1
-
-Anti Turns = -Arc * (n + 1)
-In Turns   =  Arc * (n - 1)
-```
-
 With 45-degree segments:
 
 | Ratio | Anti petals | Anti Turns | In petals | In Turns |
-| ----- | -----------: | ---------: | --------: | -------: |
-| `1:1` |            2 |       -90° |         0 |       0° |
-| `1:2` |            3 |      -135° |         1 |      45° |
-| `1:3` |            4 |      -180° |         2 |      90° |
-| `1:4` |            5 |      -225° |         3 |     135° |
-| `1:5` |            6 |      -270° |         4 |     180° |
+| ----- | ----------: | ---------: | --------: | -------: |
+| `1:1` |           2 |       -90° |         0 |       0° |
+| `1:2` |           3 |      -135° |         1 |      45° |
+| `1:3` |           4 |      -180° |         2 |      90° |
+| `1:4` |           5 |      -225° |         3 |     135° |
+| `1:5` |           6 |      -270° |         4 |     180° |
 
 The `1:1` In-Spin case is not a mathematical exception. Its `Turns` value is zero because the
 absolute prop displacement equals the hand displacement. The prop is not static. Its completed
@@ -89,7 +72,7 @@ and phase.
 
 For one complete 360-degree hand circle:
 
-| Motion    | Arc  | Turns  | Absolute prop displacement | Petals |
+| Motion    |  Arc |  Turns | Absolute prop displacement | Petals |
 | --------- | ---: | -----: | -------------------------: | -----: |
 | Anti-Spin | 360° | -1440° |                     -1080° |      4 |
 | In-Spin   | 360° |   720° |                      1080° |      2 |
@@ -103,155 +86,95 @@ The equivalent 45-degree segments are:
 
 Eight such segments accumulate the same values as the 360-degree form.
 
-## Worked `2:5` example
+## Relative-rate detection
 
-A `2:5` pattern contains two complete hand circles, so its accumulated arc is 720 degrees. It has:
-
-- six Anti-Spin petals;
-- four In-Spin petals;
-- sixteen 45-degree segments.
-
-For each 45-degree segment:
-
-```text
-Anti Turns = -45 * (5 + 1) / 2 = -135 degrees
-In Turns   =  45 * (5 - 1) / 2 =   90 degrees
-```
-
-| Motion    | Arc | Turns | Absolute prop displacement |
-| --------- | --: | ----: | -------------------------: |
-| Anti-Spin | 45° | -135° |                       -90° |
-| In-Spin   | 45° |   90° |                       135° |
-
-Across all sixteen segments:
-
-| Motion    | Accumulated Arc | Total Turns | Absolute prop displacement | Petals |
-| --------- | --------------: | ----------: | -------------------------: | -----: |
-| Anti-Spin |            720° |      -2160° |                     -1440° |      6 |
-| In-Spin   |            720° |       1440° |                      2160° |      4 |
-
-The same pattern may instead use two 360-degree segments. Each segment then uses `Turns = -1080`
-for Anti-Spin or `Turns = 720` for In-Spin.
-
-## Detection consequence
-
-A single prop segment does not necessarily identify the complete ratio. Define its relative rate
-as:
+For a timing-bearing segment, define the relative rate as:
 
 ```text
 r = abs(Turns / Arc)
 ```
 
-For a timing `a:b`, the rate is:
+For an individual `1:n` timing:
 
 ```text
-Anti rate = (b + 1) / a
-In rate   = (b - 1) / a
+Anti rate = n + 1
+In rate   = n - 1
 ```
 
-Local 45-degree motion in the `2:5` example is deliberately ambiguous when either prop is analyzed
-alone:
-
-- its Anti-Spin `Turns = -135` is locally the same as `1:2` Anti-Spin;
-- its In-Spin `Turns = 90` is locally the same as `1:3` In-Spin.
-
-For an Anti-Spin prop with rate `r`, every positive whole-number `a` that produces a positive
-whole-number `b = a * r - 1` is a candidate. For an In-Spin prop, the corresponding candidate is
-`b = a * r + 1`. A lone Anti-Spin prop with rate 3 could therefore describe `1:2`, `2:5`, `3:8`,
-and so on.
-
-### Deriving a shared timing from complementary props
-
-When one prop is Anti-Spin, the other is In-Spin, and both are known to share one timing, their two
-rates identify that timing without the complete cycle arc. Let `rA` be the Anti rate and `rI` the In
-rate:
+The timing number is therefore recovered independently for each prop:
 
 ```text
-rA = (b + 1) / a
-rI = (b - 1) / a
+Anti: n = r - 1
+In:   n = r + 1
 ```
 
-Subtracting and adding these relationships gives:
+The result must be a positive whole number within an appropriate floating-point tolerance.
+
+Initial placement values do not replace continuation values used for timing detection. For
+example, an initial `Arc = 180`, `Turns = 0` may establish placement while later 45-degree
+continuations carry the timing.
+
+## Compound timings
+
+When both props have the same individual timing, the pattern uses that timing name directly:
 
 ```text
-a = 2 / (rA - rI)
-b = a * (rA + rI) / 2
+1:2 + 1:2 = 1:2
 ```
 
-Both results must be positive whole numbers within an appropriate floating-point tolerance. The
-same `b` can also be checked independently from each prop:
+When the props use different individual timings, join their timing numbers with `v`. The left value
+belongs to `prop[0]` and the right value belongs to `prop[1]`:
 
 ```text
-b = a * rA - 1
-b = a * rI + 1
+prop[0] 1:2 + prop[1] 1:3 = 1:2v3
+prop[0] 1:1 + prop[1] 1:3 = 1:1v3
+prop[0] 1:3 + prop[1] 1:5 = 1:3v5
 ```
 
-The two-frame reference pattern contains only an initial state and one 45-degree movement for each
-prop:
+The compound name encodes a prop-index assignment. Each prop still uses its own continuation's
+Anti-Spin or In-Spin formula when deriving Turns.
 
-[Open the two-frame `2:5` reference pattern](http://localhost:8080/play-edit?r=Ew08Yk11Y&p0=Q__..5L_sR&m0=_1_mxqv__&p1=N__..5L_wm&c=_i_bhq&v=6)
-
-Its values are:
-
-| Prop | Spin | Arc | Turns | Relative rate |
-| ---- | ---- | --: | ----: | ------------: |
-| 0    | Anti | 45° | -135° |             3 |
-| 1    | In   | 45° |   90° |             2 |
-
-The shared timing is therefore:
+`1:2v3` and `1:3v2` are therefore distinct timing configurations:
 
 ```text
-a = 2 / (3 - 2) = 2
-b = 2 * (3 + 2) / 2 = 5
+1:2v3 = prop[0] 1:2, prop[1] 1:3
+1:3v2 = prop[0] 1:3, prop[1] 1:2
 ```
 
-The result is `2:5` even though the observation renders only one 45-degree movement and does not
-render the complete 720-degree cycle. Repeating that movement as eight 45-degree slices is useful
-for a 360-degree preview but is unnecessary for this derivation.
+Swap is applied after generation as an exchange of the completed animation tracks. It does not
+change the selected compound timing because each completed track carries its generated timing with
+it.
 
-### Smallest valid timing rule
+## Worked `1:2v3` example
 
-Complementary-pair inference is unavailable when both props have the same spin. In that case, use
-the smallest valid timing from each prop's candidate family. Complementary shared-timing detection
-must run before this rule; minimizing the Anti and In props in the preceding example separately
-would incorrectly label them `1:2` and `1:3` instead of recognizing their shared `2:5` timing.
+The pattern previously described as `2:5` is now named `1:2v3`. `2:5` is not a valid timing under
+the current naming model.
 
-If a prop's relative rate is reduced to the fraction `p/q`, its smallest timing is generally:
+Its timing-bearing 45-degree motion is:
+
+| Prop | Spin | Arc | Turns | Relative rate | Individual timing |
+| ---- | ---- | --: | ----: | ------------: | ----------------: |
+| 0    | Anti | 45° | -135° |             3 |             `1:2` |
+| 1    | In   | 45° |   90° |             2 |             `1:3` |
+
+The two individual timings differ, so the `prop[0]` timing is written first and the `prop[1]`
+timing second:
 
 ```text
-Anti: q:(p - 1)
-In:   q:(p + 1)
+prop[0] 1:2 + prop[1] 1:3 = 1:2v3
 ```
 
-Both timing values must be positive whole numbers. If `p - 1` is not positive for Anti-Spin, test
-successive whole-number multiples of `p/q` until both values are positive.
+[Open the two-frame `1:2v3` reference pattern](http://localhost:8080/play-edit?r=Ew08Yk11Y&p0=Q__..5L_sR&m0=_1_mxqv__&p1=N__..5L_wm&c=_i_bhq&v=6)
 
-The both-Anti reference pattern uses an initial placement followed by eight repeated 45-degree
-continuations:
+Repeating the movement as eight 45-degree slices is useful for a 360-degree preview but does not
+change the detected timing.
 
-[Open the both-Anti reference pattern](http://localhost:8080/play-vtg?r=Ew08Yk11Y&p0=Q__.mBE_____q.5JEsR.......&m0=_1_mxqv__&p1=N__.mBE_____q.5L_sR.......&c=_f_bhq&v=6)
+## Detection procedure
 
-Its timing-bearing continuation values are:
+1. Identify a representative timing-bearing continuation for each prop.
+2. Calculate each prop's relative rate `abs(Turns / Arc)`.
+3. Use the prop's spin direction to calculate its individual `1:n` timing.
+4. If both individual timings agree, assign that timing to the pattern.
+5. If they differ, write the `prop[0]` timing first and the `prop[1]` timing second, joined with `v`.
 
-| Prop | Spin | Arc | Turns | Relative rate |
-| ---- | ---- | --: | ----: | ------------: |
-| 0    | Anti | 45° | -135° |             3 |
-| 1    | Anti | 45° | -135° |             3 |
-
-For either prop, the Anti candidate relationship is `b = 3a - 1`. Its candidates begin `1:2`,
-`2:5`, `3:8`, and so on. The smallest-valid-timing rule selects `1:2`. Because both props
-independently select `1:2`, the overall pattern timing is also `1:2`.
-
-The initial `Arc = 180`, `Turns = 0` values establish placement and do not replace the continuation
-values used for timing detection.
-
-The resulting detection precedence is:
-
-1. Calculate a representative relative rate for each prop.
-2. If one prop is Anti and the other is In, first test whether they produce a valid shared timing.
-3. Otherwise, select each prop's smallest valid timing independently.
-4. If both independent results agree, assign that timing to the overall pattern.
-5. If the independent results differ, retain separate per-prop timings.
-
-This document does not yet prescribe a matching or storage implementation for independently timed
-props.
+The compound timing preserves prop order.

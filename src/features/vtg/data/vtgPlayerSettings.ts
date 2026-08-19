@@ -1,4 +1,9 @@
-import type { VtgReadableAnimation, VtgSpeedRatio } from '@/features/vtg/types'
+import { getVtgPropSpeedRatios } from '@/features/vtg/types'
+import type {
+  VtgIndividualSpeedRatio,
+  VtgReadableAnimation,
+  VtgSpeedRatio,
+} from '@/features/vtg/types'
 import type { AnimReadable, PropReadable } from '@/types/AnimTypes'
 
 export const vtgBpmControl = {
@@ -26,7 +31,15 @@ export const vtgScaleAdjustmentBySpeedRatio = {
   '1:3': 0,
   '1:4': 0.1,
   '1:5': 0.2,
-} as const satisfies Readonly<Record<VtgSpeedRatio, number>>
+} as const satisfies Readonly<Record<VtgIndividualSpeedRatio, number>>
+
+const getVtgScaleAdjustment = (speedRatio: VtgSpeedRatio): number => {
+  const [leftRatio, rightRatio] = getVtgPropSpeedRatios(speedRatio)
+  return Math.max(
+    vtgScaleAdjustmentBySpeedRatio[leftRatio],
+    vtgScaleAdjustmentBySpeedRatio[rightRatio],
+  )
+}
 
 export const vtgThickControl = {
   min: 1,
@@ -47,8 +60,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 const toVtgRawScale = (scale: number) => Math.round(scale * 10)
 
 export const getAdjustedVtgScale = (scale: number, speedRatio: VtgSpeedRatio): number => {
-  const adjustedRawScale =
-    toVtgRawScale(scale) + toVtgRawScale(vtgScaleAdjustmentBySpeedRatio[speedRatio])
+  const adjustedRawScale = toVtgRawScale(scale) + toVtgRawScale(getVtgScaleAdjustment(speedRatio))
   const minRawScale = toVtgRawScale(vtgScaleControl.min)
   const maxRawScale = toVtgRawScale(vtgScaleControl.max)
 
@@ -65,7 +77,7 @@ export const getVtgScaleControlValue = (
 
   return (
     clamp(
-      toVtgRawScale(adjustedScale) - toVtgRawScale(vtgScaleAdjustmentBySpeedRatio[speedRatio]),
+      toVtgRawScale(adjustedScale) - toVtgRawScale(getVtgScaleAdjustment(speedRatio)),
       toVtgRawScale(vtgScaleControl.min),
       toVtgRawScale(vtgScaleControl.max),
     ) / 10

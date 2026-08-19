@@ -7,7 +7,6 @@ import {
 import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
-import { hasFixedVtgPatternShape } from '@/features/vtg/data/vtgPatternCatalog'
 import {
   applyVtgInitialTurnsPlayback,
   withVtgInitialTurnsOffsetBeat,
@@ -89,9 +88,7 @@ const withoutFinalTransforms = ({
 // Qtr #2 remains accepted for legacy callers, while the current UI always emits Qtr #1 and uses
 // the shared 180 control to select the alternate face-on orientation.
 const getSelectedQtrMode = (selection: QtrPatternSelection): QtrMode => {
-  const appliesBoxShape =
-    selection.shape === 'box' && !hasFixedVtgPatternShape(selection.reference, selection.speedRatio)
-  return selection.reversePlane && !appliesBoxShape ? 2 : selection.quarters
+  return selection.reversePlane ? 2 : selection.quarters
 }
 
 const applyQtrFinalTransforms = (

@@ -8,6 +8,7 @@
     "build": "run-s build-only type-check",
     "preview": "vite preview",
     "test:unit": "vitest",
+    "audit:vtg-pattern-detection": "vitest run --config vitest.vtg-pattern-detection-audit.config.ts",
     "audit:vtg-45-trans": "vitest run --config vitest.audit.config.ts",
     "audit:builder-mutations": "vitest run --config vitest.builder-audit.config.ts",
     "test:e2e": "playwright test",

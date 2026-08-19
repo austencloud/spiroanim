@@ -12,7 +12,7 @@ import {
   vtgPlayerSettings,
   vtgScaleAdjustmentBySpeedRatio,
 } from '@/features/vtg/data/vtgPlayerSettings'
-import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { vtgBeats, vtgIndividualSpeedRatios, vtgSpeedRatios } from '@/features/vtg/types'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { reverseAngle } from '@/math/animation/AngleFunc'
@@ -21,21 +21,14 @@ import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPla
 import type { RootData, RootDataFinal } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
 
-const transposeSelection = <Selection extends VtgPatternSelection>(
-  selection: Selection,
-): Selection => {
-  const [column, row] = selection.reference.split('-')
-  return { ...selection, reference: `${row}-${column}` as VtgCellReference }
-}
-
 const createVtgAnimation = (current: RootDataFinal, selection: VtgPatternSelection) =>
-  createVtgAnimationForSelection(current, transposeSelection(selection))
+  createVtgAnimationForSelection(current, selection)
 
 const createVtgPreviewAnimation = (selection: VtgPatternSelection) =>
-  createVtgPreviewAnimationForSelection(transposeSelection(selection))
+  createVtgPreviewAnimationForSelection(selection)
 
 const buildVtgPattern = (selection: VtgPatternSelection) =>
-  buildSelectedVtgPattern(transposeSelection(selection))
+  buildSelectedVtgPattern(selection)
 
 const createCurrentAnimation = () =>
   rootFinal({
@@ -63,6 +56,38 @@ const expectVectorClose = (actual: readonly number[], expected: readonly number[
 }
 
 describe('createVtgAnimation', () => {
+  it('assigns compound ratios to prop indexes', () => {
+    const leftTwoRightThree = buildSelectedVtgPattern({
+      reference: '1-5',
+      speedRatio: '1:2v3',
+    })
+    const leftThreeRightTwo = buildSelectedVtgPattern({
+      reference: '1-5',
+      speedRatio: '1:3v2',
+    })
+
+    expect(leftTwoRightThree?.props.map((prop) => prop.anim[1]?.turns)).toEqual([-135, 90])
+    expect(leftThreeRightTwo?.props.map((prop) => prop.anim[1]?.turns)).toEqual([-180, 45])
+  })
+
+  it('leaves compound Swap out of table generation and swaps completed tracks', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:2v3',
+      swapProps: true,
+    } as const satisfies VtgPatternSelection
+    const basePattern = buildSelectedVtgPattern({ ...selection, swapProps: false })
+    const swappedPattern = buildSelectedVtgPattern(selection)
+
+    expect(swappedPattern).toEqual(basePattern)
+
+    const original = createDefaultVtgAnimation({ ...selection, swapProps: false })
+    const swapped = createDefaultVtgAnimation(selection)
+
+    expect(swapped?.props[0]?.anim).toEqual(original?.props[1]?.anim)
+    expect(swapped?.props[1]?.anim).toEqual(original?.props[0]?.anim)
+  })
+
   it.each([
     ['1:1', 0.1, 9, 19],
     ['1:2', -0.2, 6, 15],
@@ -81,7 +106,7 @@ describe('createVtgAnimation', () => {
   )
 
   it('lists every ratio adjustment and clamps adjusted Scale to the control bounds', () => {
-    expect(Object.keys(vtgScaleAdjustmentBySpeedRatio)).toEqual(vtgSpeedRatios)
+    expect(Object.keys(vtgScaleAdjustmentBySpeedRatio)).toEqual(vtgIndividualSpeedRatios)
     expect(getAdjustedVtgScale(0.5, '1:2')).toBe(0.5)
     expect(getAdjustedVtgScale(1.4, '1:5')).toBe(1.4)
   })
@@ -93,7 +118,7 @@ describe('createVtgAnimation', () => {
 
     for (const column of ruleNumbers) {
       for (const row of ruleNumbers) {
-        const reference = `${column}-${row}` as VtgCellReference
+        const reference = `${row}-${column}` as VtgCellReference
         const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
         for (const speedRatio of vtgSpeedRatios) {
           for (const isAnti of antiOptions) {

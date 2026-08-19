@@ -3,7 +3,6 @@ import {
   createDefaultQtrBaseAnimation,
 } from '@/features/vtg/qtr/createQtrAnimation'
 import { applyVtgPlaybackControls } from '@/features/vtg/createVtgAnimation'
-import { hasFixedVtgPatternShape } from '@/features/vtg/data/vtgPatternCatalog'
 import { getVtgScaleControlValue } from '@/features/vtg/data/vtgPlayerSettings'
 import type {
   QtrPatternMatch,
@@ -28,7 +27,6 @@ import {
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import { analyzeAlternatingPatternPlayback } from '@/math/animation/alternatePatternPlayback'
 import type { RootDataFinal } from '@/types/AnimTypes'
-import { patternShapes } from '@/types/PatternTypes'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
 const booleanOptions = [false, true] as const
@@ -46,8 +44,8 @@ const candidateCaches = new Map<
   Map<QtrPatternSelection['orientation'], QtrCandidateCache>
 >()
 
-const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
-  `${column}-${row}`
+const createCellReference = (row: VtgRuleNumber, column: VtgRuleNumber): VtgCellReference =>
+  `${row}-${column}`
 
 const addCandidate = (
   candidates: Map<string, QtrCandidateMatch[]>,
@@ -70,19 +68,15 @@ const buildCandidateCache = (
 
   for (const column of ruleNumbers) {
     for (const row of ruleNumbers) {
-      const reference = createCellReference(column, row)
+      const reference = createCellReference(row, column)
       const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
-      const shapeOptions = hasFixedVtgPatternShape(reference, speedRatio)
-        ? (['diamond'] as const)
-        : patternShapes
 
       for (const isAnti of antiOptions) {
-        for (const shape of shapeOptions) {
-          const baseAnimations = new Map<string, RootDataFinal | undefined>()
-          const playbackAnimations = new Map<string, RootDataFinal>()
+        const baseAnimations = new Map<string, RootDataFinal | undefined>()
+        const playbackAnimations = new Map<string, RootDataFinal>()
 
-          for (const swapProps of booleanOptions) {
-            for (const reversePlane of booleanOptions) {
+        for (const swapProps of booleanOptions) {
+          for (const reversePlane of booleanOptions) {
               const selection: QtrPatternSelection = {
                 reference,
                 speedRatio,
@@ -91,10 +85,8 @@ const buildCandidateCache = (
                 swapProps,
                 reversePlane,
                 ...(orientation === 0 ? undefined : { orientation }),
-                ...(shape === 'box' ? { shape } : undefined),
               }
-              // Box keeps QTR #1 for both final-plane states, so those bases are shared.
-              const baseKey = `${shape === 'box' ? false : reversePlane}:${orientation}`
+              const baseKey = `${reversePlane}:${orientation}`
               let baseAnimation = baseAnimations.get(baseKey)
               if (!baseAnimations.has(baseKey)) {
                 baseAnimation = createDefaultQtrBaseAnimation(selection)
@@ -112,7 +104,6 @@ const buildCandidateCache = (
                   reversePlane,
                   ...(orientation === 0 ? undefined : { orientation }),
                   ...(beat === 1 ? undefined : { beat }),
-                  ...(shape === 'box' ? { shape } : undefined),
                 }
                 const playbackKey = `${baseKey}:${beat}`
                 let playback = playbackAnimations.get(playbackKey)
@@ -140,7 +131,6 @@ const buildCandidateCache = (
                   )
                 }
               }
-            }
           }
         }
       }

@@ -468,7 +468,11 @@ const reversePreview = (index: number) => {
   const updated = reverseVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
   if (updated === undefined) return
 
-  applyBuilderPatternUpdate(updated)
+  applyBuilderPatternUpdate(
+    updated,
+    undefined,
+    PREVIEW_PLAYING.value && selectedPreviewIndex.value === index,
+  )
 }
 const previewRefreshKey = computed(() =>
   [

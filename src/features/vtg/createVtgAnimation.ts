@@ -23,6 +23,29 @@ import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 
 const vtgFrameCount = 9
 
+const applyPropRotationOffsets = (
+  animation: RootDataFinal,
+  offsets: VtgPatternSelection['propRotationOffsets'],
+): RootDataFinal =>
+  offsets === undefined || offsets.every((offset) => offset === 0)
+    ? animation
+    : {
+        ...animation,
+        props: animation.props.map((prop, index) => {
+          const firstFrame = prop.anim[0]
+          const offset = offsets[index]
+          return !firstFrame || offset === undefined || offset === 0
+            ? prop
+            : {
+                ...prop,
+                anim: [
+                  { ...firstFrame, turns: (firstFrame.turns ?? 0) + offset },
+                  ...prop.anim.slice(1),
+                ],
+              }
+        }),
+      }
+
 const addDefaultFrames = (pattern: VtgReadableAnimation): VtgReadableAnimation => ({
   ...pattern,
   props: pattern.props.map((prop, index) => {
@@ -132,7 +155,8 @@ export const createVtgAnimation = (
   }
 
   const transformed = applyPatternFinalTransforms(completed, selection)
-  const playback = applyVtgInitialTurnsPlayback(transformed, selection)
+  const aligned = applyPropRotationOffsets(transformed, selection.propRotationOffsets)
+  const playback = applyVtgInitialTurnsPlayback(aligned, selection)
   return playback ? applyPatternPropColors(playback, selection) : undefined
 }
 

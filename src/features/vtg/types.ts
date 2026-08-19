@@ -17,10 +17,33 @@ export interface VtgCellAddress {
   row: VtgRuleNumber
 }
 
-export const vtgSpeedRatios = ['1:1', '1:2', '1:3', '1:4', '1:5'] as const
-export type VtgSpeedRatio = (typeof vtgSpeedRatios)[number]
+export const vtgIndividualSpeedRatios = ['1:1', '1:2', '1:3', '1:4', '1:5'] as const
+export type VtgIndividualSpeedRatio = (typeof vtgIndividualSpeedRatios)[number]
+type VtgRatioNumber = VtgIndividualSpeedRatio extends `1:${infer Ratio}` ? Ratio : never
+export type VtgCompoundSpeedRatio = `1:${VtgRatioNumber}v${VtgRatioNumber}`
+export type VtgSpeedRatio = VtgIndividualSpeedRatio | VtgCompoundSpeedRatio
+export const vtgSpeedRatios = [
+  ...vtgIndividualSpeedRatios,
+  '1:2v3',
+  '1:3v2',
+] as const satisfies readonly VtgSpeedRatio[]
 export const vtgCanonicalSpeedRatio = '1:3' satisfies VtgSpeedRatio
 export const vtgDefaultSpeedRatio = vtgCanonicalSpeedRatio
+
+const toIndividualSpeedRatio = (ratio: VtgRatioNumber): VtgIndividualSpeedRatio => `1:${ratio}`
+export const isVtgSpeedRatio = (value: string): value is VtgSpeedRatio =>
+  /^1:[1-5](?:v[1-5])?$/.test(value)
+
+export const getVtgPropSpeedRatios = (
+  speedRatio: VtgSpeedRatio,
+): readonly [VtgIndividualSpeedRatio, VtgIndividualSpeedRatio] => {
+  const [leftRatio, rightRatio = leftRatio] = speedRatio.slice(2).split('v') as [
+    VtgRatioNumber,
+    VtgRatioNumber?,
+  ]
+  return [toIndividualSpeedRatio(leftRatio), toIndividualSpeedRatio(rightRatio)]
+}
+
 export const vtgBeats = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5] as const
 export type VtgBeat = (typeof vtgBeats)[number]
 export const vtgDefaultBeat = 1 satisfies VtgBeat
@@ -28,28 +51,19 @@ export const vtgTransitionBeats = [6, 5, 4, 3, 2] as const
 export type VtgTransitionBeats = (typeof vtgTransitionBeats)[number]
 export const vtgTransitionInitialTurnsOffsets = [-45, 45] as const
 export type VtgTransitionInitialTurnsOffset = (typeof vtgTransitionInitialTurnsOffsets)[number]
-export const vtgPatternOrientations = [-90, 0, 90, 180] as const
-export type VtgPatternOrientation = (typeof vtgPatternOrientations)[number]
-// Odd-ratio 45 Trans audits found that -90 and 90 always identify the same quarter-turn class once
-// beat, Swap, and 180 are considered. Positive 90 is the canonical quarter turn for odd ratios.
-const vtgOddPatternOrientations = [0, 90, 180] as const
-// The same audit found no 1:3 extraction that required the half turn.
-const vtg1to3PatternOrientations = [0, 90] as const
+export const vtgPatternOrientations = [-90, -45, 0, 45, 90, 180] as const
+export type VtgPatternOrientation = number
 export const getVtgPatternOrientations = (
-  speedRatio: VtgSpeedRatio,
-): readonly VtgPatternOrientation[] =>
-  speedRatio === '1:3'
-    ? vtg1to3PatternOrientations
-    : speedRatio === '1:1' || speedRatio === '1:5'
-      ? vtgOddPatternOrientations
-      : vtgPatternOrientations
+  _speedRatio: VtgSpeedRatio,
+): readonly VtgPatternOrientation[] => vtgPatternOrientations
 export const vtgDefaultPatternOrientation = -90 satisfies VtgPatternOrientation
-export const supportsVtgPatternOrientation = (speedRatio: VtgSpeedRatio) =>
-  getVtgPatternOrientations(speedRatio).length > 1
+export const supportsVtgPatternOrientation = (_speedRatio: VtgSpeedRatio) => true
 export const getDefaultVtgPatternOrientation = (
   speedRatio: VtgSpeedRatio,
 ): VtgPatternOrientation =>
-  speedRatio === '1:2' || speedRatio === '1:4' ? vtgDefaultPatternOrientation : 0
+  getVtgPropSpeedRatios(speedRatio).some((ratio) => Number(ratio.slice(2)) % 2 === 0)
+    ? vtgDefaultPatternOrientation
+    : 0
 export const vtgDefaultTransitionBeats = 4 satisfies VtgTransitionBeats
 
 export interface VtgPatternSelection
@@ -59,6 +73,7 @@ export interface VtgPatternSelection
   isAnti?: boolean
   swapProps?: boolean
   reversePlane?: boolean
+  /** @deprecated VTG no longer applies Tilted/Box shape transforms. */
   shape?: PatternShape
   beat?: VtgBeat
   transition?: boolean
@@ -69,6 +84,8 @@ export interface VtgPatternSelection
   initialTurnsOffset?: VtgTransitionInitialTurnsOffset
   initialTurnsOffsetBeat?: VtgBeat
   orientation?: VtgPatternOrientation
+  /** Hidden per-prop phase alignment inferred while matching an existing pattern. */
+  propRotationOffsets?: readonly [number, number]
   bpm?: number
   scale?: number
   thick?: number
@@ -83,6 +100,7 @@ export interface VtgPatternMatch {
   isAnti: boolean
   swapProps: boolean
   reversePlane: boolean
+  /** @deprecated VTG matching no longer returns Tilted/Box variants. */
   shape?: PatternShape
   beat?: VtgBeat
   transition?: boolean
@@ -92,6 +110,8 @@ export interface VtgPatternMatch {
   transitionSecond?: boolean
   initialTurnsOffset?: VtgTransitionInitialTurnsOffset
   orientation?: VtgPatternOrientation
+  /** Hidden per-prop phase alignment relative to the matched catalog cell. */
+  propRotationOffsets?: readonly [number, number]
   bpm: number
   scale: number
 }
@@ -119,10 +139,10 @@ export type VtgReadableAnimation = Partial<
   props: PropReadable[]
 }
 
-export type VtgPatternBuilder = (isAnti: boolean) => VtgReadableAnimation
+export type VtgPatternBuilder = (isAnti: boolean, speedRatio: VtgSpeedRatio) => VtgReadableAnimation
 
 export interface VtgPatternDefinition {
-  patternsBySpeedRatio: Readonly<Partial<Record<VtgSpeedRatio, VtgPatternBuilder>>>
+  build: VtgPatternBuilder
 }
 
 export interface VtgPropPlacement {

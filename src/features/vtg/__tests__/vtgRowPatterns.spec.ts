@@ -21,18 +21,18 @@ const buildPattern = (reference: VtgCellReference, speedRatio: VtgSpeedRatio, is
   return buildVtgPattern(selection)
 }
 
-const createReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
-  `${column}-${row}`
+const createReference = (row: VtgRuleNumber, column: VtgRuleNumber): VtgCellReference =>
+  `${row}-${column}`
 
 describe('VTG row patterns', () => {
   it.each(vtgSpeedRatios)('shares each row starting frame across its %s columns', (speedRatio) => {
     for (const row of ruleNumbers) {
-      const sharedStarts = buildPattern(createReference(1, row), speedRatio)?.props.map(
+      const sharedStarts = buildPattern(createReference(row, 1), speedRatio)?.props.map(
         (prop) => prop.anim[0],
       )
 
       for (const column of ruleNumbers) {
-        const pattern = buildPattern(createReference(column, row), speedRatio)
+        const pattern = buildPattern(createReference(row, column), speedRatio)
         expect(pattern).toBeDefined()
         expect(pattern?.props.map((prop) => prop.anim[0])).toEqual(sharedStarts)
       }

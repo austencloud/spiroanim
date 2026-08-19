@@ -11,17 +11,19 @@ import type {
 } from '@/features/vtg/types'
 import { getVtgPatternOrientations, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
 import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
+import { rootCompile } from '@/math/animation/AnimFunc'
 import { getUniqueVtgPatternOrientations } from '@/features/vtg/math/getUniqueVtgPatternOrientations'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
+import type { RootDataFinal } from '@/types/AnimTypes'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
 const booleanOptions = [false, true] as const
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 
 const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
-  `${column}-${row}`
+  `${row}-${column}`
 
 const createAnimation = (selection: VtgPatternSelection) => {
   const animation = createDefaultVtgAnimation(selection)
@@ -35,15 +37,182 @@ const canonicalRotationMatches = (matches: readonly VtgPatternMatch[]) => {
 }
 
 describe('VTG animation matching', () => {
+  it('regenerates serialized reversed orientation at 1:2 without changing compiled motion', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const source = createAnimation({
+      reference: '1-1',
+      speedRatio: '1:2',
+      beat: 1.5,
+      orientation: 90,
+      reversePlane: true,
+    })
+    const decoded = await codec.decodeVer(codec.encodeQS(source, false))
+    const match = findVtgPatternMatch(decoded)
+
+    if (!match) throw new Error('Expected the reversed 1:2 animation to match')
+    const normalizeCoordinate = (value: number) => {
+      const normalized = Math.round(value * 1e9) / 1e9
+      return Object.is(normalized, -0) ? 0 : normalized
+    }
+    const comparableTracks = (animation: RootDataFinal) =>
+      rootCompile(animation).props.map((prop) =>
+        prop.anim.map((frame) => ({
+          turns: frame.turns,
+          beats: frame.beats,
+          arc: ((frame.arc % 360) + 360) % 360,
+          plane: ((frame.plane % 360) + 360) % 360,
+          axis: ((frame.axis % 360) + 360) % 360,
+          pos: frame.pos.map(normalizeCoordinate),
+          rot: frame.rot.map(normalizeCoordinate),
+        })),
+      )
+    expect(comparableTracks(createAnimation(match))).toEqual(comparableTracks(source))
+  })
+
+  it('reproduces the supplied oddball prop headings in the detected thumbnail selection', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const source = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew08Yk11Y&p0=Q__.5E0vF___q._U0sR.......&m0=_1_mxqv__&p1=N__.g__uf___q.5E0vF.......&c=_f_bhq&v=6',
+        ),
+      ),
+    )
+    const match = findVtgPatternMatch(source)
+    if (!match) throw new Error('Expected the supplied oddball animation to match')
+    const regenerated = createAnimation(match)
+
+    expect(rootCompile(regenerated).props.map((prop) => prop.anim)).toEqual(
+      rootCompile(source).props.map((prop) => prop.anim),
+    )
+  })
+
+  it('prefers the exact phase while retaining an aligned alternate for the supplied query', async () => {
+    const version = await loadSpiroAnimQSVersion(6)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      6,
+    )
+    const animation = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew08Yk11Y&p0=Q__.mD______s.5L_wm.......&m0=_1_mxqv__&p1=N__.mD_s8___s.5L_.......&c=_i_bhq&v=6',
+        ),
+      ),
+    )
+
+    expect(findVtgPatternMatch(animation)).toEqual({
+      reference: '3-5',
+      speedRatio: '1:3',
+      isAnti: false,
+      swapProps: false,
+      reversePlane: false,
+      beat: 4,
+      bpm: 40,
+      scale: 0.8,
+    })
+
+    const alternate = findVtgPatternMatches(animation).find(
+      (match) => match.reference === '5-3' && match.beat === 2,
+    )
+    expect(alternate?.propRotationOffsets).toEqual([180, 0])
+    if (!alternate) throw new Error('Expected the supplied query to retain its alternate match')
+
+    const aligned = createAnimation(alternate)
+    expect(rootCompile(aligned).props.map((prop) => prop.anim.map((frame) => frame.rot))).toEqual(
+      rootCompile(animation).props.map((prop) => prop.anim.map((frame) => frame.rot)),
+    )
+  })
+
+  it.each([-90, -45])(
+    'retains the compiled tracks at %s degrees when orientation is applied before a half-beat shift',
+    (orientation) => {
+      const source = createAnimation({
+        reference: '1-1',
+        speedRatio: '1:1',
+        beat: 1.5,
+        orientation,
+      })
+      const match = findVtgPatternMatch(source)
+      if (!match) throw new Error('Expected the shifted animation to match')
+      const regenerated = createAnimation(match)
+
+      const compiledTracks = (animation: RootDataFinal) =>
+        rootCompile(animation).props.map((prop) => prop.anim)
+      expect(compiledTracks(regenerated)).toEqual(compiledTracks(source))
+    },
+  )
+
+  it.each(['1:1', '1:3', '1:5'] as const)(
+    'retains the row-first lower-table cells at %s',
+    (speedRatio) => {
+      for (const reference of ['3-5', '3-6', '4-5', '4-6'] as const) {
+        expect(findVtgPatternMatch(createAnimation({ reference, speedRatio }))).toMatchObject({
+          reference,
+          speedRatio,
+        })
+      }
+    },
+  )
+
+  it.each(['1:2', '1:4'] as const)(
+    'matches every serialized %s cell at the default -90-degree orientation',
+    async (speedRatio) => {
+      const version = await loadSpiroAnimQSVersion(6)
+      const codec = await useSpiroAnimQS(
+        version.VDEF,
+        useBaseQS(version.VDEF, { charset: version.CHARSET }),
+        6,
+      )
+      const missing: VtgCellReference[] = []
+      for (const row of ruleNumbers) {
+        for (const column of ruleNumbers) {
+          const reference = `${row}-${column}` as VtgCellReference
+          const source = createAnimation({ reference, speedRatio, orientation: -90 })
+          const decoded = await codec.decodeVer(codec.encodeQS(source, false))
+          if (!findVtgPatternMatch(decoded)) missing.push(reference)
+        }
+      }
+      expect(missing).toEqual([])
+    },
+  )
+
+  it.each(['1:1', '1:3', '1:5'] as const)(
+    'retains the row-first lower-table cells after query serialization at %s',
+    async (speedRatio) => {
+      const version = await loadSpiroAnimQSVersion(6)
+      const codec = await useSpiroAnimQS(
+        version.VDEF,
+        useBaseQS(version.VDEF, { charset: version.CHARSET }),
+        6,
+      )
+      for (const reference of ['3-5', '3-6', '4-5', '4-6'] as const) {
+        const decoded = await codec.decodeVer(
+          codec.encodeQS(createAnimation({ reference, speedRatio }), false),
+        )
+        expect(findVtgPatternMatch(decoded)).toMatchObject({ reference, speedRatio })
+      }
+    },
+  )
+
   it.each(['1:2', '1:4'] as const)(
     'recognizes every nonzero initial arc rotation after a beat shift at %s',
     (speedRatio) => {
       for (const orientation of getUniqueVtgPatternOrientations({
         reference: '5-1',
         speedRatio,
-      }).filter(
-        (option) => option !== 0,
-      )) {
+      }).filter((option) => option !== 0)) {
         const selection = {
           reference: '5-1',
           speedRatio,

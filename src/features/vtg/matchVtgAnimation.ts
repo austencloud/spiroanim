@@ -2,14 +2,15 @@ import {
   applyVtgPlaybackControls,
   createDefaultVtgAnimation,
 } from '@/features/vtg/createVtgAnimation'
-import { hasFixedVtgPatternShape } from '@/features/vtg/data/vtgPatternCatalog'
 import { getVtgScaleControlValue } from '@/features/vtg/data/vtgPlayerSettings'
 import {
-  createFinalTransformedVtgAnimationSignature,
   createVtgAnimationSignature,
+  createVtgDirectionSignature,
   getVtgAnimationScale,
+  getVtgPropRotationOffsets,
+  getVtgStartingTurns,
 } from '@/features/vtg/math/createVtgAnimationSignature'
-import { inferVtgSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
+import { inferVtgTiming } from '@/features/vtg/math/inferVtgSpeedRatio'
 import type {
   VtgCellReference,
   VtgPatternMatch,
@@ -19,123 +20,150 @@ import type {
   VtgRuleNumber,
   VtgSpeedRatio,
 } from '@/features/vtg/types'
-import {
-  getVtgPatternOrientations,
-  supportsVtgPatternOrientation,
-  vtgBeats,
-  vtgDefaultBeat,
-  vtgTransitionInitialTurnsOffsets,
-} from '@/features/vtg/types'
+import { vtgBeats, vtgDefaultBeat } from '@/features/vtg/types'
+import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import { analyzeAlternatingPatternPlayback } from '@/math/animation/alternatePatternPlayback'
+import { rootCompile } from '@/math/animation/AnimFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
-import { patternShapes } from '@/types/PatternTypes'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
 const booleanOptions = [false, true] as const
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
-
-type VtgCandidateMatch = Omit<VtgPatternMatch, 'bpm' | 'scale'>
-
-interface VtgCandidateCache {
-  exact: ReadonlyMap<string, readonly VtgCandidateMatch[]>
-  transitionTurns: ReadonlyMap<string, readonly VtgCandidateMatch[]>
+type Candidate = Omit<VtgPatternMatch, 'bpm' | 'scale' | 'orientation'> & {
+  baseOrientation: number
+  startingTurns: readonly [number, number]
+}
+type OrientedCandidateState = {
+  animation: RootDataFinal
+  signatureKey: string
 }
 
-const candidateCaches = new Map<
-  VtgSpeedRatio,
-  Map<VtgPatternSelection['orientation'], VtgCandidateCache>
->()
+const startingTurnsDifferenceByMatch = new WeakMap<VtgPatternMatch, number>()
+const orientedSignatureDifferenceByMatch = new WeakMap<VtgPatternMatch, number>()
+const exactRegenerationDifferenceByMatch = new WeakMap<VtgPatternMatch, number>()
+const orientedStateByCandidate = new WeakMap<Candidate, Map<number, OrientedCandidateState>>()
 
-const createCellReference = (column: VtgRuleNumber, row: VtgRuleNumber): VtgCellReference =>
-  `${column}-${row}`
+const candidateIndexes = new Map<VtgSpeedRatio, ReadonlyMap<string, readonly Candidate[]>>()
+const normalizeOrientation = (value: number) => {
+  const normalized = ((((value + 180) % 360) + 360) % 360) - 180
+  return normalized === -180 ? 180 : normalized
+}
+const signaturePrecision = 1e9
+const normalizeSignatureNumber = (value: number) => {
+  const normalized = Math.round(value * signaturePrecision) / signaturePrecision
+  return Object.is(normalized, -0) ? 0 : normalized
+}
+const createCompiledPatternSignature = (animation: RootDataFinal) => {
+  const compiled = rootCompile(animation)
+  return JSON.stringify({
+    props: compiled.props.map((prop) =>
+      prop.anim.map((frame) => [
+        normalizeSignatureNumber(frame.turns),
+        normalizeSignatureNumber(frame.beats),
+        normalizeSignatureNumber(frame.depth),
+        normalizeSignatureNumber(frame.type),
+        normalizeSignatureNumber(frame.adjust),
+        normalizeOrientation(frame.arc),
+        normalizeOrientation(frame.plane),
+        normalizeOrientation(frame.axis),
+        ...frame.pos.map(normalizeSignatureNumber),
+        ...frame.rot.map(normalizeSignatureNumber),
+      ]),
+    ),
+  })
+}
+const applyCandidatePropRotationOffsets = (
+  animation: RootDataFinal,
+  offsets: readonly [number, number],
+): RootDataFinal => ({
+  ...animation,
+  props: animation.props.map((prop, index) => {
+    const firstFrame = prop.anim[0]
+    const offset = offsets[index] ?? 0
+    return !firstFrame || offset === 0
+      ? prop
+      : {
+          ...prop,
+          anim: [{ ...firstFrame, turns: (firstFrame.turns ?? 0) + offset }, ...prop.anim.slice(1)],
+        }
+  }),
+})
+const createCellReference = (row: VtgRuleNumber, column: VtgRuleNumber): VtgCellReference =>
+  `${row}-${column}`
 
-const addCandidate = (
-  candidates: Map<string, VtgCandidateMatch[]>,
-  signature: string | undefined,
-  candidate: VtgCandidateMatch,
-) => {
-  if (!signature) return
-
-  const matches = candidates.get(signature) ?? []
-  matches.push(candidate)
-  candidates.set(signature, matches)
+const getCandidateRatios = (speedRatio: VtgSpeedRatio): readonly VtgSpeedRatio[] => {
+  const match = /^1:([1-5])v([1-5])$/.exec(speedRatio)
+  if (!match) return [speedRatio]
+  return [speedRatio, `1:${match[2]}v${match[1]}` as VtgSpeedRatio]
 }
 
-const buildCandidateCache = (
-  speedRatio: VtgSpeedRatio,
-  orientation: NonNullable<VtgPatternSelection['orientation']>,
-) => {
-  const exactCandidates = new Map<string, VtgCandidateMatch[]>()
-  const transitionTurnsCandidates = new Map<string, VtgCandidateMatch[]>()
+const getOrientedCandidateState = (
+  candidate: Candidate,
+  orientation: number,
+): OrientedCandidateState | undefined => {
+  const cachedByOrientation = orientedStateByCandidate.get(candidate) ?? new Map()
+  orientedStateByCandidate.set(candidate, cachedByOrientation)
+  const cached = cachedByOrientation.get(orientation)
+  if (cached) return cached
 
-  for (const column of ruleNumbers) {
-    for (const row of ruleNumbers) {
-      const reference = createCellReference(column, row)
-      const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
-      const shapeOptions = hasFixedVtgPatternShape(reference, speedRatio)
-        ? (['diamond'] as const)
-        : patternShapes
+  const animation = createDefaultVtgAnimation({
+    reference: candidate.reference,
+    speedRatio: candidate.speedRatio,
+    isAnti: candidate.isAnti,
+    swapProps: candidate.swapProps,
+    reversePlane: candidate.reversePlane,
+    beat: candidate.beat,
+    orientation,
+  })
+  if (!animation) return undefined
+  const signature = createVtgDirectionSignature(animation)
+  if (!signature) return undefined
+  const state = { animation, signatureKey: signature.key }
+  cachedByOrientation.set(orientation, state)
+  return state
+}
 
-      for (const isAnti of antiOptions) {
-        for (const shape of shapeOptions) {
-          const baseSelection: VtgPatternSelection = {
+const buildCandidateIndex = (speedRatio: VtgSpeedRatio) => {
+  const index = new Map<string, Candidate[]>()
+  for (const candidateRatio of getCandidateRatios(speedRatio)) {
+    for (const column of ruleNumbers) {
+      for (const row of ruleNumbers) {
+        const reference = createCellReference(row, column)
+        const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
+        for (const isAnti of antiOptions) {
+          const base = createDefaultVtgAnimation({
             reference,
-            speedRatio,
+            speedRatio: candidateRatio,
             isAnti,
-            ...(shape === 'box' ? { shape } : undefined),
-          }
-          const baseAnimations = new Map<number, RootDataFinal>()
-          const playbackAnimations = new Map<string, RootDataFinal>()
-
-          for (const swapProps of booleanOptions) {
-            for (const reversePlane of booleanOptions) {
-              let baseAnimation = baseAnimations.get(orientation)
-              if (!baseAnimation) {
-                baseAnimation = createDefaultVtgAnimation({
-                  ...baseSelection,
-                  ...(orientation === 0 ? undefined : { orientation }),
+            orientation: 0,
+          })
+          if (!base) continue
+          for (const beat of vtgBeats) {
+            const playback = applyVtgPlaybackControls(base, { speedRatio: candidateRatio, beat })
+            if (!playback) continue
+            for (const swapProps of booleanOptions) {
+              for (const reversePlane of booleanOptions) {
+                const transformed = applyPatternFinalTransforms(playback, {
+                  swapProps,
+                  reversePlane,
                 })
-                if (!baseAnimation) continue
-                baseAnimations.set(orientation, baseAnimation)
-              }
-
-              for (const beat of vtgBeats) {
-                const candidate: VtgCandidateMatch = {
+                if (inferVtgTiming(transformed)?.speedRatio !== speedRatio) continue
+                const signature = createVtgDirectionSignature(transformed)
+                const startingTurns = getVtgStartingTurns(transformed)
+                if (!signature || !startingTurns) continue
+                const candidates = index.get(signature.key) ?? []
+                candidates.push({
                   reference,
-                  speedRatio,
+                  speedRatio: candidateRatio,
                   isAnti,
                   swapProps,
                   reversePlane,
-                  ...(orientation === 0 ? undefined : { orientation }),
-                  ...(beat === 1 ? undefined : { beat }),
-                  ...(shape === 'box' ? { shape } : undefined),
-                }
-                const playbackKey = `${orientation}:${beat}`
-                let playback = playbackAnimations.get(playbackKey)
-                if (!playback) {
-                  playback = applyVtgPlaybackControls(baseAnimation, { speedRatio, beat })
-                  if (!playback) continue
-                  playbackAnimations.set(playbackKey, playback)
-                }
-
-                const finalTransforms = { swapProps, reversePlane }
-                addCandidate(
-                  exactCandidates,
-                  createFinalTransformedVtgAnimationSignature(playback, finalTransforms),
-                  candidate,
-                )
-
-                for (const initialTurnsOffset of vtgTransitionInitialTurnsOffsets) {
-                  addCandidate(
-                    transitionTurnsCandidates,
-                    createFinalTransformedVtgAnimationSignature(playback, {
-                      ...finalTransforms,
-                      initialTurnsOffset,
-                    }),
-                    { ...candidate, initialTurnsOffset },
-                  )
-                }
+                  ...(beat === vtgDefaultBeat ? undefined : { beat }),
+                  baseOrientation: signature.orientation,
+                  startingTurns,
+                })
+                index.set(signature.key, candidates)
               }
             }
           }
@@ -143,168 +171,103 @@ const buildCandidateCache = (
       }
     }
   }
-
-  const speedRatioCaches = candidateCaches.get(speedRatio) ?? new Map()
-  const candidates = { exact: exactCandidates, transitionTurns: transitionTurnsCandidates }
-  speedRatioCaches.set(orientation, candidates)
-  candidateCaches.set(speedRatio, speedRatioCaches)
-  return candidates
+  candidateIndexes.set(speedRatio, index)
+  return index
 }
 
-const getCandidateCache = (
-  speedRatio: VtgSpeedRatio,
-  orientation: NonNullable<VtgPatternSelection['orientation']>,
-) =>
-  candidateCaches.get(speedRatio)?.get(orientation) ?? buildCandidateCache(speedRatio, orientation)
-
-const getMatchingOrientations = (
-  speedRatio: VtgSpeedRatio,
-  rotationFilter?: VtgPatternRotationFilter,
-) => {
-  const orientations = supportsVtgPatternOrientation(speedRatio)
-    ? getVtgPatternOrientations(speedRatio)
-    : ([0] as const)
-  if (!rotationFilter) return orientations
-
-  return orientations.filter((orientation) =>
-    rotationFilter === 'unrotated' ? orientation === 0 : orientation !== 0,
-  )
-}
-
-const findCachedCandidates = (
-  speedRatio: VtgSpeedRatio,
-  rotationFilter: VtgPatternRotationFilter | undefined,
-  signature: string,
-  cacheKind: keyof VtgCandidateCache,
-  stopAtFirstMatchingTier: boolean,
-): readonly VtgCandidateMatch[] => {
-  const orientations = getMatchingOrientations(speedRatio, rotationFilter)
-  const orientationTiers = [
-    orientations.filter((orientation) => orientation === 0),
-    orientations.filter((orientation) => orientation !== 0),
-  ]
-
-  const allMatches: VtgCandidateMatch[] = []
-  for (const tier of orientationTiers) {
-    const matches = tier.flatMap(
-      (orientation) => getCandidateCache(speedRatio, orientation)[cacheKind].get(signature) ?? [],
-    )
-    if (matches.length > 0 && stopAtFirstMatchingTier) return matches
-    allMatches.push(...matches)
-  }
-
-  return allMatches
-}
-
-const findBaseVtgCandidateMatches = (
+const findBaseMatches = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
-  includeTransitionTurns = true,
-  stopAtFirstMatchingOrientationTier = false,
 ): readonly VtgPatternMatch[] => {
-  const speedRatio = inferVtgSpeedRatio(animation)
-  if (speedRatio === undefined) return []
-
+  const timing = inferVtgTiming(animation)
+  const signature = createVtgDirectionSignature(animation)
+  const startingTurns = getVtgStartingTurns(animation)
   const adjustedScale = getVtgAnimationScale(animation)
-  if (adjustedScale === undefined) return []
-  const scale = getVtgScaleControlValue(adjustedScale, speedRatio)
+  if (!timing || !signature || !startingTurns || adjustedScale === undefined) return []
+  const exactAnimationSignature = createCompiledPatternSignature(animation)
 
-  const signature = createVtgAnimationSignature(animation)
-  if (!signature) return []
-
-  const exactMatches = findCachedCandidates(
-    speedRatio,
-    rotationFilter,
-    signature,
-    'exact',
-    stopAtFirstMatchingOrientationTier,
-  )
   const candidates =
-    exactMatches.length > 0 || !includeTransitionTurns
-      ? exactMatches
-      : findCachedCandidates(
-          speedRatio,
-          rotationFilter,
-          signature,
-          'transitionTurns',
-          stopAtFirstMatchingOrientationTier,
-        )
-
-  return candidates.map((candidate) => ({
-    ...candidate,
-    bpm: animation.bpm / doublePlaybackMultiplier,
-    scale,
-  }))
-}
-
-const findBaseVtgPatternMatches = (
-  animation: RootDataFinal,
-  rotationFilter?: VtgPatternRotationFilter,
-  stopAtFirstMatchingOrientationTier = false,
-): readonly VtgPatternMatch[] =>
-  findBaseVtgCandidateMatches(animation, rotationFilter, true, stopAtFirstMatchingOrientationTier)
-
-const normalizeAuthoredHalfTurnPlanes = (animation: RootDataFinal): RootDataFinal => {
-  if (!animation.props.some((prop) => prop.anim.some((frame) => frame.plane === -180))) {
-    return animation
-  }
-
-  return {
-    ...animation,
-    props: animation.props.map((prop) => ({
-      ...prop,
-      anim: prop.anim.map((frame) => (frame.plane === -180 ? { ...frame, plane: 180 } : frame)),
-    })),
-  }
-}
-
-const findVtgPatternMatchesInternal = (
-  animation: RootDataFinal,
-  rotationFilter?: VtgPatternRotationFilter,
-  stopAtFirstMatchingOrientationTier = false,
-): readonly VtgPatternMatch[] => {
-  const normalizedAnimation = normalizeAuthoredHalfTurnPlanes(animation)
-  const alternating = analyzeAlternatingPatternPlayback(normalizedAnimation)
-  if (!alternating) {
-    return findBaseVtgPatternMatches(
-      normalizedAnimation,
-      rotationFilter,
-      stopAtFirstMatchingOrientationTier,
+    (candidateIndexes.get(timing.speedRatio) ?? buildCandidateIndex(timing.speedRatio)).get(
+      signature.key,
+    ) ?? []
+  const scale = getVtgScaleControlValue(adjustedScale, timing.speedRatio)
+  return candidates.flatMap((candidate) => {
+    const orientationDifference = signature.orientation - candidate.baseOrientation
+    // Orientation is applied before the final 180 transform. Reversing the initial motion plane
+    // mirrors the observed positional delta, so recover the authored orientation with its sign
+    // restored before regenerating the candidate.
+    const orientation = normalizeOrientation(
+      candidate.reversePlane ? -orientationDifference : orientationDifference,
     )
-  }
+    if (
+      (rotationFilter === 'unrotated' && orientation !== 0) ||
+      (rotationFilter === 'rotated' && orientation === 0)
+    )
+      return []
+    const {
+      baseOrientation: _baseOrientation,
+      startingTurns: canonicalStartingTurns,
+      ...match
+    } = candidate
+    const orientedState = getOrientedCandidateState(candidate, orientation)
+    if (!orientedState) return []
+    const propRotationOffsets = getVtgPropRotationOffsets(animation, orientedState.animation)
+    if (!propRotationOffsets) return []
+    const propRotationOffsetDifference = propRotationOffsets.reduce(
+      (total, offset) => total + Math.abs(offset),
+      0,
+    )
+    const turnsDifference = canonicalStartingTurns.reduce(
+      (total, turns, index) => total + Math.abs(startingTurns[index]! - turns),
+      0,
+    )
+    const result: VtgPatternMatch = {
+      ...match,
+      ...(orientation === 0 ? undefined : { orientation }),
+      ...(propRotationOffsetDifference === 0 ? undefined : { propRotationOffsets }),
+      bpm: animation.bpm / doublePlaybackMultiplier,
+      scale,
+    }
+    startingTurnsDifferenceByMatch.set(result, turnsDifference)
+    orientedSignatureDifferenceByMatch.set(
+      result,
+      Number(orientedState.signatureKey !== signature.key),
+    )
+    const alignedCandidate = applyCandidatePropRotationOffsets(
+      orientedState.animation,
+      propRotationOffsets,
+    )
+    exactRegenerationDifferenceByMatch.set(
+      result,
+      Number(createCompiledPatternSignature(alignedCandidate) !== exactAnimationSignature),
+    )
+    return [result]
+  })
+}
 
-  return findBaseVtgCandidateMatches(
-    alternating.base,
-    rotationFilter,
-    false,
-    stopAtFirstMatchingOrientationTier,
-  ).map((match) => ({
-    ...match,
-    transition: true,
-    transitionBeats: alternating.transitionBeats,
-    ...(alternating.transitionAfterBeat ? { transitionAfterBeat: true } : undefined),
-    ...(alternating.transitionQuad ? { transitionQuad: true } : undefined),
-    ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
-  }))
+const findInternal = (
+  animation: RootDataFinal,
+  rotationFilter?: VtgPatternRotationFilter,
+): readonly VtgPatternMatch[] => {
+  const alternating = analyzeAlternatingPatternPlayback(animation)
+  return findBaseMatches(alternating?.base ?? animation, rotationFilter).map((match) =>
+    alternating
+      ? {
+          ...match,
+          transition: true,
+          transitionBeats: alternating.transitionBeats,
+          ...(alternating.transitionAfterBeat ? { transitionAfterBeat: true } : undefined),
+          ...(alternating.transitionQuad ? { transitionQuad: true } : undefined),
+          ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
+        }
+      : match,
+  )
 }
 
 export const findVtgPatternMatches = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
-): readonly VtgPatternMatch[] => findVtgPatternMatchesInternal(animation, rotationFilter)
-
-const startingBeat = (match: VtgPatternMatch) => match.beat ?? vtgDefaultBeat
-
-const playbackTransformationCount = (match: VtgPatternMatch) => Number(match.transition === true)
-
-// Rotation is the final pattern comparison. Keep an equivalent zero-degree interpretation when
-// one exists, and use rotated candidates only for signatures the unrotated catalog cannot cover.
-const preferUnrotatedMatches = (
-  matches: readonly VtgPatternMatch[],
-): readonly VtgPatternMatch[] => {
-  const unrotated = matches.filter((match) => (match.orientation ?? 0) === 0)
-  return unrotated.length > 0 ? unrotated : matches
-}
+): readonly VtgPatternMatch[] => findInternal(animation, rotationFilter)
 
 const preferenceDifferenceCount = (
   match: VtgPatternMatch,
@@ -313,38 +276,52 @@ const preferenceDifferenceCount = (
   Number(match.swapProps !== preferences.swapProps) +
   Number(match.reversePlane !== preferences.reversePlane)
 
-/**
- * Tries every starting beat before changing the current non-playback controls within the retained
- * orientation candidates. Equivalent candidates that retain those controls are canonicalized to
- * the lowest starting beat only as a tie-breaker.
- */
 export const findVtgPatternMatch = (
   animation: RootDataFinal,
   preferences?: VtgPatternMatchPreferences,
   rotationFilter?: VtgPatternRotationFilter,
 ): VtgPatternMatch | undefined =>
-  [...preferUnrotatedMatches(findVtgPatternMatchesInternal(animation, rotationFilter, true))].sort(
-    (first, second) => {
-      if (preferences) {
-        const preferenceDifference =
-          preferenceDifferenceCount(first, preferences) -
-          preferenceDifferenceCount(second, preferences)
-        if (preferenceDifference !== 0) return preferenceDifference
-      }
+  [...findInternal(animation, rotationFilter)].sort((first, second) => {
+    const exactRegenerationDifference =
+      (exactRegenerationDifferenceByMatch.get(first) ?? 0) -
+      (exactRegenerationDifferenceByMatch.get(second) ?? 0)
+    if (exactRegenerationDifference) return exactRegenerationDifference
 
-      const beatDifference = startingBeat(first) - startingBeat(second)
-      if (beatDifference !== 0) return beatDifference
+    const orientedSignatureDifference =
+      (orientedSignatureDifferenceByMatch.get(first) ?? 0) -
+      (orientedSignatureDifferenceByMatch.get(second) ?? 0)
+    if (orientedSignatureDifference) return orientedSignatureDifference
 
-      return playbackTransformationCount(first) - playbackTransformationCount(second)
-    },
-  )[0]
+    // Several table cells are geometrically identical after Swap/180. Prefer the interpretation
+    // that belongs to the table directly before using retained UI preferences as a tie-breaker.
+    const transformDifference =
+      Number(first.swapProps) +
+      Number(first.reversePlane) -
+      Number(second.swapProps) -
+      Number(second.reversePlane)
+    if (transformDifference !== 0) return transformDifference
+
+    const preferenceDifference = preferences
+      ? preferenceDifferenceCount(first, preferences) -
+        preferenceDifferenceCount(second, preferences)
+      : 0
+    if (preferenceDifference) return preferenceDifference
+
+    const startingTurnsDifference =
+      (startingTurnsDifferenceByMatch.get(first) ?? 0) -
+      (startingTurnsDifferenceByMatch.get(second) ?? 0)
+    if (startingTurnsDifference) return startingTurnsDifference
+
+    return (first.beat ?? vtgDefaultBeat) - (second.beat ?? vtgDefaultBeat)
+  })[0]
 
 export const matchesVtgSelection = (
   animation: RootDataFinal,
   selection: VtgPatternSelection,
 ): boolean => {
   const candidate = createDefaultVtgAnimation(selection)
-  if (!candidate) return false
-
-  return createVtgAnimationSignature(animation) === createVtgAnimationSignature(candidate)
+  return (
+    candidate !== undefined &&
+    createVtgAnimationSignature(animation) === createVtgAnimationSignature(candidate)
+  )
 }

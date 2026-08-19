@@ -7,7 +7,7 @@ import {
   vtgSpacingControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
-import { vtgDefaultSpeedRatio, vtgSpeedRatios } from '@/features/vtg/types'
+import { isVtgSpeedRatio, vtgDefaultSpeedRatio } from '@/features/vtg/types'
 import type { VtgSpeedRatio } from '@/features/vtg/types'
 import {
   defaultPatternPropColors,
@@ -327,7 +327,7 @@ export const useConceptsStore = defineStore(
           Number.isSafeInteger(store.nextQuickSlotSetId) && store.nextQuickSlotSetId >= 1
             ? Math.max(store.nextQuickSlotSetId, nextIdAfterHydratedSets)
             : nextIdAfterHydratedSets
-        if (!vtgSpeedRatios.includes(store.speedRatio)) {
+        if (!isVtgSpeedRatio(store.speedRatio)) {
           store.speedRatio = vtgDefaultSpeedRatio
         }
         if (
