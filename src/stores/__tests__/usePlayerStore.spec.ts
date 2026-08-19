@@ -45,6 +45,26 @@ describe('usePlayerStore', () => {
     expect(store.INDEX).toBe(1)
   })
 
+  it('recompiles playback after an in-place root edit triggers its shallow ref', async () => {
+    const store = usePlayerStore('test-in-place-playback')
+    const runtime = store.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      bpm: 60,
+      props: [{ anim: [{ beats: 1 }, { beats: 1 }], motion: [] }],
+    }
+    await nextTick()
+
+    runtime.ROOT.value.props[0]!.anim[0]!.beats = 2
+    triggerRef(runtime.ROOT)
+    await nextTick()
+
+    expect(runtime.COMPILED.value.props[0]!.anim[0]!.beats).toBe(2)
+    expect(runtime.PLAYBACK_COMPILED.value.props[0]!.anim[0]!.beats).toBe(2)
+    expect(store.PTIMES).toEqual([[0, 2000]])
+    expect(store.PLAYBACK_MAX).toBe(2000)
+  })
+
   it('extends playback to the longer Motion track', async () => {
     const store = usePlayerStore('test-motion-timing')
     const runtime = store.raw()

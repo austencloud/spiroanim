@@ -179,9 +179,7 @@ export const usePlayerStore = (id: string) => {
         }
       })
 
-      // Compile the animation currently owned by the Player. Clearing the override makes this
-      // computed source point directly back to the latest ROOT without copying or replacing it.
-      watchImmediate(v.PLAYBACK_ROOT, (animation) => {
+      const compilePlayback = (animation: RootDataFinal) => {
         const compiled = rootCompile(animation)
         r.PLAYBACK_COMPILED.value = compiled
 
@@ -197,7 +195,16 @@ export const usePlayerStore = (id: string) => {
         } else {
           v.PLAYBACK_ASPECT.value = [animation.aspectx, animation.aspecty]
         }
+      }
+
+      // Subscribe directly to ROOT so triggerRef(ROOT) recompiles playback even when an in-place
+      // editor change leaves PLAYBACK_ROOT's object identity unchanged.
+      watchImmediate(r.ROOT, (animation) => {
+        if (r.PLAYBACK_OVERRIDE.value === undefined) compilePlayback(animation)
       })
+
+      // Override transitions change playback ownership. Clearing one recompiles the latest ROOT.
+      watch(r.PLAYBACK_OVERRIDE, (override) => compilePlayback(override ?? r.ROOT.value))
 
       watchImmediate(v.ETIMES, (times) => {
         v.COUNT.value = Math.max(times.length - 1, 0)
