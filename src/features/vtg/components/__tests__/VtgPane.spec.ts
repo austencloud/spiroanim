@@ -2347,6 +2347,25 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternPreview')).toHaveLength(previewsBeforeReset + 1)
   })
 
+  it('shows the full VTG grid and source controls for an empty Builder', () => {
+    const wrapper = mount(VtgPane, {
+      props: { builderActive: true, builderFullCatalog: true },
+    })
+
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+    expect(
+      wrapper.findAll('.vtg-tile-tooltip').every((tile) => tile.attributes('style') === undefined),
+    ).toBe(true)
+    expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-tilted"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-qtr"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-orientation"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-beat"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="vtg-tile"]').attributes('draggable')).toBe('true')
+  })
+
   it('limits Builder to the eight final relationship sources at every ratio', async () => {
     const wrapper = mount(VtgPane, { props: { builderActive: true } })
     const references = () =>
@@ -2381,6 +2400,8 @@ describe('VtgPane', () => {
     expect(sides().findAll('[data-role="vtg-prop"]')).toHaveLength(4)
 
     await sides().get('[aria-label="SPLIT TOG rule 2"]').trigger('click')
-    expect(wrapper.get('.vtg-tile--selected').attributes('data-cell-reference')).toMatch(/^2-[1-4]$/)
+    expect(wrapper.get('.vtg-tile--selected').attributes('data-cell-reference')).toMatch(
+      /^2-[1-4]$/,
+    )
   })
 })

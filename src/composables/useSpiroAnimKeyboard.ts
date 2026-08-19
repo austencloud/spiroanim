@@ -112,7 +112,9 @@ export function useSpiroAnimKeyboard(): () => void {
 
       switch (event.code) {
         case 'Space':
-          playerStore.PLAYING = !playerStore.PLAYING
+          if (playerStore.PLAYBACK_TEMPORARY_ACTIVE)
+            playerStore.PREVIEW_PLAYING = !playerStore.PREVIEW_PLAYING
+          else playerStore.PLAYING = !playerStore.PLAYING
           break
         case 'ArrowLeft':
           rewind()

@@ -2,7 +2,10 @@
   <div
     ref="previewGrid"
     class="vtg-transition-previews"
-    :class="{ 'vtg-transition-previews--drag-active': dragActive }"
+    :class="{
+      'vtg-transition-previews--drag-active': dragActive,
+      'vtg-transition-previews--has-selection': selectedIndex !== undefined,
+    }"
     data-role="vtg-transition-previews"
     :style="{ '--vtg-transition-preview-columns': String(columns) }"
   >
@@ -12,11 +15,13 @@
       class="vtg-transition-previews__item"
       :class="{
         'vtg-transition-previews__item--drag-over': dragOverIndex === index,
-        'vtg-transition-previews__item--delete-revealed': revealedDeleteIndex === index,
+        'vtg-transition-previews__item--drop-blocked':
+          dragOverIndex === index && !isDropAllowed(index),
+        'vtg-transition-previews__item--selected': selectedIndex === index,
       }"
       :data-preview-index="index"
       @dragenter.prevent="dragOverIndex = index"
-      @dragover.prevent="allowPatternDrop"
+      @dragover.prevent="allowPatternDrop(index, $event)"
       @dragleave="leavePatternDrop(index, $event)"
       @drop.prevent="dropPattern(index, $event)"
     >
@@ -31,8 +36,9 @@
             type="button"
             draggable="false"
             :aria-label="`Preview pattern ${index + 1}`"
-            :aria-controls="touchDevice ? `vtg-transition-preview-delete-${index}` : undefined"
-            :aria-expanded="touchDevice ? revealedDeleteIndex === index : undefined"
+            :aria-controls="`vtg-transition-preview-actions-${index}`"
+            :aria-expanded="selectedIndex === index"
+            :aria-pressed="selectedIndex === index"
             @click="previewPattern(index)"
             @dragstart.prevent
           >
@@ -47,24 +53,25 @@
           </button>
         </template>
       </BaseTooltip>
-      <button
-        class="vtg-transition-previews__reverse"
-        type="button"
-        :aria-label="`Reverse direction of pattern ${index + 1}`"
-        data-role="vtg-transition-preview-reverse"
-        @click.stop="emit('patternReverse', index)"
-      >
-        <BaseIcon :path="mdiRotate3dVariant" :size="18" />
-      </button>
-      <button
-        :id="`vtg-transition-preview-delete-${index}`"
-        class="vtg-transition-previews__delete"
-        type="button"
-        :aria-label="`Delete pattern ${index + 1}`"
-        @click.stop="emit('patternDelete', index)"
-      >
-        <BaseIcon :path="mdiTrashCanOutline" :size="18" />
-      </button>
+      <div :id="`vtg-transition-preview-actions-${index}`">
+        <button
+          class="vtg-transition-previews__reverse"
+          type="button"
+          :aria-label="`Reverse direction of pattern ${index + 1}`"
+          data-role="vtg-transition-preview-reverse"
+          @click.stop="emit('patternReverse', index)"
+        >
+          <BaseIcon :path="mdiRotate3dVariant" :size="18" />
+        </button>
+        <button
+          class="vtg-transition-previews__delete"
+          type="button"
+          :aria-label="`Delete pattern ${index + 1}`"
+          @click.stop="emit('patternDelete', index)"
+        >
+          <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+        </button>
+      </div>
       <label class="vtg-transition-previews__beats">
         <span class="vtg-transition-previews__visually-hidden">
           Pattern {{ index + 1 }} beats
@@ -91,14 +98,17 @@
     </div>
 
     <div
+      v-if="selectedIndex !== 0"
       class="vtg-transition-previews__item vtg-transition-previews__placeholder"
       :class="{
         'vtg-transition-previews__item--drag-over': dragOverIndex === previewUrls.length,
+        'vtg-transition-previews__item--drop-blocked':
+          dragOverIndex === previewUrls.length && !isDropAllowed(previewUrls.length),
       }"
       data-role="vtg-transition-preview-drop-target"
       :data-preview-index="previewUrls.length"
       @dragenter.prevent="dragOverIndex = previewUrls.length"
-      @dragover.prevent="allowPatternDrop"
+      @dragover.prevent="allowPatternDrop(previewUrls.length, $event)"
       @dragleave="leavePatternDrop(previewUrls.length, $event)"
       @drop.prevent="dropPattern(previewUrls.length, $event)"
     >
@@ -149,6 +159,7 @@ const props = withDefaults(
     initialBeatCounts: readonly number[]
     beatCounts: readonly number[]
     scale: number
+    selectedIndex?: number
   }>(),
   { columns: 4 },
 )
@@ -162,10 +173,10 @@ const emit = defineEmits<{
   patternDelete: [index: number]
   patternReverse: [index: number]
   patternPreview: [animation: RootDataFinal, index: number]
+  selectionChange: [index: number | undefined]
 }>()
 const dragActive = ref(false)
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
-const revealedDeleteIndex = ref<number>()
 const animationForRelationshipLabel = (animation: RootDataFinal): RootDataFinal => ({
   ...animation,
   props: animation.props.map((prop) => ({
@@ -193,8 +204,10 @@ useEventListener(typeof document === 'undefined' ? null : document, 'drop', () =
   dragActive.value = false
 })
 const dragOverIndex = ref<number>()
-const allowPatternDrop = (event: DragEvent) => {
-  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+const isDropAllowed = (index: number) =>
+  props.animations.length === 0 || (props.selectedIndex === 0 ? index === 0 : index > 0)
+const allowPatternDrop = (index: number, event: DragEvent) => {
+  if (event.dataTransfer) event.dataTransfer.dropEffect = isDropAllowed(index) ? 'copy' : 'none'
 }
 const leavePatternDrop = (index: number, event: DragEvent) => {
   const item = event.currentTarget
@@ -203,6 +216,7 @@ const leavePatternDrop = (index: number, event: DragEvent) => {
 }
 const dropPattern = (previewIndex: number, event: DragEvent) => {
   dragOverIndex.value = undefined
+  if (!isDropAllowed(previewIndex)) return
   const serialized = event.dataTransfer?.getData(builderPatternDragType)
   if (!serialized) return
   try {
@@ -235,7 +249,9 @@ const handlePointerMove = (event: Event) => {
 const handlePointerDrop = (event: Event) => {
   const detail = (event as CustomEvent<BuilderPatternPointerDetail>).detail
   const previewIndex = pointerDropIndex(detail.clientX, detail.clientY)
-  if (previewIndex !== undefined) emit('patternDrop', { previewIndex, selection: detail.selection })
+  if (previewIndex !== undefined && isDropAllowed(previewIndex)) {
+    emit('patternDrop', { previewIndex, selection: detail.selection })
+  }
   dragActive.value = false
   dragOverIndex.value = undefined
   pointerPosition.value = undefined
@@ -268,8 +284,9 @@ const updateBeatCount = (index: number, event: Event) => {
     emit('beatChange', index, event.target.valueAsNumber)
 }
 const previewPattern = (index: number) => {
-  if (touchDevice)
-    revealedDeleteIndex.value = revealedDeleteIndex.value === index ? undefined : index
+  const nextIndex = props.selectedIndex === index ? undefined : index
+  emit('selectionChange', nextIndex)
+  if (nextIndex === undefined) return
   const animation = props.animations[index]
   if (animation) emit('patternPreview', animation, index)
 }
@@ -305,10 +322,6 @@ watch([width, () => props.columns], ([gridWidth]) => {
   requestPreviews()
 })
 watch([() => props.animations, () => props.refreshKey], requestPreviews)
-watch(
-  () => props.animations,
-  () => (revealedDeleteIndex.value = undefined),
-)
 </script>
 
 <style scoped>
@@ -326,8 +339,16 @@ watch(
   border-radius: var(--radius-sm);
 }
 
+.vtg-transition-previews__item--selected {
+  box-shadow: 0 0 0 2px var(--color-status-warning);
+}
+
 .vtg-transition-previews__item--drag-over {
   box-shadow: 0 0 0 2px var(--color-action-primary);
+}
+
+.vtg-transition-previews__item--drop-blocked {
+  box-shadow: 0 0 0 2px var(--color-status-error);
 }
 
 .vtg-transition-previews__pointer-drag {
@@ -405,14 +426,16 @@ watch(
   place-items: center;
 }
 
-.vtg-transition-previews__item--delete-revealed .vtg-transition-previews__delete,
+.vtg-transition-previews__item--selected .vtg-transition-previews__delete,
 .vtg-transition-previews__delete:focus-visible {
   opacity: 1;
   pointer-events: auto;
 }
 
 @media (hover: hover) {
-  .vtg-transition-previews__item:hover .vtg-transition-previews__delete {
+  .vtg-transition-previews:not(.vtg-transition-previews--has-selection)
+    .vtg-transition-previews__item:hover
+    .vtg-transition-previews__delete {
     opacity: 1;
     pointer-events: auto;
   }
@@ -440,7 +463,7 @@ watch(
   place-items: center;
 }
 
-.vtg-transition-previews__item--delete-revealed .vtg-transition-previews__reverse,
+.vtg-transition-previews__item--selected .vtg-transition-previews__reverse,
 .vtg-transition-previews__reverse:focus-visible {
   opacity: 1;
   pointer-events: auto;
@@ -452,7 +475,9 @@ watch(
 }
 
 @media (hover: hover) {
-  .vtg-transition-previews__item:hover .vtg-transition-previews__reverse {
+  .vtg-transition-previews:not(.vtg-transition-previews--has-selection)
+    .vtg-transition-previews__item:hover
+    .vtg-transition-previews__reverse {
     opacity: 1;
     pointer-events: auto;
   }

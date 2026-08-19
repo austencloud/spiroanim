@@ -4,7 +4,7 @@
     class="vtg-pane"
     :class="{
       'vtg-pane--touch': touchDevice,
-      'vtg-pane--builder-active': builderActive,
+      'vtg-pane--builder-active': compactBuilder,
     }"
     aria-labelledby="vtg-pane-title"
     data-role="vtg-pane"
@@ -121,7 +121,7 @@
             class="vtg-tile-tooltip"
             :text="getTileDescription(tile)"
             :style="
-              builderActive
+              compactBuilder
                 ? {
                     gridColumn: String(tile.column),
                     gridRow: tile.row === 6 ? '2' : '1',
@@ -221,7 +221,7 @@
     <ConceptAnimationControls :animation="animation">
       <template #before-controls="{ beginSliderHistory, endSliderHistory }">
         <PatternPlaybackControls
-          v-if="!builderActive"
+          v-if="!builderActive || builderFullCatalog"
           v-model:beat="beat"
           v-model:qtr="isQtr"
           v-model:orientation="orientation"
@@ -381,10 +381,12 @@ const props = withDefaults(
     animationReady?: boolean
     patternMatcher?: PatternMatchingClient
     builderActive?: boolean
+    builderFullCatalog?: boolean
   }>(),
   {
     animationReady: true,
     builderActive: false,
+    builderFullCatalog: false,
   },
 )
 
@@ -434,8 +436,9 @@ const hasPopulatedQuickSlots = computed(
     conceptsStore.quickSlotPaths.some((path) => typeof path === 'string'),
 )
 const showStaticPropsTransitionNote = computed(() => transition.value && speedRatio.value === '1:1')
+const compactBuilder = computed(() => props.builderActive && !props.builderFullCatalog)
 const usesPairedPreviewLayout = computed(
-  () => props.builderActive || speedRatio.value === '1:2' || speedRatio.value === '1:4',
+  () => compactBuilder.value || speedRatio.value === '1:2' || speedRatio.value === '1:4',
 )
 const hideColumnHeaderDetails = computed(
   () => isQtr.value || speedRatio.value === '1:2' || speedRatio.value === '1:4',
@@ -545,7 +548,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
   matrixAddresses
     .filter(
       (address) =>
-        !props.builderActive || ((address.row === 1 || address.row === 6) && address.column <= 4),
+        !compactBuilder.value || ((address.row === 1 || address.row === 6) && address.column <= 4),
     )
     .map((address) => {
       const baseSelection: VtgPatternSelection = {
@@ -575,7 +578,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
         : baseSelection
 
       const relationships = describePatternSelectionRelationships(selection)
-      if (!props.builderActive) return { ...address, ...relationships }
+      if (!compactBuilder.value) return { ...address, ...relationships }
 
       const animation = isQtr.value
         ? createDefaultQtrAnimation(selection as QtrPatternSelection)
@@ -593,7 +596,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
 )
 
 const displayCellReference = (tile: VtgMatrixTile): string =>
-  props.builderActive ? `${tile.row === 6 ? 2 : tile.row}-${tile.column}` : tile.reference
+  compactBuilder.value ? `${tile.row === 6 ? 2 : tile.row}-${tile.column}` : tile.reference
 
 const getTileDescription = (tile: VtgMatrixTile) => tile.description
 
@@ -785,7 +788,7 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
 }
 
 const renderedReferenceForTile = (tile: VtgMatrixTile) =>
-  props.builderActive
+  compactBuilder.value
     ? tile.reference
     : usesPairedPreviewLayout.value
       ? createCellReference(
@@ -1363,7 +1366,7 @@ const displayedColumnRules = computed(() => {
       ? swappedColumnRuleNumbers
       : columnRuleNumbers
 
-  const displayedColumns = props.builderActive ? columnRuleNumbers.slice(0, 4) : columnRuleNumbers
+  const displayedColumns = compactBuilder.value ? columnRuleNumbers.slice(0, 4) : columnRuleNumbers
   return displayedColumns.map((column, index) => {
     const ruleNumber = ruleNumbers[index]
     const rule = columnRules.find((candidate) => candidate.number === ruleNumber)
@@ -1422,7 +1425,7 @@ const quarterDiagramOptions = computed(() => ({
 type DisplayedSideRule = VtgRuleSpec & { sourceNumber?: VtgRuleNumber }
 
 const displayedSideRules = computed<readonly DisplayedSideRule[]>(() => {
-  if (props.builderActive) {
+  if (compactBuilder.value) {
     const first = sideRules[0]
     const sixth = sideRules[5]
     if (!first || !sixth) throw new Error('Missing compact Builder side rules')
@@ -1446,7 +1449,7 @@ const blankDimensions = reactive<BlankDimensions[]>(
   pairedPatternPreviewReferences.map(() => ({ width: 0, height: 0 })),
 )
 const displayedPreviews = computed(() => {
-  const references = props.builderActive
+  const references = compactBuilder.value
     ? builderPatternPreviewReferences
     : usesPairedPreviewLayout.value
       ? pairedPatternPreviewReferences
@@ -1461,7 +1464,7 @@ const displayedPreviews = computed(() => {
     return {
       reference,
       rendererIndex,
-      style: props.builderActive
+      style: compactBuilder.value
         ? { gridColumn: `${column} / span 2`, gridRow: row === 6 ? '2' : '1' }
         : usesPairedPreviewLayout.value
           ? { gridColumn: `${column} / span 2`, gridRow: `${row}` }

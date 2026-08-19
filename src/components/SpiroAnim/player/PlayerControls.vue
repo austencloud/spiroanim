@@ -142,7 +142,9 @@ const clickUndo = () => {
   if (previous !== undefined) ROOT.value = previous
 }
 
-const playIcon = computed(() => (PLAYING.value ? mdiPauseCircleOutline : mdiPlayCircleOutline))
+const playIcon = computed(() =>
+  PLAYING.value ? mdiPauseCircleOutline : mdiPlayCircleOutline,
+)
 const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelectionMultiple))
 </script>
 

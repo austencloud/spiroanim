@@ -70,10 +70,11 @@
             :initial-beat-counts="baselineBeatCounts"
             :beat-counts="currentBeatCounts"
             :scale="scale"
+            :selected-index="selectedPreviewIndex"
             @pattern-drop="acceptPatternDrop"
             @pattern-delete="deletePreview"
             @pattern-reverse="reversePreview"
-            @pattern-preview="previewPattern"
+            @selection-change="selectPreview"
             @beat-change="updatePreviewBeatCount"
             @slider-start="beginSliderHistory"
             @slider-end="endSliderHistory"
@@ -145,17 +146,28 @@
               'builder-pane__player-revert--right': hijackedPane !== 'right',
             }"
           >
-            <AppTooltip :text="`Return to the loaded pattern (${remainingSeconds}s remaining)`">
+            <AppTooltip
+              :text="
+                PREVIEW_PLAYING
+                  ? `Return to the loaded pattern (${remainingSeconds}s remaining)`
+                  : 'Return to the loaded pattern'
+              "
+            >
               <template #activator="{ props: tooltipProps }">
                 <button
                   v-bind="tooltipProps"
                   class="builder-pane__player-revert-button"
                   type="button"
-                  :aria-label="`Return player to loaded pattern, ${remainingSeconds} seconds remaining`"
+                  :aria-label="
+                    PREVIEW_PLAYING
+                      ? `Return player to loaded pattern, ${remainingSeconds} seconds remaining`
+                      : 'Return player to loaded pattern'
+                  "
                   data-role="builder-preview-countdown"
                   @click="playerStore.endPlaybackPreview"
                 >
-                  {{ remainingSeconds }}
+                  <BaseIcon v-if="!PREVIEW_PLAYING" :path="mdiExitToApp" :size="20" />
+                  <template v-else>{{ remainingSeconds }}</template>
                 </button>
               </template>
             </AppTooltip>
@@ -181,7 +193,7 @@
 </template>
 
 <script setup lang="ts">
-import { mdiMinus, mdiPlus, mdiSwapVerticalBold, mdiUndoVariant } from '@mdi/js'
+import { mdiExitToApp, mdiMinus, mdiPlus, mdiSwapVerticalBold, mdiUndoVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
@@ -213,6 +225,7 @@ import AnimPlayer from '@/components/SpiroAnim/AnimPlayer.vue'
 import {
   appendVtgBuilderPattern,
   insertVtgBuilderPattern,
+  replaceFirstVtgBuilderPattern,
 } from '@/features/builder/appendVtgBuilderPattern'
 import { isVtgPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
@@ -224,7 +237,10 @@ import { useSplitterStore } from '@/stores/useSplitterStore'
 import { usePatternMatchingClient } from '@/features/concepts/composables/usePatternMatchingWorker'
 import { createBuilderQuickSlotCandidates } from '@/features/builder/createBuilderQuickSlotCandidates'
 
-const emit = defineEmits<{ quickSlotsCreate: [animations: readonly RootDataFinal[]] }>()
+const emit = defineEmits<{
+  quickSlotsCreate: [animations: readonly RootDataFinal[]]
+  previewSelectionChange: [index: number | undefined]
+}>()
 
 const paneStore = useMainPaneStore()
 const { hijackedPane } = storeToRefs(paneStore)
@@ -272,7 +288,7 @@ const swapViews = () => {
 const playerStore = usePlayerStore('main')
 const qsStore = useQSMainStore()
 const { ROOT, CURRENT } = playerStore.raw()
-const { PLAYBACK_MAX, PLAYBACK_PREVIEW_ACTIVE } = storeToRefs(playerStore)
+const { PLAYBACK_MAX, PREVIEW_PLAYING, PLAYBACK_PREVIEW_ACTIVE } = storeToRefs(playerStore)
 const remainingSeconds = computed(() =>
   Math.max(0, Math.ceil((PLAYBACK_MAX.value - CURRENT.value) / 1000)),
 )
@@ -362,29 +378,68 @@ const createBuilderQSlots = async () => {
 const builderDisplayAnimation = computed(() =>
   toVtgBuilderDisplayAnimation(ROOT.value, scale.value),
 )
-watchImmediate(builderDisplayAnimation, playerStore.setPlaybackOverride)
-const previewedPatternIndex = ref<number>()
-watch(PLAYBACK_PREVIEW_ACTIVE, (active) => {
-  if (!active) previewedPatternIndex.value = undefined
+const selectedPreviewIndex = ref<number>()
+const previewRevision = ref(0)
+const selectedPreviewAnimation = computed(() => {
+  const index = selectedPreviewIndex.value
+  const animation = index === undefined ? undefined : resizedPreviewAnimations.value?.[index]
+  return animation === undefined ? undefined : toVtgBuilderDisplayAnimation(animation, scale.value)
 })
-const previewPattern = (animation: RootDataFinal, index: number) => {
-  previewedPatternIndex.value = index
-  playerStore.startPlaybackPreview(toVtgBuilderDisplayAnimation(animation, scale.value))
+const builderPlaybackAnimation = computed(
+  () => selectedPreviewAnimation.value ?? builderDisplayAnimation.value,
+)
+const restoreBuilderPlayback = () =>
+  playerStore.setPlaybackOverride(
+    builderPlaybackAnimation.value,
+    selectedPreviewAnimation.value !== undefined,
+  )
+watchImmediate(builderPlaybackAnimation, (animation) => {
+  if (!PLAYBACK_PREVIEW_ACTIVE.value)
+    playerStore.setPlaybackOverride(animation, selectedPreviewAnimation.value !== undefined)
+})
+watch(PLAYBACK_PREVIEW_ACTIVE, (active) => {
+  if (!active) restoreBuilderPlayback()
+})
+const selectPreview = (index: number | undefined) => {
+  if (PLAYBACK_PREVIEW_ACTIVE.value) playerStore.endPlaybackPreview()
+  if (index === undefined) {
+    const hadSelection = selectedPreviewIndex.value !== undefined
+    selectedPreviewIndex.value = undefined
+    emit('previewSelectionChange', undefined)
+    if (!hadSelection) return
+    CURRENT.value = 0
+    return
+  }
+
+  selectedPreviewIndex.value = index
+  emit('previewSelectionChange', index)
+  CURRENT.value = 0
 }
 
-const applyBuilderPatternUpdate = (updated: RootDataFinal, current?: number) => {
+const applyBuilderPatternUpdate = (
+  updated: RootDataFinal,
+  current?: number,
+  preservePreviewSelection = false,
+) => {
   if (PLAYBACK_PREVIEW_ACTIVE.value) playerStore.endPlaybackPreview()
-  previewedPatternIndex.value = undefined
+  if (!preservePreviewSelection) selectPreview(undefined)
   ROOT.value = updated
+  previewRevision.value += 1
   if (current !== undefined) CURRENT.value = current
 }
 
 const acceptPatternDrop = (drop: BuilderPatternDrop) => {
   const previewCount = resizedPreviewAnimations.value?.length
   if (previewCount === undefined || !isVtgPatternSelection(drop.selection)) return
+  const dropAllowed =
+    previewCount === 0 ||
+    (selectedPreviewIndex.value === 0 ? drop.previewIndex === 0 : drop.previewIndex > 0)
+  if (!dropAllowed) return
 
-  const updated =
-    drop.previewIndex === previewCount
+  const replacesFirst = selectedPreviewIndex.value === 0 && drop.previewIndex === 0
+  const updated = replacesFirst
+    ? replaceFirstVtgBuilderPattern(preparedPattern.value.pattern, drop.selection)
+    : drop.previewIndex === previewCount
       ? appendVtgBuilderPattern(preparedPattern.value.pattern, drop.selection)
       : insertVtgBuilderPattern(preparedPattern.value.pattern, drop.selection, drop.previewIndex)
   if (!updated) return
@@ -399,7 +454,7 @@ const acceptPatternDrop = (drop: BuilderPatternDrop) => {
       ? 0
       : (PROPTIMES(rootCompile(updated))[0]?.[insertedStartFrame] ?? 0)
 
-  applyBuilderPatternUpdate(updated, insertedStartMS)
+  applyBuilderPatternUpdate(updated, insertedStartMS, replacesFirst)
 }
 const updatePreviewBeatCount = (index: number, beatCount: number) => {
   const updated = resizeVtgTransitionPatternPreview(preparedPattern.value.pattern, index, beatCount)
@@ -409,19 +464,11 @@ const deletePreview = (index: number) => {
   const updated = removeVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
   if (updated !== undefined) applyBuilderPatternUpdate(updated)
 }
-const reversePreview = async (index: number) => {
-  const restartPreview = PLAYBACK_PREVIEW_ACTIVE.value && previewedPatternIndex.value === index
+const reversePreview = (index: number) => {
   const updated = reverseVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
   if (updated === undefined) return
 
   applyBuilderPatternUpdate(updated)
-  if (!restartPreview) return
-
-  // Let the main Builder override and extracted thumbnails update first so the refreshed
-  // temporary preview remains the final playback override.
-  await nextTick()
-  const updatedPreview = resizedPreviewAnimations.value?.[index]
-  if (updatedPreview) previewPattern(updatedPreview, index)
 }
 const previewRefreshKey = computed(() =>
   [
@@ -435,6 +482,7 @@ const previewRefreshKey = computed(() =>
     rightPropVisible.value,
     leftPropColor.value,
     rightPropColor.value,
+    previewRevision.value,
   ].join('|'),
 )
 
@@ -458,10 +506,12 @@ const endSliderHistory = () => {
 }
 onBeforeUnmount(() => {
   endSliderHistory()
+  emit('previewSelectionChange', undefined)
   playerStore.endPlaybackPreview()
 })
 
 const exit = () => {
+  selectPreview(undefined)
   playerStore.endPlaybackPreview()
   paneStore.exitPaneHijack()
 }

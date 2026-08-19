@@ -78,6 +78,8 @@ const playerStore = usePlayerStore(props.store)
 const { CURRENT } = playerStore.raw()
 const {
   PLAYING,
+  PREVIEW_PLAYING,
+  PLAYBACK_TEMPORARY_ACTIVE,
   UPDATE,
   SELECTION,
   SELECTED,
@@ -87,6 +89,13 @@ const {
   PLAYBACK_OVERRIDE_ACTIVE,
   ETIMES,
 } = storeToRefs(playerStore)
+const rendererPlaying = computed({
+  get: () => (PLAYBACK_TEMPORARY_ACTIVE.value ? PREVIEW_PLAYING.value : PLAYING.value),
+  set: (playing: boolean) => {
+    if (PLAYBACK_TEMPORARY_ACTIVE.value) PREVIEW_PLAYING.value = playing
+    else PLAYING.value = playing
+  },
+})
 
 const dim = inject<Readonly<{ width: number; height: number }>>('dim')
 
@@ -112,8 +121,8 @@ const start = (event?: Event) => {
   if (interacting) return
   interacting = true
 
-  if (PLAYING.value) {
-    PLAYING.value = false
+  if (rendererPlaying.value) {
+    rendererPlaying.value = false
     autoPlay = true
   } else autoPlay = false
 }
@@ -123,7 +132,7 @@ const end = (/*final: number*/) => {
   interacting = false
   selectionHandles.value = [SELECTED.value[0] ?? 0, SELECTED.value[1] ?? 0]
 
-  if (autoPlay) PLAYING.value = true
+  if (autoPlay) rendererPlaying.value = true
 }
 
 const inputValue = (event: Event) => Number((event.currentTarget as HTMLInputElement).value)

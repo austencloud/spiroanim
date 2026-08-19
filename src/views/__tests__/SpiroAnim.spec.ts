@@ -15,6 +15,8 @@ import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
+import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 
 describe('SpiroAnim view', () => {
   beforeEach(() => {
@@ -134,10 +136,8 @@ describe('SpiroAnim view', () => {
     await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
     await flushPromises()
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
-    expect(playerStore.PLAYING).toBe(true)
-    expect(playerStore.raw().CURRENT.value).toBe(0)
-    await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
-    await flushPromises()
+    expect(playerStore.PLAYING).toBe(false)
+    expect(playerStore.PREVIEW_PLAYING).toBe(true)
     expect(playerStore.raw().CURRENT.value).toBe(0)
     const countdown = wrapper.get('[data-role="builder-preview-countdown"]')
     const previewMaximum = playerStore.PLAYBACK_MAX
@@ -145,19 +145,61 @@ describe('SpiroAnim view', () => {
     await nextTick()
     expect(countdown.text()).toBe('2')
     expect(countdown.attributes('aria-label')).toContain('2 seconds remaining')
+    playerStore.PREVIEW_PLAYING = false
+    await nextTick()
+    expect(playerStore.PREVIEW_PLAYING).toBe(false)
+    expect(playerStore.PLAYING).toBe(false)
+    expect(countdown.text()).toBe('')
+    expect(countdown.find('svg').exists()).toBe(true)
+    expect(countdown.attributes('aria-label')).toBe('Return player to loaded pattern')
     await countdown.trigger('click')
     expect(wrapper.find('[data-role="builder-preview-countdown"]').exists()).toBe(false)
     expect(playerStore.raw().CURRENT.value).toBe(0)
     expect(playerStore.PLAYING).toBe(false)
 
     await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
+    await flushPromises()
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
+    expect(playerStore.PLAYING).toBe(false)
+    expect(playerStore.PREVIEW_PLAYING).toBe(false)
+    expect(wrapper.find('[data-role="builder-preview-countdown"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
+    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
+    expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
+      'vtg-transition-previews__item--selected',
+    )
+    const replacementDragData = new Map<string, string>()
+    const replacementDataTransfer = {
+      effectAllowed: 'none',
+      dropEffect: 'none',
+      setData: (type: string, value: string) => replacementDragData.set(type, value),
+      getData: (type: string) => replacementDragData.get(type) ?? '',
+    }
+    const rootBeforeReplacement = playerRoot.value
+    const routeBeforeReplacement = router.currentRoute.value.fullPath
+    await wrapper.get('[data-cell-reference="3-4"]').trigger('dragstart', {
+      dataTransfer: replacementDataTransfer,
+    })
+    await wrapper.get('[data-preview-index="0"]').trigger('drop', {
+      dataTransfer: replacementDataTransfer,
+    })
+    await flushPromises()
+    expect(playerRoot.value).not.toBe(rootBeforeReplacement)
+    const replacedFirstPreview = createVtgTransitionPreviewAnimations(playerRoot.value)?.[0]
+    expect(replacedFirstPreview).toBeDefined()
+    expect(findVtgPatternMatch(replacedFirstPreview!)).toMatchObject({ reference: '3-4' })
+    expect(router.currentRoute.value.fullPath).not.toBe(routeBeforeReplacement)
+    expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
+      'vtg-transition-previews__item--selected',
+    )
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
     playerStore.raw().CURRENT.value = 500
     await wrapper.findAll('[data-role="vtg-transition-preview-reverse"]')[0]!.trigger('click')
     await flushPromises()
-    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     expect(playerStore.raw().CURRENT.value).toBe(0)
-    expect(wrapper.find('[data-role="builder-preview-countdown"]').exists()).toBe(true)
-    playerStore.endPlaybackPreview()
+    expect(wrapper.find('[data-role="builder-preview-countdown"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(8)
 
     playerStore.setPlaybackOverride(playerRoot.value)
     playerStore.raw().CURRENT.value = 0
@@ -165,6 +207,7 @@ describe('SpiroAnim view', () => {
     playerStore.PLAYING = false
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', cancelable: true }))
     expect(playerStore.PLAYING).toBe(true)
+    expect(playerStore.PREVIEW_PLAYING).toBe(false)
     const dragData = new Map<string, string>()
     const dataTransfer = {
       effectAllowed: 'none',
@@ -178,7 +221,8 @@ describe('SpiroAnim view', () => {
     await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
     await flushPromises()
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
-    expect(playerStore.PLAYING).toBe(true)
+    expect(playerStore.PLAYING).toBe(false)
+    expect(playerStore.PREVIEW_PLAYING).toBe(false)
     await wrapper.get('[data-cell-reference="1-2"]').trigger('dragstart', { dataTransfer })
     await wrapper
       .get('[data-role="vtg-transition-preview-drop-target"]')
@@ -231,7 +275,7 @@ describe('SpiroAnim view', () => {
     playerStore.PLAYING = false
     await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
     await flushPromises()
-    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     await durationSlider.trigger('pointerdown')
     await durationSlider.setValue(String(Number(durationSlider.element.value) + 0.5))
     await durationSlider.trigger('pointerup')
@@ -248,7 +292,7 @@ describe('SpiroAnim view', () => {
     expect(playerRoot.value.props[0]!.anim).toHaveLength(frameCountBeforeResize + 5)
     await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
     await flushPromises()
-    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     await wrapper.get('button[aria-label="Delete pattern 1"]').trigger('click')
     await flushPromises()
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
@@ -256,7 +300,6 @@ describe('SpiroAnim view', () => {
     expect(playerStore.PLAYING).toBe(false)
     expect(router.currentRoute.value.path).toBe(pathBeforeHijack)
     expect(router.currentRoute.value.fullPath).not.toBe(routeBeforeHijack)
-    const routeAfterBuilderEdit = router.currentRoute.value.fullPath
     expect(
       wrapper.get('[data-role="builder-pane-view"]').element.closest('[data-role="left-pane"]'),
     ).toBe(wrapper.get('[data-role="left-pane"]').element)
@@ -267,6 +310,19 @@ describe('SpiroAnim view', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-pattern-builder"]').element.checked).toBe(
       true,
     )
+
+    await wrapper.get('button[aria-label="Delete pattern 1"]').trigger('click')
+    await flushPromises()
+    expect(playerRoot.value.props).toHaveLength(0)
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
+    expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(true)
+    wrapper.get('[data-role="vtg-tilted"]')
+    wrapper.get('[data-role="vtg-qtr"]')
+    wrapper.get('[data-role="vtg-orientation"]')
+    wrapper.get('[data-role="vtg-beat"]')
+    playerRoot.value = initialAnimation
+    await flushPromises()
+    const routeAfterBuilderEdit = router.currentRoute.value.fullPath
     expect(router.currentRoute.value.fullPath).toBe(routeAfterBuilderEdit)
 
     await wrapper.get('[data-role="vtg-pattern-builder"]').trigger('click')

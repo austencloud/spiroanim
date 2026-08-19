@@ -47,6 +47,7 @@
       :animation-ready="animationReady"
       :pattern-matcher="patternMatcher"
       :builder-active="builderActive"
+      :builder-full-catalog="builderFullCatalog"
       @pattern-select="emit('patternSelect', $event)"
       @pattern-preview="emit('patternPreview', $event)"
       @customize="emit('customize', $event)"
@@ -91,6 +92,7 @@ const props = defineProps<{
   animation?: RootDataFinal
   animationReady?: boolean
   builderActive?: boolean
+  builderFullCatalog?: boolean
 }>()
 
 const emit = defineEmits<{

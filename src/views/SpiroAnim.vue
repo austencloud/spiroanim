@@ -59,6 +59,7 @@
         :animation="ROOT"
         :animation-ready="animationReady"
         :builder-active="paneStore.isPaneHijacked"
+        :builder-full-catalog="builderFullCatalog"
         data-type="concepts"
         data-role="concepts-view"
         @pattern-select="applyConceptPattern"
@@ -75,6 +76,7 @@
         data-type="builder"
         data-role="builder-pane-view"
         @quick-slots-create="saveAnimationsToQuickSlots"
+        @preview-selection-change="selectedBuilderPreviewIndex = $event"
       />
     </div>
     <AppNavigationMenu />
@@ -139,6 +141,12 @@ const conceptsStore = useConceptsStore()
 const qsStore = useQSMainStore()
 const queryVersionStore = useQueryVersionStore()
 const { ROOT } = playerStore.raw()
+const selectedBuilderPreviewIndex = ref<number>()
+const builderFullCatalog = computed(
+  () =>
+    paneStore.isPaneHijacked &&
+    (ROOT.value.props.length === 0 || selectedBuilderPreviewIndex.value === 0),
+)
 const { ETIMES, PTIMES, UTIMES } = storeToRefs(playerStore)
 const { pSELECTED, showFullTimeline } = storeToRefs(usePropertiesStore('main'))
 const { registerComponentEl } = paneStore

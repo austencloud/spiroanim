@@ -84,6 +84,32 @@ describe('PlayerProgress', () => {
     expect(store.PLAYING).toBe(false)
   })
 
+  it('controls preview playback without changing loaded ROOT playback', async () => {
+    const store = usePlayerStore('progress-preview-playback')
+    store.PLAYING = true
+    store.PREVIEW_PLAYING = false
+    store.setPlaybackOverride(store.raw().ROOT.value, true)
+    const wrapper = mount(PlayerProgress, {
+      props: { store: 'progress-preview-playback' },
+      global: { provide: { dim: { width: 600, height: 400 } } },
+    })
+    const slider = wrapper.get('input[aria-label="Animation position"]')
+
+    await slider.trigger('pointerdown')
+    await slider.trigger('pointerup')
+    expect(store.PREVIEW_PLAYING).toBe(false)
+    expect(store.PLAYING).toBe(true)
+
+    store.PLAYING = false
+    store.PREVIEW_PLAYING = true
+    await slider.trigger('pointerdown')
+    expect(store.PREVIEW_PLAYING).toBe(false)
+    expect(store.PLAYING).toBe(false)
+    await slider.trigger('pointerup')
+    expect(store.PREVIEW_PLAYING).toBe(true)
+    expect(store.PLAYING).toBe(false)
+  })
+
   it('does not treat a claimed global shortcut as progress interaction', () => {
     const store = usePlayerStore('progress-global-shortcut')
     const wrapper = mountProgress('progress-global-shortcut')

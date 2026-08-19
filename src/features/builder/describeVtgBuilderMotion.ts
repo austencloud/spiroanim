@@ -1,20 +1,27 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
-import type { RootDataFinal } from '@/types/AnimTypes'
+import type { RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 
-type SpinCode = 'A' | 'I'
-type DirectionCode = 'S' | 'O'
+export type VtgBuilderSpinCode = 'A' | 'I'
+export type VtgBuilderDirectionCode = 'S' | 'O'
 
-export type VtgBuilderMotionLabel = `${SpinCode}${SpinCode}/${DirectionCode}${DirectionCode}`
+export interface VtgBuilderMotion {
+  spins: readonly [VtgBuilderSpinCode, VtgBuilderSpinCode]
+  directions: readonly [VtgBuilderDirectionCode, VtgBuilderDirectionCode]
+}
 
-const spinDescription = (code: SpinCode): string => (code === 'A' ? 'Anti' : 'In')
-const directionDescription = (code: DirectionCode): string => (code === 'S' ? 'Same' : 'Opposite')
+export type VtgBuilderMotionLabel =
+  `${VtgBuilderSpinCode}${VtgBuilderSpinCode}/${VtgBuilderDirectionCode}${VtgBuilderDirectionCode}`
+
+const spinDescription = (code: VtgBuilderSpinCode): string => (code === 'A' ? 'Anti' : 'In')
+const directionDescription = (code: VtgBuilderDirectionCode): string =>
+  code === 'S' ? 'Same' : 'Opposite'
 
 export const describeVtgBuilderMotionLabel = (label: VtgBuilderMotionLabel): string => {
   const [spins, directions] = label.split('/')
-  const firstSpin = spins?.[0] as SpinCode | undefined
-  const secondSpin = spins?.[1] as SpinCode | undefined
-  const firstDirection = directions?.[0] as DirectionCode | undefined
-  const secondDirection = directions?.[1] as DirectionCode | undefined
+  const firstSpin = spins?.[0] as VtgBuilderSpinCode | undefined
+  const secondSpin = spins?.[1] as VtgBuilderSpinCode | undefined
+  const firstDirection = directions?.[0] as VtgBuilderDirectionCode | undefined
+  const secondDirection = directions?.[1] as VtgBuilderDirectionCode | undefined
   if (!firstSpin || !secondSpin || !firstDirection || !secondDirection) {
     throw new Error(`Invalid Builder motion label ${label}`)
   }
@@ -52,23 +59,60 @@ const spinCode = (
   arc: number,
   rotx: DirectionVector,
   rotation: number,
-): SpinCode => (signedDirection(posx, arc, rotx, rotation) < 0 ? 'A' : 'I')
+): VtgBuilderSpinCode => (signedDirection(posx, arc, rotx, rotation) < 0 ? 'A' : 'I')
 
 const directionCode = (
   first: DirectionVector,
   firstAmount: number,
   second: DirectionVector,
   secondAmount: number,
-): DirectionCode => (signedDirection(first, firstAmount, second, secondAmount) < 0 ? 'O' : 'S')
+): VtgBuilderDirectionCode =>
+  signedDirection(first, firstAmount, second, secondAmount) < 0 ? 'O' : 'S'
 
-/** Describes the compiled movement axes used when a VTG cell enters Pattern Builder. */
-export const describeVtgBuilderMotion = (animation: RootDataFinal): VtgBuilderMotionLabel => {
-  const compiled = rootCompile(animation)
-  const first = compiled.props[0]?.anim[1]
-  const second = compiled.props[1]?.anim[1]
+/** Returns the spin and relationship directions at one compiled relationship frame. */
+export const getCompiledVtgBuilderMotion = (
+  compiled: RootDataCompiled,
+  frameIndex: number,
+): VtgBuilderMotion => {
+  const first = compiled.props[0]?.anim[frameIndex]
+  const second = compiled.props[1]?.anim[frameIndex]
   if (!first || !second) throw new Error('Builder motion labels require two compiled prop tracks')
 
   const firstRotation = first.turns + first.arc
   const secondRotation = second.turns + second.arc
-  return `${spinCode(first.posx, first.arc, first.rotx, firstRotation)}${spinCode(second.posx, second.arc, second.rotx, secondRotation)}/${directionCode(first.posx, first.arc, second.posx, second.arc)}${directionCode(first.rotx, firstRotation, second.rotx, secondRotation)}`
+  return {
+    spins: [
+      spinCode(first.posx, first.arc, first.rotx, firstRotation),
+      spinCode(second.posx, second.arc, second.rotx, secondRotation),
+    ],
+    directions: [
+      directionCode(first.posx, first.arc, second.posx, second.arc),
+      directionCode(first.rotx, firstRotation, second.rotx, secondRotation),
+    ],
+  }
+}
+
+/** Returns the compiled spin and relationship directions used by Pattern Builder. */
+export const getVtgBuilderMotion = (animation: RootDataFinal): VtgBuilderMotion =>
+  getCompiledVtgBuilderMotion(rootCompile(animation), 1)
+
+export const areVtgBuilderMotionsEqual = (
+  firstMotion: VtgBuilderMotion,
+  secondMotion: VtgBuilderMotion,
+): boolean =>
+  firstMotion.spins[0] === secondMotion.spins[0] &&
+  firstMotion.spins[1] === secondMotion.spins[1] &&
+  firstMotion.directions[0] === secondMotion.directions[0] &&
+  firstMotion.directions[1] === secondMotion.directions[1]
+
+export const areVtgBuilderSpinsEqual = (
+  firstMotion: VtgBuilderMotion,
+  secondMotion: VtgBuilderMotion,
+): boolean =>
+  firstMotion.spins[0] === secondMotion.spins[0] && firstMotion.spins[1] === secondMotion.spins[1]
+
+/** Describes the compiled movement axes used when a VTG cell enters Pattern Builder. */
+export const describeVtgBuilderMotion = (animation: RootDataFinal): VtgBuilderMotionLabel => {
+  const motion = getVtgBuilderMotion(animation)
+  return `${motion.spins[0]}${motion.spins[1]}/${motion.directions[0]}${motion.directions[1]}`
 }

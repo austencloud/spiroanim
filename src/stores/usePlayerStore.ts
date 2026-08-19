@@ -60,35 +60,42 @@ export const usePlayerStore = (id: string) => {
         COMPILED: shallowRef<RootDataCompiled>({} as RootDataCompiled),
         PLAYBACK_COMPILED: shallowRef<RootDataCompiled>({} as RootDataCompiled),
       }
-      const playbackPreviewRestorePlaying = ref<boolean>()
+      const playbackPreviewActive = ref(false)
+      const playbackTemporaryActive = ref(false)
+      const playing = ref(true)
+      const previewPlaying = ref(true)
 
       const v = {
         raw: () => r,
 
         PLAYBACK_ROOT: computed(() => r.PLAYBACK_OVERRIDE.value ?? r.ROOT.value),
         PLAYBACK_OVERRIDE_ACTIVE: computed(() => r.PLAYBACK_OVERRIDE.value !== undefined),
-        PLAYBACK_PREVIEW_ACTIVE: computed(() => playbackPreviewRestorePlaying.value !== undefined),
+        PLAYBACK_PREVIEW_ACTIVE: computed(() => playbackPreviewActive.value),
+        PLAYBACK_TEMPORARY_ACTIVE: computed(() => playbackTemporaryActive.value),
 
-        setPlaybackOverride: (animation: RootDataFinal) => {
+        // Preview playback is session-only and intentionally independent from loaded ROOT playback.
+        PREVIEW_PLAYING: previewPlaying,
+
+        setPlaybackOverride: (animation: RootDataFinal, temporary = false) => {
           r.PLAYBACK_OVERRIDE.value = animation
+          playbackTemporaryActive.value = temporary
         },
         clearPlaybackOverride: () => {
           r.PLAYBACK_OVERRIDE.value = undefined
+          playbackTemporaryActive.value = false
         },
         startPlaybackPreview: (animation: RootDataFinal) => {
-          if (playbackPreviewRestorePlaying.value === undefined)
-            playbackPreviewRestorePlaying.value = v.PLAYING.value
+          playbackPreviewActive.value = true
+          playbackTemporaryActive.value = true
           r.PLAYBACK_OVERRIDE.value = animation
           r.CURRENT.value = 0
-          v.PLAYING.value = true
         },
         endPlaybackPreview: () => {
           r.PLAYBACK_OVERRIDE.value = undefined
-          const restorePlaying = playbackPreviewRestorePlaying.value
-          if (restorePlaying === undefined) return
+          playbackTemporaryActive.value = false
+          if (!playbackPreviewActive.value) return
           r.CURRENT.value = 0
-          v.PLAYING.value = restorePlaying
-          playbackPreviewRestorePlaying.value = undefined
+          playbackPreviewActive.value = false
         },
 
         INDEX: ref(0), //         current combined Unique Time index
@@ -108,7 +115,7 @@ export const usePlayerStore = (id: string) => {
         SELECTED: ref([0, 0]), // Current selection
         UPDATE: ref(Symbol()), // Forces an update
 
-        PLAYING: ref(true), //    Turns Playing on/off
+        PLAYING: playing, //      Turns loaded ROOT playing on/off
         TRACER: ref(false), //    Turns tracer mode on/off
 
         PTIMES: ref<number[][]>([[]]), // Individual times for each prop

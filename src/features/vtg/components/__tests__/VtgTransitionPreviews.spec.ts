@@ -34,6 +34,7 @@ describe('VtgTransitionPreviews', () => {
     await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
 
     expect(wrapper.emitted('patternPreview')).toEqual([[animation, 0]])
+    expect(wrapper.emitted('selectionChange')).toEqual([[0]])
     expect(wrapper.get('.vtg-transition-previews__label').text()).toBe('TS/TS')
     expect(
       wrapper.get('button[aria-label="Preview pattern 1"]').attributes('aria-describedby'),
@@ -51,8 +52,8 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.emitted('patternPreview')).toHaveLength(1)
   })
 
-  it('reveals only the tapped thumbnail delete control on touch devices', async () => {
-    device.touch = true
+  it.each([false, true])('selects exactly one thumbnail when touch is %s', async (touch) => {
+    device.touch = touch
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
         animations: [animation, animation],
@@ -66,14 +67,52 @@ describe('VtgTransitionPreviews', () => {
     const items = wrapper.findAll('.vtg-transition-previews__item').slice(0, 2)
 
     await previews[0]!.trigger('click')
-    expect(items[0]!.classes()).toContain('vtg-transition-previews__item--delete-revealed')
+    await wrapper.setProps({ selectedIndex: 0 })
+    expect(items[0]!.classes()).toContain('vtg-transition-previews__item--selected')
+    expect(wrapper.classes()).toContain('vtg-transition-previews--has-selection')
+    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
 
     await previews[1]!.trigger('click')
-    expect(items[0]!.classes()).not.toContain('vtg-transition-previews__item--delete-revealed')
-    expect(items[1]!.classes()).toContain('vtg-transition-previews__item--delete-revealed')
+    await wrapper.setProps({ selectedIndex: 1 })
+    expect(items[0]!.classes()).not.toContain('vtg-transition-previews__item--selected')
+    expect(items[1]!.classes()).toContain('vtg-transition-previews__item--selected')
 
     await previews[1]!.trigger('click')
-    expect(items[1]!.classes()).not.toContain('vtg-transition-previews__item--delete-revealed')
+    expect(wrapper.emitted('selectionChange')).toEqual([[0], [1], [undefined]])
+  })
+
+  it('blocks the first insertion target until its thumbnail is selected', async () => {
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation, animation],
+        refreshKey: 'drop-rules',
+        initialBeatCounts: [1, 1],
+        beatCounts: [1, 1],
+        scale: 1,
+      },
+    })
+    const items = wrapper.findAll('.vtg-transition-previews__item')
+    const dataTransfer = {
+      dropEffect: 'copy',
+      getData: () => JSON.stringify({ reference: '1-1', speedRatio: '1:3' }),
+    }
+
+    await items[0]!.trigger('dragenter')
+    expect(items[0]!.classes()).toContain('vtg-transition-previews__item--drop-blocked')
+    await items[0]!.trigger('drop', { dataTransfer })
+    expect(wrapper.emitted('patternDrop')).toBeUndefined()
+
+    await wrapper.setProps({ selectedIndex: 0 })
+    await items[0]!.trigger('dragenter')
+    expect(items[0]!.classes()).toContain('vtg-transition-previews__item--drag-over')
+    expect(items[0]!.classes()).not.toContain('vtg-transition-previews__item--drop-blocked')
+    await items[0]!.trigger('drop', { dataTransfer })
+    expect(wrapper.emitted('patternDrop')).toHaveLength(1)
+
+    await items[1]!.trigger('dragenter')
+    expect(items[1]!.classes()).toContain('vtg-transition-previews__item--drop-blocked')
+    await items[1]!.trigger('drop', { dataTransfer })
+    expect(wrapper.emitted('patternDrop')).toHaveLength(1)
   })
 
   it('labels a half-beat thumbnail without changing the supplied animation', () => {
@@ -105,6 +144,7 @@ describe('VtgTransitionPreviews', () => {
         initialBeatCounts: [1],
         beatCounts: [1],
         scale: 1,
+        selectedIndex: 0,
       },
     })
     const target = wrapper.get<HTMLElement>('[data-preview-index="0"]')

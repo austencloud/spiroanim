@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { appendVtgBuilderPattern } from '@/features/builder/appendVtgBuilderPattern'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import {
   createVtgTransitionQuickSlotAnimationCandidates,
@@ -108,6 +109,43 @@ describe('createVtgTransitionQuickSlotAnimations', () => {
         before.props[propIndex]!.anim[starts[3]! + 1]!.plane,
       )
     }
+  })
+
+  it('matches the VTG 180 transform on the selected Builder portion and its successor', () => {
+    const first = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    const second = first
+      ? appendVtgBuilderPattern(first, { reference: '5-2', speedRatio: '1:3' })
+      : undefined
+    const source = second
+      ? appendVtgBuilderPattern(second, { reference: '5-5', speedRatio: '1:3' })
+      : undefined
+    if (!source) throw new Error('Expected three Builder portions')
+
+    const updated = reverseVtgTransitionPatternPreview(source, 0)
+    const previews = updated ? createVtgTransitionPreviewAnimations(updated) : undefined
+    const expectedFirst = createDefaultVtgAnimation({
+      reference: '1-1',
+      speedRatio: '1:3',
+      reversePlane: true,
+    })
+    const expectedSecond = expectedFirst
+      ? appendVtgBuilderPattern(expectedFirst, {
+          reference: '5-2',
+          speedRatio: '1:3',
+          reversePlane: true,
+        })
+      : undefined
+    const expected = expectedSecond
+      ? appendVtgBuilderPattern(expectedSecond, {
+          reference: '5-5',
+          speedRatio: '1:3',
+        })
+      : undefined
+    const expectedPreviews = expected ? createVtgTransitionPreviewAnimations(expected) : undefined
+
+    expect(previews).toHaveLength(3)
+    expect(rootCompile(previews![0]!)).toEqual(rootCompile(expectedPreviews![0]!))
+    expect(rootCompile(previews![1]!)).toEqual(rootCompile(expectedPreviews![1]!))
   })
 
   it('grows and shrinks a working preview with trailing inherited frames', () => {

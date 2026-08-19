@@ -97,6 +97,8 @@ const {
   SELECTED,
   UPDATE,
   PLAYING,
+  PREVIEW_PLAYING,
+  PLAYBACK_TEMPORARY_ACTIVE,
   TRACER,
   ETIMES,
   PLAYBACK_ASPECT,
@@ -109,6 +111,13 @@ const {
   videoExportError,
   trackClicks,
 } = storeToRefs(playerStore)
+const rendererPlaying = computed({
+  get: () => (PLAYBACK_TEMPORARY_ACTIVE.value ? PREVIEW_PLAYING.value : PLAYING.value),
+  set: (playing: boolean) => {
+    if (PLAYBACK_TEMPORARY_ACTIVE.value) PREVIEW_PLAYING.value = playing
+    else PLAYING.value = playing
+  },
+})
 
 const eCanvas = ref<HTMLCanvasElement>()
 
@@ -169,7 +178,7 @@ onMounted(() => {
   on('pos', (val) => {
     // pos should only be received when worker has modified it,
     // Therefor, update worker with CURRENT if we aren't playing
-    if (!PLAYING.value) send('jump', CURRENT.value)
+    if (!rendererPlaying.value) send('jump', CURRENT.value)
     // Otherwise update it locally
     else CURRENT.value = val
   })
@@ -228,14 +237,14 @@ onMounted(() => {
   // been backgrounded. Focus/pageshow provide a second foreground signal for the main player.
   const recoverAfterForeground = () => {
     if (document.visibilityState === 'visible') {
-      send('animate', { val: true, play: PLAYING.value })
+      send('animate', { val: true, play: rendererPlaying.value })
     }
   }
   useEventListener(window, 'focus', recoverAfterForeground)
   useEventListener(window, 'pageshow', recoverAfterForeground)
 
   // Play / Pause
-  watchImmediate(PLAYING, (val) => {
+  watchImmediate(rendererPlaying, (val) => {
     if (val) {
       send('jump', CURRENT.value) // helps smooth things out
       send('play', undefined)

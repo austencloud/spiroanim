@@ -8,7 +8,8 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'jsdom',
-      include: ['src/features/vtg/math/__audits__/vtg45Transition.audit.ts'],
+      include: ['src/features/builder/__audits__/*.audit.ts'],
+      fileParallelism: false,
       root: fileURLToPath(new URL('./', import.meta.url)),
     },
   }),

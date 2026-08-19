@@ -1,5 +1,7 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
-import { alignCompiledRelationshipDirection } from '@/math/animation/alignCompiledRelationshipDirection'
+import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
+import { rejoinVtgBuilderJunction } from '@/features/builder/rejoinVtgBuilderJunction'
+import { selectVtgBuilderJunctionPlane } from '@/features/builder/selectVtgBuilderJunctionPlane'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import {
   shiftAnimationFrameRange,
@@ -7,13 +9,11 @@ import {
 } from '@/math/animation/shiftAnimationFrames'
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import type { VtgPatternRotationFilter } from '@/features/vtg/types'
-import type { AnimData, AnimDataCompiled, RootDataFinal } from '@/types/AnimTypes'
+import type { RootDataFinal } from '@/types/AnimTypes'
 
 const extractedPatternSourceFrameCount = 2
 const doubledVtgFrameCount = 9
 const transitionSegmentCount = 4
-const rigidShapeMatchTolerance = 1e-8
-
 export type VtgTransitionQuickSlotCandidates = readonly RootDataFinal[]
 export type VtgTransitionPreviewAnimations = readonly RootDataFinal[]
 
@@ -23,62 +23,6 @@ export const getVtgTransitionPreviewBeatCount = (animation: RootDataFinal): numb
 
   const doubledBeatCount = frames.slice(0, -1).reduce((total, frame) => total + frame.beats, 0)
   return doubledBeatCount / doublePlaybackMultiplier
-}
-
-type ShapeVector = AnimDataCompiled['pos']
-
-const dotShapeVectors = (first: ShapeVector, second: ShapeVector) =>
-  first.reduce((total, value, index) => total + value * second[index]!, 0)
-
-const shapeTripleProduct = (first: ShapeVector, second: ShapeVector, third: ShapeVector) =>
-  first[0] * (second[1] * third[2] - second[2] * third[1]) -
-  first[1] * (second[0] * third[2] - second[2] * third[0]) +
-  first[2] * (second[0] * third[1] - second[1] * third[0])
-
-/** Compares a prop's complete hand/prop shape while allowing one rigid rotation of the result. */
-const getCompiledTrackShapeDifference = (
-  actual: readonly AnimDataCompiled[],
-  expected: readonly AnimDataCompiled[],
-) => {
-  if (actual.length !== expected.length) return Number.POSITIVE_INFINITY
-
-  const actualVectors = actual.flatMap((frame) => [frame.pos, frame.rot, frame.posx, frame.rotx])
-  const expectedVectors = expected.flatMap((frame) => [
-    frame.pos,
-    frame.rot,
-    frame.posx,
-    frame.rotx,
-  ])
-  let difference = 0
-
-  // Pairwise dot products preserve the complete shape under rotation. Signed triple products
-  // additionally distinguish mirrored paths, which is required to retain Anti versus In.
-  for (let firstIndex = 0; firstIndex < actualVectors.length; firstIndex++) {
-    const actualFirst = actualVectors[firstIndex]
-    const expectedFirst = expectedVectors[firstIndex]
-    if (!actualFirst || !expectedFirst) return Number.POSITIVE_INFINITY
-
-    for (let secondIndex = firstIndex; secondIndex < actualVectors.length; secondIndex++) {
-      const actualSecond = actualVectors[secondIndex]
-      const expectedSecond = expectedVectors[secondIndex]
-      if (!actualSecond || !expectedSecond) return Number.POSITIVE_INFINITY
-      difference += Math.abs(
-        dotShapeVectors(actualFirst, actualSecond) - dotShapeVectors(expectedFirst, expectedSecond),
-      )
-
-      for (let thirdIndex = secondIndex + 1; thirdIndex < actualVectors.length; thirdIndex++) {
-        const actualThird = actualVectors[thirdIndex]
-        const expectedThird = expectedVectors[thirdIndex]
-        if (!actualThird || !expectedThird) return Number.POSITIVE_INFINITY
-        difference += Math.abs(
-          shapeTripleProduct(actualFirst, actualSecond, actualThird) -
-            shapeTripleProduct(expectedFirst, expectedSecond, expectedThird),
-        )
-      }
-    }
-  }
-
-  return difference
 }
 
 export const resizeVtgTransitionPatternPreview = (
@@ -130,8 +74,7 @@ export const resizeVtgTransitionPatternPreview = (
   }
 }
 
-const reversedTravelPlane = (plane: number): number =>
-  (((plane + 180) % 360) + 360) % 360
+const reversedTravelPlane = (plane: number): number => (((plane + 180) % 360) + 360) % 360
 
 /** Reverses one Builder segment and carries the plane correction into its successor. */
 export const reverseVtgTransitionPatternPreview = (
@@ -151,12 +94,12 @@ export const reverseVtgTransitionPatternPreview = (
   const selectedStart = sliceStarts[previewIndex]
   if (selectedStart === undefined) return undefined
 
-  const movementFrameIndices = [selectedStart + 1]
+  const movementFrameIndices = [previewIndex === 0 ? 0 : selectedStart + 1]
   const nextStart = sliceStarts[previewIndex + 1]
   if (nextStart !== undefined) movementFrameIndices.push(nextStart + 1)
 
   const compiled = rootCompile(animation)
-  return {
+  const reversed = {
     ...animation,
     props: animation.props.map((prop, propIndex) => ({
       ...prop,
@@ -168,6 +111,7 @@ export const reverseVtgTransitionPatternPreview = (
       }),
     })),
   }
+  return reversed
 }
 
 /** Removes one Builder preview while preserving the authored relationship that follows it. */
@@ -199,22 +143,45 @@ export const removeVtgTransitionPatternPreview = (
     const shifted = shiftClosedAnimation(animation, nextStartFrameIndex, true)
     if (!shifted) return undefined
     const remainingFrameCount = firstProp.anim.length - nextStartFrameIndex
-    return {
+    const rebased: RootDataFinal = {
       ...shifted,
       props: shifted.props.map((prop) => ({
         ...prop,
         anim: prop.anim.slice(0, remainingFrameCount).map((frame) => ({ ...frame })),
       })),
     }
+    const compiledRebased = rootCompile(rebased)
+    const survivingRelationshipFrameIndices = sliceStarts
+      .slice(1)
+      .map((sliceStart) => sliceStart - nextStartFrameIndex + 1)
+    const withBoundaries: RootDataFinal = {
+      ...rebased,
+      props: rebased.props.map((prop, propIndex) => ({
+        ...prop,
+        anim: prop.anim.map((frame, frameIndex) => {
+          if (!survivingRelationshipFrameIndices.includes(frameIndex)) {
+            if (frameIndex < extractedPatternSourceFrameCount) return frame
+            const withoutRebaseBoundary = { ...frame }
+            delete withoutRebaseBoundary.plane
+            delete withoutRebaseBoundary.turns
+            return withoutRebaseBoundary
+          }
+          const compiledFrame = compiledRebased.props[propIndex]?.anim[frameIndex]
+          return compiledFrame
+            ? { ...frame, plane: compiledFrame.plane, turns: compiledFrame.turns }
+            : frame
+        }),
+      })),
+    }
+    const followingPreview = createVtgTransitionPreviewAnimations(animation)?.[1]
+    return followingPreview
+      ? selectVtgBuilderJunctionPlane(withBoundaries, 1, getVtgBuilderMotion(followingPreview))
+      : undefined
   }
 
   const deleteEndFrameIndex = nextStartFrameIndex ?? firstProp.anim.length - 1
   const deleteCount = deleteEndFrameIndex - startFrameIndex
-  const followingPreview =
-    nextStartFrameIndex === undefined
-      ? undefined
-      : createVtgTransitionPreviewAnimations(animation)?.[previewIndex + 1]
-  if (!followingPreview) {
+  if (nextStartFrameIndex === undefined) {
     return {
       ...animation,
       props: animation.props.map((prop) => ({
@@ -226,118 +193,16 @@ export const removeVtgTransitionPatternPreview = (
       })),
     }
   }
+  const followingPreview = createVtgTransitionPreviewAnimations(animation)?.[previewIndex + 1]
+  if (!followingPreview) return undefined
 
-  const nextFollowingStartFrameIndex = sliceStarts[previewIndex + 2]
-  const buildCandidate = (
-    followingTracks: readonly (readonly AnimData[])[],
-  ): RootDataFinal | undefined => {
-    const props: RootDataFinal['props'] = []
-    for (const [propIndex, prop] of animation.props.entries()) {
-      const prefix = prop.anim.slice(0, startFrameIndex + 1).map((frame) => ({ ...frame }))
-      const followingTrack = followingTracks[propIndex]
-      if (!followingTrack) return undefined
-
-      const tailStart =
-        nextFollowingStartFrameIndex === undefined
-          ? prop.anim.length
-          : nextFollowingStartFrameIndex + 1
-      props.push({
-        ...prop,
-        // Rejoin the immediate following piece at its selected phase. Later pieces remain
-        // authored exactly as they were.
-        anim: [
-          ...prefix,
-          ...followingTrack.slice(1).map((frame) => ({ ...frame })),
-          ...prop.anim.slice(tailStart).map((frame) => ({ ...frame })),
-        ],
-      })
-    }
-
-    return { ...animation, props }
-  }
-
-  const expectedPreviews = createVtgTransitionPreviewAnimations(animation)?.slice(previewIndex + 1)
-  if (!expectedPreviews) return undefined
-
-  const shiftedTracks = followingPreview.props.map((prop, propIndex) => {
-    const variants: AnimData[][] = [prop.anim.map((frame) => ({ ...frame }))]
-    for (let shift = 1; shift < prop.anim.length; shift++) {
-      const previous = variants.at(-1)
-      if (!previous) break
-      const compiled = rootCompile({
-        ...followingPreview,
-        props: followingPreview.props.map((candidateProp, candidatePropIndex) => ({
-          ...candidateProp,
-          anim: candidatePropIndex === propIndex ? previous : candidateProp.anim,
-        })),
-      }).props[propIndex]
-      if (!compiled) break
-
-      const shifted = shiftAnimationFrameRange(previous, compiled.anim, 0, previous.length - 1, {
-        allowEndpointMismatch: true,
-      })
-      if (!shifted) break
-      variants.push(shifted)
-    }
-    return variants
-  })
-  const firstPropVariants = shiftedTracks[0]
-  const secondPropVariants = shiftedTracks[1]
-  if (!firstPropVariants || !secondPropVariants) return undefined
-
-  const scoreCandidate = (candidate: RootDataFinal): number => {
-    const candidatePreviews = createVtgTransitionPreviewAnimations(candidate)?.slice(previewIndex)
-    if (!candidatePreviews || candidatePreviews.length !== expectedPreviews.length) {
-      return Number.POSITIVE_INFINITY
-    }
-
-    let score = 0
-    for (const [candidatePreviewIndex, candidatePreview] of candidatePreviews.entries()) {
-      const expectedPreview = expectedPreviews[candidatePreviewIndex]
-      if (!expectedPreview) return Number.POSITIVE_INFINITY
-
-      const candidateCompiled = rootCompile(candidatePreview)
-      const expectedCompiled = rootCompile(expectedPreview)
-      if (candidateCompiled.props.length !== expectedCompiled.props.length) {
-        return Number.POSITIVE_INFINITY
-      }
-
-      for (const [propIndex, candidateProp] of candidateCompiled.props.entries()) {
-        const expectedProp = expectedCompiled.props[propIndex]
-        if (!expectedProp) return Number.POSITIVE_INFINITY
-        score += getCompiledTrackShapeDifference(candidateProp.anim, expectedProp.anim)
-      }
-    }
-
-    return score
-  }
-
-  let bestCandidate: RootDataFinal | undefined
-  let bestScore = Number.POSITIVE_INFINITY
-  for (const swapTracks of [false, true]) {
-    const firstVariants = swapTracks ? secondPropVariants : firstPropVariants
-    const secondVariants = swapTracks ? firstPropVariants : secondPropVariants
-    for (const firstTrack of firstVariants) {
-      for (const secondTrack of secondVariants) {
-        const rawCandidate = buildCandidate([firstTrack, secondTrack])
-        if (!rawCandidate) continue
-        const candidate = alignCompiledRelationshipDirection(
-          rawCandidate,
-          startFrameIndex + 1,
-          followingPreview,
-          1,
-        )
-        const score = scoreCandidate(candidate)
-        if (score <= rigidShapeMatchTolerance) return candidate
-        if (!bestCandidate || score < bestScore) {
-          bestCandidate = candidate
-          bestScore = score
-        }
-      }
-    }
-  }
-
-  return bestCandidate
+  return rejoinVtgBuilderJunction(
+    animation,
+    startFrameIndex,
+    animation,
+    nextStartFrameIndex,
+    getVtgBuilderMotion(followingPreview),
+  )
 }
 
 export type VtgTransitionQuickSlotResolution =

@@ -4,6 +4,7 @@
     :animation-ready="animationReady"
     :pattern-matcher="patternMatcher"
     :builder-active="builderActive"
+    :builder-full-catalog="builderFullCatalog"
     @pattern-select="forwardSelection"
     @pattern-preview="emit('patternPreview', $event)"
     @customize="emit('customize', $event)"
@@ -24,8 +25,9 @@ withDefaults(
     animationReady?: boolean
     patternMatcher?: PatternMatchingClient
     builderActive?: boolean
+    builderFullCatalog?: boolean
   }>(),
-  { animationReady: true, builderActive: false },
+  { animationReady: true, builderActive: false, builderFullCatalog: false },
 )
 
 const emit = defineEmits<{

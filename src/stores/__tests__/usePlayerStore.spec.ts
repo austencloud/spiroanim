@@ -122,22 +122,26 @@ describe('usePlayerStore', () => {
     expect(runtime.PLAYBACK_COMPILED.value.bpm).toBe(90)
   })
 
-  it('restores position and play state after a temporary playback preview', async () => {
+  it('keeps preview playback independent from loaded ROOT playback', async () => {
     const store = usePlayerStore('test-playback-preview')
     const runtime = store.raw()
     const firstPreview = { ...runtime.ROOT.value, bpm: 60 }
     const secondPreview = { ...runtime.ROOT.value, bpm: 90 }
-    store.PLAYING = false
+    expect(store.PREVIEW_PLAYING).toBe(true)
+    store.PLAYING = true
+    store.PREVIEW_PLAYING = false
     runtime.CURRENT.value = 750
 
     store.startPlaybackPreview(firstPreview)
     expect(store.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
     expect(store.PLAYBACK_ROOT).toBe(firstPreview)
     expect(store.PLAYING).toBe(true)
+    expect(store.PREVIEW_PLAYING).toBe(false)
     expect(runtime.CURRENT.value).toBe(0)
 
     store.startPlaybackPreview(secondPreview)
     expect(store.PLAYBACK_ROOT).toBe(secondPreview)
+    expect(store.PREVIEW_PLAYING).toBe(false)
 
     runtime.CURRENT.value = 500
     store.endPlaybackPreview()
@@ -145,7 +149,8 @@ describe('usePlayerStore', () => {
 
     expect(store.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     expect(store.PLAYBACK_OVERRIDE_ACTIVE).toBe(false)
-    expect(store.PLAYING).toBe(false)
+    expect(store.PLAYING).toBe(true)
+    expect(store.PREVIEW_PLAYING).toBe(false)
     expect(runtime.CURRENT.value).toBe(0)
   })
 

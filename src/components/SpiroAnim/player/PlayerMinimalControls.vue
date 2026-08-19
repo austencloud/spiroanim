@@ -7,8 +7,8 @@
             v-bind="tooltipProps"
             class="minimal-player-controls__play"
             type="button"
-            :aria-label="PLAYING ? 'Pause' : 'Play'"
-            @click="PLAYING = !PLAYING"
+            :aria-label="rendererPlaying ? 'Pause' : 'Play'"
+            @click="rendererPlaying = !rendererPlaying"
           >
             <BaseIcon :path="playIcon" :size="30" />
           </button>
@@ -27,8 +27,19 @@ import PlayerProgress from '@/components/SpiroAnim/player/PlayerProgress.vue'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 const props = defineProps<{ store: string }>()
-const { PLAYING } = storeToRefs(usePlayerStore(props.store))
-const playIcon = computed(() => (PLAYING.value ? mdiPauseCircleOutline : mdiPlayCircleOutline))
+const { PLAYING, PREVIEW_PLAYING, PLAYBACK_TEMPORARY_ACTIVE } = storeToRefs(
+  usePlayerStore(props.store),
+)
+const rendererPlaying = computed({
+  get: () => (PLAYBACK_TEMPORARY_ACTIVE.value ? PREVIEW_PLAYING.value : PLAYING.value),
+  set: (playing: boolean) => {
+    if (PLAYBACK_TEMPORARY_ACTIVE.value) PREVIEW_PLAYING.value = playing
+    else PLAYING.value = playing
+  },
+})
+const playIcon = computed(() =>
+  rendererPlaying.value ? mdiPauseCircleOutline : mdiPlayCircleOutline,
+)
 </script>
 
 <style scoped>
