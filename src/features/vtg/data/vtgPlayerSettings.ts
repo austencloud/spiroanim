@@ -1,9 +1,5 @@
-import { getVtgPropSpeedRatios } from '@/features/vtg/types'
-import type {
-  VtgIndividualSpeedRatio,
-  VtgReadableAnimation,
-  VtgSpeedRatio,
-} from '@/features/vtg/types'
+import { getVtgPropSpeedRatios, parseVtgIndividualSpeedRatio } from '@/features/vtg/types'
+import type { VtgReadableAnimation, VtgSpeedRatio } from '@/features/vtg/types'
 import type { AnimReadable, PropReadable } from '@/types/AnimTypes'
 
 export const vtgBpmControl = {
@@ -25,20 +21,21 @@ export const vtgScaleControl = {
 } as const
 
 /** Added to the Scale control value before converting it to VTG's internal x10 scale. */
-export const vtgScaleAdjustmentBySpeedRatio = {
-  '1:1': 0.1,
-  '1:2': -0.2,
-  '1:3': 0,
-  '1:4': 0.1,
-  '1:5': 0.2,
-} as const satisfies Readonly<Record<VtgIndividualSpeedRatio, number>>
+export const vtgScaleAdjustmentByDenominator: Readonly<Record<number, number>> = {
+  1: 0.1,
+  2: -0.2,
+  3: 0,
+  4: 0.1,
+  5: 0.2,
+}
 
 const getVtgScaleAdjustment = (speedRatio: VtgSpeedRatio): number => {
   const [leftRatio, rightRatio] = getVtgPropSpeedRatios(speedRatio)
-  return Math.max(
-    vtgScaleAdjustmentBySpeedRatio[leftRatio],
-    vtgScaleAdjustmentBySpeedRatio[rightRatio],
-  )
+  const getAdjustment = (ratio: typeof leftRatio) => {
+    const denominator = parseVtgIndividualSpeedRatio(ratio)?.denominator
+    return denominator === undefined ? 0 : (vtgScaleAdjustmentByDenominator[denominator] ?? 0)
+  }
+  return Math.max(getAdjustment(leftRatio), getAdjustment(rightRatio))
 }
 
 export const vtgThickControl = {

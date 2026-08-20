@@ -47,7 +47,7 @@ route.query
 decodeVer() selects a version
     |
     v
-decodeQS() / decodeVar() unpack sparse integer fields
+decodeQS() / decodeVar() unpack sparse integer fields and apply versioned transforms
     |
     v
 rootFinal() supplies a small set of root runtime defaults
@@ -65,12 +65,12 @@ independent layers, each with a different responsibility.
 
 ## The four numeric-control layers
 
-| Layer             | Main location                      | Responsibility                                             | What it does not guarantee                       |
-| ----------------- | ---------------------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
-| Control metadata  | Property panel or VTG component    | Slider range, step, multiplier, displayed precision        | Query compatibility or final state range         |
-| Property setter   | `useProperties.ts`                 | Clamp editor writes to `VDEF` minimum and maximum          | Integer values, rounding, or semantic transforms |
-| Feature transform | For example `vtgPlayerSettings.ts` | Convert a feature-level value into stored animation values | General editor behavior                          |
-| Query codec       | Query service                      | Fit serialized values into the versioned integer schema    | Preservation of unsupported fractions            |
+| Layer             | Main location                      | Responsibility                                                   | What it does not guarantee                       |
+| ----------------- | ---------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------ |
+| Control metadata  | Property panel or VTG component    | Slider range, step, multiplier, displayed precision              | Query compatibility or final state range         |
+| Property setter   | `useProperties.ts`                 | Clamp editor writes to `VDEF` minimum and maximum                | Integer values, rounding, or semantic transforms |
+| Feature transform | For example `vtgPlayerSettings.ts` | Convert a feature-level value into stored animation values       | General editor behavior                          |
+| Query codec       | Query service                      | Fit values into the integer schema and apply declared transforms | Preservation of undeclared fractions             |
 
 When a value is wrong, identify the layer that produced it before changing a similarly named
 control elsewhere. For example, Motion and Camera Orbit each expose a `Distance` path property,
@@ -83,7 +83,7 @@ Camera frame.
 - `src/features/editor/composables/useProperties.ts` - property reads, writes, display values,
   and editor-side range constraints.
 - `src/features/editor/stores/usePropertiesStore.ts` - active prop/frame selection.
-- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv6.ts` - versioned ranges, bit
+- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv7.ts` - versioned ranges, bit
   widths, field order, and segment layouts.
 - `src/services/query/createBaseQueryCodec.ts` - integer normalization and bit packing.
 - `src/composables/useSpiroAnimQS.ts` - root/prop/frame encoding, decoding, and query history.
@@ -100,7 +100,8 @@ Camera frame.
 - `VDEF` currently serves two responsibilities: editor range constraints and persisted query
   schema. Changing it for UI convenience can silently change shared-URL compatibility.
 - Slider bounds describe relative adjustment, while query bounds describe stored values.
-- Query V1 assumes integers, but editor setters only clamp ranges.
+- Query fields assume integers unless their version declares a numeric transform; editor setters
+  only clamp ranges.
 - Direct state assignments and feature builders must enforce their own domain normalization before
   serialization.
 - Equivalent compiled animation data can have different sparse raw objects and different URL

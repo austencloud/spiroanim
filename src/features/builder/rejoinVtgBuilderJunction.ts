@@ -1,12 +1,12 @@
-import { selectVtgBuilderJunctionPlane } from '@/features/builder/selectVtgBuilderJunctionPlane'
+import { selectVtgBuilderJunctionMotion } from '@/features/builder/selectVtgBuilderJunctionPlane'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { VtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import type { AnimData, RootDataFinal } from '@/types/AnimTypes'
 
 /**
  * Rejoins an authored Builder suffix after a changed prefix. Inherited scalar values are
- * materialized at the new junction, Axis remains authored, and only the four Plane directions are
- * considered when preserving the two prop Anti/In results.
+ * materialized at the new junction. Plane and Axis directions are solved together so both the
+ * Anti/In spins and Same/Opposite relationships remain unchanged.
  */
 export const rejoinVtgBuilderJunction = (
   candidate: RootDataFinal,
@@ -46,7 +46,7 @@ export const rejoinVtgBuilderJunction = (
     })
   }
 
-  return selectVtgBuilderJunctionPlane(
+  return selectVtgBuilderJunctionMotion(
     { ...candidate, props },
     candidateStartFrameIndex + 1,
     expectedMotion,

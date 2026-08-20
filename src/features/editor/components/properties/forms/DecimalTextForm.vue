@@ -3,7 +3,7 @@
     <span>{{ label }}</span>
     <input
       v-model="val"
-      inputmode="numeric"
+      :inputmode="float ? 'decimal' : 'numeric'"
       @focus="beginEditing"
       @blur="endEditing"
       @input="handleInput"
@@ -54,7 +54,7 @@ const get = (): string => {
 
 const parse = computed(() => {
   const f = float.value
-  return f ? (val: number) => Math.floor(val * f) / f : (val: number) => val
+  return f ? (val: number) => Math.round(val * f) / f : (val: number) => val
 })
 
 const val = computed({
@@ -84,7 +84,7 @@ const val = computed({
 const regex = computed(() => {
   const n = neg.value
   const f = float.value
-  return f ? (n ? /^[-.]?[0-9]*$/ : /^[.]?[0-9]*$/) : n ? /^[-]?[0-9]*$/ : /^[0-9]*$/
+  return f ? (n ? /^-?\d*(?:\.\d*)?$/ : /^\d*(?:\.\d*)?$/) : n ? /^-?\d*$/ : /^\d*$/
 })
 
 const handleInput = (event: InputEvent) => {

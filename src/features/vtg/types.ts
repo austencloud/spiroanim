@@ -17,31 +17,118 @@ export interface VtgCellAddress {
   row: VtgRuleNumber
 }
 
-export const vtgIndividualSpeedRatios = ['1:1', '1:2', '1:3', '1:4', '1:5'] as const
-export type VtgIndividualSpeedRatio = (typeof vtgIndividualSpeedRatios)[number]
-type VtgRatioNumber = VtgIndividualSpeedRatio extends `1:${infer Ratio}` ? Ratio : never
-export type VtgCompoundSpeedRatio = `1:${VtgRatioNumber}v${VtgRatioNumber}`
+export type VtgIndividualSpeedRatio = `${number}:${number}`
+export type VtgCompoundSpeedRatio =
+  | `${VtgIndividualSpeedRatio}v${number}`
+  | `${VtgIndividualSpeedRatio}v${VtgIndividualSpeedRatio}`
 export type VtgSpeedRatio = VtgIndividualSpeedRatio | VtgCompoundSpeedRatio
-export const vtgSpeedRatios = [
-  ...vtgIndividualSpeedRatios,
-  '1:2v3',
-  '1:3v2',
-] as const satisfies readonly VtgSpeedRatio[]
+export const vtgPrimarySpeedRatios = [
+  '1:1',
+  '1:2',
+  '1:3',
+  '1:4',
+  '1:5',
+] as const satisfies readonly VtgIndividualSpeedRatio[]
+export type VtgEstablishedIndividualSpeedRatio = (typeof vtgPrimarySpeedRatios)[number]
+export const vtgTwoCycleSpeedRatios = [
+  '2:1',
+  '2:3',
+  '2:5',
+] as const satisfies readonly VtgIndividualSpeedRatio[]
+export const vtgIndividualSpeedRatios = [
+  ...vtgPrimarySpeedRatios,
+  ...vtgTwoCycleSpeedRatios,
+] as const satisfies readonly VtgIndividualSpeedRatio[]
+export const vtgRatioPickerRatios = [
+  '1:1',
+  '2:1',
+  '1:2',
+  '1:3',
+  '2:3',
+  '1:4',
+  '1:5',
+  '2:5',
+] as const satisfies readonly VtgIndividualSpeedRatio[]
+export const vtgSpeedRatioRows = [
+  vtgRatioPickerRatios,
+] as const satisfies readonly (readonly VtgSpeedRatio[])[]
+export const vtgSpeedRatios = vtgSpeedRatioRows.flat()
 export const vtgCanonicalSpeedRatio = '1:3' satisfies VtgSpeedRatio
 export const vtgDefaultSpeedRatio = vtgCanonicalSpeedRatio
 
-const toIndividualSpeedRatio = (ratio: VtgRatioNumber): VtgIndividualSpeedRatio => `1:${ratio}`
-export const isVtgSpeedRatio = (value: string): value is VtgSpeedRatio =>
-  /^1:[1-5](?:v[1-5])?$/.test(value)
+export interface VtgRatioParts {
+  numerator: number
+  denominator: number
+}
+
+const greatestCommonDivisor = (left: number, right: number): number => {
+  let a = Math.abs(left)
+  let b = Math.abs(right)
+  while (b !== 0) [a, b] = [b, a % b]
+  return a
+}
+
+export const formatVtgIndividualSpeedRatio = ({
+  numerator,
+  denominator,
+}: VtgRatioParts): VtgIndividualSpeedRatio => `${numerator}:${denominator}`
+
+export const parseVtgIndividualSpeedRatio = (value: string): VtgRatioParts | undefined => {
+  const match = /^(\d+):(\d+)$/.exec(value)
+  if (!match) return undefined
+  const numerator = Number(match[1])
+  const denominator = Number(match[2])
+  if (numerator < 1 || denominator < 1 || greatestCommonDivisor(numerator, denominator) !== 1) {
+    return undefined
+  }
+  return { numerator, denominator }
+}
 
 export const getVtgPropSpeedRatios = (
   speedRatio: VtgSpeedRatio,
 ): readonly [VtgIndividualSpeedRatio, VtgIndividualSpeedRatio] => {
-  const [leftRatio, rightRatio = leftRatio] = speedRatio.slice(2).split('v') as [
-    VtgRatioNumber,
-    VtgRatioNumber?,
-  ]
-  return [toIndividualSpeedRatio(leftRatio), toIndividualSpeedRatio(rightRatio)]
+  const match = /^(\d+):(\d+)(?:v(?:(\d+):)?(\d+))?$/.exec(speedRatio)
+  if (!match) throw new RangeError(`Invalid VTG speed ratio: ${speedRatio}`)
+
+  const left = `${match[1]}:${match[2]}` as VtgIndividualSpeedRatio
+  if (match[4] === undefined) return [left, left]
+  const right = `${match[3] ?? match[1]}:${match[4]}` as VtgIndividualSpeedRatio
+  return [left, right]
+}
+
+const leastCommonMultiple = (left: number, right: number): number =>
+  Math.abs(left * right) / greatestCommonDivisor(left, right)
+
+/** Number of complete hand rotations needed for both prop timings to close. */
+export const getVtgTimingCycleCount = (speedRatio: VtgSpeedRatio): number => {
+  const [left, right] = getVtgPropSpeedRatios(speedRatio)
+  const leftParts = parseVtgIndividualSpeedRatio(left)
+  const rightParts = parseVtgIndividualSpeedRatio(right)
+  if (!leftParts || !rightParts) throw new RangeError(`Invalid VTG speed ratio: ${speedRatio}`)
+  return leastCommonMultiple(leftParts.numerator, rightParts.numerator)
+}
+
+export const formatVtgSpeedRatio = (
+  left: VtgIndividualSpeedRatio,
+  right: VtgIndividualSpeedRatio,
+): VtgSpeedRatio => {
+  if (left === right) return left
+  const leftParts = parseVtgIndividualSpeedRatio(left)
+  const rightParts = parseVtgIndividualSpeedRatio(right)
+  if (!leftParts || !rightParts) throw new RangeError(`Invalid VTG ratio pair: ${left}, ${right}`)
+  return leftParts.numerator === rightParts.numerator
+    ? `${left}v${rightParts.denominator}`
+    : `${left}v${right}`
+}
+
+export const isVtgSpeedRatio = (value: string): value is VtgSpeedRatio => {
+  try {
+    const [left, right] = getVtgPropSpeedRatios(value as VtgSpeedRatio)
+    if (!parseVtgIndividualSpeedRatio(left) || !parseVtgIndividualSpeedRatio(right)) return false
+    return formatVtgSpeedRatio(left, right) === value
+  } catch {
+    return false
+  }
 }
 
 export const vtgBeats = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5] as const
@@ -61,6 +148,7 @@ export const supportsVtgPatternOrientation = (_speedRatio: VtgSpeedRatio) => tru
 export const getDefaultVtgPatternOrientation = (
   speedRatio: VtgSpeedRatio,
 ): VtgPatternOrientation =>
+  getVtgTimingCycleCount(speedRatio) === 2 ||
   getVtgPropSpeedRatios(speedRatio).some((ratio) => Number(ratio.slice(2)) % 2 === 0)
     ? vtgDefaultPatternOrientation
     : 0

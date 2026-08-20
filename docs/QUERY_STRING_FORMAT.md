@@ -198,6 +198,24 @@ completely empty Motion frame produces no `mN` parameter, while multiple empty f
 dots needed to preserve their frame count. Versions 4 and 5 keep their historical leading-dot
 format for compatibility.
 
+## Version 7 fractional Turns layout
+
+Version 7 stores Animation `turns` to one decimal place across the existing `-1980..1980` degree
+range. A bidirectional query transform multiplies degrees by 10 before packing and divides by 10
+after unpacking. The application-facing `VDEF` range remains in degrees so editor constraints do
+not see the scaled integer representation.
+
+The four spare bits distributed across the Version 6 Animation frame are recovered by repacking
+the frame into four three-character groups:
+
+1. `plane` (9 bits), `arc` (9 bits)
+2. `turns` (16 bits), `type` (2 bits)
+3. `axis` (9 bits), `adjust` (9 bits)
+4. `beats` (6 bits), `scale` (6 bits), `depth` (6 bits)
+
+Every group uses exactly 18 bits, so Animation frames remain 12 characters. Versions 1-6 retain
+their historical field positions and whole-degree Turns representation.
+
 ## Low-level packing
 
 Versions 1 and 2 use this custom URL-safe radix-64 alphabet:
@@ -209,7 +227,7 @@ Versions 1 and 2 use this custom URL-safe radix-64 alphabet:
 This is not standard Base64. The final character, `-`, is also the maximum radix digit used for
 all-ones padding.
 
-Versions 3 through 6 use the same characters with the final pair reversed:
+Versions 3 through 7 use the same characters with the final pair reversed:
 
 ```text
 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_
@@ -226,13 +244,15 @@ least-significant field first into a signed 32-bit JavaScript bit field. Version
 must therefore remain within the documented practical maximum of 30 bits.
 
 Unused bits up to the fixed character length are filled with ones. Entire trailing groups made
-only of maximum digits are removed. On decode, the all-ones field value becomes `undefined` and a
-definition transform such as `Boolean` is applied.
+only of maximum digits are removed. On decode, the all-ones field value becomes `undefined`. A
+legacy one-way definition transform such as `Boolean`, or a bidirectional numeric codec such as
+Version 7 Turns, is then applied.
 
 ### Integer requirement and fractional values
 
-The query format has no fractional encoding. The property setter's range clamp does not enforce
-this.
+Versions 1-6 have no fractional encoding. Version 7 explicitly supports tenths for Animation
+Turns through its bidirectional numeric transform. The property setter's range clamp does not
+otherwise enforce integer or decimal precision.
 
 Packed scalar fields pass through JavaScript bitwise operators, which coerce nonnegative
 normalized fractions to integers by discarding the fractional part. This is an implementation
@@ -244,8 +264,8 @@ the packed-field path. Passing a fraction there can produce malformed or shorten
 fractional values are not valid alphabet indices. Every legacy Cartesian value must be converted
 to an integer before encoding. Version 4 Motion fields use packed integer groups.
 
-Consequently, a feature that calculates a V1-backed value should make its rounding policy
-explicit at the feature boundary:
+Consequently, a feature that calculates a field without an explicit query transform should make
+its rounding policy explicit at the feature boundary:
 
 ```text
 derived floating-point value
@@ -343,7 +363,8 @@ Query-format changes should cover the applicable behavior:
 ## Current cautions
 
 - `VDEF` currently serves both editor constraints and persisted query schema.
-- Query values assume integers, but editor setters only clamp ranges.
+- Query fields assume integers unless their active version defines an explicit numeric transform;
+  editor setters only clamp ranges.
 - Prop-level `thick` and root `smooth` are currently outside V1 query and undo coverage.
 - Unsupported query versions are rejected.
 - Prop decoding stops at the first missing numbered prop key.

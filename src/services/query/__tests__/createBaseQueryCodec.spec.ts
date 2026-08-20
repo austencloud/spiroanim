@@ -8,6 +8,15 @@ import {
 const definitions = {
   signed: [-2, 2, 3],
   enabled: [0, 1, 2, Boolean],
+  tenths: [
+    -2,
+    2,
+    6,
+    {
+      encode: (value: number) => Math.round(value * 10),
+      decode: (value: number) => value / 10,
+    },
+  ],
 } as const
 
 describe('createBaseQueryCodec', () => {
@@ -38,6 +47,12 @@ describe('createBaseQueryCodec', () => {
       signed: 1,
       enabled: true,
     })
+  })
+
+  it('round-trips values through bidirectional numeric transforms', () => {
+    const encoded = codec.pack(['tenths'], { tenths: -1.5 }, 1)
+
+    expect(codec.unpack(['tenths'], encoded)).toEqual({ tenths: -1.5 })
   })
 })
 

@@ -43,6 +43,8 @@ export async function loadSpiroAnimQSVersion(version: number): Promise<SpiroAnim
       return import('@/services/query/versions/SpiroAnimQSv5')
     case 6:
       return import('@/services/query/versions/SpiroAnimQSv6')
+    case 7:
+      return import('@/services/query/versions/SpiroAnimQSv7')
     default:
       throw new UnsupportedSpiroAnimQSVersionError(version)
   }

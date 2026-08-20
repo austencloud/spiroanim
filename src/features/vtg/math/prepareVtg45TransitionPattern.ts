@@ -1,11 +1,15 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
-import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
+import {
+  consolidateAnimationPlayback,
+  subdivideAnimationPlayback,
+} from '@/math/animation/subdivideAnimationPlayback'
 import type { AnimDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 
 const continuationFrameIndex = 1
-const undoubledArc = 90
 const supportedArc = 45
 const supportedPropCount = 2
+const turnsDecimalScale = 10
+const turnsPrecisionTolerance = 0.000_001
 
 export interface PreparedVtg45TransitionPattern {
   pattern: RootDataFinal
@@ -30,6 +34,20 @@ const hasContinuationArc = (frames: readonly AnimDataCompiled[], arc: number): b
   frames.length > continuationFrameIndex &&
   frames.slice(continuationFrameIndex).every((frame) => frame.arc === arc)
 
+const hasRepresentableDividedTurns = (
+  frames: readonly AnimDataCompiled[],
+  divisor: number,
+): boolean =>
+  frames.slice(continuationFrameIndex).every((frame) => {
+    const scaledTurns = (frame.turns / divisor) * turnsDecimalScale
+    return Math.abs(scaledTurns - Math.round(scaledTurns)) <= turnsPrecisionTolerance
+  })
+
+const getWholeFactor = (value: number): number | undefined => {
+  const rounded = Math.round(value)
+  return rounded >= 1 && Math.abs(value - rounded) <= turnsPrecisionTolerance ? rounded : undefined
+}
+
 const hasAlignedFrames = (pattern: RootDataFinal): boolean => {
   const [firstProp, secondProp] = pattern.props
   if (!firstProp || !secondProp || firstProp.anim.length !== secondProp.anim.length) return false
@@ -49,12 +67,35 @@ export const prepareVtg45TransitionPattern = (
 ): PreparedVtg45TransitionPattern => {
   const copy = clonePattern(source)
   const compiledCopy = rootCompile(copy)
-  const shouldDouble =
-    copy.props.length === supportedPropCount &&
-    compiledCopy.props.every((prop) => hasContinuationArc(prop.anim, undoubledArc))
-  const pattern = shouldDouble ? (doubleAnimationPlayback(copy) ?? copy) : copy
+  const continuationArc = compiledCopy.props[0]?.anim[continuationFrameIndex]?.arc
+  const hasUniformArc =
+    continuationArc !== undefined &&
+    compiledCopy.props.every((prop) => hasContinuationArc(prop.anim, continuationArc))
+  const subdivisionFactor =
+    hasUniformArc && continuationArc > supportedArc
+      ? getWholeFactor(continuationArc / supportedArc)
+      : undefined
+  const consolidationFactor =
+    hasUniformArc && continuationArc < supportedArc
+      ? getWholeFactor(supportedArc / continuationArc)
+      : undefined
+  const converted =
+    copy.props.length !== supportedPropCount
+      ? undefined
+      : subdivisionFactor !== undefined &&
+          compiledCopy.props.every((prop) =>
+            hasRepresentableDividedTurns(prop.anim, subdivisionFactor),
+          )
+        ? subdivideAnimationPlayback(copy, subdivisionFactor)
+        : consolidationFactor !== undefined
+          ? consolidateAnimationPlayback(copy, consolidationFactor)
+          : continuationArc === supportedArc
+            ? copy
+            : undefined
+  const pattern = converted ?? copy
   const compiledPattern = rootCompile(pattern)
   const supported =
+    converted !== undefined &&
     pattern.props.length === supportedPropCount &&
     compiledPattern.props.every((prop) => hasContinuationArc(prop.anim, supportedArc)) &&
     hasAlignedFrames(pattern)

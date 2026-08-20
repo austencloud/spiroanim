@@ -26,6 +26,11 @@ export function createBaseQueryCodec<Variable extends string>(
   const radix = charset.length
   const paddingCharacter = charset.at(-1) ?? ''
 
+  const encodeDefinitionValue = (variable: Variable, value: number): number => {
+    const transform = definitions[variable][3]
+    return typeof transform === 'object' ? transform.encode(value) : value
+  }
+
   const encodeInteger = (value: number): string => {
     let remaining = value
     let encoded = ''
@@ -51,7 +56,10 @@ export function createBaseQueryCodec<Variable extends string>(
   const normalize = (variable: Variable, value: number | undefined, bits: number): number => {
     const [minimum, maximum] = definitions[variable]
     if (value === undefined) return (1 << bits) - 1
-    return Math.max(0, Math.min(value - minimum, maximum - minimum))
+    const storedMinimum = encodeDefinitionValue(variable, minimum)
+    const storedMaximum = encodeDefinitionValue(variable, maximum)
+    const storedValue = encodeDefinitionValue(variable, value)
+    return Math.max(0, Math.min(storedValue - storedMinimum, storedMaximum - storedMinimum))
   }
 
   const denormalize = (
@@ -62,7 +70,9 @@ export function createBaseQueryCodec<Variable extends string>(
     const [minimum, maximum] = definitions[variable]
     if (value === undefined || value === (1 << bits) - 1) return undefined
 
-    return Math.max(minimum, Math.min(value + minimum, maximum))
+    const storedMinimum = encodeDefinitionValue(variable, minimum)
+    const storedMaximum = encodeDefinitionValue(variable, maximum)
+    return Math.max(storedMinimum, Math.min(value + storedMinimum, storedMaximum))
   }
 
   const pack = (
@@ -130,9 +140,12 @@ export function createBaseQueryCodec<Variable extends string>(
 
       if (value !== undefined) {
         // Version definitions may restore booleans or other domain values after unpacking.
-        values[variable] = transform
-          ? transform(value)
-          : Math.max(minimum, Math.min(value, maximum))
+        values[variable] =
+          typeof transform === 'object'
+            ? transform.decode(value)
+            : transform
+              ? transform(value)
+              : Math.max(minimum, Math.min(value, maximum))
       }
 
       bitPosition += bits
@@ -161,7 +174,9 @@ export function validateQueryDefinitions<Variable extends string>(
   for (const variable of Object.keys(definitions) as Variable[]) {
     const [minimum, maximum, bits] = definitions[variable]
     const largestEncodableRange = 2 ** bits - RESERVED_UNDEFINED_VALUES - 1
-    const definedRange = maximum - minimum
+    const definedRange =
+      encodeDefinitionBoundary(definitions[variable], maximum) -
+      encodeDefinitionBoundary(definitions[variable], minimum)
 
     if (definedRange > largestEncodableRange) {
       console.error(
@@ -170,4 +185,9 @@ export function validateQueryDefinitions<Variable extends string>(
       )
     }
   }
+}
+
+function encodeDefinitionBoundary(definition: QueryVariableDefinition, value: number): number {
+  const transform = definition[3]
+  return typeof transform === 'object' ? transform.encode(value) : value
 }

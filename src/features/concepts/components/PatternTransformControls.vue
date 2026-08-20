@@ -1,6 +1,19 @@
 <template>
   <fieldset class="concept-pattern-options vtg-pattern-options">
     <legend class="concept-controls__visually-hidden">Pattern options</legend>
+    <AppTooltip v-if="showMore" text="Choose separate timing ratios for each prop">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps">
+          <input
+            v-model="more"
+            type="checkbox"
+            aria-label="Choose separate timing ratios for each prop"
+            :data-role="`${rolePrefix}-more`"
+          />
+          <span>More</span>
+        </label>
+      </template>
+    </AppTooltip>
     <AppTooltip v-if="showSwap" text="Exchange the completed left and right animation tracks">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps">
@@ -73,6 +86,7 @@ const props = withDefaults(
     reverseDescription?: string
     confirmReset?: boolean
     showSwap?: boolean
+    showMore?: boolean
   }>(),
   {
     rolePrefix: 'vtg',
@@ -80,12 +94,15 @@ const props = withDefaults(
     reverseDescription: 'Rotate floor plane by 180 degrees',
     confirmReset: false,
     showSwap: true,
+    showMore: false,
   },
 )
 
 const emit = defineEmits<{
   reset: []
 }>()
+
+const more = defineModel<boolean>('more', { default: false })
 
 const { swapProps, reversePlane } = storeToRefs(useConceptsStore())
 const confirmationOpen = ref(false)

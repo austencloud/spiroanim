@@ -41,6 +41,24 @@ describe('alternatePatternPlayback', () => {
     expect(animation.props[1]!.anim[32]).toEqual({ turns: -180, plane: 180 })
   })
 
+  it.each(['2:1', '2:3', '2:5'] as const)(
+    'uses eight reciprocal transition passes when %s is involved',
+    (speedRatio) => {
+      const base = createDefaultVtgAnimation({ reference: '1-1', speedRatio })
+      if (!base) throw new Error(`Expected a ${speedRatio} VTG animation`)
+
+      const animation = alternatePatternPlayback(base)
+      if (!animation) throw new Error(`Expected an alternating ${speedRatio} animation`)
+
+      const changeFrames = Array.from({ length: 8 }, (_, index) => (index + 1) * 8)
+      for (const frameIndex of changeFrames) {
+        expect(animation.props[0]?.anim[frameIndex]).toMatchObject({ plane: 180 })
+        expect(animation.props[1]?.anim[frameIndex]).toMatchObject({ plane: 180 })
+      }
+      expect(analyzeAlternatingPatternPlayback(animation)?.base).toEqual(base)
+    },
+  )
+
   it.each(vtgSpeedRatios)('derives valid alternating turns for %s', (speedRatio) => {
     const base = createDoubledQtrAnimation({
       reference: '1-1',

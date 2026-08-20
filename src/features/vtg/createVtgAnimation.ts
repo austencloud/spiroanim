@@ -2,7 +2,11 @@ import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { toConceptPreviewAnimation } from '@/features/concepts/data/toConceptPreviewAnimation'
 import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
-import { vtgDefaultBeat, vtgDefaultTransitionBeats } from '@/features/vtg/types'
+import {
+  getVtgTimingCycleCount,
+  vtgDefaultBeat,
+  vtgDefaultTransitionBeats,
+} from '@/features/vtg/types'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
@@ -21,7 +25,7 @@ import {
 } from '@/features/concepts/applyPatternFinalTransforms'
 import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 
-const vtgFrameCount = 9
+const vtgIntervalsPerHandRotation = 8
 
 const applyPropRotationOffsets = (
   animation: RootDataFinal,
@@ -46,17 +50,21 @@ const applyPropRotationOffsets = (
         }),
       }
 
-const addDefaultFrames = (pattern: VtgReadableAnimation): VtgReadableAnimation => ({
+const addDefaultFrames = (
+  pattern: VtgReadableAnimation,
+  speedRatio: VtgPatternSelection['speedRatio'],
+): VtgReadableAnimation => ({
   ...pattern,
   props: pattern.props.map((prop, index) => {
     const defaults = vtgPropSettings[index]
+    const frameCount = getVtgTimingCycleCount(speedRatio) * vtgIntervalsPerHandRotation + 1
 
     return {
       ...defaults,
       ...prop,
       anim: [
         ...prop.anim,
-        ...Array.from({ length: Math.max(0, vtgFrameCount - prop.anim.length) }, () => ({})),
+        ...Array.from({ length: Math.max(0, frameCount - prop.anim.length) }, () => ({})),
       ],
     }
   }),
@@ -123,13 +131,16 @@ export const createVtgAnimation = (
   const selectedPattern = buildVtgPattern(selection)
   if (!selectedPattern) return undefined
 
-  const patternWithDefaults = addDefaultFrames({
-    ...selectedPattern,
-    ...(selection.thick === undefined ? {} : { thick: selection.thick }),
-    paths: selection.paths ?? vtgPlayerSettings.paths,
-    hands: selection.hands ?? vtgPlayerSettings.hands,
-    arms: selection.arms ?? vtgPlayerSettings.arms,
-  })
+  const patternWithDefaults = addDefaultFrames(
+    {
+      ...selectedPattern,
+      ...(selection.thick === undefined ? {} : { thick: selection.thick }),
+      paths: selection.paths ?? vtgPlayerSettings.paths,
+      hands: selection.hands ?? vtgPlayerSettings.hands,
+      arms: selection.arms ?? vtgPlayerSettings.arms,
+    },
+    selection.speedRatio,
+  )
   const pattern = {
     ...patternWithDefaults,
     props: applyPatternPropVisibility(

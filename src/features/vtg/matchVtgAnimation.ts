@@ -20,7 +20,12 @@ import type {
   VtgRuleNumber,
   VtgSpeedRatio,
 } from '@/features/vtg/types'
-import { vtgBeats, vtgDefaultBeat } from '@/features/vtg/types'
+import {
+  formatVtgSpeedRatio,
+  getVtgPropSpeedRatios,
+  vtgBeats,
+  vtgDefaultBeat,
+} from '@/features/vtg/types'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import { analyzeAlternatingPatternPlayback } from '@/math/animation/alternatePatternPlayback'
@@ -93,9 +98,9 @@ const createCellReference = (row: VtgRuleNumber, column: VtgRuleNumber): VtgCell
   `${row}-${column}`
 
 const getCandidateRatios = (speedRatio: VtgSpeedRatio): readonly VtgSpeedRatio[] => {
-  const match = /^1:([1-5])v([1-5])$/.exec(speedRatio)
-  if (!match) return [speedRatio]
-  return [speedRatio, `1:${match[2]}v${match[1]}` as VtgSpeedRatio]
+  const [left, right] = getVtgPropSpeedRatios(speedRatio)
+  if (left === right) return [speedRatio]
+  return [speedRatio, formatVtgSpeedRatio(right, left)]
 }
 
 const getOrientedCandidateState = (

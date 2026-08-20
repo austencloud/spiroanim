@@ -1,12 +1,9 @@
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
-import type { VtgPatternSelection } from '@/features/vtg/types'
+import { getVtgTimingCycleCount, type VtgPatternSelection } from '@/features/vtg/types'
 import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import { rejoinVtgBuilderJunction } from '@/features/builder/rejoinVtgBuilderJunction'
-import {
-  selectVtgBuilderJunctionMotion,
-  selectVtgBuilderJunctionPlane,
-} from '@/features/builder/selectVtgBuilderJunctionPlane'
+import { selectVtgBuilderJunctionMotion } from '@/features/builder/selectVtgBuilderJunctionPlane'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import { orthoAngle } from '@/math/animation/OrthogonalFunc'
@@ -14,6 +11,8 @@ import type { AnimData, AnimDataCompiled, RootDataFinal } from '@/types/AnimType
 import { MathUtils, Vector3 } from 'three'
 
 const doubledFourBeatIntervalCount = 8
+const getBuilderPieceIntervalCount = (selection: VtgPatternSelection): number =>
+  getVtgTimingCycleCount(selection.speedRatio) * doubledFourBeatIntervalCount
 const normalizeTravelPlane = (plane: number): 0 | 180 =>
   Math.abs(((plane % 360) + 360) % 360) === 180 ? 180 : 0
 
@@ -89,7 +88,7 @@ const createBuilderPieceFrames = (
 ): AnimData[][] | undefined => {
   const source = createVtgAnimation(current, selection)
   if (!source || source.props.length !== current.props.length) return undefined
-  return createTransportedBuilderPieceFrames(source)
+  return createTransportedBuilderPieceFrames(source, getBuilderPieceIntervalCount(selection))
 }
 
 const swapAnimationTracks = (animation: RootDataFinal): RootDataFinal | undefined => {
@@ -111,6 +110,7 @@ const createStartingVtgBuilderPattern = (
 ): RootDataFinal | undefined => {
   const source = createVtgAnimation(current, selection)
   if (!source || source.props.length !== current.props.length) return undefined
+  const targetIntervalCount = getBuilderPieceIntervalCount(selection)
   const compiledSource = rootCompile(source)
   const candidate = {
     ...current,
@@ -119,10 +119,10 @@ const createStartingVtgBuilderPattern = (
       const compiledSourceProp = compiledSource.props[index]
       if (!sourceProp || !compiledSourceProp) return prop
 
-      const inserted = sourceProp.anim.slice(0, doubledFourBeatIntervalCount + 1).map((frame) => ({
+      const inserted = sourceProp.anim.slice(0, targetIntervalCount + 1).map((frame) => ({
         ...frame,
       }))
-      while (inserted.length < doubledFourBeatIntervalCount + 1) inserted.push({})
+      while (inserted.length < targetIntervalCount + 1) inserted.push({})
       const insertedRelationship = inserted[1]
       if (insertedRelationship) {
         insertedRelationship.plane = normalizeTravelPlane(compiledSourceProp.anim[1]?.plane ?? 0)
@@ -136,7 +136,7 @@ const createStartingVtgBuilderPattern = (
       return { ...prop, anim: inserted }
     }),
   }
-  return selectVtgBuilderJunctionPlane(candidate, 1, getVtgBuilderMotion(source))
+  return selectVtgBuilderJunctionMotion(candidate, 1, getVtgBuilderMotion(source))
 }
 
 const prependVtgBuilderPattern = (
@@ -144,10 +144,11 @@ const prependVtgBuilderPattern = (
   selection: VtgPatternSelection,
 ): RootDataFinal | undefined => {
   const candidate = createStartingVtgBuilderPattern(current, selection)
+  const targetIntervalCount = getBuilderPieceIntervalCount(selection)
   return candidate
     ? rejoinVtgBuilderJunction(
         candidate,
-        doubledFourBeatIntervalCount,
+        targetIntervalCount,
         current,
         0,
         getVtgBuilderMotion(current),
@@ -155,7 +156,7 @@ const prependVtgBuilderPattern = (
     : undefined
 }
 
-/** Appends a dragged VTG cell as one doubled four-beat Builder piece. */
+/** Appends a dragged VTG cell as one complete doubled timing cycle. */
 export const appendVtgBuilderPattern = (
   current: RootDataFinal,
   selection: VtgPatternSelection,
@@ -178,7 +179,7 @@ export const appendVtgBuilderPattern = (
   if (!source || source.props.length < 2 || appended.props.length < 2) return appended
   const appendTarget = current.props[0]?.anim.length
   if (appendTarget === undefined) return appended
-  return selectVtgBuilderJunctionPlane(appended, appendTarget, getVtgBuilderMotion(source))
+  return selectVtgBuilderJunctionMotion(appended, appendTarget, getVtgBuilderMotion(source))
 }
 
 /** Swaps one Builder portion's prop tracks and rejoins its untouched successor. */
@@ -271,6 +272,7 @@ export const insertVtgBuilderPattern = (
   const source = createVtgAnimation(current, selection)
   if (!source) return undefined
   const insertionIndex = targetStart + 1
+  const insertedIntervalCount = getBuilderPieceIntervalCount(selection)
   const inserted = {
     ...current,
     props: current.props.map((prop, index) => {
@@ -285,7 +287,7 @@ export const insertVtgBuilderPattern = (
       }
     }),
   }
-  const alignedInserted = selectVtgBuilderJunctionPlane(
+  const alignedInserted = selectVtgBuilderJunctionMotion(
     inserted,
     insertionIndex,
     getVtgBuilderMotion(source),
@@ -294,7 +296,7 @@ export const insertVtgBuilderPattern = (
   return alignedInserted && followingPreview
     ? rejoinVtgBuilderJunction(
         alignedInserted,
-        insertionIndex + doubledFourBeatIntervalCount - 1,
+        insertionIndex + insertedIntervalCount - 1,
         current,
         targetStart,
         getVtgBuilderMotion(followingPreview),
@@ -313,13 +315,14 @@ export const replaceFirstVtgBuilderPattern = (
 
   const followingStart = findExplicitPlaneOrTurnsFrameIndices(current, 2)[0]
   const candidate = createStartingVtgBuilderPattern(current, selection)
+  const replacementIntervalCount = getBuilderPieceIntervalCount(selection)
   if (followingStart === undefined || !candidate) return undefined
 
   // The old starting portion is omitted; the replacement prefix is joined directly to the
   // untouched authored successor and suffix.
   return rejoinVtgBuilderJunction(
     candidate,
-    doubledFourBeatIntervalCount,
+    replacementIntervalCount,
     current,
     followingStart - 1,
     getVtgBuilderMotion(followingPreview),

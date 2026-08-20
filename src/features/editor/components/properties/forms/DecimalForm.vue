@@ -56,7 +56,7 @@ const from = ref<number | boolean>(false)
 
 const parse = computed(() => {
   const f = float.value
-  return f !== undefined ? (val: number) => Math.floor(val * f) / f : (val: number) => val
+  return f !== undefined ? (val: number) => Math.round(val * f) / f : (val: number) => val
 })
 
 const minFreeze = ref<number | null>()

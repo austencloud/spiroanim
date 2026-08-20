@@ -76,6 +76,7 @@ const turns = reactive({
   min: -8,
   max: 8,
   neg: true,
+  float: 10,
 })
 
 const arc = reactive({

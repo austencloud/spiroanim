@@ -1,10 +1,17 @@
 export type QueryValueTransform = (value: number) => unknown
 
+export interface QueryValueCodec {
+  encode(value: number): number
+  decode(value: number): unknown
+}
+
+export type QueryVariableTransform = QueryValueTransform | QueryValueCodec
+
 export type QueryVariableDefinition = readonly [
   minimum: number,
   maximum: number,
   bits: number,
-  transform?: QueryValueTransform,
+  transform?: QueryVariableTransform,
 ]
 
 export type QueryEncodableValue = number | boolean | undefined

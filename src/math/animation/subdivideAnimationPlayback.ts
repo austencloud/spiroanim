@@ -126,3 +126,67 @@ export const subdivideAnimationPlayback = (
 
 export const doubleAnimationPlayback = (animation: RootDataFinal): RootDataFinal | undefined =>
   subdivideAnimationPlayback(animation, doublePlaybackMultiplier)
+
+/**
+ * Lowers playback rate while combining equal groups of authored intervals. This is the inverse of
+ * subdivision for uniformly authored motion and retains each group's final visual state.
+ */
+export const consolidateAnimationPlayback = (
+  animation: RootDataFinal,
+  consolidationCount: number,
+): RootDataFinal | undefined => {
+  if (!Number.isInteger(consolidationCount) || consolidationCount < doublePlaybackMultiplier) {
+    return undefined
+  }
+
+  const compiled = rootCompile(animation)
+  const props = animation.props.map((prop, propIndex) => {
+    const compiledProp = compiled.props[propIndex]
+    const firstFrame = prop.anim[0]
+    if (
+      !compiledProp ||
+      !firstFrame ||
+      prop.anim.length !== compiledProp.anim.length ||
+      (prop.anim.length - 1) % consolidationCount !== 0
+    ) {
+      return undefined
+    }
+
+    const anim: AnimData[] = [{ ...firstFrame }]
+    for (
+      let startIndex = 1;
+      startIndex < compiledProp.anim.length;
+      startIndex += consolidationCount
+    ) {
+      const first = compiledProp.anim[startIndex]
+      const last = compiledProp.anim[startIndex + consolidationCount - 1]
+      if (!first || !last) return undefined
+
+      anim.push({
+        turns: Array.from(
+          { length: consolidationCount },
+          (_, offset) => compiledProp.anim[startIndex + offset]?.turns,
+        ).reduce<number>((sum, turns) => sum + (turns ?? 0), 0),
+        beats: last.beats,
+        scale: last.scale,
+        depth: last.depth,
+        type: last.type,
+        adjust: last.adjust,
+        arc: Array.from(
+          { length: consolidationCount },
+          (_, offset) => compiledProp.anim[startIndex + offset]?.arc,
+        ).reduce<number>((sum, arc) => sum + (arc ?? 0), 0),
+        plane: first.plane,
+        axis: first.axis,
+      })
+    }
+    return { ...prop, anim }
+  })
+  if (props.some((prop) => prop === undefined)) return undefined
+
+  return {
+    ...animation,
+    bpm: animation.bpm / consolidationCount,
+    props: props.map((prop) => prop!),
+  }
+}

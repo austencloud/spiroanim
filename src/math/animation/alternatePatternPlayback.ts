@@ -4,7 +4,7 @@ import type { AnimData, RootDataFinal } from '@/types/AnimTypes'
 import { vtgDefaultTransitionBeats, type VtgTransitionBeats } from '@/features/vtg/types'
 
 const transitionPlane = 180
-const doubledVtgBaseFrameCount = 9
+const doubledIntervalsPerHandRotation = 8
 
 const appendFrames = (
   animation: RootDataFinal,
@@ -51,8 +51,9 @@ const replaceLastFrame = (
 const prepareFirstTransition = (
   animation: RootDataFinal,
   transitionBeats: VtgTransitionBeats,
+  baseBeatCount: number,
 ): RootDataFinal => {
-  const frameDelta = (transitionBeats - 4) * doublePlaybackMultiplier
+  const frameDelta = (transitionBeats - baseBeatCount) * doublePlaybackMultiplier
   if (frameDelta > 0) return appendFrames(animation, [], frameDelta)
   if (frameDelta === 0) return animation
 
@@ -69,7 +70,8 @@ const alternateTurns = (turns: number, arc: number) => -turns - 2 * arc
 
 /**
  * Extends a doubled closed cycle with reciprocal QTR/VTG relationship changes. By default both
- * props change together four times; Quad mode preserves four alternating single-prop changes.
+ * props change together four times for a one-rotation timing cycle and eight times for a
+ * two-rotation timing cycle; Quad mode alternates the same number of single-prop changes.
  * Five beats preserves the original complete-cycle-plus-transition timing. Shorter experimental
  * intervals trim doubled frames before the first change. Boundary mode places changes on each
  * interval's final frame. After-boundary mode places each change on the following frame, so its
@@ -90,8 +92,11 @@ export const alternatePatternPlayback = (
 
   const cycleFrameCount = firstProp.anim.length - 1
   if (cycleFrameCount < 1 || animation.props.length < 1) return undefined
+  const timingCycleCount = cycleFrameCount / doubledIntervalsPerHandRotation
+  if (!Number.isInteger(timingCycleCount) || timingCycleCount < 1) return undefined
+  const baseBeatCount = timingCycleCount * 4
 
-  const prepared = prepareFirstTransition(animation, transitionBeats)
+  const prepared = prepareFirstTransition(animation, transitionBeats, baseBeatCount)
 
   const compiled = rootCompile(prepared)
   const inheritedTurns = compiled.props.map((prop) => prop.anim.at(-1)?.turns)
@@ -99,7 +104,7 @@ export const alternatePatternPlayback = (
   if (inheritedTurns.some((value) => value === undefined)) return undefined
   if (inheritedArcs.some((value) => value === undefined)) return undefined
 
-  const changeCount = animation.props.length * doublePlaybackMultiplier
+  const changeCount = animation.props.length * doublePlaybackMultiplier * timingCycleCount
   const transitionFrameCount = transitionBeats * doublePlaybackMultiplier
   const resultFrameCount = changeCount * transitionFrameCount + 1
   let result = prepared
@@ -153,21 +158,25 @@ export const analyzeAlternatingPatternPlayback = (
   if (!firstProp || animation.props.length < 1) return undefined
   if (animation.props.some((prop) => prop.anim.length !== firstProp.anim.length)) return undefined
 
-  const mode = ([false, true] as const).flatMap((quad) =>
-    ([1, 0] as const).map((frameOffset) => ({ quad, frameOffset })),
-  ).find(({ quad, frameOffset }) => {
-    const eventCount = animation.props.length * doublePlaybackMultiplier
-    const beats = (firstProp.anim.length - 1) / (eventCount * doublePlaybackMultiplier)
-    if (!isTransitionBeatCount(beats)) return false
-    const firstChangeIndex = beats * doublePlaybackMultiplier + frameOffset
-    const changedPropCount = animation.props.filter(
-      (prop) => prop.anim[firstChangeIndex]?.plane === transitionPlane,
-    ).length
-    return changedPropCount === (quad ? 1 : animation.props.length)
-  })
+  const mode = ([1, 2] as const)
+    .flatMap((timingCycleCount) =>
+      ([false, true] as const).flatMap((quad) =>
+        ([1, 0] as const).map((frameOffset) => ({ timingCycleCount, quad, frameOffset })),
+      ),
+    )
+    .find(({ timingCycleCount, quad, frameOffset }) => {
+      const eventCount = animation.props.length * doublePlaybackMultiplier * timingCycleCount
+      const beats = (firstProp.anim.length - 1) / (eventCount * doublePlaybackMultiplier)
+      if (!isTransitionBeatCount(beats)) return false
+      const firstChangeIndex = beats * doublePlaybackMultiplier + frameOffset
+      const changedPropCount = animation.props.filter(
+        (prop) => prop.anim[firstChangeIndex]?.plane === transitionPlane,
+      ).length
+      return changedPropCount === (quad ? 1 : animation.props.length)
+    })
   if (mode === undefined) return undefined
-  const { quad: transitionQuad, frameOffset } = mode
-  const eventCount = animation.props.length * doublePlaybackMultiplier
+  const { timingCycleCount, quad: transitionQuad, frameOffset } = mode
+  const eventCount = animation.props.length * doublePlaybackMultiplier * timingCycleCount
   const transitionBeats = (firstProp.anim.length - 1) / (eventCount * doublePlaybackMultiplier)
   if (!isTransitionBeatCount(transitionBeats)) return undefined
   const firstChangeIndex = transitionBeats * doublePlaybackMultiplier + frameOffset
@@ -176,6 +185,7 @@ export const analyzeAlternatingPatternPlayback = (
   )
   const transitionSecond = transitionQuad && changedPropIndexes[0] === 1
 
+  const doubledVtgBaseFrameCount = timingCycleCount * doubledIntervalsPerHandRotation + 1
   const retainedBaseFrameCount = Math.min(doubledVtgBaseFrameCount, firstChangeIndex + 1)
   const base = {
     ...animation,

@@ -38,7 +38,8 @@ export type PropMod = (typeof PROPSR)[PropInd] // Prop Name (No spaces etc.)
 export type PropStr = (typeof PTEXT)[PropInd] // Prop String
 
 export type PPropKeys = keyof (typeof PPROP)[PointTypes] // Keys used in PPROP
-export type qsTransform = BooleanConstructor | undefined // For typecasting certain values from query string
+/** @deprecated Query transforms are owned by the query codec types. */
+export type qsTransform = BooleanConstructor | undefined
 
 export type GrefItem = Record<PointInd, PointInd>
 export type FrameSet = 'animation' | 'motion' | 'camera'

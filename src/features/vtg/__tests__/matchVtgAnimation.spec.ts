@@ -37,6 +37,12 @@ const canonicalRotationMatches = (matches: readonly VtgPatternMatch[]) => {
 }
 
 describe('VTG animation matching', () => {
+  it('matches a generalized timing ratio', () => {
+    const source = createAnimation({ reference: '1-1', speedRatio: '2:1' })
+
+    expect(findVtgPatternMatch(source)).toMatchObject({ reference: '1-1', speedRatio: '2:1' })
+  })
+
   it('regenerates serialized reversed orientation at 1:2 without changing compiled motion', async () => {
     const version = await loadSpiroAnimQSVersion(6)
     const codec = await useSpiroAnimQS(

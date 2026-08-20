@@ -10,9 +10,9 @@ import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import {
   getAdjustedVtgScale,
   vtgPlayerSettings,
-  vtgScaleAdjustmentBySpeedRatio,
+  vtgScaleAdjustmentByDenominator,
 } from '@/features/vtg/data/vtgPlayerSettings'
-import { vtgBeats, vtgIndividualSpeedRatios, vtgSpeedRatios } from '@/features/vtg/types'
+import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { reverseAngle } from '@/math/animation/AngleFunc'
@@ -27,8 +27,7 @@ const createVtgAnimation = (current: RootDataFinal, selection: VtgPatternSelecti
 const createVtgPreviewAnimation = (selection: VtgPatternSelection) =>
   createVtgPreviewAnimationForSelection(selection)
 
-const buildVtgPattern = (selection: VtgPatternSelection) =>
-  buildSelectedVtgPattern(selection)
+const buildVtgPattern = (selection: VtgPatternSelection) => buildSelectedVtgPattern(selection)
 
 const createCurrentAnimation = () =>
   rootFinal({
@@ -99,16 +98,25 @@ describe('createVtgAnimation', () => {
     (speedRatio, adjustment, rawScale, distance) => {
       const pattern = buildVtgPattern({ reference: '1-6', speedRatio })
 
-      expect(vtgScaleAdjustmentBySpeedRatio[speedRatio]).toBe(adjustment)
+      expect(vtgScaleAdjustmentByDenominator[Number(speedRatio.slice(2))]).toBe(adjustment)
       expect(pattern?.props.map((prop) => prop.anim[0]?.scale)).toEqual([rawScale, rawScale])
       expect(pattern?.distance).toBe(distance)
     },
   )
 
   it('lists every ratio adjustment and clamps adjusted Scale to the control bounds', () => {
-    expect(Object.keys(vtgScaleAdjustmentBySpeedRatio)).toEqual(vtgIndividualSpeedRatios)
+    expect(vtgScaleAdjustmentByDenominator).toEqual({ 1: 0.1, 2: -0.2, 3: 0, 4: 0.1, 5: 0.2 })
     expect(getAdjustedVtgScale(0.5, '1:2')).toBe(0.5)
     expect(getAdjustedVtgScale(1.4, '1:5')).toBe(1.4)
+  })
+
+  it.each([
+    ['2:3', '1:3'],
+    ['2:5', '1:5'],
+    ['1:3v2', '1:3'],
+    ['2:3v5', '1:5'],
+  ] as const)('uses denominator-based Scale adjustment for %s', (actual, expected) => {
+    expect(getAdjustedVtgScale(0.8, actual)).toBe(getAdjustedVtgScale(0.8, expected))
   })
 
   it('keeps every removable transition-subdivision continuation frame empty', () => {
@@ -452,6 +460,20 @@ describe('createVtgAnimation', () => {
 
     expect(buildVtgPattern(selection)?.props[0]?.anim).toHaveLength(9)
     expect(createVtgAnimation(createCurrentAnimation(), selection)?.props[0]?.anim).toHaveLength(9)
+  })
+
+  it.each([
+    ['1:3', 9, 4],
+    ['1:2v3', 9, 4],
+    ['2:1', 17, 8],
+    ['2:3', 17, 8],
+    ['2:5', 17, 8],
+  ] as const)('generates the complete %s cycle', (speedRatio, frameCount, beatCount) => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio })
+    if (!animation) throw new Error(`Expected the ${speedRatio} pattern to be defined`)
+
+    expect(animation.props.every((prop) => prop.anim.length === frameCount)).toBe(true)
+    expect((frameCount - 1) / doublePlaybackMultiplier).toBe(beatCount)
   })
 
   it('uses player VTG settings with preview-only visibility and thickness overrides', () => {

@@ -1,4 +1,8 @@
-import type { VtgIndividualSpeedRatio, VtgRuleNumber, VtgSpeedRatio } from '@/features/vtg/types'
+import type {
+  VtgEstablishedIndividualSpeedRatio,
+  VtgRuleNumber,
+  VtgSpeedRatio,
+} from '@/features/vtg/types'
 
 export interface VtgTopHeaderRule {
   ruleNumbers: readonly VtgRuleNumber[]
@@ -19,11 +23,11 @@ const establishedTopHeaderRules = {
   '1:3': { ruleNumbers: standardRuleNumbers, showDetails: true },
   '1:4': defaultTopHeaderRule,
   '1:5': { ruleNumbers: swappedRuleNumbers, showDetails: true },
-} as const satisfies Readonly<Record<VtgIndividualSpeedRatio, VtgTopHeaderRule>>
+} as const satisfies Readonly<Record<VtgEstablishedIndividualSpeedRatio, VtgTopHeaderRule>>
 
 const hasEstablishedTopHeaderRule = (
   speedRatio: VtgSpeedRatio,
-): speedRatio is VtgIndividualSpeedRatio => speedRatio in establishedTopHeaderRules
+): speedRatio is VtgEstablishedIndividualSpeedRatio => speedRatio in establishedTopHeaderRules
 
 /** Ratios without an established mapping intentionally use the 1:2/1:4 top headers. */
 export const getVtgTopHeaderRule = (speedRatio: VtgSpeedRatio): VtgTopHeaderRule =>

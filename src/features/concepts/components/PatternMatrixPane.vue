@@ -20,30 +20,67 @@
     <div class="vtg-top-options">
       <fieldset class="vtg-speed-ratio">
         <legend class="vtg-pane__visually-hidden">Speed ratio</legend>
-        <div class="vtg-radio-options">
-          <AppTooltip
-            v-for="ratio in speedRatios"
-            :key="ratio"
-            :text="`Use the ${ratio} speed ratio`"
-          >
-            <template #activator="{ props: activatorProps }">
-              <label v-bind="activatorProps">
-                <input
-                  v-model="speedRatio"
-                  type="radio"
-                  name="vtg-speed-ratio"
-                  :value="ratio"
-                  :aria-label="`Use the ${ratio} speed ratio`"
-                />
-                <span>{{ ratio }}</span>
-              </label>
-            </template>
-          </AppTooltip>
+        <div v-if="!moreRatios" class="vtg-radio-options">
+          <div v-for="(ratios, rowIndex) in speedRatioRows" :key="rowIndex" class="vtg-radio-row">
+            <AppTooltip v-for="ratio in ratios" :key="ratio" :text="`Use the ${ratio} speed ratio`">
+              <template #activator="{ props: activatorProps }">
+                <label v-bind="activatorProps">
+                  <input
+                    v-model="speedRatio"
+                    type="radio"
+                    name="vtg-speed-ratio"
+                    :value="ratio"
+                    :aria-label="`Use the ${ratio} speed ratio`"
+                  />
+                  <span>{{ ratio }}</span>
+                </label>
+              </template>
+            </AppTooltip>
+          </div>
+        </div>
+        <div v-else class="vtg-ratio-selects">
+          <label class="vtg-ratio-select">
+            <span class="vtg-ratio-select__label">Left:</span>
+            <AppTooltip text="Choose the timing ratio for the left prop">
+              <template #activator="{ props: activatorProps }">
+                <select
+                  v-bind="activatorProps"
+                  v-model="firstPropRatio"
+                  aria-label="Left prop timing ratio"
+                  @change="applyMoreRatios"
+                >
+                  <option v-for="ratio in ratioPickerRatios" :key="ratio" :value="ratio">
+                    {{ ratio }}
+                  </option>
+                </select>
+              </template>
+            </AppTooltip>
+          </label>
+          <label class="vtg-ratio-select">
+            <span class="vtg-ratio-select__label">Right:</span>
+            <AppTooltip text="Choose the right prop timing ratio, or none to match the left prop">
+              <template #activator="{ props: activatorProps }">
+                <select
+                  v-bind="activatorProps"
+                  v-model="secondPropRatio"
+                  aria-label="Right prop timing ratio"
+                  @change="applyMoreRatios"
+                >
+                  <option value="">none</option>
+                  <option v-for="ratio in ratioPickerRatios" :key="ratio" :value="ratio">
+                    {{ ratio }}
+                  </option>
+                </select>
+              </template>
+            </AppTooltip>
+          </label>
         </div>
       </fieldset>
 
       <PatternTransformControls
+        v-model:more="moreRatios"
         confirm-reset
+        show-more
         :show-swap="!builderActive"
         :reverse-label="isQtr ? 'Flip' : '180°'"
         :reverse-description="
@@ -334,13 +371,19 @@ import type {
   VtgPatternOrientation,
   VtgTransitionInitialTurnsOffset,
   VtgTransitionBeats,
+  VtgIndividualSpeedRatio,
+  VtgSpeedRatio,
 } from '@/features/vtg/types'
 import {
+  formatVtgSpeedRatio,
+  getVtgPropSpeedRatios,
   supportsVtgPatternOrientation,
   getDefaultVtgPatternOrientation,
+  getVtgTimingCycleCount,
   getVtgPatternOrientations,
   vtgDefaultTransitionBeats,
-  vtgSpeedRatios,
+  vtgRatioPickerRatios,
+  vtgSpeedRatioRows,
 } from '@/features/vtg/types'
 import {
   createVtgTransitionQuickSlotAnimationCandidates,
@@ -391,7 +434,8 @@ const emit = defineEmits<{
   builderOpen: []
 }>()
 
-const speedRatios = vtgSpeedRatios
+const speedRatioRows = vtgSpeedRatioRows
+const ratioPickerRatios = vtgRatioPickerRatios
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 const conceptsStore = useConceptsStore()
 const {
@@ -412,6 +456,28 @@ const {
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
 const isAnti = ref(false)
+const moreRatios = ref(false)
+const firstPropRatio = ref<VtgIndividualSpeedRatio>(getVtgPropSpeedRatios(speedRatio.value)[0])
+const secondPropRatio = ref<VtgIndividualSpeedRatio | ''>('')
+const syncMoreRatioControls = (value: VtgSpeedRatio) => {
+  const [first, second] = getVtgPropSpeedRatios(value)
+  firstPropRatio.value = first
+  secondPropRatio.value = first === second ? '' : second
+  if (first !== second) moreRatios.value = true
+}
+const applyMoreRatios = () => {
+  speedRatio.value =
+    secondPropRatio.value === ''
+      ? firstPropRatio.value
+      : formatVtgSpeedRatio(firstPropRatio.value, secondPropRatio.value)
+}
+watch(moreRatios, (enabled) => {
+  if (enabled) syncMoreRatioControls(speedRatio.value)
+  else {
+    secondPropRatio.value = ''
+    speedRatio.value = firstPropRatio.value
+  }
+})
 const beat = ref<VtgBeat>(1)
 const orientation = ref<VtgPatternOrientation>(getDefaultVtgPatternOrientation(speedRatio.value))
 const propRotationOffsets = ref<readonly [number, number]>()
@@ -431,7 +497,11 @@ const hasPopulatedQuickSlots = computed(
 const showStaticPropsTransitionNote = computed(() => transition.value && speedRatio.value === '1:1')
 const compactBuilder = computed(() => props.builderActive && !props.builderFullCatalog)
 const usesPairedPreviewLayout = computed(
-  () => compactBuilder.value || speedRatio.value === '1:2' || speedRatio.value === '1:4',
+  () =>
+    compactBuilder.value ||
+    speedRatio.value === '1:2' ||
+    speedRatio.value === '1:4' ||
+    getVtgTimingCycleCount(speedRatio.value) === 2,
 )
 const topHeaderRule = computed(() => getVtgTopHeaderRule(speedRatio.value))
 const hideColumnHeaderDetails = computed(() => isQtr.value || !topHeaderRule.value.showDetails)
@@ -1038,6 +1108,7 @@ const resetPatternControls = async () => {
   const tile = matrixTiles.value.find(({ reference }) => reference === activeReference)
   const suppressionOwner = beginPatternEmitSuppression()
   conceptsStore.resetPatternControls()
+  moreRatios.value = false
   isQtr.value = false
   isAnti.value = false
   beat.value = 1
@@ -1131,6 +1202,7 @@ watch(
 watch(
   speedRatio,
   (nextSpeedRatio, previousSpeedRatio) => {
+    syncMoreRatioControls(nextSpeedRatio)
     ratioOrientationChangeActive = true
     try {
       propRotationOffsets.value = undefined
@@ -1263,6 +1335,7 @@ const selectInitialRandomPattern = () => {
   const suppressionOwner = beginPatternEmitSuppression()
   selectedCell.value = undefined
   conceptsStore.resetPatternControls()
+  moreRatios.value = false
   isAnti.value = false
   beat.value = 1
   transition.value = false
@@ -1635,6 +1708,8 @@ defineExpose({
 
   box-sizing: border-box;
   display: flex;
+  flex-direction: column;
+  align-items: center;
   width: min(100%, 45rem);
   min-width: var(--size-concept-content-min-width);
   padding: 0 var(--space-concept-control-row-inline) var(--space-1);
@@ -1651,9 +1726,60 @@ defineExpose({
 
 .vtg-radio-options {
   display: grid;
+  gap: var(--space-1);
+}
+
+.vtg-ratio-selects {
+  display: grid;
+  grid-auto-columns: max-content;
+  grid-auto-flow: column;
+  gap: var(--space-2);
+}
+
+.vtg-ratio-select {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.vtg-ratio-select__label {
+  display: grid;
+  min-block-size: 2rem;
+  padding-inline: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--font-size-concept-control);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: linear-gradient(90deg, var(--color-surface), transparent);
+  border-inline-start: 3px solid var(--color-action-primary);
+  border-radius: var(--radius-sm);
+  place-items: center;
+}
+
+.vtg-ratio-selects select {
+  min-block-size: 2rem;
+  padding-inline: var(--space-concept-control-inline);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-concept-control);
+  font-weight: 700;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.vtg-ratio-selects select:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+.vtg-radio-row {
+  display: grid;
   grid-auto-columns: max-content;
   grid-auto-flow: column;
   gap: var(--space-1);
+  justify-content: center;
 }
 
 .vtg-radio-options label {

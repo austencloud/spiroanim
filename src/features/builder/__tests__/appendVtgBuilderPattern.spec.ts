@@ -17,18 +17,19 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import {
-  areVtgBuilderSpinsEqual,
+  areVtgBuilderMotionsEqual,
   getVtgBuilderMotion,
 } from '@/features/builder/describeVtgBuilderMotion'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import type { VtgCellReference } from '@/features/vtg/types'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 
-const expectSameSpinsAndDuration = (actual: RootDataFinal, expected: RootDataFinal) => {
-  expect(areVtgBuilderSpinsEqual(getVtgBuilderMotion(actual), getVtgBuilderMotion(expected))).toBe(
-    true,
-  )
+const expectSameMotionAndDuration = (actual: RootDataFinal, expected: RootDataFinal) => {
+  expect(
+    areVtgBuilderMotionsEqual(getVtgBuilderMotion(actual), getVtgBuilderMotion(expected)),
+  ).toBe(true)
   expect(getVtgTransitionPreviewBeatCount(actual)).toBe(getVtgTransitionPreviewBeatCount(expected))
 }
 
@@ -110,7 +111,7 @@ describe('appendVtgBuilderPattern', () => {
     const appendStart = current.props[0]!.anim.length
     const appendedPreview = createVtgTransitionPreviewAnimations(result)?.[1]
     if (!appendedPreview) throw new Error('Expected appended preview')
-    expectSameSpinsAndDuration(appendedPreview, cell)
+    expectSameMotionAndDuration(appendedPreview, cell)
     expect(compiledResult.props.map((prop) => prop.anim[appendStart]?.turns)).toEqual(
       compiledCell.props.map((prop) => prop.anim[1]?.turns),
     )
@@ -149,7 +150,7 @@ describe('appendVtgBuilderPattern', () => {
 
     const appendedPreview = createVtgTransitionPreviewAnimations(result)?.[1]
     if (!appendedPreview) throw new Error('Expected appended preview')
-    expectSameSpinsAndDuration(appendedPreview, source)
+    expectSameMotionAndDuration(appendedPreview, source)
   })
   it('creates the initial Builder pattern when dropping onto an empty animation', () => {
     const template = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
@@ -183,6 +184,68 @@ describe('appendVtgBuilderPattern', () => {
     const previews = createVtgTransitionPreviewAnimations(result)
     expect(previews).toHaveLength(2)
     expect(previews?.map((preview) => preview.props[0]!.anim.length)).toEqual([9, 9])
+  })
+
+  it('appends the complete eight-beat cycle for a mixed-numerator ratio', () => {
+    const current = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!current) throw new Error('Expected a supported VTG pattern')
+
+    const result = appendVtgBuilderPattern(current, {
+      reference: '5-6',
+      speedRatio: '1:1v2:3',
+    })
+    if (!result) throw new Error('Expected an appended mixed-numerator pattern')
+
+    const previews = createVtgTransitionPreviewAnimations(result)
+    expect(previews).toHaveLength(2)
+    expect(previews?.map(getVtgTransitionPreviewBeatCount)).toEqual([4, 8])
+    expect(previews?.map((preview) => preview.props[0]?.anim.length)).toEqual([9, 17])
+  })
+
+  it('preserves AA / OO when appended to the supplied mixed-ratio pattern', async () => {
+    const version = await loadSpiroAnimQSVersion(7)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      7,
+    )
+    const current = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew08Yk11Z&p0=Q__.mBE_______r_.5JE...............&m0=_1_mxqv__&p1=N__.mBE_______r_.5L_QzP...............&c=_g_bhq&v=7',
+        ),
+      ),
+    )
+    const references = [
+      '1-1',
+      '1-2',
+      '1-3',
+      '1-4',
+      '6-1',
+      '6-2',
+      '6-3',
+      '6-4',
+    ] as const satisfies readonly VtgCellReference[]
+    const reference = references.find((candidate) => {
+      const source = createDefaultVtgAnimation({
+        reference: candidate,
+        speedRatio: '1:1v2:3',
+      })
+      return (
+        source &&
+        getVtgBuilderMotion(source).directions.every((direction) => direction === 'O') &&
+        getVtgBuilderMotion(source).spins.every((spin) => spin === 'A')
+      )
+    })
+    if (!reference) throw new Error('Expected an AA / OO Builder source')
+
+    const result = appendVtgBuilderPattern(current, { reference, speedRatio: '1:1v2:3' })
+    const appended = result && createVtgTransitionPreviewAnimations(result)?.at(-1)
+
+    expect(appended && getVtgBuilderMotion(appended)).toEqual({
+      spins: ['A', 'A'],
+      directions: ['O', 'O'],
+    })
   })
 
   it('preserves the VTG 180 transform after removing the source first frame', () => {
@@ -286,7 +349,7 @@ describe('appendVtgBuilderPattern', () => {
           current.props[propIndex]!.anim[insertionIndex]?.axis,
         )
       })
-      expectSameSpinsAndDuration(after[targetIndex + 1]!, before[targetIndex]!)
+      expectSameMotionAndDuration(after[targetIndex + 1]!, before[targetIndex]!)
     },
   )
 
@@ -331,7 +394,7 @@ describe('appendVtgBuilderPattern', () => {
     const after = result ? createVtgTransitionPreviewAnimations(result) : undefined
 
     expect(after).toHaveLength(2)
-    expectSameSpinsAndDuration(after![1]!, before![2]!)
+    expectSameMotionAndDuration(after![1]!, before![2]!)
     const beforeStarts = [
       0,
       ...findExplicitPlaneOrTurnsFrameIndices(third, 2).map((frameIndex) => frameIndex - 1),
@@ -370,7 +433,7 @@ describe('appendVtgBuilderPattern', () => {
     const after = result ? createVtgTransitionPreviewAnimations(result) : undefined
 
     expect(after).toHaveLength(before!.length - 1)
-    expectSameSpinsAndDuration(after![2]!, before![3]!)
+    expectSameMotionAndDuration(after![2]!, before![3]!)
   })
 
   it('preserves the following Anti/In spins without exchanging prop tracks', async () => {
@@ -392,7 +455,7 @@ describe('appendVtgBuilderPattern', () => {
     const before = createVtgTransitionPreviewAnimations(source)?.[2]
     const after = result ? createVtgTransitionPreviewAnimations(result)?.[1] : undefined
     if (!before || !after) throw new Error('Expected the following preview before and after delete')
-    expectSameSpinsAndDuration(after, before)
+    expectSameMotionAndDuration(after, before)
   })
 
   it('rebases the next piece when deleting the first Builder pattern', () => {
@@ -406,7 +469,7 @@ describe('appendVtgBuilderPattern', () => {
     const remaining = result ? createVtgTransitionPreviewAnimations(result) : undefined
 
     expect(remaining).toHaveLength(1)
-    expectSameSpinsAndDuration(remaining![0]!, before![1]!)
+    expectSameMotionAndDuration(remaining![0]!, before![1]!)
   })
 
   it('returns to the empty Builder state when deleting its only pattern', () => {
@@ -444,7 +507,7 @@ describe('appendVtgBuilderPattern', () => {
       beat: 2,
     })
     expect(
-      areVtgBuilderSpinsEqual(
+      areVtgBuilderMotionsEqual(
         getVtgBuilderMotion(previews![1]!),
         getVtgBuilderMotion(followingBefore![0]!),
       ),
@@ -483,7 +546,7 @@ describe('appendVtgBuilderPattern', () => {
 
     expect(after).toHaveLength(2)
     expect(
-      areVtgBuilderSpinsEqual(getVtgBuilderMotion(after![1]!), getVtgBuilderMotion(before[1])),
+      areVtgBuilderMotionsEqual(getVtgBuilderMotion(after![1]!), getVtgBuilderMotion(before[1])),
     ).toBe(true)
   })
 
@@ -509,9 +572,9 @@ describe('appendVtgBuilderPattern', () => {
     const after = result ? createVtgTransitionPreviewAnimations(result) : undefined
 
     expect(after).toHaveLength(2)
-    expect(findVtgPatternMatch(before[1])).toBeUndefined()
+    expect(findVtgPatternMatch(before[1])).toMatchObject({ speedRatio: '1:3v2' })
     expect(
-      areVtgBuilderSpinsEqual(getVtgBuilderMotion(after![1]!), getVtgBuilderMotion(before[1])),
+      areVtgBuilderMotionsEqual(getVtgBuilderMotion(after![1]!), getVtgBuilderMotion(before[1])),
     ).toBe(true)
     expect(after![1]!.props.map((prop) => prop.anim[1]?.axis)).toEqual([undefined, undefined])
     expect(getVtgTransitionPreviewBeatCount(after![1]!)).toBe(

@@ -255,24 +255,64 @@ describe('VtgPane', () => {
     expect(group.get('legend').classes()).toContain('vtg-pane__visually-hidden')
     expect(options.map((option) => option.element.value)).toEqual([
       '1:1',
+      '2:1',
       '1:2',
       '1:3',
+      '2:3',
       '1:4',
       '1:5',
-      '1:2v3',
-      '1:3v2',
+      '2:5',
     ])
-    expect(options[2]?.element.checked).toBe(true)
+    expect(group.findAll('.vtg-radio-row')).toHaveLength(1)
+    expect(
+      group
+        .findAll('.vtg-radio-row')
+        .map((row) =>
+          row
+            .findAll<HTMLInputElement>('input[type="radio"]')
+            .map((option) => option.element.value),
+        ),
+    ).toEqual([['1:1', '2:1', '1:2', '1:3', '2:3', '1:4', '1:5', '2:5']])
+    expect(options[3]?.element.checked).toBe(true)
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:3')
-
-    await selectSpeedRatio(wrapper, '1:3v2')
-
-    expect(options[6]?.element.checked).toBe(true)
-    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:3v2')
-    expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
-  it.each(['1:2', '1:4', '1:2v3', '1:3v2'] as const)(
+  it('uses More to assign an optional ratio to the second prop', async () => {
+    const wrapper = mount(VtgPane)
+    const more = wrapper.get<HTMLInputElement>('[data-role="vtg-more"]')
+
+    expect(more.element.checked).toBe(false)
+    expect(wrapper.findAll('fieldset.vtg-speed-ratio input[type="radio"]')).toHaveLength(8)
+
+    await more.setValue(true)
+
+    expect(wrapper.findAll('fieldset.vtg-speed-ratio input[type="radio"]')).toHaveLength(0)
+    const first = wrapper.get<HTMLSelectElement>('select[aria-label="Left prop timing ratio"]')
+    const second = wrapper.get<HTMLSelectElement>('select[aria-label="Right prop timing ratio"]')
+    expect(wrapper.findAll('.vtg-ratio-select__label').map((label) => label.text())).toEqual([
+      'Left:',
+      'Right:',
+    ])
+    expect(first.attributes('aria-describedby')).toBeTruthy()
+    expect(second.attributes('aria-describedby')).toBeTruthy()
+    expect(first.element.value).toBe('1:3')
+    expect(second.element.value).toBe('')
+
+    await first.setValue('2:3')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('2:3')
+
+    await second.setValue('1:5')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('2:3v1:5')
+
+    await second.setValue('')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('2:3')
+
+    await more.setValue(false)
+    expect(wrapper.findAll('fieldset.vtg-speed-ratio input[type="radio"]')).toHaveLength(8)
+    expect(wrapper.get<HTMLInputElement>('input[value="2:3"]').element.checked).toBe(true)
+  })
+
+  it.each(['1:2', '1:4'] as const)(
     'hides top-header labels, diagrams, and dividers at %s while retaining left-header details',
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
@@ -2236,6 +2276,22 @@ describe('VtgPane', () => {
       .map(({ type }) => type)
     expect(renderMessages).toEqual(Array.from({ length: 9 }, () => ['data', 'reqimgs']).flat())
   })
+
+  it.each(['2:1', '2:3', '2:5'] as const)(
+    'uses the paired VTG layout at %s',
+    async (speedRatio) => {
+      const wrapper = mount(VtgPane)
+      await selectSpeedRatio(wrapper, speedRatio)
+      await nextTick()
+
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+      expect(wrapper.findAll('.vtg-tile')[0]?.classes()).toContain('vtg-tile--paired-left')
+      expect(wrapper.findAll('.vtg-tile')[1]?.classes()).toContain('vtg-tile--paired-right')
+      expect(wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').element.value).toBe(
+        '-90',
+      )
+    },
+  )
 
   it.each(['1:2', '1:4'] as const)(
     'uses one bottom thumbnail per horizontal cell pair at %s',

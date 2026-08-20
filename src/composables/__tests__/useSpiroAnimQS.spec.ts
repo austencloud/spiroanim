@@ -8,6 +8,7 @@ import { CHARSET as CHARSET_V3, VDEF as VDEF_V3 } from '@/services/query/version
 import { CHARSET as CHARSET_V4, VDEF as VDEF_V4 } from '@/services/query/versions/SpiroAnimQSv4'
 import { CHARSET as CHARSET_V5, VDEF as VDEF_V5 } from '@/services/query/versions/SpiroAnimQSv5'
 import { CHARSET as CHARSET_V6, VDEF as VDEF_V6 } from '@/services/query/versions/SpiroAnimQSv6'
+import { CHARSET as CHARSET_V7, VDEF as VDEF_V7 } from '@/services/query/versions/SpiroAnimQSv7'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -265,6 +266,43 @@ describe('useSpiroAnimQS', () => {
     expect(query.decodeQS(encoded).props.map(({ motion }) => motion)).toEqual(
       root.props.map(({ motion }) => motion),
     )
+  })
+
+  it('stores Animation Turns to tenths in a 12-character version-7 frame', async () => {
+    const query = await useSpiroAnimQS(VDEF_V7, useBaseQS(VDEF_V7, { charset: CHARSET_V7 }), 7)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props[0]!.anim = [
+      {
+        plane: -180,
+        arc: 360,
+        turns: -1980,
+        type: 1,
+        axis: 180,
+        adjust: -180,
+        beats: 63,
+        scale: 40,
+        depth: -30,
+      },
+      { turns: 12.5 },
+      { turns: 1980 },
+      {},
+    ]
+
+    const encoded = query.encodeQS(root, false)
+    const frames = encoded.p0?.split('.').slice(1) ?? []
+
+    expect(encoded).toEqual({
+      r: 'GE28E39gY',
+      p0: 'O__.J00g0005E0Y-.___QTl.___VGM.',
+      c: '_m_bhq',
+      v: '7',
+    })
+    expect(encoded.v).toBe('7')
+    expect(frames[0]).toHaveLength(12)
+    expect(frames[1]).toHaveLength(6)
+    expect(query.decodeQS(encoded).props[0]!.anim).toEqual(root.props[0]!.anim)
+    expect(query.encodeQS(query.decodeQS(encoded), false)).toEqual(encoded)
   })
 
   it('migrates the existing multi-prop MOVE query into optional m values', async () => {

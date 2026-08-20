@@ -1,5 +1,5 @@
 import { vtgBaseFrameSettings, vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
-import { getVtgPropSpeedRatios } from '@/features/vtg/types'
+import { getVtgPropSpeedRatios, parseVtgIndividualSpeedRatio } from '@/features/vtg/types'
 import type {
   VtgCellReference,
   VtgPatternDefinition,
@@ -41,8 +41,13 @@ const createTurns = (
   spin: VtgSpinDirection,
   speedRatio: VtgIndividualSpeedRatio,
 ): number => {
-  const ratio = Number(speedRatio.slice(2))
-  return spin === 'anti' ? -arc * (ratio + 1) : arc * (ratio - 1)
+  const ratio = parseVtgIndividualSpeedRatio(speedRatio)
+  if (!ratio) throw new RangeError(`Invalid individual VTG speed ratio: ${speedRatio}`)
+  const relativeRate =
+    spin === 'anti'
+      ? -(ratio.denominator + ratio.numerator) / ratio.numerator
+      : (ratio.denominator - ratio.numerator) / ratio.numerator
+  return arc * relativeRate
 }
 
 const createContinuationFrame = (

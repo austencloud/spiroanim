@@ -1,6 +1,6 @@
 // src/services/query/types/BaseQSTypes.ts
 
-import type { qsTransform } from '@/types/AnimTypes'
+import type { QueryVariableTransform } from '@/services/query/types/BaseQueryCodecTypes'
 
 export type EncodeBase64Fn = (number: number) => string
 
@@ -42,4 +42,4 @@ export interface BaseQS<AllVars extends string> {
   unpackBase64: UnpackBase64Fn<AllVars>
 }
 
-export type VDefEntry = [number, number, number, qsTransform?]
+export type VDefEntry = [number, number, number, QueryVariableTransform?]
