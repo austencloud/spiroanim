@@ -20,18 +20,18 @@ const describeCell = (reference: VtgCellReference) => {
 
 describe('describeVtgBuilderMotion', () => {
   it('expands the compact motion code into a Builder tooltip', () => {
-    expect(describeVtgBuilderMotionLabel('AI/SO')).toBe(
+    expect(describeVtgBuilderMotionLabel('AI / SO')).toBe(
       'Spin: Anti / In\nDirection: Same / Opposite',
     )
-    expect(describeVtgBuilderMotionLabel('AA/OS')).toBe(
+    expect(describeVtgBuilderMotionLabel('AA / OS')).toBe(
       'Spin: Anti / Anti\nDirection: Opposite / Same',
     )
   })
 
   it('uses signed hand and prop rotation amounts to distinguish Anti from In-Spin', () => {
-    expect(describeCell('1-1')).toBe('AA/SS')
-    expect(describeCell('3-1')).toBe('II/SS')
-    expect(describeCell('5-1')).toBe('IA/SO')
+    expect(describeCell('1-1')).toBe('AA / SS')
+    expect(describeCell('3-1')).toBe('II / SS')
+    expect(describeCell('5-1')).toBe('IA / SO')
   })
 
   it('exposes the compiled motion independently from its display label', () => {

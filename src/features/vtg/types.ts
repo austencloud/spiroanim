@@ -10,7 +10,7 @@ export type VtgCellReference = `${VtgRuleNumber}-${VtgRuleNumber}`
 export type VtgTimingCode = 'S' | 'T' | 'Q'
 export type VtgDirectionCode = 'S' | 'O'
 export type VtgRelationshipCode = `${VtgTimingCode}${VtgDirectionCode}`
-export type VtgPatternLabel = `${VtgRelationshipCode}/${VtgRelationshipCode}`
+export type VtgPatternLabel = `${VtgRelationshipCode} / ${VtgRelationshipCode}`
 
 export interface VtgCellAddress {
   column: VtgRuleNumber

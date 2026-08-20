@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
-import { inferVtgSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
+import {
+  inferVtgDoubledPortionSpeedRatio,
+  inferVtgSpeedRatio,
+} from '@/features/vtg/math/inferVtgSpeedRatio'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 
@@ -41,5 +44,17 @@ describe('inferVtgSpeedRatio', () => {
 
     mixed.props[0]!.anim[1] = { ...mixed.props[0]!.anim[1], turns: -315 }
     expect(inferVtgSpeedRatio(mixed)).toBeUndefined()
+  })
+
+  it.each(vtgSpeedRatios)('infers %s from a doubled Builder portion', (speedRatio) => {
+    const animation = createDefaultVtgAnimation({ reference: '5-6', speedRatio, isAnti: true })
+    if (!animation) throw new Error(`Missing ${speedRatio} animation`)
+
+    const portion = {
+      ...animation,
+      props: animation.props.map((prop) => ({ ...prop, anim: prop.anim.slice(0, 2) })),
+    }
+
+    expect(inferVtgDoubledPortionSpeedRatio(portion)).toBe(speedRatio)
   })
 })

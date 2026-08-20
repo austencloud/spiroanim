@@ -158,8 +158,8 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--large')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--small')).toHaveLength(24)
-    expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('SO/TS')
-    expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('TO/TS')
+    expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('SO / TS')
+    expect(wrapper.get('[data-role="vtg-matrix"]').text()).toContain('TO / TS')
     expect(wrapper.find('[data-role="qtr-development-note"]').exists()).toBe(false)
   })
 
@@ -184,7 +184,7 @@ describe('VtgPane', () => {
     const headerLabels = wrapper.findAll('.vtg-rule-card__title')
 
     expect(matrixCells).toHaveLength(36)
-    expect(matrixCells.every((cell) => /^Q[SO]\/Q[SO]$/.test(cell.text()))).toBe(true)
+    expect(matrixCells.every((cell) => /^Q[SO] \/ Q[SO]$/.test(cell.text()))).toBe(true)
     expect(headerLabels).toHaveLength(12)
     expect(headerLabels.every((label) => label.text() === '')).toBe(true)
     expect(wrapper.find('[data-role="qtr-development-note"]').exists()).toBe(false)
@@ -221,7 +221,7 @@ describe('VtgPane', () => {
       '--vtg-rule-prop-tether-color: rgb(0,85,0)',
     )
 
-    expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-label')).toContain('QO/QS')
+    expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-label')).toContain('QO / QS')
     expect(
       wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]').attributes('aria-label'),
     ).toBe('TOG SPLIT rule 5')
@@ -611,20 +611,20 @@ describe('VtgPane', () => {
       wrapper.get('[data-cell-reference="1-2"] .vtg-tile__label').text()
 
     expect(rotate.element.value).toBe('-90')
-    expect(firstRowSecondColumn()).toBe('TO/TO')
-    expect(secondRowFirstColumn()).toBe('SO/SO')
+    expect(firstRowSecondColumn()).toBe('TO / TO')
+    expect(secondRowFirstColumn()).toBe('SO / SO')
 
     await rotate.setValue('0')
-    expect(firstRowSecondColumn()).toBe('SO/SO')
-    expect(secondRowFirstColumn()).toBe('TO/TO')
+    expect(firstRowSecondColumn()).toBe('SO / SO')
+    expect(secondRowFirstColumn()).toBe('TO / TO')
 
     await rotate.setValue('90')
-    expect(firstRowSecondColumn()).toBe('TO/TO')
-    expect(secondRowFirstColumn()).toBe('SO/SO')
+    expect(firstRowSecondColumn()).toBe('TO / TO')
+    expect(secondRowFirstColumn()).toBe('SO / SO')
 
     await rotate.setValue('180')
-    expect(firstRowSecondColumn()).toBe('SO/SO')
-    expect(secondRowFirstColumn()).toBe('TO/TO')
+    expect(firstRowSecondColumn()).toBe('SO / SO')
+    expect(secondRowFirstColumn()).toBe('TO / TO')
   })
 
   it('offers a Tilted checkbox that reapplies VTG and Qtr patterns', async () => {
@@ -2265,9 +2265,9 @@ describe('VtgPane', () => {
       expect(wrapper.get('[data-cell-reference="2-1"]').classes()).toContain(
         'vtg-tile--paired-right',
       )
-      expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label').text()).toBe('TS/TS')
-      expect(wrapper.get('[data-cell-reference="2-1"] .vtg-tile__label').text()).toBe('TO/TO')
-      expect(wrapper.get('[data-cell-reference="1-2"] .vtg-tile__label').text()).toBe('SO/SO')
+      expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label').text()).toBe('TS / TS')
+      expect(wrapper.get('[data-cell-reference="2-1"] .vtg-tile__label').text()).toBe('TO / TO')
+      expect(wrapper.get('[data-cell-reference="1-2"] .vtg-tile__label').text()).toBe('SO / SO')
 
       await wrapper.get('[data-cell-reference="5-5"]').trigger('click')
       expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
@@ -2392,7 +2392,7 @@ describe('VtgPane', () => {
     await nextTick()
     const tile = wrapper.get<HTMLButtonElement>('[data-cell-reference="1-1"]')
     const builderLabel = tile.get('.vtg-tile__label-text').text()
-    expect(builderLabel).toMatch(/^[AI]{2}\/[SO]{2}$/)
+    expect(builderLabel).toMatch(/^[AI]{2} \/ [SO]{2}$/)
     expect(builderLabel).not.toBe(standardLabel)
     expect(tile.attributes('draggable')).toBe('true')
     expect(wrapper.find('.vtg-tile--selected').exists()).toBe(false)

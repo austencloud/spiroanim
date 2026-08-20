@@ -1,8 +1,11 @@
+import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import AppTooltip from '@/components/AppTooltip.vue'
 import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { useViewportStore } from '@/stores/useViewportStore'
 import {
   builderPatternPointerDropEvent,
   builderPatternPointerMoveEvent,
@@ -18,6 +21,7 @@ if (!animation) throw new Error('Expected a supported VTG pattern')
 describe('VtgTransitionPreviews', () => {
   beforeEach(() => {
     device.touch = false
+    setActivePinia(createPinia())
   })
 
   it('emits the exact thumbnail animation when its visual is clicked', async () => {
@@ -35,21 +39,55 @@ describe('VtgTransitionPreviews', () => {
 
     expect(wrapper.emitted('patternPreview')).toEqual([[animation, 0]])
     expect(wrapper.emitted('selectionChange')).toEqual([[0]])
-    expect(wrapper.get('.vtg-transition-previews__label').text()).toBe('TS/TS')
+    expect(wrapper.get('.vtg-transition-previews__label').text()).toBe('TS / TS')
+    expect(wrapper.get('.vtg-transition-previews__ratio').text()).toBe('1:3')
     expect(
       wrapper.get('button[aria-label="Preview pattern 1"]').attributes('aria-describedby'),
     ).toBeTruthy()
     expect(wrapper.get('button[aria-label="Preview pattern 1"]').attributes('draggable')).toBe(
       'false',
     )
+    expect(wrapper.findAllComponents(AppTooltip).map((tooltip) => tooltip.props('text'))).toEqual([
+      'Reverse',
+      'Swap Props',
+      'Delete',
+    ])
 
     await wrapper.get('button[aria-label="Reverse direction of pattern 1"]').trigger('click')
     expect(wrapper.emitted('patternReverse')).toEqual([[0]])
     expect(wrapper.emitted('patternPreview')).toHaveLength(1)
 
+    await wrapper.get('button[aria-label="Swap props in pattern 1"]').trigger('click')
+    expect(wrapper.emitted('patternSwap')).toEqual([[0]])
+    expect(wrapper.emitted('patternPreview')).toHaveLength(1)
+
     await wrapper.get('button[aria-label="Delete pattern 1"]').trigger('click')
     expect(wrapper.emitted('patternDelete')).toEqual([[0]])
     expect(wrapper.emitted('patternPreview')).toHaveLength(1)
+  })
+
+  it('shows the shared action tooltip when application tooltips are enabled', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        refreshKey: 'action-tooltip',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        scale: 1,
+        selectedIndex: 0,
+      },
+    })
+
+    useViewportStore().showTooltips = true
+    await nextTick()
+    await wrapper.get('button[aria-label="Reverse direction of pattern 1"]').trigger('mouseenter')
+    vi.advanceTimersByTime(0)
+    await nextTick()
+
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe('Reverse')
+    wrapper.unmount()
+    vi.useRealTimers()
   })
 
   it.each([false, true])('selects exactly one thumbnail when touch is %s', async (touch) => {
@@ -130,7 +168,9 @@ describe('VtgTransitionPreviews', () => {
       },
     })
 
-    expect(wrapper.get('.vtg-transition-previews__label').text()).toMatch(/^[TSQ][SO]\/[TSQ][SO]$/)
+    expect(wrapper.get('.vtg-transition-previews__label').text()).toMatch(
+      /^[TSQ][SO] \/ [TSQ][SO]$/,
+    )
     expect(shortAnimation.props.every((prop) => prop.anim.length === 2)).toBe(true)
   })
 

@@ -10,14 +10,14 @@ export interface VtgBuilderMotion {
 }
 
 export type VtgBuilderMotionLabel =
-  `${VtgBuilderSpinCode}${VtgBuilderSpinCode}/${VtgBuilderDirectionCode}${VtgBuilderDirectionCode}`
+  `${VtgBuilderSpinCode}${VtgBuilderSpinCode} / ${VtgBuilderDirectionCode}${VtgBuilderDirectionCode}`
 
 const spinDescription = (code: VtgBuilderSpinCode): string => (code === 'A' ? 'Anti' : 'In')
 const directionDescription = (code: VtgBuilderDirectionCode): string =>
   code === 'S' ? 'Same' : 'Opposite'
 
 export const describeVtgBuilderMotionLabel = (label: VtgBuilderMotionLabel): string => {
-  const [spins, directions] = label.split('/')
+  const [spins, directions] = label.split(' / ')
   const firstSpin = spins?.[0] as VtgBuilderSpinCode | undefined
   const secondSpin = spins?.[1] as VtgBuilderSpinCode | undefined
   const firstDirection = directions?.[0] as VtgBuilderDirectionCode | undefined
@@ -114,5 +114,5 @@ export const areVtgBuilderSpinsEqual = (
 /** Describes the compiled movement axes used when a VTG cell enters Pattern Builder. */
 export const describeVtgBuilderMotion = (animation: RootDataFinal): VtgBuilderMotionLabel => {
   const motion = getVtgBuilderMotion(animation)
-  return `${motion.spins[0]}${motion.spins[1]}/${motion.directions[0]}${motion.directions[1]}`
+  return `${motion.spins[0]}${motion.spins[1]} / ${motion.directions[0]}${motion.directions[1]}`
 }

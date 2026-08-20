@@ -166,7 +166,7 @@ export const describePatternRelationships = (
 
   const hands: VtgRelationshipCode = `${handPhase.timing}${handDirection}`
   const props: VtgRelationshipCode = `${propPhase.timing}${propDirection}`
-  const label: VtgPatternLabel = `${hands}/${props}`
+  const label: VtgPatternLabel = `${hands} / ${props}`
 
   return {
     label,

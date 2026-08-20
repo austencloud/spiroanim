@@ -5,6 +5,7 @@ import {
   appendVtgBuilderPattern,
   insertVtgBuilderPattern,
   replaceFirstVtgBuilderPattern,
+  swapVtgBuilderPatternProps,
 } from '@/features/builder/appendVtgBuilderPattern'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import {
@@ -22,6 +23,7 @@ import {
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 
 const expectSameSpinsAndDuration = (actual: RootDataFinal, expected: RootDataFinal) => {
   expect(areVtgBuilderSpinsEqual(getVtgBuilderMotion(actual), getVtgBuilderMotion(expected))).toBe(
@@ -31,6 +33,60 @@ const expectSameSpinsAndDuration = (actual: RootDataFinal, expected: RootDataFin
 }
 
 describe('appendVtgBuilderPattern', () => {
+  it.each([0, 1, 2])(
+    'swaps props in portion %s while preserving that portion and its successor',
+    (targetIndex) => {
+      const selections = [
+        { reference: '5-1', speedRatio: '1:3' },
+        { reference: '5-1', speedRatio: '1:3' },
+        { reference: '5-1', speedRatio: '1:3' },
+      ] as const
+      const build = () => {
+        const first = createDefaultVtgAnimation(selections[0])
+        const second = first ? appendVtgBuilderPattern(first, selections[1]) : undefined
+        return second ? appendVtgBuilderPattern(second, selections[2]) : undefined
+      }
+
+      const source = build()
+      const serializedSource = JSON.stringify(source)
+      const updated = source ? swapVtgBuilderPatternProps(source, targetIndex) : undefined
+      const twice = updated ? swapVtgBuilderPatternProps(updated, targetIndex) : undefined
+      if (!source || !updated || !twice) {
+        throw new Error(`Expected Builder portion ${targetIndex} to swap twice`)
+      }
+
+      const beforePreviews = createVtgTransitionPreviewAnimations(source)
+      const updatedPreviews = createVtgTransitionPreviewAnimations(updated)
+      const twicePreviews = createVtgTransitionPreviewAnimations(twice)
+      expect(updatedPreviews).toHaveLength(3)
+      expect(twicePreviews).toHaveLength(3)
+      expect(JSON.stringify(source)).toBe(serializedSource)
+
+      for (const previewIndex of [0, 1, 2]) {
+        const beforeMotion = getVtgBuilderMotion(beforePreviews![previewIndex]!)
+        const expectedMotion =
+          previewIndex === targetIndex
+            ? getVtgBuilderMotion(
+                applyPatternFinalTransforms(beforePreviews![previewIndex]!, { swapProps: true }),
+              )
+            : beforeMotion
+        expect(
+          getVtgBuilderMotion(updatedPreviews![previewIndex]!),
+          `target ${targetIndex}, preview ${previewIndex}`,
+        ).toEqual(expectedMotion)
+        expect(getVtgTransitionPreviewBeatCount(updatedPreviews![previewIndex]!)).toBe(
+          getVtgTransitionPreviewBeatCount(beforePreviews![previewIndex]!),
+        )
+        expect(getVtgBuilderMotion(twicePreviews![previewIndex]!)).toEqual(
+          getVtgBuilderMotion(beforePreviews![previewIndex]!),
+        )
+        expect(getVtgTransitionPreviewBeatCount(twicePreviews![previewIndex]!)).toBe(
+          getVtgTransitionPreviewBeatCount(beforePreviews![previewIndex]!),
+        )
+      }
+    },
+  )
+
   it('preserves each prop Anti/In spin when appending an independently authored pattern', async () => {
     const version = await loadSpiroAnimQSVersion(6)
     const codec = await useSpiroAnimQS(

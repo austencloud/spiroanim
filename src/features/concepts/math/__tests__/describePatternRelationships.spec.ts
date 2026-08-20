@@ -13,48 +13,48 @@ const booleanOptions = [false, true] as const
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 
 const expectedLabelsByRow = {
-  1: ['TS/TS', 'SO/SO', 'TS/TS', 'SO/SO', 'TS/SO', 'SO/TS'],
-  2: ['TO/TO', 'SS/SS', 'TO/TO', 'SS/SS', 'TO/SS', 'SS/TO'],
-  3: ['TS/TS', 'SO/SO', 'TS/TS', 'SO/SO', 'TS/SO', 'SO/TS'],
-  4: ['TO/TO', 'SS/SS', 'TO/TO', 'SS/SS', 'TO/SS', 'SS/TO'],
-  5: ['TS/TO', 'SO/SS', 'TS/TO', 'SO/SS', 'TS/SS', 'SO/TO'],
-  6: ['TO/TS', 'SS/SO', 'TO/TS', 'SS/SO', 'TO/SO', 'SS/TS'],
+  1: ['TS / TS', 'SO / SO', 'TS / TS', 'SO / SO', 'TS / SO', 'SO / TS'],
+  2: ['TO / TO', 'SS / SS', 'TO / TO', 'SS / SS', 'TO / SS', 'SS / TO'],
+  3: ['TS / TS', 'SO / SO', 'TS / TS', 'SO / SO', 'TS / SO', 'SO / TS'],
+  4: ['TO / TO', 'SS / SS', 'TO / TO', 'SS / SS', 'TO / SS', 'SS / TO'],
+  5: ['TS / TO', 'SO / SS', 'TS / TO', 'SO / SS', 'TS / SS', 'SO / TO'],
+  6: ['TO / TS', 'SS / SO', 'TO / TS', 'SS / SO', 'TO / SO', 'SS / TS'],
 } as const satisfies Readonly<Record<VtgRuleNumber, readonly VtgPatternLabel[]>>
 
 const expectedDescription = (label: VtgPatternLabel): string => {
   const timingDescriptions = { T: 'Together', S: 'Split', Q: 'Quarter' } as const
   const directionDescriptions = { S: 'Same', O: 'Opposite' } as const
-  const [hands, props] = label.split('/')
+  const [hands, props] = label.split(' / ')
   if (!hands || !props) throw new Error(`Invalid expected relationship label: ${label}`)
 
   return `Hands: ${timingDescriptions[hands[0] as keyof typeof timingDescriptions]} / ${directionDescriptions[hands[1] as keyof typeof directionDescriptions]}\nProps: ${timingDescriptions[props[0] as keyof typeof timingDescriptions]} / ${directionDescriptions[props[1] as keyof typeof directionDescriptions]}`
 }
 
 const quarterLabel = (label: VtgPatternLabel): VtgPatternLabel => {
-  const [hands, props] = label.split('/')
+  const [hands, props] = label.split(' / ')
   if (!hands || !props) throw new Error(`Invalid expected relationship label: ${label}`)
-  return `Q${hands[1]}/Q${props[1]}` as VtgPatternLabel
+  return `Q${hands[1]} / Q${props[1]}` as VtgPatternLabel
 }
 
 describe('describePatternRelationships', () => {
   it('derives even-ratio labels from local path phase without changing 1:3', () => {
     expect(
       describePatternSelectionRelationships({ reference: '2-1', speedRatio: '1:3' }).label,
-    ).toBe('SO/SO')
+    ).toBe('SO / SO')
     expect(
       describePatternSelectionRelationships({
         reference: '1-2',
         speedRatio: '1:2',
         orientation: -90,
       }).label,
-    ).toBe('SO/SO')
+    ).toBe('SO / SO')
     expect(
       describePatternSelectionRelationships({
         reference: '1-2',
         speedRatio: '1:4',
         orientation: -90,
       }).label,
-    ).toBe('SO/SO')
+    ).toBe('SO / SO')
   })
 
   it('keeps every VTG relationship invariant across playback-only controls', () => {

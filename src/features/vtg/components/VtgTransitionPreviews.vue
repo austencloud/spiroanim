@@ -49,28 +49,59 @@
               :alt="`45 Trans pattern ${index + 1}`"
               draggable="false"
             />
+            <span v-if="previewRatios[index]" class="vtg-transition-previews__ratio">
+              {{ previewRatios[index] }}
+            </span>
             <span class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>
           </button>
         </template>
       </BaseTooltip>
-      <div :id="`vtg-transition-preview-actions-${index}`">
-        <button
-          class="vtg-transition-previews__reverse"
-          type="button"
-          :aria-label="`Reverse direction of pattern ${index + 1}`"
-          data-role="vtg-transition-preview-reverse"
-          @click.stop="emit('patternReverse', index)"
-        >
-          <BaseIcon :path="mdiRotate3dVariant" :size="18" />
-        </button>
-        <button
-          class="vtg-transition-previews__delete"
-          type="button"
-          :aria-label="`Delete pattern ${index + 1}`"
-          @click.stop="emit('patternDelete', index)"
-        >
-          <BaseIcon :path="mdiTrashCanOutline" :size="18" />
-        </button>
+      <div :id="`vtg-transition-preview-actions-${index}`" class="vtg-transition-previews__actions">
+        <div class="vtg-transition-previews__transform-actions">
+          <AppTooltip text="Reverse">
+            <template #activator="{ props: tooltipProps }">
+              <button
+                v-bind="tooltipProps"
+                class="vtg-transition-previews__reverse"
+                type="button"
+                :aria-label="`Reverse direction of pattern ${index + 1}`"
+                data-role="vtg-transition-preview-reverse"
+                @click.stop="emit('patternReverse', index)"
+              >
+                <BaseIcon :path="mdiRotate3dVariant" :size="18" />
+              </button>
+            </template>
+          </AppTooltip>
+          <AppTooltip text="Swap Props">
+            <template #activator="{ props: tooltipProps }">
+              <button
+                v-bind="tooltipProps"
+                class="vtg-transition-previews__swap"
+                type="button"
+                :aria-label="`Swap props in pattern ${index + 1}`"
+                data-role="vtg-transition-preview-swap"
+                @click.stop="emit('patternSwap', index)"
+              >
+                <BaseIcon :path="mdiSwapHorizontal" :size="18" />
+              </button>
+            </template>
+          </AppTooltip>
+        </div>
+        <div class="vtg-transition-previews__delete-action">
+          <AppTooltip text="Delete">
+            <template #activator="{ props: tooltipProps }">
+              <button
+                v-bind="tooltipProps"
+                class="vtg-transition-previews__delete"
+                type="button"
+                :aria-label="`Delete pattern ${index + 1}`"
+                @click.stop="emit('patternDelete', index)"
+              >
+                <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+              </button>
+            </template>
+          </AppTooltip>
+        </div>
       </div>
       <label class="vtg-transition-previews__beats">
         <span class="vtg-transition-previews__visually-hidden">
@@ -140,9 +171,11 @@ import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { vtgThickControl } from '@/features/vtg/data/vtgPlayerSettings'
+import { inferVtgDoubledPortionSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
+import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
-import { mdiRotate3dVariant, mdiTrashCanOutline } from '@mdi/js'
+import { mdiRotate3dVariant, mdiSwapHorizontal, mdiTrashCanOutline } from '@mdi/js'
 import { isTouchDevice } from '@/utils/device'
 import {
   builderPatternPointerDropEvent,
@@ -172,6 +205,7 @@ const emit = defineEmits<{
   patternDrop: [drop: BuilderPatternDrop]
   patternDelete: [index: number]
   patternReverse: [index: number]
+  patternSwap: [index: number]
   patternPreview: [animation: RootDataFinal, index: number]
   selectionChange: [index: number | undefined]
 }>()
@@ -193,6 +227,7 @@ const previewRelationships = computed(() =>
   ),
 )
 const previewLabels = computed(() => previewRelationships.value.map(({ label }) => label))
+const previewRatios = computed(() => props.animations.map(inferVtgDoubledPortionSpeedRatio))
 const pointerPosition = ref<{ x: number; y: number; reference: string }>()
 useEventListener(typeof document === 'undefined' ? null : document, 'dragstart', () => {
   dragActive.value = true
@@ -409,11 +444,20 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   outline-offset: 2px;
 }
 
-.vtg-transition-previews__delete {
+.vtg-transition-previews__actions {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.vtg-transition-previews__delete-action {
   position: absolute;
   top: var(--space-1);
   right: var(--space-1);
   z-index: 1;
+}
+
+.vtg-transition-previews__delete {
   display: grid;
   padding: var(--space-1);
   color: var(--color-text-muted);
@@ -446,11 +490,17 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   outline-offset: 2px;
 }
 
-.vtg-transition-previews__reverse {
+.vtg-transition-previews__transform-actions {
   position: absolute;
-  top: var(--space-1);
-  left: var(--space-1);
+  inset-block-start: var(--space-1);
+  inset-inline-start: var(--space-1);
   z-index: 2;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.vtg-transition-previews__reverse,
+.vtg-transition-previews__swap {
   display: grid;
   padding: var(--space-1);
   color: var(--color-text);
@@ -464,12 +514,15 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
 }
 
 .vtg-transition-previews__item--selected .vtg-transition-previews__reverse,
-.vtg-transition-previews__reverse:focus-visible {
+.vtg-transition-previews__item--selected .vtg-transition-previews__swap,
+.vtg-transition-previews__reverse:focus-visible,
+.vtg-transition-previews__swap:focus-visible {
   opacity: 1;
   pointer-events: auto;
 }
 
-.vtg-transition-previews__reverse:focus-visible {
+.vtg-transition-previews__reverse:focus-visible,
+.vtg-transition-previews__swap:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
 }
@@ -477,16 +530,19 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
 @media (hover: hover) {
   .vtg-transition-previews:not(.vtg-transition-previews--has-selection)
     .vtg-transition-previews__item:hover
-    .vtg-transition-previews__reverse {
+    .vtg-transition-previews__reverse,
+  .vtg-transition-previews:not(.vtg-transition-previews--has-selection)
+    .vtg-transition-previews__item:hover
+    .vtg-transition-previews__swap {
     opacity: 1;
     pointer-events: auto;
   }
 }
 
-.vtg-transition-previews__label {
+.vtg-transition-previews__label,
+.vtg-transition-previews__ratio {
   position: absolute;
   bottom: var(--space-1);
-  left: 50%;
   z-index: 1;
   padding-inline: var(--space-1);
   color: var(--color-text);
@@ -496,14 +552,21 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   pointer-events: none;
   background: color-mix(in srgb, var(--color-surface) 78%, transparent);
   border-radius: var(--radius-sm);
-  transform: translateX(-50%);
+}
+
+.vtg-transition-previews__label {
+  inset-inline-end: var(--space-1);
+}
+
+.vtg-transition-previews__ratio {
+  inset-inline-start: var(--space-1);
 }
 
 .vtg-transition-previews--drag-active .vtg-transition-previews__delete {
   display: none;
 }
 
-.vtg-transition-previews--drag-active .vtg-transition-previews__reverse {
+.vtg-transition-previews--drag-active .vtg-transition-previews__transform-actions {
   display: none;
 }
 

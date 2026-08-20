@@ -3,7 +3,10 @@ import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/create
 import type { VtgPatternSelection } from '@/features/vtg/types'
 import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import { rejoinVtgBuilderJunction } from '@/features/builder/rejoinVtgBuilderJunction'
-import { selectVtgBuilderJunctionPlane } from '@/features/builder/selectVtgBuilderJunctionPlane'
+import {
+  selectVtgBuilderJunctionMotion,
+  selectVtgBuilderJunctionPlane,
+} from '@/features/builder/selectVtgBuilderJunctionPlane'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import { orthoAngle } from '@/math/animation/OrthogonalFunc'
@@ -37,6 +40,7 @@ const rebaseSourceTravelPlane = (
 const createAppendedFrames = (
   frames: readonly AnimData[],
   compiledFrames: ReturnType<typeof rootCompile>['props'][number]['anim'],
+  targetIntervalCount = doubledFourBeatIntervalCount,
 ): AnimData[] | undefined => {
   // The extracted block drops the source endpoint at index 0. Transport the compiled outgoing
   // POSX axis to the junction, then re-solve Plane so signed source travel stays intact.
@@ -44,7 +48,7 @@ const createAppendedFrames = (
   const sourceTarget = compiledFrames[1]
   if (frames.length < 2 || !sourceStart || !sourceTarget) return undefined
 
-  const appended = frames.slice(1, doubledFourBeatIntervalCount + 1).map((frame) => ({ ...frame }))
+  const appended = frames.slice(1, targetIntervalCount + 1).map((frame) => ({ ...frame }))
   const firstFrame = appended[0]
   if (!firstFrame) return undefined
   firstFrame.plane = rebaseSourceTravelPlane(sourceStart, sourceTarget)
@@ -59,8 +63,24 @@ const createAppendedFrames = (
     delete frame.turns
   }
 
-  while (appended.length < doubledFourBeatIntervalCount) appended.push({})
+  while (appended.length < targetIntervalCount) appended.push({})
   return appended
+}
+
+const createTransportedBuilderPieceFrames = (
+  source: RootDataFinal,
+  targetIntervalCount = doubledFourBeatIntervalCount,
+): AnimData[][] | undefined => {
+  const compiledSource = rootCompile(source)
+  const framesByProp = source.props.map((prop, index) => {
+    const compiledProp = compiledSource.props[index]
+    return compiledProp
+      ? createAppendedFrames(prop.anim, compiledProp.anim, targetIntervalCount)
+      : undefined
+  })
+  return framesByProp.some((frames) => frames === undefined)
+    ? undefined
+    : framesByProp.map((frames) => frames!)
 }
 
 const createBuilderPieceFrames = (
@@ -69,15 +89,20 @@ const createBuilderPieceFrames = (
 ): AnimData[][] | undefined => {
   const source = createVtgAnimation(current, selection)
   if (!source || source.props.length !== current.props.length) return undefined
+  return createTransportedBuilderPieceFrames(source)
+}
 
-  const compiledSource = rootCompile(source)
-  const framesByProp = source.props.map((prop, index) => {
-    const compiledProp = compiledSource.props[index]
-    return compiledProp ? createAppendedFrames(prop.anim, compiledProp.anim) : undefined
-  })
-  return framesByProp.some((frames) => frames === undefined)
-    ? undefined
-    : framesByProp.map((frames) => frames!)
+const swapAnimationTracks = (animation: RootDataFinal): RootDataFinal | undefined => {
+  const [first, second] = animation.props
+  if (!first || !second || animation.props.length !== 2) return undefined
+
+  return {
+    ...animation,
+    props: [
+      { ...first, anim: second.anim.map((frame) => ({ ...frame })) },
+      { ...second, anim: first.anim.map((frame) => ({ ...frame })) },
+    ],
+  }
 }
 
 const createStartingVtgBuilderPattern = (
@@ -154,6 +179,77 @@ export const appendVtgBuilderPattern = (
   const appendTarget = current.props[0]?.anim.length
   if (appendTarget === undefined) return appended
   return selectVtgBuilderJunctionPlane(appended, appendTarget, getVtgBuilderMotion(source))
+}
+
+/** Swaps one Builder portion's prop tracks and rejoins its untouched successor. */
+export const swapVtgBuilderPatternProps = (
+  current: RootDataFinal,
+  previewIndex: number,
+): RootDataFinal | undefined => {
+  const previews = createVtgTransitionPreviewAnimations(current)
+  const selected = previews?.[previewIndex]
+  const firstSelectedProp = selected?.props[0]
+  if (!selected || !firstSelectedProp) return undefined
+
+  const relationshipFrames = findExplicitPlaneOrTurnsFrameIndices(current, 2)
+  const sliceStarts = [0, ...relationshipFrames.map((frameIndex) => frameIndex - 1)]
+  const selectedStart = sliceStarts[previewIndex]
+  if (selectedStart === undefined) return undefined
+
+  const swapped = swapAnimationTracks(selected)
+  if (!swapped) return undefined
+  const selectedIntervalCount = firstSelectedProp.anim.length - 1
+  const selectedMotion = getVtgBuilderMotion(swapped)
+
+  const candidate =
+    previewIndex === 0
+      ? {
+          ...current,
+          props: current.props.map((prop, propIndex) => {
+            const swappedProp = swapped.props[propIndex]
+            return swappedProp
+              ? { ...prop, anim: swappedProp.anim.map((frame) => ({ ...frame })) }
+              : prop
+          }),
+        }
+      : (() => {
+          const transported = createTransportedBuilderPieceFrames(swapped, selectedIntervalCount)
+          if (!transported) return undefined
+          return {
+            ...current,
+            props: current.props.map((prop, propIndex) => ({
+              ...prop,
+              anim: [
+                ...prop.anim.slice(0, selectedStart + 1).map((frame) => ({ ...frame })),
+                ...transported[propIndex]!,
+              ],
+            })),
+          }
+        })()
+  if (!candidate) return undefined
+
+  const selectedTarget = previewIndex === 0 ? 1 : selectedStart + 1
+  const aligned = selectVtgBuilderJunctionMotion(candidate, selectedTarget, selectedMotion)
+  if (!aligned) return undefined
+
+  const nextStart = sliceStarts[previewIndex + 1]
+  const followingPreview = previews[previewIndex + 1]
+  if (nextStart === undefined || !followingPreview) return aligned
+
+  const rejoined = rejoinVtgBuilderJunction(
+    aligned,
+    selectedStart + selectedIntervalCount,
+    current,
+    nextStart,
+    getVtgBuilderMotion(followingPreview),
+  )
+  return rejoined
+    ? selectVtgBuilderJunctionMotion(
+        rejoined,
+        selectedStart + selectedIntervalCount + 1,
+        getVtgBuilderMotion(followingPreview),
+      )
+    : undefined
 }
 
 /** Inserts a dragged VTG cell before an existing Builder preview. */

@@ -74,6 +74,7 @@
             @pattern-drop="acceptPatternDrop"
             @pattern-delete="deletePreview"
             @pattern-reverse="reversePreview"
+            @pattern-swap="swapPreviewProps"
             @selection-change="selectPreview"
             @beat-change="updatePreviewBeatCount"
             @slider-start="beginSliderHistory"
@@ -226,6 +227,7 @@ import {
   appendVtgBuilderPattern,
   insertVtgBuilderPattern,
   replaceFirstVtgBuilderPattern,
+  swapVtgBuilderPatternProps,
 } from '@/features/builder/appendVtgBuilderPattern'
 import { isVtgPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
@@ -400,14 +402,22 @@ watchImmediate(builderPlaybackAnimation, (animation) => {
 watch(PLAYBACK_PREVIEW_ACTIVE, (active) => {
   if (!active) restoreBuilderPlayback()
 })
+const getPreviewStartMS = (animation: RootDataFinal, index: number): number => {
+  const sliceStarts = [
+    0,
+    ...findExplicitPlaneOrTurnsFrameIndices(animation, 2).map((frameIndex) => frameIndex - 1),
+  ]
+  const startFrame = sliceStarts[index]
+  return startFrame === undefined ? 0 : (PROPTIMES(rootCompile(animation))[0]?.[startFrame] ?? 0)
+}
 const selectPreview = (index: number | undefined) => {
   if (PLAYBACK_PREVIEW_ACTIVE.value) playerStore.endPlaybackPreview()
   if (index === undefined) {
-    const hadSelection = selectedPreviewIndex.value !== undefined
+    const deselectedIndex = selectedPreviewIndex.value
     selectedPreviewIndex.value = undefined
     emit('previewSelectionChange', undefined)
-    if (!hadSelection) return
-    CURRENT.value = 0
+    if (deselectedIndex === undefined) return
+    CURRENT.value = getPreviewStartMS(preparedPattern.value.pattern, deselectedIndex)
     return
   }
 
@@ -444,15 +454,7 @@ const acceptPatternDrop = (drop: BuilderPatternDrop) => {
       : insertVtgBuilderPattern(preparedPattern.value.pattern, drop.selection, drop.previewIndex)
   if (!updated) return
 
-  const sliceStarts = [
-    0,
-    ...findExplicitPlaneOrTurnsFrameIndices(updated, 2).map((frameIndex) => frameIndex - 1),
-  ]
-  const insertedStartFrame = sliceStarts[drop.previewIndex]
-  const insertedStartMS =
-    insertedStartFrame === undefined
-      ? 0
-      : (PROPTIMES(rootCompile(updated))[0]?.[insertedStartFrame] ?? 0)
+  const insertedStartMS = getPreviewStartMS(updated, drop.previewIndex)
 
   applyBuilderPatternUpdate(updated, insertedStartMS, replacesFirst)
 }
@@ -462,10 +464,24 @@ const updatePreviewBeatCount = (index: number, beatCount: number) => {
 }
 const deletePreview = (index: number) => {
   const updated = removeVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
-  if (updated !== undefined) applyBuilderPatternUpdate(updated)
+  if (updated === undefined) return
+
+  const nextPreviewStartMS =
+    selectedPreviewIndex.value === index ? getPreviewStartMS(updated, index) : undefined
+  applyBuilderPatternUpdate(updated, nextPreviewStartMS)
 }
 const reversePreview = (index: number) => {
   const updated = reverseVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
+  if (updated === undefined) return
+
+  applyBuilderPatternUpdate(
+    updated,
+    undefined,
+    PREVIEW_PLAYING.value && selectedPreviewIndex.value === index,
+  )
+}
+const swapPreviewProps = (index: number) => {
+  const updated = swapVtgBuilderPatternProps(preparedPattern.value.pattern, index)
   if (updated === undefined) return
 
   applyBuilderPatternUpdate(
