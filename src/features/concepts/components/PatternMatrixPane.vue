@@ -317,6 +317,7 @@ import {
   vtgSpacingControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
+import { getVtgTopHeaderRule } from '@/features/vtg/data/vtgTopHeaderRules'
 import type {
   QtrPatternSelection,
   VtgCellAddress,
@@ -430,9 +431,8 @@ const compactBuilder = computed(() => props.builderActive && !props.builderFullC
 const usesPairedPreviewLayout = computed(
   () => compactBuilder.value || speedRatio.value === '1:2' || speedRatio.value === '1:4',
 )
-const hideColumnHeaderDetails = computed(
-  () => isQtr.value || speedRatio.value === '1:2' || speedRatio.value === '1:4',
-)
+const topHeaderRule = computed(() => getVtgTopHeaderRule(speedRatio.value))
+const hideColumnHeaderDetails = computed(() => isQtr.value || !topHeaderRule.value.showDetails)
 const usesQuarterTurnHeaderLayout = computed(
   () =>
     supportsVtgPatternOrientation(speedRatio.value) &&
@@ -1355,16 +1355,10 @@ const columnRules: readonly VtgRuleSpec[] = [
   },
 ]
 
-const swappedColumnRuleNumbers = [3, 4, 1, 2, 5, 6] as const satisfies readonly VtgRuleNumber[]
 const displayedColumnRules = computed(() => {
-  const ruleNumbers =
-    speedRatio.value === '1:1' || speedRatio.value === '1:5'
-      ? swappedColumnRuleNumbers
-      : columnRuleNumbers
-
   const displayedColumns = compactBuilder.value ? columnRuleNumbers.slice(0, 4) : columnRuleNumbers
   return displayedColumns.map((column, index) => {
-    const ruleNumber = ruleNumbers[index]
+    const ruleNumber = topHeaderRule.value.ruleNumbers[index]
     const rule = columnRules.find((candidate) => candidate.number === ruleNumber)
     if (!rule) throw new Error(`Missing VTG column header rule ${ruleNumber}`)
 

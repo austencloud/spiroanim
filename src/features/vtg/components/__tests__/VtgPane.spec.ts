@@ -272,7 +272,7 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
-  it.each(['1:2', '1:4'] as const)(
+  it.each(['1:2', '1:4', '1:2v3', '1:3v2'] as const)(
     'hides top-header labels, diagrams, and dividers at %s while retaining left-header details',
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
