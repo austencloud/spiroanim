@@ -802,6 +802,62 @@ const emitBuilderPreview = (tile?: VtgMatrixTile) => {
   emit('patternPreview', createPatternSelection(activeTile))
 }
 
+const previewReferenceForTile = (tile: VtgMatrixTile) =>
+  usesPairedPreviewLayout.value
+    ? createCellReference(
+        tile.row,
+        tile.column % 2 === 0 ? ((tile.column - 1) as VtgRuleNumber) : tile.column,
+      )
+    : renderedReferenceForTile(tile)
+
+const createBuilderPointerPreview = (
+  tile: VtgMatrixTile,
+  source: HTMLElement | null,
+): BuilderPatternPointerPreview => {
+  const rendererIndex = pairedPatternPreviewReferences.indexOf(previewReferenceForTile(tile))
+  const bounds = source?.getBoundingClientRect()
+  return {
+    width: bounds?.width ?? 0,
+    height: bounds?.height ?? 0,
+    label: tile.label,
+    ...(previewUrls.value[rendererIndex]
+      ? { imageUrl: previewUrls.value[rendererIndex] }
+      : undefined),
+  }
+}
+
+const setBuilderDragImage = (
+  tile: VtgMatrixTile,
+  source: HTMLElement,
+  dataTransfer: DataTransfer,
+) => {
+  const dragImage = source.cloneNode(true) as HTMLElement
+  const patternImage = paneElement.value
+    ?.querySelector<HTMLImageElement>(`[data-preview-reference="${previewReferenceForTile(tile)}"]`)
+    ?.cloneNode(true) as HTMLImageElement | undefined
+  if (patternImage) {
+    patternImage.style.position = 'absolute'
+    patternImage.style.inset = '11%'
+    patternImage.style.width = '78%'
+    patternImage.style.height = '78%'
+    dragImage.prepend(patternImage)
+  }
+
+  const bounds = source.getBoundingClientRect()
+  dragImage.removeAttribute('id')
+  dragImage.removeAttribute('aria-describedby')
+  dragImage.setAttribute('aria-hidden', 'true')
+  dragImage.setAttribute('draggable', 'false')
+  dragImage.style.position = 'fixed'
+  dragImage.style.inset = '0 auto auto -10000px'
+  dragImage.style.width = `${bounds.width}px`
+  dragImage.style.height = `${bounds.height}px`
+  dragImage.style.pointerEvents = 'none'
+  paneElement.value?.appendChild(dragImage)
+  dataTransfer.setDragImage(dragImage, bounds.width / 2, bounds.height / 2)
+  setTimeout(() => dragImage.remove())
+}
+
 const startBuilderDrag = (tile: VtgMatrixTile, event: DragEvent) => {
   if (!props.builderActive || !event.dataTransfer) return
   // Paired-ratio thumbnails span an odd/even cell pair. Dragging either half must send the odd
@@ -811,6 +867,10 @@ const startBuilderDrag = (tile: VtgMatrixTile, event: DragEvent) => {
   event.dataTransfer.effectAllowed = 'copy'
   event.dataTransfer.setData(builderPatternDragType, JSON.stringify(selection))
   event.dataTransfer.setData('text/plain', `VTG ${renderedReference}`)
+  const source = event.currentTarget as HTMLElement | null
+  if (source && typeof event.dataTransfer.setDragImage === 'function') {
+    setBuilderDragImage(tile, source, event.dataTransfer)
+  }
 }
 
 const pointerDragThreshold = 10
@@ -838,27 +898,13 @@ const startBuilderPointerDrag = (tile: VtgMatrixTile, event: PointerEvent) => {
     return
 
   const renderedReference = renderedReferenceForTile(tile)
-  const previewReference = usesPairedPreviewLayout.value
-    ? createCellReference(
-        tile.row,
-        tile.column % 2 === 0 ? ((tile.column - 1) as VtgRuleNumber) : tile.column,
-      )
-    : renderedReference
-  const rendererIndex = pairedPatternPreviewReferences.indexOf(previewReference)
-  const bounds = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect()
+  const source = event.currentTarget as HTMLElement | null
   builderPointerDrag = {
     pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
     selection: createPatternSelection(tile, renderedReference),
-    preview: {
-      width: bounds?.width ?? 0,
-      height: bounds?.height ?? 0,
-      label: tile.label,
-      ...(previewUrls.value[rendererIndex]
-        ? { imageUrl: previewUrls.value[rendererIndex] }
-        : undefined),
-    },
+    preview: createBuilderPointerPreview(tile, source),
     active: false,
   }
   ;(event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId)

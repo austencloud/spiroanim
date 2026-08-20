@@ -353,14 +353,21 @@ const previewRelationships =
 let previewRelationshipRevision = 0
 watchImmediate(resizedPreviewAnimations, async (previews) => {
   const revision = ++previewRelationshipRevision
-  previewRelationships.value = undefined
-  if (!previews) return
+  if (!previews) {
+    previewRelationships.value = undefined
+    return
+  }
 
   const relationships = await resolveVtgBuilderPreviewRelationships(
     previews,
     patternMatcher.matchVtg,
   )
-  if (revision === previewRelationshipRevision) previewRelationships.value = relationships
+  // Keep the mounted controls and their active pointer capture while a beat resize is rematched.
+  // Replacing the relationships only after they resolve prevents range input drags from being
+  // interrupted by an avoidable thumbnail-grid unmount.
+  if (revision === previewRelationshipRevision && relationships) {
+    previewRelationships.value = relationships
+  }
 })
 const quickSlotCreationError = ref<string>()
 const createBuilderQSlots = async () => {

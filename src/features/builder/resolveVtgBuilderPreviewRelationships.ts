@@ -29,9 +29,6 @@ export const resolveVtgBuilderPreviewRelationships = async (
         swapProps: match.swapProps,
         reversePlane: match.reversePlane,
         ...('quarters' in match ? { quarters: match.quarters } : undefined),
-        ...(match.orientation === -90 || match.orientation === 90
-          ? { orientation: match.orientation }
-          : undefined),
       })
     }),
   )

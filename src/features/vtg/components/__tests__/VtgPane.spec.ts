@@ -2488,6 +2488,41 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternPreview')).toHaveLength(previewsBeforeReset + 1)
   })
 
+  it('uses a full-size copy of the VTG cell as the desktop Builder drag image', async () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const wrapper = mount(VtgPane, { props: { animation, builderActive: true } })
+    await flushPromises()
+    const tile = wrapper.get<HTMLButtonElement>('[data-cell-reference="1-1"]')
+    vi.spyOn(tile.element, 'getBoundingClientRect').mockReturnValue({
+      width: 120,
+      height: 80,
+      x: 0,
+      y: 0,
+      top: 0,
+      right: 120,
+      bottom: 80,
+      left: 0,
+      toJSON: () => ({}),
+    })
+    const setDragImage = vi.fn()
+
+    await tile.trigger('dragstart', {
+      dataTransfer: {
+        effectAllowed: 'none',
+        setData: vi.fn(),
+        setDragImage,
+      },
+    })
+
+    expect(setDragImage).toHaveBeenCalledWith(expect.any(HTMLElement), 60, 40)
+    const desktopDragImage = setDragImage.mock.calls[0]?.[0] as HTMLElement
+    expect(desktopDragImage.classList.contains('vtg-tile')).toBe(true)
+    expect(desktopDragImage.style.width).toBe('120px')
+    expect(desktopDragImage.style.height).toBe('80px')
+    expect(desktopDragImage.textContent).toContain(tile.text())
+  })
+
   it('shows the full VTG grid and source controls for an empty Builder', () => {
     const wrapper = mount(VtgPane, {
       props: { builderActive: true, builderFullCatalog: true },
