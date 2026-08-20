@@ -292,6 +292,7 @@ import {
   builderPatternPointerMoveEvent,
   createBuilderPatternPointerEvent,
 } from '@/features/builder/patternPointerDrag'
+import type { BuilderPatternPointerPreview } from '@/features/builder/patternPointerDrag'
 import { builderPatternDragType } from '@/features/builder/types'
 import {
   describeVtgBuilderMotion,
@@ -819,6 +820,7 @@ let builderPointerDrag:
       startX: number
       startY: number
       selection: ConceptPatternSelection
+      preview: BuilderPatternPointerPreview
       active: boolean
     }
   | undefined
@@ -835,11 +837,28 @@ const startBuilderPointerDrag = (tile: VtgMatrixTile, event: PointerEvent) => {
   )
     return
 
+  const renderedReference = renderedReferenceForTile(tile)
+  const previewReference = usesPairedPreviewLayout.value
+    ? createCellReference(
+        tile.row,
+        tile.column % 2 === 0 ? ((tile.column - 1) as VtgRuleNumber) : tile.column,
+      )
+    : renderedReference
+  const rendererIndex = pairedPatternPreviewReferences.indexOf(previewReference)
+  const bounds = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect()
   builderPointerDrag = {
     pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
-    selection: createPatternSelection(tile, renderedReferenceForTile(tile)),
+    selection: createPatternSelection(tile, renderedReference),
+    preview: {
+      width: bounds?.width ?? 0,
+      height: bounds?.height ?? 0,
+      label: tile.label,
+      ...(previewUrls.value[rendererIndex]
+        ? { imageUrl: previewUrls.value[rendererIndex] }
+        : undefined),
+    },
     active: false,
   }
   ;(event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId)
@@ -861,6 +880,7 @@ const moveBuilderPointerDrag = (event: PointerEvent) => {
       clientX: event.clientX,
       clientY: event.clientY,
       selection: drag.selection,
+      preview: drag.preview,
     }),
   )
 }
@@ -876,6 +896,7 @@ const finishBuilderPointerDrag = (event: PointerEvent) => {
         clientX: event.clientX,
         clientY: event.clientY,
         selection: drag.selection,
+        preview: drag.preview,
       }),
     )
   }

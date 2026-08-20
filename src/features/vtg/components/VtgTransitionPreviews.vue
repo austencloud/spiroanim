@@ -152,11 +152,21 @@
       :style="{
         insetInlineStart: `${pointerPosition.x}px`,
         insetBlockStart: `${pointerPosition.y}px`,
+        inlineSize: `${pointerPosition.preview.width}px`,
+        blockSize: `${pointerPosition.preview.height}px`,
       }"
       data-role="vtg-pattern-pointer-drag"
       aria-hidden="true"
     >
-      {{ pointerPosition.reference }}
+      <img
+        v-if="pointerPosition.preview.imageUrl"
+        class="vtg-transition-previews__pointer-drag-image"
+        :src="pointerPosition.preview.imageUrl"
+        alt=""
+      />
+      <span class="vtg-transition-previews__pointer-drag-label">
+        {{ pointerPosition.preview.label }}
+      </span>
     </div>
   </div>
 </template>
@@ -169,7 +179,7 @@ import { builderPatternDragType } from '@/features/builder/types'
 import type { BuilderPatternDrop } from '@/features/builder/types'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
-import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
+import type { PatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { vtgThickControl } from '@/features/vtg/data/vtgPlayerSettings'
 import { inferVtgDoubledPortionSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
 import AppTooltip from '@/components/AppTooltip.vue'
@@ -191,6 +201,7 @@ const props = withDefaults(
     columns?: number
     initialBeatCounts: readonly number[]
     beatCounts: readonly number[]
+    relationships: readonly PatternRelationships[]
     scale: number
     selectedIndex?: number
   }>(),
@@ -211,24 +222,12 @@ const emit = defineEmits<{
 }>()
 const dragActive = ref(false)
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
-const animationForRelationshipLabel = (animation: RootDataFinal): RootDataFinal => ({
-  ...animation,
-  props: animation.props.map((prop) => ({
-    ...prop,
-    anim:
-      prop.anim.length >= 3
-        ? prop.anim
-        : [...prop.anim, ...Array.from({ length: 3 - prop.anim.length }, () => ({}))],
-  })),
-})
-const previewRelationships = computed(() =>
-  props.animations.map((animation) =>
-    describePatternRelationships(animationForRelationshipLabel(animation)),
-  ),
-)
+const previewRelationships = computed(() => props.relationships)
 const previewLabels = computed(() => previewRelationships.value.map(({ label }) => label))
 const previewRatios = computed(() => props.animations.map(inferVtgDoubledPortionSpeedRatio))
-const pointerPosition = ref<{ x: number; y: number; reference: string }>()
+const pointerPosition = ref<
+  { x: number; y: number; preview: BuilderPatternPointerDetail['preview'] } | undefined
+>()
 useEventListener(typeof document === 'undefined' ? null : document, 'dragstart', () => {
   dragActive.value = true
 })
@@ -277,7 +276,7 @@ const handlePointerMove = (event: Event) => {
   pointerPosition.value = {
     x: detail.clientX,
     y: detail.clientY,
-    reference: detail.selection.reference,
+    preview: detail.preview,
   }
   dragOverIndex.value = pointerDropIndex(detail.clientX, detail.clientY)
 }
@@ -392,18 +391,36 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   display: grid;
   min-width: 3rem;
   min-height: 3rem;
-  padding: var(--space-2);
-  color: var(--color-on-action-primary);
-  font-size: var(--font-size-concept-control);
-  font-weight: 800;
+  overflow: hidden;
+  color: var(--vtg-color-rule-text);
   pointer-events: none;
-  background: color-mix(in srgb, var(--color-action-primary) 82%, transparent);
-  border: 2px solid var(--color-on-action-primary);
-  border-radius: var(--radius-md);
+  background: var(--vtg-color-primary);
+  border: 2px solid var(--vtg-color-rule-text);
+  border-radius: 1.7cqi;
   box-shadow: var(--shadow-sm);
-  opacity: 0.9;
+  opacity: 0.92;
   place-items: center;
   transform: translate(-50%, -50%);
+}
+
+.vtg-transition-previews__pointer-drag-image {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+}
+
+.vtg-transition-previews__pointer-drag-label {
+  position: absolute;
+  inset-block-end: var(--space-1);
+  inset-inline: var(--space-1);
+  overflow: hidden;
+  font-family: 'Arial Narrow', var(--font-family-sans);
+  font-size: var(--font-size-concept-control);
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .vtg-transition-previews__placeholder {

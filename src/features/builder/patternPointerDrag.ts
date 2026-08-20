@@ -4,10 +4,18 @@ export const builderPatternPointerMoveEvent = 'spiroanim:builder-pattern-pointer
 export const builderPatternPointerDropEvent = 'spiroanim:builder-pattern-pointer-drop'
 export const builderPatternPointerEndEvent = 'spiroanim:builder-pattern-pointer-end'
 
+export interface BuilderPatternPointerPreview {
+  width: number
+  height: number
+  label: string
+  imageUrl?: string
+}
+
 export interface BuilderPatternPointerDetail {
   clientX: number
   clientY: number
   selection: ConceptPatternSelection
+  preview: BuilderPatternPointerPreview
 }
 
 export const createBuilderPatternPointerEvent = (

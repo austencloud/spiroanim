@@ -62,13 +62,14 @@
             Pattern not supported.
           </p>
           <VtgTransitionPreviews
-            v-if="resizedPreviewAnimations"
+            v-if="resizedPreviewAnimations && previewRelationships"
             :key="resizedPreviewAnimations.length"
             :animations="resizedPreviewAnimations"
             :refresh-key="previewRefreshKey"
             :columns="columns"
             :initial-beat-counts="baselineBeatCounts"
             :beat-counts="currentBeatCounts"
+            :relationships="previewRelationships"
             :scale="scale"
             :selected-index="selectedPreviewIndex"
             @pattern-drop="acceptPatternDrop"
@@ -217,6 +218,7 @@ import {
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
+import { resolveVtgBuilderPreviewRelationships } from '@/features/builder/resolveVtgBuilderPreviewRelationships'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useQSMainStore } from '@/stores/useQSMainStore'
@@ -346,6 +348,20 @@ watch(
 )
 const resizedPreviewAnimations = previewAnimations
 const patternMatcher = usePatternMatchingClient(computed(() => true))
+const previewRelationships =
+  shallowRef<Awaited<ReturnType<typeof resolveVtgBuilderPreviewRelationships>>>()
+let previewRelationshipRevision = 0
+watchImmediate(resizedPreviewAnimations, async (previews) => {
+  const revision = ++previewRelationshipRevision
+  previewRelationships.value = undefined
+  if (!previews) return
+
+  const relationships = await resolveVtgBuilderPreviewRelationships(
+    previews,
+    patternMatcher.matchVtg,
+  )
+  if (revision === previewRelationshipRevision) previewRelationships.value = relationships
+})
 const quickSlotCreationError = ref<string>()
 const createBuilderQSlots = async () => {
   quickSlotCreationError.value = undefined

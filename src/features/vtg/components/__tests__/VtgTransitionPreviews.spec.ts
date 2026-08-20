@@ -6,6 +6,7 @@ import AppTooltip from '@/components/AppTooltip.vue'
 import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { useViewportStore } from '@/stores/useViewportStore'
+import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
 import {
   builderPatternPointerDropEvent,
   builderPatternPointerMoveEvent,
@@ -17,6 +18,7 @@ vi.mock('@/utils/device', () => ({ isTouchDevice: () => device.touch }))
 
 const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
 if (!animation) throw new Error('Expected a supported VTG pattern')
+const relationship = describePatternSelectionRelationships({ reference: '1-1', speedRatio: '1:3' })
 
 describe('VtgTransitionPreviews', () => {
   beforeEach(() => {
@@ -28,6 +30,7 @@ describe('VtgTransitionPreviews', () => {
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
         animations: [animation],
+        relationships: [relationship],
         refreshKey: 'test',
         initialBeatCounts: [1],
         beatCounts: [1],
@@ -71,6 +74,7 @@ describe('VtgTransitionPreviews', () => {
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
         animations: [animation],
+        relationships: [relationship],
         refreshKey: 'action-tooltip',
         initialBeatCounts: [1],
         beatCounts: [1],
@@ -95,6 +99,7 @@ describe('VtgTransitionPreviews', () => {
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
         animations: [animation, animation],
+        relationships: [relationship, relationship],
         refreshKey: 'touch-delete',
         initialBeatCounts: [1, 1],
         beatCounts: [1, 1],
@@ -123,6 +128,7 @@ describe('VtgTransitionPreviews', () => {
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
         animations: [animation, animation],
+        relationships: [relationship, relationship],
         refreshKey: 'drop-rules',
         initialBeatCounts: [1, 1],
         beatCounts: [1, 1],
@@ -161,6 +167,7 @@ describe('VtgTransitionPreviews', () => {
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
         animations: [shortAnimation],
+        relationships: [relationship],
         refreshKey: 'short-label',
         initialBeatCounts: [0.5],
         beatCounts: [0.5],
@@ -180,6 +187,7 @@ describe('VtgTransitionPreviews', () => {
       attachTo: document.body,
       props: {
         animations: [animation],
+        relationships: [relationship],
         refreshKey: 'touch-drop',
         initialBeatCounts: [1],
         beatCounts: [1],
@@ -199,17 +207,23 @@ describe('VtgTransitionPreviews', () => {
         clientX: 10,
         clientY: 10,
         selection,
+        preview: { width: 96, height: 72, label: 'TS / TS', imageUrl: 'preview.png' },
       }),
     )
     await nextTick()
     expect(target.classes()).toContain('vtg-transition-previews__item--drag-over')
-    expect(wrapper.get('[data-role="vtg-pattern-pointer-drag"]').text()).toBe('1-1')
+    const pointerDrag = wrapper.get<HTMLElement>('[data-role="vtg-pattern-pointer-drag"]')
+    expect(pointerDrag.text()).toBe('TS / TS')
+    expect(pointerDrag.attributes('style')).toContain('inline-size: 96px')
+    expect(pointerDrag.attributes('style')).toContain('block-size: 72px')
+    expect(pointerDrag.get('img').attributes('src')).toBe('preview.png')
 
     document.dispatchEvent(
       createBuilderPatternPointerEvent(builderPatternPointerDropEvent, {
         clientX: 10,
         clientY: 10,
         selection,
+        preview: { width: 96, height: 72, label: 'TS / TS', imageUrl: 'preview.png' },
       }),
     )
     await nextTick()
