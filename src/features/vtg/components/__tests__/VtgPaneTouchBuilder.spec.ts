@@ -16,7 +16,16 @@ describe('VtgPane touch Builder', () => {
 
     const pane = wrapper.get('[data-role="vtg-pane"]')
     expect(pane.classes()).toContain('vtg-pane--touch')
-    expect(pane.classes()).toContain('vtg-pane--builder-active')
-    expect(wrapper.get('[data-role="vtg-tile"]').attributes('draggable')).toBe('false')
+    expect(pane.classes()).toContain('vtg-pane--builder-drag-active')
+    expect(pane.classes()).not.toContain('vtg-pane--builder-active')
+    const tiles = wrapper.findAll('[data-role="vtg-tile"]')
+    expect(tiles).toHaveLength(36)
+    expect(new Set(tiles.map((tile) => tile.attributes('data-board-column')))).toEqual(
+      new Set(['2', '3', '4', '5', '6', '7']),
+    )
+    expect(new Set(tiles.map((tile) => tile.attributes('data-board-row')))).toEqual(
+      new Set(['1', '2', '3', '4', '5', '6']),
+    )
+    expect(tiles.every((tile) => tile.attributes('draggable') === 'false')).toBe(true)
   })
 })

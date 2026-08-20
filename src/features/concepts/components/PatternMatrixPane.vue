@@ -4,7 +4,8 @@
     class="vtg-pane"
     :class="{
       'vtg-pane--touch': touchDevice,
-      'vtg-pane--builder-active': builderActive,
+      'vtg-pane--builder-active': compactBuilder,
+      'vtg-pane--builder-drag-active': builderActive,
     }"
     aria-labelledby="vtg-pane-title"
     data-role="vtg-pane"
@@ -1914,7 +1915,7 @@ defineExpose({
   white-space: nowrap;
 }
 
-.vtg-pane--touch.vtg-pane--builder-active .vtg-tile {
+.vtg-pane--touch.vtg-pane--builder-drag-active .vtg-tile {
   touch-action: none;
 }
 
