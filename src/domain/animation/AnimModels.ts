@@ -1,4 +1,10 @@
-import { SphereGeometry, /*TorusGeometry,*/ CylinderGeometry } from 'three'
+import {
+  SphereGeometry,
+  /*TorusGeometry,*/ CylinderGeometry,
+  LatheGeometry,
+  SplineCurve,
+  Vector2,
+} from 'three'
 import { Group, Mesh, MeshStandardMaterial, MeshToonMaterial } from 'three'
 
 import { COLSET } from '@/domain/animation/AnimStruct'
@@ -114,4 +120,44 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
     model2.size = 2.4 * multi // Used for Y offset manipulations, multiplied by -1 to 1
 
     return model2
+  },
+  CLUBS = (multi: number, color: ColorInd, girth: number): ModelGroup => {
+    const cset = COLSET[color]!
+
+    const knobRadius = 0.12 * multi * girth
+    const knob = new Mesh(createFacetedSphere(knobRadius), createPropMaterial(cset[1]))
+    // Match the Poi handle's lower extent for every girth setting.
+    knob.position.y = (-0.12 + 0.06 * girth) * multi
+
+    const handle = new Mesh(
+      new CylinderGeometry(0.075 * multi * girth, 0.095 * multi * girth, 0.88 * multi, 32),
+      createTetherMaterial(cset[2]),
+    )
+    handle.position.y = 0.38 * multi
+
+    const bodyProfile = new SplineCurve([
+      new Vector2(0.09 * multi * girth, 0.82 * multi),
+      new Vector2(0.13 * multi * girth, 0.92 * multi),
+      new Vector2(0.2 * multi * girth, 1.2 * multi),
+      new Vector2(0.235 * multi * girth, 1.42 * multi),
+      new Vector2(0.22 * multi * girth, 1.62 * multi),
+      new Vector2(0.16 * multi * girth, 1.95 * multi),
+      new Vector2(0.11 * multi * girth, 2.28 * multi),
+      new Vector2(0.1 * multi * girth, 2.4 * multi),
+    ])
+    const body = new Mesh(
+      new LatheGeometry(bodyProfile.getPoints(24), 32),
+      createPropMaterial(cset[0]),
+    )
+
+    const tipRadius = 0.1 * multi * girth
+    const tip = new Mesh(createFacetedSphere(tipRadius), createPropMaterial(cset[1]))
+    // Match the Poi head's upper extent for every girth setting.
+    tip.position.y = (2.4 + 0.1 * girth) * multi
+
+    const model = new Group() as ModelGroup
+    model.add(knob, handle, body, tip)
+    model.size = 2.4 * multi // Used for Y offset manipulations, multiplied by -1 to 1
+
+    return model
   }

@@ -1,6 +1,6 @@
 // src/services/query/versions/SpiroAnimQSv1.ts
 
-import { PTEXT, COLORS, TTEXT } from '@/domain/animation/AnimStruct'
+import { COLORS, TTEXT } from '@/domain/animation/AnimStruct'
 
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 import type { VDefEntry } from '@/services/query/types/BaseQSTypes'
@@ -15,7 +15,8 @@ export const VDEF = {
   /*Name,      Min,   Max,             Bits, Transform,             Max*/
   bpm: [20, 520, 9], // 510
   beats: [1, 63, 6], //
-  prop: [0, PTEXT.length - 1, 4], // 14
+  // V1 supported only Poi and Staff. Keep this range immutable when new prop types are added.
+  prop: [0, 1, 4], // 14
   color: [0, COLORS.length - 1, 4], // 14
   guides: [0, 1, 2, Boolean], // 1
   paths: [0, 1, 2, Boolean], // 1

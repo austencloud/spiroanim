@@ -64,6 +64,7 @@ export const createEightStepAnimation = (
 
   const animation = {
     ...rootFinal(decoded),
+    ...(selection.prop === undefined ? undefined : { prop: selection.prop }),
     camera: [createDefaultCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
     speed: current.speed,
     type: pattern.type ?? current.type,

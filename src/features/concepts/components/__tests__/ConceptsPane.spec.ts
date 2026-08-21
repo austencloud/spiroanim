@@ -106,6 +106,7 @@ describe('ConceptsPane', () => {
         {
           reference: '1-1',
           speedRatio: '1:3',
+          prop: 2,
         },
       ],
     ])
@@ -139,6 +140,7 @@ describe('ConceptsPane', () => {
       {
         reference: '2-2',
         speedRatio: '1:5',
+        prop: 2,
         swapProps: true,
         reversePlane: true,
         bpm: 84,
@@ -181,6 +183,7 @@ describe('ConceptsPane', () => {
       {
         concept: '8stp',
         reference: '4-II',
+        prop: 2,
         swapProps: true,
         reversePlane: true,
         bpm: 84,
@@ -208,10 +211,18 @@ describe('ConceptsPane', () => {
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
-  it('emits Left and Right prop colors from Customize by prop slot', async () => {
+  it('emits prop type and Left and Right colors from Customize', async () => {
     const wrapper = mount(ConceptsPane)
 
     await wrapper.get('[data-role="vtg-customize-toggle"]').trigger('click')
+    const propSelect = wrapper.get<HTMLSelectElement>('[data-role="vtg-prop-type"]')
+    expect(propSelect.element.value).toBe('2')
+    expect(Array.from(propSelect.element.options, ({ text }) => text.trim())).toEqual([
+      'POI',
+      'Staff',
+      'Juggling Clubs',
+    ])
+    await propSelect.setValue('0')
     await wrapper.get<HTMLSelectElement>('[data-role="vtg-left-color"]').setValue('Blue')
     await wrapper.get<HTMLSelectElement>('[data-role="vtg-right-color"]').setValue('Magenta')
     await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
@@ -220,6 +231,7 @@ describe('ConceptsPane', () => {
       {
         reference: '1-1',
         speedRatio: '1:3',
+        prop: 0,
         propColors: ['Blue', 'Magenta'],
       },
     ])
@@ -368,7 +380,7 @@ describe('ConceptsPane', () => {
       'qst-pattern-card--selected',
     )
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { concept: 'qst', reference: 'advanced-1', swapProps: true },
+      { concept: 'qst', reference: 'advanced-1', prop: 2, swapProps: true },
     ])
     await wrapper.get<HTMLInputElement>('[data-role="qst-swap"]').setValue(false)
     await wrapper.get('[data-role="qst-back"]').trigger('click')
@@ -376,14 +388,14 @@ describe('ConceptsPane', () => {
     await wrapper.get('[data-role="qst-page"][data-page="2"]').trigger('click')
     await wrapper.get('[data-pattern-reference="breaks-17"] button').trigger('click')
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { concept: 'qst', reference: 'breaks-17' },
+      { concept: 'qst', reference: 'breaks-17', prop: 2 },
     ])
     await wrapper.get<HTMLInputElement>('[data-role="qst-swap"]').setValue(true)
     expect(wrapper.get('[data-pattern-reference="breaks-19"]').classes()).toContain(
       'qst-pattern-card--selected',
     )
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { concept: 'qst', reference: 'breaks-17', swapProps: true },
+      { concept: 'qst', reference: 'breaks-17', prop: 2, swapProps: true },
     ])
     await wrapper.get<HTMLInputElement>('[data-role="qst-swap"]').setValue(false)
     await wrapper.get('[data-role="qst-page"][data-page="4"]').trigger('click')

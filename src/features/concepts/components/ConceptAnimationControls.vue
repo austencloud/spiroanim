@@ -195,6 +195,14 @@
             <option v-for="color in propColors" :key="color" :value="color">{{ color }}</option>
           </select>
         </label>
+        <label class="concept-color-controls__prop">
+          <span>Prop</span>
+          <select v-model.number="prop" :data-role="`${rolePrefix}-prop-type`">
+            <option v-for="(propName, index) in propTypes" :key="propName" :value="index">
+              {{ propName }}
+            </option>
+          </select>
+        </label>
       </fieldset>
     </div>
   </details>
@@ -212,7 +220,7 @@ import {
 import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { useTouchSafeRangeSlider } from '@/composables/useTouchSafeRangeSlider'
-import { COLORS } from '@/domain/animation/AnimStruct'
+import { COLORS, PTEXT } from '@/domain/animation/AnimStruct'
 
 const props = withDefaults(
   defineProps<{
@@ -235,8 +243,10 @@ const {
   customizeExpanded,
   leftPropColor,
   rightPropColor,
+  prop,
 } = storeToRefs(useConceptsStore())
 const propColors = COLORS
+const propTypes = PTEXT
 
 watch(
   [leftPropVisible, rightPropVisible],
@@ -346,19 +356,19 @@ onBeforeUnmount(endSliderHistory)
 }
 
 .concept-color-controls {
-  display: flex;
+  display: grid;
   width: min(100%, 45rem);
   padding: var(--space-1) var(--space-2);
   margin: 0 auto;
   border: 0;
+  grid-template-columns: repeat(2, minmax(9rem, 16rem));
   gap: var(--space-3);
   justify-content: center;
 }
 
 .concept-color-controls label {
   display: grid;
-  flex: 1 1 9rem;
-  max-width: 16rem;
+  width: 100%;
   gap: var(--space-1);
   color: var(--color-text);
   font-size: 0.8125rem;

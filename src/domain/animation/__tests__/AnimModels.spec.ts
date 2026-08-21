@@ -1,7 +1,7 @@
-import { Mesh, MeshStandardMaterial, MeshToonMaterial } from 'three'
+import { Box3, Mesh, MeshStandardMaterial, MeshToonMaterial } from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { POI, STAFF } from '@/domain/animation/AnimModels'
+import { CLUBS, POI, STAFF } from '@/domain/animation/AnimModels'
 
 describe('AnimModels prop lighting', () => {
   it.each([
@@ -32,5 +32,26 @@ describe('AnimModels prop lighting', () => {
       expect(child.geometry.index).toBeNull()
       expect(child.material.customProgramCacheKey()).toContain('propRim')
     }
+  })
+
+  it.each([1, 2])('builds opaque Juggling Clubs with the Poi length at girth %s', (girth) => {
+    const clubs = CLUBS(1, 4, girth)
+    const poi = POI(1, 4, girth)
+
+    expect(clubs.children).toHaveLength(4)
+    expect(clubs.size).toBe(poi.size)
+    for (const child of clubs.children) {
+      if (!(child instanceof Mesh)) throw new Error('Expected every Club part to be a Mesh')
+      expect(child.material).toBeInstanceOf(
+        child === clubs.children[1] ? MeshStandardMaterial : MeshToonMaterial,
+      )
+      expect(child.material.transparent).toBe(false)
+      expect(child.material.opacity).toBe(1)
+    }
+
+    const clubBounds = new Box3().setFromObject(clubs)
+    const poiBounds = new Box3().setFromObject(poi)
+    expect(clubBounds.min.y).toBeCloseTo(poiBounds.min.y)
+    expect(clubBounds.max.y).toBeCloseTo(poiBounds.max.y)
   })
 })

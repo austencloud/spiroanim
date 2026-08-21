@@ -1,4 +1,4 @@
-import type { PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
+import type { PropInd, PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import type { PatternPropVisibilitySelection } from '@/features/concepts/patternPropVisibility'
 import type { PatternPropSpacingSelection } from '@/features/concepts/patternPropSpacing'
@@ -180,6 +180,7 @@ export interface VtgPatternSelection
   paths?: boolean
   hands?: boolean
   arms?: boolean
+  prop?: PropInd
 }
 
 export interface VtgPatternMatch {

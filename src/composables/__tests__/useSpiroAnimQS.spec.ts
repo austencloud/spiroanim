@@ -9,6 +9,7 @@ import { CHARSET as CHARSET_V4, VDEF as VDEF_V4 } from '@/services/query/version
 import { CHARSET as CHARSET_V5, VDEF as VDEF_V5 } from '@/services/query/versions/SpiroAnimQSv5'
 import { CHARSET as CHARSET_V6, VDEF as VDEF_V6 } from '@/services/query/versions/SpiroAnimQSv6'
 import { CHARSET as CHARSET_V7, VDEF as VDEF_V7 } from '@/services/query/versions/SpiroAnimQSv7'
+import { CHARSET as CHARSET_V8, VDEF as VDEF_V8 } from '@/services/query/versions/SpiroAnimQSv8'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -303,6 +304,20 @@ describe('useSpiroAnimQS', () => {
     expect(frames[1]).toHaveLength(6)
     expect(query.decodeQS(encoded).props[0]!.anim).toEqual(root.props[0]!.anim)
     expect(query.encodeQS(query.decodeQS(encoded), false)).toEqual(encoded)
+  })
+
+  it('round-trips Juggling Clubs as prop index 2 in version 8', async () => {
+    const query = await useSpiroAnimQS(VDEF_V8, useBaseQS(VDEF_V8, { charset: CHARSET_V8 }), 8)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    root.prop = 2
+    root.props[0]!.prop = 2
+
+    const encoded = query.encodeQS(root, false)
+    const decoded = query.decodeQS(encoded)
+
+    expect(encoded.v).toBe('8')
+    expect(decoded.prop).toBe(2)
+    expect(decoded.props[0]!.prop).toBe(2)
   })
 
   it('migrates the existing multi-prop MOVE query into optional m values', async () => {

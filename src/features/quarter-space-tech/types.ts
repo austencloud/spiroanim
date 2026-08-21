@@ -1,7 +1,7 @@
 import type { PatternPropSpacingSelection } from '@/features/concepts/patternPropSpacing'
 import type { PatternPropVisibilitySelection } from '@/features/concepts/patternPropVisibility'
 import type { PatternPropColorSelection } from '@/features/concepts/patternPropColors'
-import type { PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
+import type { PropInd, PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
 
 export const qstCollectionKeys = ['breaks', 'advanced', 'beyond'] as const
 export type QstCollectionKey = (typeof qstCollectionKeys)[number]
@@ -24,6 +24,7 @@ export interface QstPatternSelection
   paths?: boolean
   hands?: boolean
   arms?: boolean
+  prop?: PropInd
 }
 
 export interface QstPatternMatch {

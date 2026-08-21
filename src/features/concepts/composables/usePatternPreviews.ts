@@ -15,6 +15,7 @@ import type {
 } from '@/features/vtg/types'
 import { supportsVtgPatternOrientation } from '@/features/vtg/types'
 import type { PatternPropColor } from '@/features/concepts/patternPropColors'
+import type { PropInd } from '@/types/AnimTypes'
 
 interface UseVtgPreviewsOptions {
   dimensions: readonly ConceptPreviewDimensions[]
@@ -28,6 +29,7 @@ interface UseVtgPreviewsOptions {
   quarters: Ref<QtrMode | false>
   leftPropColor: Ref<PatternPropColor>
   rightPropColor: Ref<PatternPropColor>
+  prop: Ref<PropInd>
   orientation: Ref<VtgPatternOrientation>
   propRotationOffsets: Ref<readonly [number, number] | undefined>
   initialTurnsOffset: Ref<VtgTransitionInitialTurnsOffset | undefined>
@@ -68,6 +70,7 @@ export const usePatternPreviews = ({
   quarters,
   leftPropColor,
   rightPropColor,
+  prop,
   orientation,
   propRotationOffsets,
   initialTurnsOffset,
@@ -89,6 +92,7 @@ export const usePatternPreviews = ({
       scale: scale.value,
       spacing: spacing.value,
       propColors: [leftPropColor.value, rightPropColor.value],
+      prop: prop.value,
     }
 
     if (spinToggleCells.has(reference)) selection.isAnti = isAnti.value
@@ -134,6 +138,7 @@ export const usePatternPreviews = ({
       quarters,
       leftPropColor,
       rightPropColor,
+      prop,
       orientation,
       propRotationOffsets,
       initialTurnsOffset,

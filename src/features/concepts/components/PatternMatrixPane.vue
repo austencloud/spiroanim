@@ -453,6 +453,7 @@ const {
   rightPropVisible,
   leftPropColor,
   rightPropColor,
+  prop,
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
 const isAnti = ref(false)
@@ -794,6 +795,7 @@ const createPatternSelection = (
   const baseSelection: VtgPatternSelection = {
     reference,
     speedRatio: speedRatio.value,
+    prop: prop.value,
   }
   if (isSpinToggleCell(reference)) baseSelection.isAnti = isAnti.value
   if (swapProps.value) baseSelection.swapProps = true
@@ -1185,6 +1187,7 @@ watch(
     rightPropVisible,
     leftPropColor,
     rightPropColor,
+    prop,
   ],
   () => {
     if (suppressPatternEmit) return
@@ -1310,6 +1313,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
       animation.props[1]?.color === undefined
         ? defaultPatternPropColors[1]
         : COLORS[animation.props[1].color]
+    prop.value = animation.prop
     isQtr.value = result.status === 'matched' && result.source === 'qtr'
   } else {
     selectedCell.value = undefined
@@ -1615,6 +1619,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   quarters: activeQtrMode,
   leftPropColor,
   rightPropColor,
+  prop,
   orientation,
   propRotationOffsets,
   initialTurnsOffset,

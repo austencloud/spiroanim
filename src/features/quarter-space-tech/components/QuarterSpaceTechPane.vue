@@ -263,6 +263,7 @@ const {
   rightPropVisible,
   leftPropColor,
   rightPropColor,
+  prop,
 } = storeToRefs(conceptsStore)
 
 const selectedCollection = shallowRef<QstCollectionDefinition>()
@@ -312,7 +313,7 @@ const propColorStyle = computed(() => ({
 
 const catalogPageKey = computed(
   () =>
-    `${selectedCollection.value?.key}-${pageIndex.value}-${swapProps.value}-${reversePlane.value}-${scale.value}-${spacing.value}-${leftPropVisible.value}-${rightPropVisible.value}-${leftPropColor.value}-${rightPropColor.value}`,
+    `${selectedCollection.value?.key}-${pageIndex.value}-${swapProps.value}-${reversePlane.value}-${scale.value}-${spacing.value}-${leftPropVisible.value}-${rightPropVisible.value}-${leftPropColor.value}-${rightPropColor.value}-${prop.value}`,
 )
 
 const createSelection = (pattern: QstPatternDefinition): QstPatternSelection => {
@@ -320,6 +321,7 @@ const createSelection = (pattern: QstPatternDefinition): QstPatternSelection => 
   const selection: QstPatternSelection = {
     concept: 'qst',
     reference: selectedDefinition.reference,
+    prop: prop.value,
   }
 
   if (swapProps.value) selection.swapProps = true
@@ -413,6 +415,7 @@ watch(
     rightPropVisible,
     leftPropColor,
     rightPropColor,
+    prop,
   ],
   () => {
     if (!suppressPatternEmit && selectedPattern.value) {
@@ -527,6 +530,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
       animation.props[1]?.color === undefined
         ? defaultPatternPropColors[1]
         : COLORS[animation.props[1].color]
+    prop.value = animation.prop
   } else {
     selectedCollection.value = undefined
     selectedPattern.value = undefined

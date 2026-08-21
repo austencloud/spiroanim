@@ -315,6 +315,7 @@ const {
   rightPropVisible,
   leftPropColor,
   rightPropColor,
+  prop,
 } = storeToRefs(conceptsStore)
 const selectedCell = ref<EightStepPatternDefinition>()
 const shape = ref<EightStepShape>('diamond')
@@ -364,6 +365,7 @@ const { previewUrls, requestPreviews } = useEightStepPreviews({
   shape,
   leftPropColor,
   rightPropColor,
+  prop,
 })
 
 let previewObserver: ResizeObserver | undefined
@@ -387,6 +389,7 @@ const createSelection = (cell: EightStepPatternDefinition): EightStepPatternSele
   const selection: EightStepPatternSelection = {
     concept: '8stp',
     reference: cell.reference,
+    prop: prop.value,
   }
 
   if (swapProps.value) selection.swapProps = true
@@ -484,6 +487,7 @@ watch(
     rightPropVisible,
     leftPropColor,
     rightPropColor,
+    prop,
   ],
   () => {
     if (!suppressPatternEmit && selectedCell.value) emitPatternSelection(selectedCell.value)
@@ -543,6 +547,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
       animation.props[1]?.color === undefined
         ? defaultPatternPropColors[1]
         : COLORS[animation.props[1].color]
+    prop.value = animation.prop
   } else {
     selectedCell.value = undefined
   }

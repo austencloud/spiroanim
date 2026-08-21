@@ -1,4 +1,4 @@
-import type { PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
+import type { PropInd, PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { patternShapes } from '@/types/PatternTypes'
 import type { PatternShape } from '@/types/PatternTypes'
 import type { PatternPropVisibilitySelection } from '@/features/concepts/patternPropVisibility'
@@ -37,6 +37,7 @@ export interface EightStepPatternSelection
   paths?: boolean
   hands?: boolean
   arms?: boolean
+  prop?: PropInd
 }
 
 export interface EightStepPatternMatch {

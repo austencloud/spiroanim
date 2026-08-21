@@ -9,6 +9,7 @@ import {
 } from '@/features/vtg/data/vtgPlayerSettings'
 import { isVtgSpeedRatio, vtgDefaultSpeedRatio } from '@/features/vtg/types'
 import type { VtgSpeedRatio } from '@/features/vtg/types'
+import type { PropInd } from '@/types/AnimTypes'
 import {
   defaultPatternPropColors,
   type PatternPropColor,
@@ -55,6 +56,7 @@ export const useConceptsStore = defineStore(
     const customizeExpanded = ref(false)
     const leftPropColor = ref<PatternPropColor>(defaultPatternPropColors[0])
     const rightPropColor = ref<PatternPropColor>(defaultPatternPropColors[1])
+    const prop = ref<PropInd>(2)
 
     const resetPatternControls = () => {
       speedRatio.value = vtgDefaultSpeedRatio
@@ -71,6 +73,7 @@ export const useConceptsStore = defineStore(
       rightPropVisible.value = true
       leftPropColor.value = defaultPatternPropColors[0]
       rightPropColor.value = defaultPatternPropColors[1]
+      prop.value = 2
     }
 
     const addQuickSlot = () => {
@@ -223,6 +226,7 @@ export const useConceptsStore = defineStore(
       customizeExpanded,
       leftPropColor,
       rightPropColor,
+      prop,
       resetPatternControls,
       addQuickSlot,
       removeQuickSlot,

@@ -52,6 +52,7 @@ describe('useConceptsStore', () => {
     expect(store.rightPropVisible).toBe(true)
     expect(store.leftPropColor).toBe('Cyan')
     expect(store.rightPropColor).toBe('Green')
+    expect(store.prop).toBe(2)
     expect(store.customizeExpanded).toBe(false)
     app.unmount()
   })
