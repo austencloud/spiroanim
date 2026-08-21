@@ -18,7 +18,8 @@ import type { RootDataFinal } from '@/types/AnimTypes'
 
 export interface VtgPatternMatchRequest {
   animation: RootDataFinal
-  preferences: VtgPatternMatchPreferences & Pick<QtrPatternMatchPreferences, 'quarters'>
+  preferences: VtgPatternMatchPreferences &
+    Pick<QtrPatternMatchPreferences, 'quarters' | 'orientation'>
   rotationFilter?: VtgPatternRotationFilter
   lastSelection?: VtgPatternSelection | QtrPatternSelection
 }

@@ -21,7 +21,11 @@
           <span v-for="(label, index) in visibleLabels" :key="index">{{ label }}</span>
         </span>
 
-        <span class="vtg-rule-card__diagram" aria-hidden="true">
+        <span
+          class="vtg-rule-card__diagram"
+          :style="diagramStyle"
+          aria-hidden="true"
+        >
           <span
             v-if="props.showDivider"
             class="vtg-rule-card__divider"
@@ -94,6 +98,7 @@ const props = withDefaults(
     tooltipDisabled?: boolean
     reversed?: boolean
     mirrorProps?: boolean
+    diagramRotation?: number
   }>(),
   {
     accent: false,
@@ -102,6 +107,7 @@ const props = withDefaults(
     tooltipDisabled: false,
     reversed: false,
     mirrorProps: true,
+    diagramRotation: 0,
   },
 )
 
@@ -110,6 +116,10 @@ const emit = defineEmits<{
 }>()
 
 const visibleLabels = computed(() => props.displayLabels ?? props.labels)
+
+const diagramStyle = computed<CSSProperties>(() =>
+  props.diagramRotation === 0 ? {} : { transform: `rotate(${props.diagramRotation}deg)` },
+)
 
 const mirrorPlacement = (placement: VtgPropPlacement): VtgPropPlacement => {
   const placementOrientation = placement.orientation ?? props.orientation

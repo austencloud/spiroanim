@@ -7,8 +7,12 @@ import {
   vtgSpacingControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
-import { isVtgSpeedRatio, vtgDefaultSpeedRatio } from '@/features/vtg/types'
-import type { VtgSpeedRatio } from '@/features/vtg/types'
+import {
+  isVtgSpeedRatio,
+  vtgDefaultSpeedRatio,
+  vtgPatternOrientations,
+} from '@/features/vtg/types'
+import type { VtgPatternOrientation, VtgSpeedRatio } from '@/features/vtg/types'
 import type { PropInd } from '@/types/AnimTypes'
 import {
   defaultPatternPropColors,
@@ -44,6 +48,7 @@ export const useConceptsStore = defineStore(
     const speedRatio = ref<VtgSpeedRatio>(vtgDefaultSpeedRatio)
     const swapProps = ref(false)
     const reversePlane = ref(false)
+    const orientation = ref<VtgPatternOrientation>(0)
     const bpm = ref<number>(vtgBpmControl.default)
     const scale = ref<number>(vtgScaleControl.default)
     const thick = ref<number>(vtgThickControl.default)
@@ -63,6 +68,7 @@ export const useConceptsStore = defineStore(
       speedRatio.value = vtgDefaultSpeedRatio
       swapProps.value = false
       reversePlane.value = false
+      orientation.value = 0
       bpm.value = vtgBpmControl.default
       scale.value = vtgScaleControl.default
       thick.value = vtgThickControl.default
@@ -215,6 +221,7 @@ export const useConceptsStore = defineStore(
       speedRatio,
       swapProps,
       reversePlane,
+      orientation,
       bpm,
       scale,
       thick,
@@ -260,6 +267,7 @@ export const useConceptsStore = defineStore(
         'speedRatio',
         'swapProps',
         'reversePlane',
+        'orientation',
         'spacing',
         'customizeExpanded',
         'classicLayout',
@@ -337,6 +345,7 @@ export const useConceptsStore = defineStore(
         if (!isVtgSpeedRatio(store.speedRatio)) {
           store.speedRatio = vtgDefaultSpeedRatio
         }
+        if (!vtgPatternOrientations.includes(store.orientation)) store.orientation = 0
         if (
           !Number.isInteger(store.spacing) ||
           store.spacing < vtgSpacingControl.min ||

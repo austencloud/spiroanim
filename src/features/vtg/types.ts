@@ -228,7 +228,7 @@ export interface QtrPatternMatch extends VtgPatternMatch {
 }
 
 export type QtrPatternMatchPreferences = VtgPatternMatchPreferences &
-  Pick<QtrPatternMatch, 'quarters'>
+  Pick<QtrPatternMatch, 'quarters' | 'orientation'>
 
 export type VtgReadableAnimation = Partial<
   Omit<RootReadable, 'props'> & Pick<RootDataFinal, 'speed' | 'type' | 'turns' | 'depth'>

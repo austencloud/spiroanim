@@ -76,6 +76,18 @@ describe('Quarters side-header prop states', () => {
     ])
   })
 
+  it.each([
+    { swapProps: false, reversePlane: false },
+    { swapProps: true, reversePlane: false },
+    { swapProps: false, reversePlane: true },
+    { swapProps: true, reversePlane: true },
+  ])('keeps all six row headers distinct with %o', (options) => {
+    const signatures = ([1, 2, 3, 4, 5, 6] as const).map((row) =>
+      JSON.stringify(getStates(row, options)),
+    )
+    expect(new Set(signatures)).toHaveLength(6)
+  })
+
   it('keeps rows 1/2 and 3/4 distinct when Swap is enabled', () => {
     expect(getStates(1, { swapProps: true })).toEqual([
       { position: 'right', facing: 'out' },
@@ -106,4 +118,5 @@ describe('Quarters side-header prop states', () => {
       getQtrSidePropStates({ ...baseOptions, speedRatio: '1:5' }),
     )
   })
+
 })

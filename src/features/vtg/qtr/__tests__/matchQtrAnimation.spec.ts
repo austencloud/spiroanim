@@ -73,6 +73,25 @@ describe('Qtr animation matching', () => {
     },
   )
 
+  it('retains a preferred equivalent rotation during control hydration', () => {
+    const selection = {
+      reference: '5-1',
+      speedRatio: '1:3',
+      quarters: 1,
+      orientation: -45,
+    } as const satisfies QtrPatternSelection
+    const animation = createQtrAnimation(selection)
+
+    expect(
+      findQtrPatternMatch(animation, {
+        quarters: 1,
+        swapProps: false,
+        reversePlane: false,
+        orientation: -45,
+      }),
+    ).toMatchObject({ orientation: -45 })
+  })
+
   it.each(vtgTransitionBeats)('detects the %s-beat reciprocal transition', (transitionBeats) => {
     const selection = {
       reference: '5-1',

@@ -253,7 +253,14 @@ const playbackTransformationCount = (match: QtrPatternMatch) => Number(match.tra
 // one exists, and use rotated candidates only for signatures the unrotated catalog cannot cover.
 const preferUnrotatedMatches = (
   matches: readonly QtrPatternMatch[],
+  preferences?: QtrPatternMatchPreferences,
 ): readonly QtrPatternMatch[] => {
+  if (preferences?.orientation !== undefined) {
+    const preferred = matches.filter(
+      (match) => (match.orientation ?? 0) === preferences.orientation,
+    )
+    if (preferred.length > 0) return preferred
+  }
   const unrotated = matches.filter((match) => (match.orientation ?? 0) === 0)
   return unrotated.length > 0 ? unrotated : matches
 }
@@ -270,7 +277,16 @@ export const findQtrPatternMatch = (
   preferences?: QtrPatternMatchPreferences,
   rotationFilter?: VtgPatternRotationFilter,
 ): QtrPatternMatch | undefined =>
-  [...preferUnrotatedMatches(findQtrPatternMatchesInternal(animation, rotationFilter, true))].sort(
+  [
+    ...preferUnrotatedMatches(
+      findQtrPatternMatchesInternal(
+        animation,
+        rotationFilter,
+        preferences?.orientation === undefined || preferences.orientation === 0,
+      ),
+      preferences,
+    ),
+  ].sort(
     (first, second) => {
       if (preferences) {
         const preferenceDifference =

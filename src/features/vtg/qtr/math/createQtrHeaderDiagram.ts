@@ -110,7 +110,7 @@ export const getQtrSidePropStates = ({
 }: QtrSideDiagramOptions): readonly [QtrPropState, QtrPropState] =>
   getVtgQuarterReferencePropStates({
     ...options,
-    reference: `1-${row}`,
+    reference: `${row}-1`,
   })
 
 const createPlacement = ({ position, facing }: QtrPropState): VtgPropPlacement => {

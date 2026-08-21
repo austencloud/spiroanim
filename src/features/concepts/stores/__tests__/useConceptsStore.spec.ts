@@ -41,6 +41,7 @@ describe('useConceptsStore', () => {
     expect(store.speedRatio).toBe('1:3')
     expect(store.swapProps).toBe(false)
     expect(store.reversePlane).toBe(false)
+    expect(store.orientation).toBe(0)
     expect(store.bpm).toBe(40)
     expect(store.scale).toBe(0.8)
     expect(store.thick).toBe(5)
@@ -65,6 +66,16 @@ describe('useConceptsStore', () => {
 
     const second = mountStore()
     expect(second.store.classicLayout).toBe(false)
+    second.app.unmount()
+  })
+
+  it('persists the selected pattern orientation', () => {
+    const first = mountStore()
+    first.store.orientation = -45
+    first.app.unmount()
+
+    const second = mountStore()
+    expect(second.store.orientation).toBe(-45)
     second.app.unmount()
   })
 

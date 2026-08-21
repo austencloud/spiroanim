@@ -165,6 +165,7 @@ describe('VtgPane', () => {
 
   it('switches the matrix and headers when the integrated QTR checkbox is enabled', async () => {
     const wrapper = mount(VtgPane)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]').setValue(false)
     const qtr = wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]')
     const beat = wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]')
     const transition = wrapper.get('[data-role="vtg-transition"]')
@@ -195,6 +196,13 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-column-headers"] [data-role="vtg-prop"]')).toHaveLength(
       0,
     )
+    const sideHeaderSignatures = wrapper
+      .get('[data-role="vtg-sidebar"]')
+      .findAll('[data-role="vtg-rule-card"]')
+      .map((header) =>
+        header.findAll('[data-role="vtg-prop"]').map((prop) => prop.html()).join('|'),
+      )
+    expect(new Set(sideHeaderSignatures)).toHaveLength(6)
     const firstSideProps = wrapper.findAll(
       '[data-role="vtg-sidebar"] [data-role="vtg-rule-card"]:first-child [data-role="vtg-prop"]',
     )
@@ -225,6 +233,16 @@ describe('VtgPane', () => {
     expect(
       wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]').attributes('aria-label'),
     ).toBe('TOG SPLIT rule 5')
+
+    await wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').setValue('90')
+    expect(
+      wrapper
+        .get('[data-role="vtg-sidebar"] [aria-label$="rule 1"] .vtg-rule-card__diagram')
+        .attributes('style'),
+    ).toContain('rotate(90deg)')
+    await wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').setValue('0')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]').setValue(true)
+    wrapper.unmount()
   })
 
   it('disables Qtr header tooltips and derives Quarter cell descriptions', async () => {

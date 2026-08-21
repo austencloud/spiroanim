@@ -128,6 +128,7 @@
             :tooltip-disabled="isQtr"
             :reversed="sideHeaderReversed"
             :mirror-props="!isQtr"
+            :diagram-rotation="isQtr ? orientation : 0"
             @select="selectRow(rule.sourceNumber ?? rule.number)"
           />
         </template>
@@ -189,6 +190,7 @@
           :tooltip-disabled="isQtr"
           :reversed="sideHeaderReversed"
           :mirror-props="!isQtr"
+          :diagram-rotation="isQtr ? orientation : 0"
           @select="selectRow(rule.sourceNumber ?? rule.number)"
         />
       </div>
@@ -471,6 +473,7 @@ const {
   speedRatio,
   swapProps,
   reversePlane,
+  orientation,
   bpm,
   scale,
   thick,
@@ -510,7 +513,6 @@ watch(moreRatios, (enabled) => {
   }
 })
 const beat = ref<VtgBeat>(1)
-const orientation = ref<VtgPatternOrientation>(getDefaultVtgPatternOrientation(speedRatio.value))
 const propRotationOffsets = ref<readonly [number, number]>()
 const initialTurnsOffset = ref<VtgTransitionInitialTurnsOffset>()
 const initialTurnsOffsetBeat = ref<VtgBeat>()
@@ -1325,6 +1327,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     swapProps: swapProps.value,
     reversePlane: reversePlane.value,
     quarters: 1 as const,
+    orientation: orientation.value,
   }
 
   let result
