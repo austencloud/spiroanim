@@ -13,6 +13,10 @@ import { MathUtils, Vector3 } from 'three'
 const doubledFourBeatIntervalCount = 8
 const getBuilderPieceIntervalCount = (selection: VtgPatternSelection): number =>
   getVtgTimingCycleCount(selection.speedRatio) * doubledFourBeatIntervalCount
+const normalizeSignedAngle = (angle: number): number => {
+  const normalized = ((angle % 360) + 360) % 360
+  return normalized > 180 ? normalized - 360 : normalized
+}
 const normalizeTravelPlane = (plane: number): 0 | 180 =>
   Math.abs(((plane % 360) + 360) % 360) === 180 ? 180 : 0
 
@@ -28,11 +32,11 @@ const rebaseSourceTravelPlane = (
   const sourceOutgoingOrthogonal = new Vector3()
     .crossVectors(new Vector3().fromArray(sourceTarget.posx), sourcePosition)
     .normalize()
-  return (
+  return normalizeSignedAngle(
     sourceStart.plane +
-    MathUtils.radToDeg(
-      orthoAngle(sourcePosition, sourceOutgoingOrthogonal, sourcePositionReference),
-    )
+      MathUtils.radToDeg(
+        orthoAngle(sourcePosition, sourceOutgoingOrthogonal, sourcePositionReference),
+      ),
   )
 }
 

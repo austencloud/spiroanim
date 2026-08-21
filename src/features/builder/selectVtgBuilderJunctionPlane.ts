@@ -8,6 +8,11 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const planeMasks = [0, 1, 2, 3] as const
+const normalizeSignedAngle = (angle: number): number => {
+  const normalized = ((angle % 360) + 360) % 360
+  return normalized > 180 ? normalized - 360 : normalized
+}
+const reverseDirectionAngle = (angle: number): number => normalizeSignedAngle(angle + 180)
 
 const adjustJunctionDirections = (
   candidate: RootDataFinal,
@@ -34,8 +39,12 @@ const adjustJunctionDirections = (
           frameIndex === targetFrameIndex
             ? {
                 ...frame,
-                ...(reversePlane ? { plane: compiledRelationship.plane + 180 } : undefined),
-                ...(reverseAxis ? { axis: compiledRelationship.axis + 180 } : undefined),
+                ...(reversePlane
+                  ? { plane: reverseDirectionAngle(compiledRelationship.plane) }
+                  : undefined),
+                ...(reverseAxis
+                  ? { axis: reverseDirectionAngle(compiledRelationship.axis) }
+                  : undefined),
               }
             : frame,
         ),
@@ -67,7 +76,7 @@ export const selectVtgBuilderJunctionPlane = (
                 ...prop,
                 anim: prop.anim.map((frame, frameIndex) =>
                   frameIndex === targetFrameIndex
-                    ? { ...frame, plane: compiledRelationship.plane + 180 }
+                    ? { ...frame, plane: reverseDirectionAngle(compiledRelationship.plane) }
                     : frame,
                 ),
               }

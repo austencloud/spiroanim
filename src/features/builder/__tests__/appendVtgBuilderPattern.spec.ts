@@ -248,6 +248,32 @@ describe('appendVtgBuilderPattern', () => {
     })
   })
 
+  it('preserves appended AA / OO after a version 8 query round trip', async () => {
+    const version = await loadSpiroAnimQSVersion(8)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      8,
+    )
+    const current = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew48Yk11Y&p0=Q__.blE_______s_.5JEQpg.......&m0=_1_mxqv__&p1=N__.blE_______s_.5JEQpg.......&c=_i_bhq&v=8',
+        ),
+      ),
+    )
+
+    const result = appendVtgBuilderPattern(current, { reference: '1-2', speedRatio: '1:3' })
+    const encoded = result && codec.encodeQS(result, false)
+    const reloaded = encoded && codec.decodeQS(encoded)
+    const appended = reloaded && createVtgTransitionPreviewAnimations(reloaded)?.at(-1)
+
+    expect(appended && getVtgBuilderMotion(appended)).toEqual({
+      spins: ['A', 'A'],
+      directions: ['O', 'O'],
+    })
+  })
+
   it('preserves the VTG 180 transform after removing the source first frame', () => {
     const current = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     if (!current) throw new Error('Expected a supported VTG pattern')
