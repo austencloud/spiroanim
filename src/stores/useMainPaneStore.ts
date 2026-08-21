@@ -1,6 +1,7 @@
 // src\stores\SpiroAnim\panes\useMainPaneStore.ts
 
 import { createPaneStore } from '@/stores/createPaneStore'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 
 /**
  * Defines the logical "views" that can be dynamically assigned to a pane.
@@ -95,4 +96,5 @@ export const useMainPaneStore = createPaneStore(
     vtg: 'concepts',
   },
   ['builder'],
+  (view) => view !== 'editor' || useEditorAccessStore().editorEnabled,
 )

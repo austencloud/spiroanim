@@ -110,6 +110,7 @@ describe('AppNavigationMenu', () => {
       'Export Image',
       'Export Video',
       'Tracer: Off',
+      'Enable Editor',
       'Home',
       'About',
       'Reset App',
@@ -169,6 +170,9 @@ describe('AppNavigationMenu', () => {
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Tracer: Off')
+
+    await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement?.textContent).toContain('Enable Editor')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Home')
@@ -239,6 +243,27 @@ describe('AppNavigationMenu', () => {
     wrapper.unmount()
   })
 
+  it('toggles Editor rotation access independently of Player visibility', async () => {
+    const paneStore = useMainPaneStore()
+    paneStore.parents.player = 'hidden'
+    paneStore.parents.timeline = 'left'
+    const { wrapper } = await mountMenu()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    const enableItem = wrapper.get('.editor-access-menu-item')
+    expect(enableItem.text()).toBe('Enable Editor')
+    expect(enableItem.attributes('aria-pressed')).toBe('false')
+
+    await enableItem.trigger('click')
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    const disableItem = wrapper.get('.editor-access-menu-item')
+    expect(disableItem.text()).toBe('Disable Editor')
+    expect(disableItem.attributes('aria-pressed')).toBe('true')
+    wrapper.unmount()
+  })
+
   it('shows player actions only while the player view is visible', async () => {
     const paneStore = useMainPaneStore()
     paneStore.setViewInPane('editor', 'left')
@@ -249,6 +274,7 @@ describe('AppNavigationMenu', () => {
     expect(wrapper.find('.tracer-menu-item').exists()).toBe(false)
     expect(wrapper.find('.export-image-menu-item').exists()).toBe(false)
     expect(wrapper.find('.export-video-menu-item').exists()).toBe(false)
+    expect(wrapper.get('.editor-access-menu-item').text()).toBe('Enable Editor')
 
     wrapper.unmount()
   })
@@ -333,6 +359,7 @@ describe('AppNavigationMenu', () => {
       'Export Image',
       'Export Video',
       'Tracer: Off',
+      'Enable Editor',
     ])
 
     await wrapper.get('.share-menu-item').trigger('click')
@@ -454,6 +481,7 @@ describe('AppNavigationMenu', () => {
       'Export Image',
       'Export Video',
       'Tracer: Off',
+      'Enable Editor',
       'Home',
       'About',
       'Reset App',

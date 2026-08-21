@@ -111,9 +111,9 @@
             :max="vtgScaleControl.max"
             :step="vtgScaleControl.step"
             :data-role="`${rolePrefix}-scale`"
-            @pointerdown="beginPointerSliderHistory"
-            @pointerup="endPointerSliderHistory"
-            @pointercancel="cancelPointerSliderHistory"
+            @pointerdown="beginPointerSlider"
+            @pointerup="endPointerSlider"
+            @pointercancel="cancelPointerSlider"
             @keydown="beginSliderHistory"
             @keyup="endSliderHistory"
             @blur="endSliderHistory"
@@ -131,9 +131,9 @@
             :max="vtgThickControl.max"
             :step="vtgThickControl.step"
             :data-role="`${rolePrefix}-thick`"
-            @pointerdown="beginPointerSliderHistory"
-            @pointerup="endPointerSliderHistory"
-            @pointercancel="cancelPointerSliderHistory"
+            @pointerdown="beginPointerSlider"
+            @pointerup="endPointerSlider"
+            @pointercancel="cancelPointerSlider"
             @keydown="beginSliderHistory"
             @keyup="endSliderHistory"
             @blur="endSliderHistory"
@@ -151,9 +151,9 @@
             :max="vtgSpacingControl.max"
             :step="vtgSpacingControl.step"
             :data-role="`${rolePrefix}-spacing`"
-            @pointerdown="beginPointerSliderHistory"
-            @pointerup="endPointerSliderHistory"
-            @pointercancel="cancelPointerSliderHistory"
+            @pointerdown="beginPointerSlider"
+            @pointerup="endPointerSlider"
+            @pointercancel="cancelPointerSlider"
             @keydown="beginSliderHistory"
             @keyup="endSliderHistory"
             @blur="endSliderHistory"
@@ -171,9 +171,9 @@
             :max="vtgBpmControl.max"
             :step="vtgBpmControl.step"
             :data-role="`${rolePrefix}-bpm`"
-            @pointerdown="beginPointerSliderHistory"
-            @pointerup="endPointerSliderHistory"
-            @pointercancel="cancelPointerSliderHistory"
+            @pointerdown="beginPointerSlider"
+            @pointerup="endPointerSlider"
+            @pointercancel="cancelPointerSlider"
             @keydown="beginSliderHistory"
             @keyup="endSliderHistory"
             @blur="endSliderHistory"
@@ -211,7 +211,7 @@ import {
 } from '@/features/vtg/data/vtgPlayerSettings'
 import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
-import { isTouchDevice } from '@/utils/device'
+import { useTouchSafeRangeSlider } from '@/composables/useTouchSafeRangeSlider'
 import { COLORS } from '@/domain/animation/AnimStruct'
 
 const props = withDefaults(
@@ -252,14 +252,6 @@ watch(
 
 const { beginHistoryGroup, endHistoryGroup } = useQSMainStore()
 let sliderHistoryActive = false
-const protectTouchScrolling = typeof navigator !== 'undefined' && isTouchDevice()
-let touchSliderStart:
-  | {
-      input: HTMLInputElement
-      pointerId: number
-      value: string
-    }
-  | undefined
 
 const beginSliderHistory = () => {
   if (sliderHistoryActive || props.animation === undefined) return
@@ -275,38 +267,8 @@ const endSliderHistory = () => {
   endHistoryGroup()
 }
 
-const beginPointerSliderHistory = (event: PointerEvent) => {
-  if (
-    protectTouchScrolling &&
-    event.pointerType !== 'mouse' &&
-    event.currentTarget instanceof HTMLInputElement
-  ) {
-    touchSliderStart = {
-      input: event.currentTarget,
-      pointerId: event.pointerId,
-      value: event.currentTarget.value,
-    }
-  }
-
-  beginSliderHistory()
-}
-
-const endPointerSliderHistory = () => {
-  touchSliderStart = undefined
-  endSliderHistory()
-}
-
-const cancelPointerSliderHistory = (event: PointerEvent) => {
-  const start = touchSliderStart
-  touchSliderStart = undefined
-
-  if (start?.pointerId === event.pointerId && start.input.value !== start.value) {
-    start.input.value = start.value
-    start.input.dispatchEvent(new Event('input', { bubbles: true }))
-  }
-
-  endSliderHistory()
-}
+const { protectTouchScrolling, beginPointerSlider, endPointerSlider, cancelPointerSlider } =
+  useTouchSafeRangeSlider({ begin: beginSliderHistory, end: endSliderHistory })
 
 onBeforeUnmount(endSliderHistory)
 </script>

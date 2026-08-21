@@ -24,8 +24,8 @@
           <div>
             <h2>Built through iteration</h2>
             <p>
-              The project has evolved alongside its ideas, gradually finding its focus as a 3D
-              rendering and editing tool for flow arts props.
+              The project has evolved alongside its ideas, gradually finding its focus as an
+              advanced concepts exploration tool for flow arts props.
             </p>
           </div>
         </div>

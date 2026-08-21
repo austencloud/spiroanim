@@ -16,7 +16,7 @@
         <h1 id="kinetic-alphabet-title">The Kinetic Alphabet</h1>
         <p class="kinetic-alphabet-pane__lede">Possibly coming soon</p>
         <p class="kinetic-alphabet-pane__note" data-role="tka-development-note">
-          Austin might be working on something...
+          Austin might be working on something for us...
         </p>
       </div>
     </div>

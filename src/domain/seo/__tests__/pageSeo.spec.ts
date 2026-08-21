@@ -5,7 +5,7 @@ import { getPageSeo } from '@/domain/seo/pageSeo'
 describe('page SEO metadata', () => {
   it('makes the prerendered public pages indexable', () => {
     expect(getPageSeo('/')).toMatchObject({
-      appTitle: '3D Flow Arts Animation',
+      appTitle: 'Flow Arts Concepts',
       canonicalPath: '/',
       robots: 'index, follow',
     })
@@ -24,7 +24,7 @@ describe('page SEO metadata', () => {
 
   it('keeps application and unknown routes out of search indexes', () => {
     expect(getPageSeo('/app').robots).toBe('noindex, nofollow')
-    expect(getPageSeo('/app').appTitle).toBe('3D Flow Arts Animation')
+    expect(getPageSeo('/app').appTitle).toBe('Flow Arts Concepts')
     expect(getPageSeo('/missing').robots).toBe('noindex, nofollow')
   })
 })

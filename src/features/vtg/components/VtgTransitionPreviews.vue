@@ -5,6 +5,7 @@
     :class="{
       'vtg-transition-previews--drag-active': dragActive,
       'vtg-transition-previews--has-selection': selectedIndex !== undefined,
+      'vtg-transition-previews--touch-sliders': protectTouchScrolling,
     }"
     data-role="vtg-transition-previews"
     :style="{ '--vtg-transition-preview-columns': String(columns) }"
@@ -117,9 +118,9 @@
           :aria-valuetext="`${beatCounts[index]} beats`"
           data-role="vtg-transition-preview-beats"
           @input="updateBeatCount(index, $event)"
-          @pointerdown="emit('sliderStart')"
-          @pointerup="emit('sliderEnd')"
-          @pointercancel="emit('sliderEnd')"
+          @pointerdown="beginPointerSlider"
+          @pointerup="endPointerSlider"
+          @pointercancel="cancelPointerSlider"
           @keydown="emit('sliderStart')"
           @keyup="emit('sliderEnd')"
           @blur="emit('sliderEnd')"
@@ -187,6 +188,7 @@ import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import { mdiRotate3dVariant, mdiSwapHorizontal, mdiTrashCanOutline } from '@mdi/js'
 import { isTouchDevice } from '@/utils/device'
+import { useTouchSafeRangeSlider } from '@/composables/useTouchSafeRangeSlider'
 import {
   builderPatternPointerDropEvent,
   builderPatternPointerEndEvent,
@@ -222,6 +224,11 @@ const emit = defineEmits<{
 }>()
 const dragActive = ref(false)
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
+const { protectTouchScrolling, beginPointerSlider, endPointerSlider, cancelPointerSlider } =
+  useTouchSafeRangeSlider({
+    begin: () => emit('sliderStart'),
+    end: () => emit('sliderEnd'),
+  })
 const previewRelationships = computed(() => props.relationships)
 const previewLabels = computed(() => previewRelationships.value.map(({ label }) => label))
 const previewRatios = computed(() => props.animations.map(inferVtgDoubledPortionSpeedRatio))
@@ -611,6 +618,10 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   min-width: 0;
   accent-color: var(--color-action-primary);
   cursor: pointer;
+}
+
+.vtg-transition-previews--touch-sliders .vtg-transition-previews__beats input {
+  touch-action: pan-y;
 }
 
 .vtg-transition-previews__beats input:focus-visible {

@@ -9,9 +9,9 @@
 
         <section class="project-note" aria-labelledby="preview-title">
           <p class="eyebrow">Early preview</p>
-          <h2 id="preview-title">A 3D playground for flow arts</h2>
+          <h2 id="preview-title">A playground for advanced flow arts concepts</h2>
           <p>
-            SpiroAnim is a proof-of-concept rendering tool with a basic editor.<br />
+            SpiroAnim is an exploration and visualization tool for advanced flow arts concepts.<br />
             Now includes a VTG3 Generator, a duplicate of Vulkan Tech Gospel v3 with several
             functional additions and upgrades.<br />
             Credit to:
@@ -29,7 +29,7 @@
           <p class="eyebrow">Why SpiroAnim exists</p>
           <h2 id="creator-note-title">Built for the way I want to animate</h2>
           <p>
-            I always wanted to animate my POI the way I imagined it, potentially in 3D. It is
+            I always wanted to explore and animate POI concepts the way I imagined them. It is
             finally here, and more recently it has evolved dramatically. SpiroAnim is built for me,
             with the features I want. If you know how to reach me, I might take special requests.
           </p>
@@ -48,8 +48,8 @@
             <h2>The complete workspace lives on desktop</h2>
             <p>
               A high-end mobile device can run SpiroAnim, but desktop provides the best experience:
-              hover tooltips, more room for the player, editor, and timeline, plus additional
-              features that may not be available in the touch layout.
+              hover tooltips, more room for playback, concept exploration, and timeline controls,
+              plus additional features that may not be available in the touch layout.
             </p>
           </div>
 

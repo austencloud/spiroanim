@@ -30,7 +30,9 @@ describe('Landing view', () => {
     expect(wrapper.get('h1').text()).toBe('SpiroAnim.com')
     expect(wrapper.get('img.brand-mark').attributes('src')).toBe('/images/app-icons/pwa-source.svg')
     expect(wrapper.get('img.brand-mark').attributes('alt')).toBe('')
-    expect(wrapper.get('.project-note').text()).toContain('proof-of-concept rendering tool')
+    expect(wrapper.get('.project-note').text()).toContain(
+      'exploration and visualization tool for advanced flow arts concepts',
+    )
     expect(wrapper.get('.project-note').text()).not.toContain('More features are on the way')
     expect(wrapper.get('.project-note').text()).not.toContain('rough edges')
     expect(wrapper.get('.project-note').text()).toContain(
@@ -47,7 +49,7 @@ describe('Landing view', () => {
     })
     expect(wrapper.get('.creator-note h2').text()).toBe('Built for the way I want to animate')
     expect(wrapper.get('.creator-note').text()).toContain(
-      'I always wanted to animate my POI the way I imagined it, potentially in 3D.',
+      'I always wanted to explore and animate POI concepts the way I imagined them.',
     )
     expect(wrapper.get('.creator-note').text()).toContain('SpiroAnim is built for me')
     expect(wrapper.get('.creator-note').text()).toContain('I might take special requests')

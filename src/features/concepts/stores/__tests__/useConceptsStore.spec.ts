@@ -367,6 +367,15 @@ describe('useConceptsStore', () => {
     app.unmount()
   })
 
+  it('hydrates Third Order as the selected concept', () => {
+    localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: 'to' }))
+
+    const { app, store } = mountStore()
+
+    expect(store.selectedConcept).toBe('to')
+    app.unmount()
+  })
+
   it('hydrates Quarter Space Tech as the selected concept', () => {
     localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: 'qst' }))
 

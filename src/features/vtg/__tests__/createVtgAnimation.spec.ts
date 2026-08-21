@@ -111,11 +111,12 @@ describe('createVtgAnimation', () => {
   })
 
   it.each([
-    ['2:3', '1:3'],
-    ['2:5', '1:5'],
+    ['2:1', '1:3'],
+    ['2:3', '1:2'],
+    ['2:5', '1:4'],
     ['1:3v2', '1:3'],
-    ['2:3v5', '1:5'],
-  ] as const)('uses denominator-based Scale adjustment for %s', (actual, expected) => {
+    ['2:3v5', '1:4'],
+  ] as const)('loads %s one Scale level below the corresponding 1:x ratio', (actual, expected) => {
     expect(getAdjustedVtgScale(0.8, actual)).toBe(getAdjustedVtgScale(0.8, expected))
   })
 

@@ -20,6 +20,7 @@
         <option value="vtg">Vulkan Tech Gospel</option>
         <option value="8stp">Eight Step</option>
         <option value="qst">Quarter Space Tech</option>
+        <option value="to">Third Order</option>
         <option value="tka">The Kinetic Alphabet</option>
       </select>
 
@@ -68,6 +69,7 @@
       :pattern-matcher="patternMatcher"
       @pattern-select="emit('patternSelect', $event)"
     />
+    <ThirdOrderPane v-else-if="selectedConcept === 'to'" />
     <KineticAlphabetPane v-else />
   </section>
 </template>
@@ -84,6 +86,7 @@ import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import KineticAlphabetPane from '@/features/kinetic-alphabet/components/KineticAlphabetPane.vue'
 import QuarterSpaceTechPane from '@/features/quarter-space-tech/components/QuarterSpaceTechPane.vue'
+import ThirdOrderPane from '@/features/third-order/components/ThirdOrderPane.vue'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { isTouchDevice } from '@/utils/device'
@@ -107,7 +110,9 @@ const emit = defineEmits<{
 
 const conceptsStore = useConceptsStore()
 const { quickSlotCount, selectedConcept } = storeToRefs(conceptsStore)
-const usesPatternMatching = computed(() => selectedConcept.value !== 'tka' && !props.builderActive)
+const usesPatternMatching = computed(
+  () => selectedConcept.value !== 'to' && selectedConcept.value !== 'tka' && !props.builderActive,
+)
 const patternMatcher = usePatternMatchingClient(usesPatternMatching)
 
 const createQuickSlots = () => {

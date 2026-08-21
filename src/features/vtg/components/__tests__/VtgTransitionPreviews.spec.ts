@@ -181,6 +181,34 @@ describe('VtgTransitionPreviews', () => {
     expect(shortAnimation.props.every((prop) => prop.anim.length === 2)).toBe(true)
   })
 
+  it('uses the shared touch slider behavior for Builder beat controls', async () => {
+    device.touch = true
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [relationship],
+        refreshKey: 'touch-slider',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        scale: 1,
+      },
+    })
+    const slider = wrapper.get<HTMLInputElement>('[data-role="vtg-transition-preview-beats"]')
+
+    await slider.trigger('pointerdown', { pointerId: 7, pointerType: 'touch' })
+    slider.element.value = '2'
+    await slider.trigger('input')
+    await slider.trigger('pointercancel', { pointerId: 7, pointerType: 'touch' })
+
+    expect(wrapper.classes()).toContain('vtg-transition-previews--touch-sliders')
+    expect(wrapper.emitted('beatChange')).toEqual([
+      [0, 2],
+      [0, 1],
+    ])
+    expect(wrapper.emitted('sliderStart')).toHaveLength(1)
+    expect(wrapper.emitted('sliderEnd')).toHaveLength(1)
+  })
+
   it('accepts a pointer drag drop on touch devices', async () => {
     device.touch = true
     const wrapper = mount(VtgTransitionPreviews, {

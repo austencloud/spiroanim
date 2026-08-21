@@ -57,6 +57,7 @@ export function createPaneStore<
   defaults?: Partial<Record<Exclude<Panes[number], Hidden>, Views[number]>>,
   legacyViewKeys?: Readonly<Record<string, Views[number]>>,
   nonRotatingViewKeys: readonly Views[number][] = [],
+  isRotationEnabled: (view: Views[number]) => boolean = () => true,
 ) {
   // Type of individual view name (e.g. 'player' | 'editor')
   type ElementType = Views[number]
@@ -157,7 +158,7 @@ export function createPaneStore<
         // Rotate through the queue to find the next valid view
         for (let i = 1; i <= viewKeys.length; i++) {
           const next = viewKeys[(currentIndex + i) % viewKeys.length] as ElementType
-          if (!used.has(next) && !nonRotatingViewKeys.includes(next)) {
+          if (!used.has(next) && !nonRotatingViewKeys.includes(next) && isRotationEnabled(next)) {
             if (currentView) parents.value[currentView] = hiddenPane
             parents.value[next] = pane
             parents.value = { ...parents.value } // Trigger shallow watchers

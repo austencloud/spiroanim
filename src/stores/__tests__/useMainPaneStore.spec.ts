@@ -4,6 +4,7 @@ import { createApp, defineComponent, h } from 'vue'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { paneKeysMain, useMainPaneStore, viewKeysMain } from '@/stores/useMainPaneStore'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 
 const mountStore = (persist = false) => {
   const pinia = createPinia()
@@ -45,18 +46,40 @@ describe('useMainPaneStore', () => {
     app.unmount()
   })
 
-  it('rotates to the next view not used by another visible pane', () => {
+  it('skips Editor during rotation while Editor access is disabled', () => {
     const { app, store } = mountStore()
 
     store.rotatePane('left')
 
     expect(store.parents).toEqual({
       player: 'hidden',
-      editor: 'left',
-      timeline: 'hidden',
+      editor: 'hidden',
+      timeline: 'left',
       concepts: 'right',
       builder: 'hidden',
     })
+    app.unmount()
+  })
+
+  it('still permits explicit Editor pane assignment without enabling rotation access', () => {
+    const { app, store } = mountStore()
+
+    store.setViewInPane('editor', 'left')
+
+    expect(store.parents.editor).toBe('left')
+    expect(useEditorAccessStore().editorEnabled).toBe(false)
+    store.rotatePane('left')
+    expect(store.parents.editor).toBe('hidden')
+    app.unmount()
+  })
+
+  it('includes Editor in rotation after Editor access is enabled', () => {
+    const { app, store } = mountStore()
+    useEditorAccessStore().editorEnabled = true
+
+    store.rotatePane('left')
+
+    expect(store.parents.editor).toBe('left')
     app.unmount()
   })
 

@@ -12,8 +12,8 @@ Production hosting must:
   prerendered HTML;
 - serve the generated client-only directory index files for `/app`, `/player`, `/editor`,
   `/timeline`, `/concepts`, `/vulkan-tech-gospel`, `/quarterspacing`, `/eight-step`,
-  `/quarter-space-tech`, `/the-kinetic-alphabet`, and the pane-layout aliases. A blanket rewrite to
-  `/index.html` would
+  `/quarter-space-tech`, `/third-order`, `/the-kinetic-alphabet`, and the pane-layout aliases. A
+  blanket rewrite to `/index.html` would
   replace this separation and should not be used;
 - serve both web manifests as `application/manifest+json`;
 - revalidate HTML files, `/manifest.webmanifest`, `/manifest-dev.webmanifest`, and `/sw.js` rather

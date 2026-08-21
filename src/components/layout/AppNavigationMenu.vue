@@ -105,6 +105,16 @@
             <span>{{ tracerLabel }}</span>
           </button>
         </template>
+        <button
+          class="menu-link menu-action editor-access-menu-item"
+          type="button"
+          role="menuitem"
+          :aria-pressed="editorEnabled"
+          @click="toggleEditorAccess"
+        >
+          <BaseIcon :path="editorAccessIcon" :size="22" />
+          <span>{{ editorAccessLabel }}</span>
+        </button>
       </section>
       <section class="menu-group" role="group" aria-labelledby="navigation-heading">
         <h2 id="navigation-heading">Navigation</h2>
@@ -161,6 +171,8 @@ import {
   mdiLightbulbOnOutline,
   mdiMovieOpenOutline,
   mdiPanoramaVariant,
+  mdiPencil,
+  mdiPencilOff,
   mdiRestoreAlert,
   mdiShareVariantOutline,
   mdiViewGridOutline,
@@ -182,6 +194,7 @@ import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 import { hasVideoExportApi, probeVideoExportCodecs } from '@/services/videoExportSupport'
 import { videoExportDurationMs } from '@/math/videoExportTiming'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import type {
   ImageExportFeature,
@@ -249,6 +262,9 @@ const playerVisible = computed(() => viewVisible.value.player)
 const videoExportAvailable = ref(false)
 const tracerIcon = computed(() => (TRACER.value ? mdiFirework : mdiFireworkOff))
 const tracerLabel = computed(() => (TRACER.value ? 'Tracer: On' : 'Tracer: Off'))
+const { editorEnabled } = storeToRefs(useEditorAccessStore())
+const editorAccessIcon = computed(() => (editorEnabled.value ? mdiPencilOff : mdiPencil))
+const editorAccessLabel = computed(() => (editorEnabled.value ? 'Disable Editor' : 'Enable Editor'))
 const imageExportFeatures: ImageExportFeature[] = [
   'paths',
   'hands',
@@ -281,6 +297,11 @@ function toggleFullscreenMode() {
 
 function toggleTracerMode() {
   TRACER.value = !TRACER.value
+  closeMenu()
+}
+
+function toggleEditorAccess() {
+  editorEnabled.value = !editorEnabled.value
   closeMenu()
 }
 

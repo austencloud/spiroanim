@@ -32,8 +32,11 @@ export const vtgScaleAdjustmentByDenominator: Readonly<Record<number, number>> =
 const getVtgScaleAdjustment = (speedRatio: VtgSpeedRatio): number => {
   const [leftRatio, rightRatio] = getVtgPropSpeedRatios(speedRatio)
   const getAdjustment = (ratio: typeof leftRatio) => {
-    const denominator = parseVtgIndividualSpeedRatio(ratio)?.denominator
-    return denominator === undefined ? 0 : (vtgScaleAdjustmentByDenominator[denominator] ?? 0)
+    const parts = parseVtgIndividualSpeedRatio(ratio)
+    if (!parts) return 0
+
+    const adjustmentLevel = parts.denominator - (parts.numerator === 2 ? 1 : 0)
+    return vtgScaleAdjustmentByDenominator[adjustmentLevel] ?? 0
   }
   return Math.max(getAdjustment(leftRatio), getAdjustment(rightRatio))
 }
