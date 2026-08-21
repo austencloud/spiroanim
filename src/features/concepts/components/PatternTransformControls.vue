@@ -14,6 +14,19 @@
         </label>
       </template>
     </AppTooltip>
+    <AppTooltip v-if="showClassic" text="Use the classic transposed pattern table layout">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps">
+          <input
+            v-model="classic"
+            type="checkbox"
+            aria-label="Use the classic pattern table layout"
+            :data-role="`${rolePrefix}-classic`"
+          />
+          <span>Classic</span>
+        </label>
+      </template>
+    </AppTooltip>
     <AppTooltip v-if="showSwap" text="Exchange the completed left and right animation tracks">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps">
@@ -87,6 +100,7 @@ const props = withDefaults(
     confirmReset?: boolean
     showSwap?: boolean
     showMore?: boolean
+    showClassic?: boolean
   }>(),
   {
     rolePrefix: 'vtg',
@@ -95,6 +109,7 @@ const props = withDefaults(
     confirmReset: false,
     showSwap: true,
     showMore: false,
+    showClassic: false,
   },
 )
 
@@ -103,6 +118,7 @@ const emit = defineEmits<{
 }>()
 
 const more = defineModel<boolean>('more', { default: false })
+const classic = defineModel<boolean>('classic', { default: false })
 
 const { swapProps, reversePlane } = storeToRefs(useConceptsStore())
 const confirmationOpen = ref(false)

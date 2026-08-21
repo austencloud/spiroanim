@@ -54,7 +54,18 @@ describe('useConceptsStore', () => {
     expect(store.rightPropColor).toBe('Green')
     expect(store.prop).toBe(2)
     expect(store.customizeExpanded).toBe(false)
+    expect(store.classicLayout).toBe(true)
     app.unmount()
+  })
+
+  it('persists the Classic table layout preference', () => {
+    const first = mountStore()
+    first.store.classicLayout = false
+    first.app.unmount()
+
+    const second = mountStore()
+    expect(second.store.classicLayout).toBe(false)
+    second.app.unmount()
   })
 
   it('restores four Quick Slots and allows removing all of them', () => {

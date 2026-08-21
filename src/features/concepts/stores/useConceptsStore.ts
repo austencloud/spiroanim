@@ -54,6 +54,7 @@ export const useConceptsStore = defineStore(
     const leftPropVisible = ref(true)
     const rightPropVisible = ref(true)
     const customizeExpanded = ref(false)
+    const classicLayout = ref(true)
     const leftPropColor = ref<PatternPropColor>(defaultPatternPropColors[0])
     const rightPropColor = ref<PatternPropColor>(defaultPatternPropColors[1])
     const prop = ref<PropInd>(2)
@@ -224,6 +225,7 @@ export const useConceptsStore = defineStore(
       leftPropVisible,
       rightPropVisible,
       customizeExpanded,
+      classicLayout,
       leftPropColor,
       rightPropColor,
       prop,
@@ -260,6 +262,7 @@ export const useConceptsStore = defineStore(
         'reversePlane',
         'spacing',
         'customizeExpanded',
+        'classicLayout',
       ],
       afterHydrate: ({ store }) => {
         const hydratedConcept: string = store.selectedConcept
@@ -342,6 +345,7 @@ export const useConceptsStore = defineStore(
           store.spacing = vtgSpacingControl.default
         }
         if (typeof store.customizeExpanded !== 'boolean') store.customizeExpanded = false
+        if (typeof store.classicLayout !== 'boolean') store.classicLayout = true
       },
     },
   },

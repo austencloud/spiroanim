@@ -201,7 +201,7 @@ const dividerStyle = computed<CSSProperties>(() => {
   inset-inline-start: 0.6cqi;
   display: flex;
   flex-direction: column;
-  font-size: max(0.62rem, 1.7cqi);
+  font-size: max(0.46rem, 1.7cqi);
   font-weight: 800;
   letter-spacing: 0.045em;
   line-height: 0.98;
@@ -213,7 +213,7 @@ const dividerStyle = computed<CSSProperties>(() => {
   z-index: 3;
   inset-inline-end: 1.8cqi;
   inset-block-end: 1.5cqi;
-  font-size: max(1.3rem, 4cqi);
+  font-size: max(0.88rem, 4cqi);
   font-weight: 900;
   line-height: 0.88;
   text-rendering: geometricPrecision;

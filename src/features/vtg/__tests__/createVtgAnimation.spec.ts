@@ -652,7 +652,7 @@ describe('createVtgAnimation', () => {
     expect(maximum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([14, 14])
   })
 
-  it('builds an inferred 1:5 pattern', () => {
+  it('builds a restored 1:5 pattern', () => {
     const animation = createVtgAnimation(createCurrentAnimation(), {
       reference: '5-2',
       speedRatio: '1:5',
@@ -660,11 +660,11 @@ describe('createVtgAnimation', () => {
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
       { arc: 90, scale: 10 },
-      { arc: 45, turns: -270 },
+      { arc: 45, turns: 180 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
       { arc: 90, turns: 180, scale: 10 },
-      { plane: 180, arc: 45 },
+      { plane: 180, arc: 45, turns: -270 },
     ])
   })
 

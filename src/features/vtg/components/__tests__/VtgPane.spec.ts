@@ -312,6 +312,132 @@ describe('VtgPane', () => {
     expect(wrapper.get<HTMLInputElement>('input[value="2:3"]').element.checked).toBe(true)
   })
 
+  it('transposes only the displayed table and moves its swapped top headers to the bottom', async () => {
+    const wrapper = mount(VtgPane)
+    const classic = wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]')
+    const pane = wrapper.get('[data-role="vtg-pane"]')
+    const tile = wrapper.get('[data-cell-reference="2-3"]')
+
+    expect(classic.element.checked).toBe(true)
+    expect(pane.classes()).toContain('vtg-pane--classic')
+
+    await classic.setValue(false)
+
+    expect(pane.classes()).not.toContain('vtg-pane--classic')
+    expect(
+      wrapper.get('[data-cell-reference="2-3"]').element.parentElement?.getAttribute('style'),
+    ).toBe('')
+
+    await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).not.toContain(
+      'vtg-tile__spin-toggle--bottom',
+    )
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).not.toContain(
+      'vtg-tile__spin-toggle--left',
+    )
+    await wrapper.get('[data-cell-reference="5-5"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).not.toContain(
+      'vtg-tile__spin-toggle--bottom',
+    )
+    await wrapper.get('[data-cell-reference="6-5"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+      'vtg-tile__spin-toggle--bottom',
+    )
+    await wrapper.get('[data-cell-reference="6-6"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+      'vtg-tile__spin-toggle--bottom',
+    )
+
+    await selectSpeedRatio(wrapper, '1:2')
+    await wrapper.get('[data-cell-reference="6-5"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+      'vtg-tile__spin-toggle--bottom',
+    )
+    await wrapper.get('[data-cell-reference="6-6"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+      'vtg-tile__spin-toggle--bottom',
+    )
+
+    await selectSpeedRatio(wrapper, '1:3')
+    await classic.setValue(true)
+
+    expect(pane.classes()).toContain('vtg-pane--classic')
+    const classicTile = wrapper.get('[data-cell-reference="2-3"]')
+    expect(classicTile.element.parentElement?.getAttribute('style')).toContain('grid-column: 2')
+    expect(classicTile.element.parentElement?.getAttribute('style')).toContain('grid-row: 4')
+    expect(classicTile.attributes('data-board-column')).toBe('3')
+    expect(classicTile.attributes('data-board-row')).toBe('4')
+    const classicSideHeaders = wrapper
+      .get('[data-role="vtg-sidebar"]')
+      .findAll('[data-role="vtg-rule-card"]')
+    expect(classicSideHeaders[0]?.attributes('aria-label')).toContain('rule 6')
+    expect(classicSideHeaders[5]?.attributes('aria-label')).toContain('rule 1')
+    expect(
+      classicSideHeaders.every((header) => header.classes().includes('vtg-rule-card--vertical')),
+    ).toBe(true)
+    expect(
+      wrapper
+        .get('[data-role="vtg-column-headers"]')
+        .findAll('[data-role="vtg-rule-card"]')
+        .every((header) => header.classes().includes('vtg-rule-card--horizontal')),
+    ).toBe(true)
+
+    await classicTile.trigger('click')
+
+    expect(wrapper.emitted<VtgPatternSelection[]>('patternSelect')?.at(-1)?.[0]?.reference).toBe(
+      '2-3',
+    )
+    expect(
+      wrapper
+        .get('[data-role="vtg-column-headers"]')
+        .findAll('[data-role="vtg-rule-card"]')[1]
+        ?.classes(),
+    ).toContain('vtg-rule-card--accent')
+    expect(
+      wrapper.get('[data-role="vtg-sidebar"]').findAll('[data-role="vtg-rule-card"]')[3]?.classes(),
+    ).toContain('vtg-rule-card--accent')
+
+    await wrapper.get('[data-cell-reference="5-5"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+      'vtg-tile__spin-toggle--bottom',
+    )
+    await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+      'vtg-tile__spin-toggle--top',
+    )
+
+    await selectSpeedRatio(wrapper, '1:2')
+    expect(wrapper.get('[data-cell-reference="2-1"]').classes()).toContain(
+      'vtg-tile--paired-bottom',
+    )
+    expect(wrapper.get('[data-cell-reference="2-2"]').classes()).toContain('vtg-tile--paired-top')
+
+    await wrapper.get('[data-cell-reference="5-5"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+      'vtg-tile__spin-toggle--bottom',
+    )
+    await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+      'vtg-tile__spin-toggle--top',
+    )
+
+    await selectSpeedRatio(wrapper, '2:1')
+    for (const [reference, vertical, horizontal] of [
+      ['5-6', 'top', 'left'],
+      ['6-6', 'top', 'right'],
+      ['5-5', 'bottom', 'left'],
+      ['6-5', 'bottom', 'right'],
+    ] as const) {
+      await wrapper.get(`[data-cell-reference="${reference}"]`).trigger('click')
+      expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+        `vtg-tile__spin-toggle--${vertical}`,
+      )
+      expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
+        `vtg-tile__spin-toggle--${horizontal}`,
+      )
+    }
+  })
+
   it.each(['1:2', '1:4'] as const)(
     'hides top-header labels, diagrams, and dividers at %s while retaining left-header details',
     async (speedRatio) => {
@@ -389,9 +515,9 @@ describe('VtgPane', () => {
   })
 
   it.each([
-    ['1:1', 'TOG IN rule 1'],
+    ['1:1', 'TOG OUT rule 1'],
     ['1:3', 'TOG OUT rule 1'],
-    ['1:5', 'TOG IN rule 1'],
+    ['1:5', 'TOG OUT rule 1'],
   ] as const)(
     'maps the %s top headers by physical column',
     async (speedRatio, firstHeaderLabel) => {
@@ -546,7 +672,7 @@ describe('VtgPane', () => {
       wrapper
         .findAll('.vtg-top-options .concept-pattern-options label span')
         .map((option) => option.text()),
-    ).toEqual(['Swap', '180°'])
+    ).toEqual(['More', 'Classic', 'Swap', '180°'])
 
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
     await swap.setValue(true)
@@ -1983,7 +2109,7 @@ describe('VtgPane', () => {
     const toggle = wrapper.get('[data-role="vtg-spin-toggle"]')
     expect(toggle.text()).toBe('Spin')
     expect(toggle.attributes('aria-pressed')).toBe('false')
-    expect(toggle.classes()).toContain('vtg-tile__spin-toggle--bottom')
+    expect(toggle.classes()).not.toContain('vtg-tile__spin-toggle--bottom')
     expect(wrapper.emitted('patternSelect')).toEqual([
       [{ reference: '5-6', speedRatio: '1:3', isAnti: false }],
     ])
@@ -2297,6 +2423,7 @@ describe('VtgPane', () => {
     'uses one bottom thumbnail per horizontal cell pair at %s',
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
+      await wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]').setValue(false)
       await settlePreviewRendering()
       reportAllBlankDimensions(72, 68)
       await settlePreviewRendering()
@@ -2318,20 +2445,20 @@ describe('VtgPane', () => {
       expect(wrapper.get('[data-cell-reference="1-1"]').classes()).toContain(
         'vtg-tile--paired-left',
       )
-      expect(wrapper.get('[data-cell-reference="2-1"]').classes()).toContain(
+      expect(wrapper.get('[data-cell-reference="1-2"]').classes()).toContain(
         'vtg-tile--paired-right',
       )
       expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label').text()).toBe('TS / TS')
-      expect(wrapper.get('[data-cell-reference="2-1"] .vtg-tile__label').text()).toBe('TO / TO')
-      expect(wrapper.get('[data-cell-reference="1-2"] .vtg-tile__label').text()).toBe('SO / SO')
+      expect(wrapper.get('[data-cell-reference="2-1"] .vtg-tile__label').text()).toBe('SO / SO')
+      expect(wrapper.get('[data-cell-reference="1-2"] .vtg-tile__label').text()).toBe('TO / TO')
 
       await wrapper.get('[data-cell-reference="5-5"]').trigger('click')
       expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
-        'vtg-tile__spin-toggle--paired-left',
+        'vtg-tile__spin-toggle--left',
       )
-      await wrapper.get('[data-cell-reference="6-5"]').trigger('click')
+      await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
       expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
-        'vtg-tile__spin-toggle--paired-right',
+        'vtg-tile__spin-toggle--right',
       )
     },
   )
@@ -2613,6 +2740,26 @@ describe('VtgPane', () => {
     }
   })
 
+  it('keeps Classic visible and transposes the compact Builder table', () => {
+    const wrapper = mount(VtgPane, { props: { builderActive: true } })
+    const classic = wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]')
+    const first = wrapper.get('[data-cell-reference="1-1"]')
+    const last = wrapper.get('[data-cell-reference="2-4"]')
+
+    expect(classic.element.checked).toBe(true)
+    expect(wrapper.get('[data-role="vtg-pane"]').classes()).toContain('vtg-pane--classic')
+    expect(first.element.parentElement?.getAttribute('style')).toContain('grid-column: 1')
+    expect(first.element.parentElement?.getAttribute('style')).toContain('grid-row: 4')
+    expect(last.element.parentElement?.getAttribute('style')).toContain('grid-column: 2')
+    expect(last.element.parentElement?.getAttribute('style')).toContain('grid-row: 1')
+    expect(
+      wrapper.get('[data-role="vtg-sidebar"]').findAll('[data-role="vtg-rule-card"]'),
+    ).toHaveLength(4)
+    expect(
+      wrapper.get('[data-role="vtg-column-headers"]').findAll('[data-role="vtg-rule-card"]'),
+    ).toHaveLength(2)
+  })
+
   it('preserves each compact Builder header rule and its ratio-specific behavior', async () => {
     const wrapper = mount(VtgPane, { props: { builderActive: true } })
     const columns = () => wrapper.get('[data-role="vtg-column-headers"]')
@@ -2620,7 +2767,7 @@ describe('VtgPane', () => {
 
     await selectSpeedRatio(wrapper, '1:1')
     expect(columns().findAll('[data-role="vtg-rule-card"]')).toHaveLength(4)
-    columns().get('[aria-label="TOG IN rule 1"]')
+    columns().get('[aria-label="TOG OUT rule 1"]')
     expect(columns().findAll('[data-role="vtg-prop"]')).toHaveLength(8)
     expect(sides().findAll('[data-role="vtg-rule-card"]')).toHaveLength(2)
     sides().get('[aria-label="SPLIT TOG rule 2"]')

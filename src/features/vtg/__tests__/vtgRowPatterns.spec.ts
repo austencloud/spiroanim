@@ -61,39 +61,57 @@ describe('VTG row patterns', () => {
     },
   )
 
-  it('derives every ratio from 1:3 turns while preserving all other frame data', () => {
-    for (const column of ruleNumbers) {
-      for (const row of ruleNumbers) {
-        const reference = createReference(column, row)
+  it('restores the historical 1:1, 1:3, and 1:5 direction definitions', () => {
+    expect(buildPattern('1-1', '1:1')?.props.map((prop) => prop.anim[1]?.turns ?? 0)).toEqual([
+      0, 0,
+    ])
+    expect(buildPattern('1-1', '1:3')?.props.map((prop) => prop.anim[1]?.turns)).toEqual([
+      -180, -180,
+    ])
+    expect(buildPattern('1-1', '1:5')?.props.map((prop) => prop.anim[1]?.turns)).toEqual([180, 180])
 
-        for (const isAnti of [false, true]) {
-          const base = buildPattern(reference, '1:3', isAnti)
-          if (base === undefined) {
-            throw new Error(`Missing VTG ratio pattern for ${reference}`)
-          }
+    expect(buildPattern('1-3', '1:1')?.props.map((prop) => prop.anim[1]?.turns)).toEqual([-90, -90])
+    expect(buildPattern('1-3', '1:3')?.props.map((prop) => prop.anim[1]?.turns)).toEqual([90, 90])
+    expect(buildPattern('1-3', '1:5')?.props.map((prop) => prop.anim[1]?.turns)).toEqual([
+      -270, -270,
+    ])
+  })
 
-          for (const speedRatio of vtgSpeedRatios) {
-            const denominator = Number(speedRatio.slice(2))
-            const pattern = buildPattern(reference, speedRatio, isAnti)
-            if (pattern === undefined) throw new Error(`Missing VTG pattern for ${reference}`)
+  it.each([
+    ['2:1', [-22.5, -22.5], [-67.5, -67.5]],
+    ['2:3', [-112.5, -112.5], [22.5, 22.5]],
+    ['2:5', [67.5, 67.5], [-157.5, -157.5]],
+  ] as const)(
+    'derives %s timing from its corresponding 1:x direction definitions',
+    (speedRatio, firstCellTurns, thirdCellTurns) => {
+      expect(buildPattern('1-1', speedRatio)?.props.map((prop) => prop.anim[1]?.turns)).toEqual(
+        firstCellTurns,
+      )
+      expect(buildPattern('1-3', speedRatio)?.props.map((prop) => prop.anim[1]?.turns)).toEqual(
+        thirdCellTurns,
+      )
+    },
+  )
 
-            for (const propIndex of [0, 1] as const) {
-              const baseFrame = base.props[propIndex]?.anim[1]
-              const frame = pattern.props[propIndex]?.anim[1]
-              if (baseFrame === undefined || frame === undefined) {
-                throw new Error(`Missing VTG continuation frame for ${reference}`)
-              }
+  it.each([
+    ['1:2', [45, 45], [-135, -135]],
+    ['1:4', [-225, -225], [135, 135]],
+    ['2:7', [-202.5, -202.5], [112.5, 112.5]],
+  ] as const)(
+    'selects the denominator family definitions for %s',
+    (speedRatio, firstCellTurns, thirdCellTurns) => {
+      expect(buildPattern('1-1', speedRatio)?.props.map((prop) => prop.anim[1]?.turns)).toEqual(
+        firstCellTurns,
+      )
+      expect(buildPattern('1-3', speedRatio)?.props.map((prop) => prop.anim[1]?.turns)).toEqual(
+        thirdCellTurns,
+      )
+    },
+  )
 
-              const { turns: baseFrameTurns, ...baseShape } = baseFrame
-              const { turns: frameTurns, ...shape } = frame
-              const baseTurns = baseFrameTurns ?? base.props[propIndex]?.anim[0]?.turns ?? 0
-              const turns = frameTurns ?? pattern.props[propIndex]?.anim[0]?.turns ?? 0
-              expect(shape).toEqual(baseShape)
-              expect(turns).toBe(((baseTurns + 45) * denominator) / 3 - 45)
-            }
-          }
-        }
-      }
-    }
+  it('selects definition families independently for compound timing props', () => {
+    expect(buildPattern('1-1', '1:2v4')?.props.map((prop) => prop.anim[1]?.turns)).toEqual([
+      45, -225,
+    ])
   })
 })

@@ -4,11 +4,11 @@ import { getVtgTopHeaderRule } from '@/features/vtg/data/vtgTopHeaderRules'
 
 describe('getVtgTopHeaderRule', () => {
   it.each([
-    ['1:1', [3, 4, 1, 2, 5, 6], true],
+    ['1:1', [1, 2, 3, 4, 5, 6], true],
     ['1:2', [1, 2, 3, 4, 5, 6], false],
     ['1:3', [1, 2, 3, 4, 5, 6], true],
     ['1:4', [1, 2, 3, 4, 5, 6], false],
-    ['1:5', [3, 4, 1, 2, 5, 6], true],
+    ['1:5', [1, 2, 3, 4, 5, 6], true],
   ] as const)(
     'preserves the established %s top-header rule',
     (speedRatio, ruleNumbers, showDetails) => {

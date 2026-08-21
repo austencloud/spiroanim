@@ -26,6 +26,7 @@ type VtgColumnPatterns = Readonly<Record<VtgRuleNumber, VtgCellPattern>>
 interface VtgRowPattern {
   starts: VtgStartPair
   columns: VtgColumnPatterns
+  columnsBySpeedRatio?: Readonly<Partial<Record<VtgIndividualSpeedRatio, VtgColumnPatterns>>>
   swapProps?: boolean
 }
 
@@ -65,18 +66,37 @@ const createContinuationFrame = (
   return frame
 }
 
+const getDefinitionSpeedRatio = (speedRatio: VtgIndividualSpeedRatio): VtgIndividualSpeedRatio => {
+  const ratio = parseVtgIndividualSpeedRatio(speedRatio)
+  if (!ratio) return '1:3'
+
+  switch (ratio.denominator) {
+    case 1:
+    case 2:
+      return '1:1'
+    case 5:
+    case 6:
+      return '1:5'
+    default:
+      return '1:3'
+  }
+}
+
 const createPattern = (
   row: VtgRowPattern,
-  cellPattern: VtgCellPattern,
+  column: VtgRuleNumber,
   isAnti: boolean,
   speedRatio: VtgSpeedRatio,
 ): VtgReadableAnimation => {
-  const continuations =
-    'spin' in cellPattern ? (isAnti ? cellPattern.anti : cellPattern.spin) : cellPattern
   const speedRatios = getVtgPropSpeedRatios(speedRatio)
   const sourceIndexes = row.swapProps ? ([1, 0] as const) : ([0, 1] as const)
   const createProp = (outputIndex: 0 | 1) => {
     const sourceIndex = sourceIndexes[outputIndex]
+    const definitionSpeedRatio = getDefinitionSpeedRatio(speedRatios[outputIndex])
+    const cellPattern =
+      row.columnsBySpeedRatio?.[definitionSpeedRatio]?.[column] ?? row.columns[column]
+    const continuations =
+      'spin' in cellPattern ? (isAnti ? cellPattern.anti : cellPattern.spin) : cellPattern
     return {
       anim: [
         createFirstFrame(row.starts[sourceIndex]),
@@ -107,13 +127,18 @@ const createPatternDefinition = (
   row: VtgRowPattern,
   column: VtgRuleNumber,
 ): VtgPatternDefinition => ({
-  build: (isAnti, speedRatio) => createPattern(row, row.columns[column], isAnti, speedRatio),
+  build: (isAnti, speedRatio) => createPattern(row, column, isAnti, speedRatio),
 })
 
 /**
  * VTG cells are numbered row first in the interface. Every cell in a row shares
  * the same first animation frame for each prop. Continuations are the
- * semantic Anti/In directions; the builder derives Turns from the target ratio.
+ * semantic Anti/In directions; the builder derives Turns from the target ratio. The historical
+ * 1:1 and 1:5 definitions intentionally reverse several directions from the canonical 1:3 data.
+ * Compound timings select the appropriate definition independently for each prop. Definition
+ * families are selected from each timing denominator: 1-2 use 1:1, 3-4 use 1:3, and 5-6 use
+ * 1:5. Unrecognized denominators use the canonical 1:3 definitions. Actual timing math still uses
+ * the complete ratio.
  * Only the four special cells define explicit Spin/Anti variants.
  */
 // prettier-ignore
@@ -121,6 +146,24 @@ const rowPatterns: Readonly<Record<VtgRuleNumber, VtgRowPattern>> = {
   // Row 1 starts both props on the 180-degree plane and owns every continuation.
   1: {
     starts: [{ plane: 180, arc: 90, turns: 0 }, { plane: 180, arc: 90, turns: 0 }],
+    columnsBySpeedRatio: {
+      '1:1': {
+        1: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }],
+        2: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }],
+        3: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }],
+        4: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }],
+        5: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'anti' }],
+        6: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }],
+      },
+      '1:5': {
+        1: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }],
+        2: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }],
+        3: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }],
+        4: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }],
+        5: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'anti' }],
+        6: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }],
+      },
+    },
     columns: {
       1: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }],
       2: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }],
@@ -133,6 +176,14 @@ const rowPatterns: Readonly<Record<VtgRuleNumber, VtgRowPattern>> = {
   // Row 2 starts the second prop on plane 0 and owns a separate copy of every continuation.
   2: {
     starts: [{ plane: 180, arc: 90, turns: 0 }, { plane: 0, arc: 90, turns: 0 }],
+    columnsBySpeedRatio: {
+      '1:1': {
+        1: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }], 2: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], 3: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }], 4: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }], 5: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'anti' }], 6: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }],
+      },
+      '1:5': {
+        1: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }], 2: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], 3: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }], 4: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }], 5: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'anti' }], 6: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }],
+      },
+    },
     columns: {
       1: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }],
       2: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }],
@@ -145,6 +196,14 @@ const rowPatterns: Readonly<Record<VtgRuleNumber, VtgRowPattern>> = {
   // Row 3 starts the props in opposite directions and keeps row 4's second prop on plane 0.
   3: {
     starts: [{ plane: 180, arc: 90, turns: -180 }, { plane: 180, arc: 90, turns: 180 }],
+    columnsBySpeedRatio: {
+      '1:1': {
+        1: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }], 2: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }], 3: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }], 4: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], 5: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'anti' }], 6: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }],
+      },
+      '1:5': {
+        1: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }], 2: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }], 3: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }], 4: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], 5: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'anti' }], 6: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }],
+      },
+    },
     columns: {
       1: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }],
       2: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }],
@@ -157,6 +216,14 @@ const rowPatterns: Readonly<Record<VtgRuleNumber, VtgRowPattern>> = {
   // Row 4 pairs a backward plane path with a forward arc path and owns every continuation.
   4: {
     starts: [{ plane: 180, arc: 90, turns: -180 }, { plane: 0, arc: 90, turns: 180 }],
+    columnsBySpeedRatio: {
+      '1:1': {
+        1: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }], 2: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }], 3: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }], 4: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], 5: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'anti' }], 6: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }],
+      },
+      '1:5': {
+        1: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }], 2: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }], 3: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }], 4: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], 5: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'anti' }], 6: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }],
+      },
+    },
     columns: {
       1: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }],
       2: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }],
@@ -169,6 +236,14 @@ const rowPatterns: Readonly<Record<VtgRuleNumber, VtgRowPattern>> = {
   // Row 5 starts with two arc paths and defines Spin/Anti alternatives for rows 5 and 6.
   5: {
     starts: [{ plane: 0, arc: 90, turns: 0 }, { plane: 0, arc: 90, turns: 180 }],
+    columnsBySpeedRatio: {
+      '1:1': {
+        1: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }], 2: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'anti' }], 3: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'in' }], 4: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'in' }], 5: { spin: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], anti: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }] }, 6: { spin: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }], anti: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }] },
+      },
+      '1:5': {
+        1: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }], 2: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'anti' }], 3: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'in' }], 4: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'in' }], 5: { spin: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], anti: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }] }, 6: { spin: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 180, arc: 45, spin: 'in' }], anti: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'anti' }] },
+      },
+    },
     columns: {
       1: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'in' }],
       2: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 180, arc: 45, spin: 'in' }],
@@ -182,6 +257,14 @@ const rowPatterns: Readonly<Record<VtgRuleNumber, VtgRowPattern>> = {
   6: {
     starts: [{ plane: 180, arc: 90, turns: 180 }, { plane: 0, arc: 90, turns: 0 }],
     swapProps: true,
+    columnsBySpeedRatio: {
+      '1:1': {
+        1: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'in' }], 2: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'in' }], 3: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }], 4: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }], 5: { spin: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], anti: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }] }, 6: { spin: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], anti: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }] },
+      },
+      '1:5': {
+        1: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'in' }], 2: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'in' }], 3: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }], 4: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }], 5: { spin: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], anti: [{ plane: 0, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }] }, 6: { spin: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'in' }], anti: [{ plane: 180, arc: 45, spin: 'anti' }, { plane: 0, arc: 45, spin: 'anti' }] },
+      },
+    },
     columns: {
       1: [{ plane: 0, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }],
       2: [{ plane: 180, arc: 45, spin: 'in' }, { plane: 0, arc: 45, spin: 'anti' }],

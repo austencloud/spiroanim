@@ -10,7 +10,6 @@ export interface VtgTopHeaderRule {
 }
 
 const standardRuleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
-const swappedRuleNumbers = [3, 4, 1, 2, 5, 6] as const satisfies readonly VtgRuleNumber[]
 
 const defaultTopHeaderRule: VtgTopHeaderRule = {
   ruleNumbers: standardRuleNumbers,
@@ -18,11 +17,11 @@ const defaultTopHeaderRule: VtgTopHeaderRule = {
 }
 
 const establishedTopHeaderRules = {
-  '1:1': { ruleNumbers: swappedRuleNumbers, showDetails: true },
+  '1:1': { ruleNumbers: standardRuleNumbers, showDetails: true },
   '1:2': defaultTopHeaderRule,
   '1:3': { ruleNumbers: standardRuleNumbers, showDetails: true },
   '1:4': defaultTopHeaderRule,
-  '1:5': { ruleNumbers: swappedRuleNumbers, showDetails: true },
+  '1:5': { ruleNumbers: standardRuleNumbers, showDetails: true },
 } as const satisfies Readonly<Record<VtgEstablishedIndividualSpeedRatio, VtgTopHeaderRule>>
 
 const hasEstablishedTopHeaderRule = (

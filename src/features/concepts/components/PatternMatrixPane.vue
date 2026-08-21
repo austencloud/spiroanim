@@ -6,6 +6,7 @@
       'vtg-pane--touch': touchDevice,
       'vtg-pane--builder-active': compactBuilder,
       'vtg-pane--builder-drag-active': builderActive,
+      'vtg-pane--classic': classicLayout,
     }"
     aria-labelledby="vtg-pane-title"
     data-role="vtg-pane"
@@ -79,8 +80,10 @@
 
       <PatternTransformControls
         v-model:more="moreRatios"
+        v-model:classic="classicLayout"
         confirm-reset
         show-more
+        show-classic
         :show-swap="!builderActive"
         :reverse-label="isQtr ? 'Flip' : '180°'"
         :reverse-description="
@@ -107,7 +110,29 @@
       </AppTooltip>
 
       <div class="vtg-column-headers" data-role="vtg-column-headers">
+        <template v-if="classicLayout">
+          <VtgRuleCard
+            v-for="rule in displayedSideRules"
+            :key="`column-${rule.number}`"
+            :labels="rule.labels"
+            :display-labels="
+              isQtr ? qtrSideRuleLabels[rule.sourceNumber ?? rule.number] : undefined
+            "
+            :number="rule.number"
+            :diagram="rule.diagram"
+            :description="rule.description"
+            :orientation="sideHeaderOrientation"
+            :accent="(rule.sourceNumber ?? rule.number) === selectedCell?.row"
+            :show-divider="!isQtr"
+            :prop-colors="isQtr ? vtgHeaderPropColors : undefined"
+            :tooltip-disabled="isQtr"
+            :reversed="sideHeaderReversed"
+            :mirror-props="!isQtr"
+            @select="selectRow(rule.sourceNumber ?? rule.number)"
+          />
+        </template>
         <VtgRuleCard
+          v-else
           v-for="header in displayedColumnRules"
           :key="`column-${header.column}`"
           :labels="header.rule.labels"
@@ -128,7 +153,28 @@
       </div>
 
       <div class="vtg-sidebar" data-role="vtg-sidebar">
+        <template v-if="classicLayout">
+          <VtgRuleCard
+            v-for="header in classicSideHeaderRules"
+            :key="`side-${header.column}`"
+            :labels="header.rule.labels"
+            :display-labels="
+              hideColumnHeaderDetails ? qtrColumnRuleLabels[header.rule.number] : undefined
+            "
+            :number="header.column"
+            :diagram="header.rule.diagram"
+            :description="header.rule.description"
+            :orientation="columnHeaderOrientation"
+            :accent="header.column === selectedCell?.column"
+            :show-divider="!hideColumnHeaderDetails"
+            :show-props="!hideColumnHeaderDetails"
+            :tooltip-disabled="hideColumnHeaderDetails"
+            :mirror-props="!hideColumnHeaderDetails"
+            @select="selectColumn(header.column)"
+          />
+        </template>
         <VtgRuleCard
+          v-else
           v-for="rule in displayedSideRules"
           :key="`side-${rule.number}`"
           :labels="rule.labels"
@@ -154,30 +200,18 @@
             :key="tile.reference"
             class="vtg-tile-tooltip"
             :text="getTileDescription(tile)"
-            :style="
-              compactBuilder
-                ? {
-                    gridColumn: String(tile.column),
-                    gridRow: tile.row === 6 ? '2' : '1',
-                  }
-                : undefined
-            "
+            :style="getTileGridStyle(tile)"
           >
             <template #activator="{ props: activatorProps }">
               <button
                 v-bind="activatorProps"
                 type="button"
                 class="vtg-tile"
-                :class="{
-                  'vtg-tile--highlighted': isTileHighlighted(tile),
-                  'vtg-tile--selected': tile.reference === selectedCellReference,
-                  'vtg-tile--paired-left': usesPairedPreviewLayout && tile.column % 2 === 1,
-                  'vtg-tile--paired-right': usesPairedPreviewLayout && tile.column % 2 === 0,
-                }"
+                :class="getTileClasses(tile)"
                 :aria-label="`${tile.label}, cell ${displayCellReference(tile)}`"
                 :aria-pressed="tile.reference === selectedCellReference"
-                :data-board-column="tile.boardColumn"
-                :data-board-row="tile.boardRow"
+                :data-board-column="getTileBoardColumn(tile)"
+                :data-board-row="getTileBoardRow(tile)"
                 :data-cell-reference="displayCellReference(tile)"
                 data-role="vtg-tile"
                 :draggable="builderActive && !touchDevice"
@@ -203,13 +237,7 @@
                     v-bind="controlActivatorProps"
                     type="button"
                     class="vtg-tile__spin-toggle"
-                    :class="{
-                      'vtg-tile__spin-toggle--bottom': isBottomSpinToggleCell(tile.reference),
-                      'vtg-tile__spin-toggle--paired-left':
-                        usesPairedPreviewLayout && tile.column % 2 === 1,
-                      'vtg-tile__spin-toggle--paired-right':
-                        usesPairedPreviewLayout && tile.column % 2 === 0,
-                    }"
+                    :class="getSpinTogglePositionClasses(tile)"
                     :aria-label="`Use ${isAnti ? 'Spin' : 'Anti'} pattern for cell ${tile.reference}`"
                     :aria-pressed="isAnti"
                     data-role="vtg-spin-toggle"
@@ -381,6 +409,7 @@ import {
   getDefaultVtgPatternOrientation,
   getVtgTimingCycleCount,
   getVtgPatternOrientations,
+  requiresPairedVtgPreviewLayout,
   vtgDefaultTransitionBeats,
   vtgRatioPickerRatios,
   vtgSpeedRatioRows,
@@ -454,6 +483,7 @@ const {
   leftPropColor,
   rightPropColor,
   prop,
+  classicLayout,
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
 const isAnti = ref(false)
@@ -498,11 +528,7 @@ const hasPopulatedQuickSlots = computed(
 const showStaticPropsTransitionNote = computed(() => transition.value && speedRatio.value === '1:1')
 const compactBuilder = computed(() => props.builderActive && !props.builderFullCatalog)
 const usesPairedPreviewLayout = computed(
-  () =>
-    compactBuilder.value ||
-    speedRatio.value === '1:2' ||
-    speedRatio.value === '1:4' ||
-    getVtgTimingCycleCount(speedRatio.value) === 2,
+  () => compactBuilder.value || requiresPairedVtgPreviewLayout(speedRatio.value),
 )
 const topHeaderRule = computed(() => getVtgTopHeaderRule(speedRatio.value))
 const hideColumnHeaderDetails = computed(() => isQtr.value || !topHeaderRule.value.showDetails)
@@ -670,6 +696,54 @@ const displayCellReference = (tile: VtgMatrixTile): string =>
 
 const getTileDescription = (tile: VtgMatrixTile) => tile.description
 
+const getTileGridPosition = (tile: VtgMatrixTile) => {
+  if (!classicLayout.value) {
+    return {
+      column: tile.column,
+      row: compactBuilder.value ? (tile.row === 6 ? 2 : 1) : tile.row,
+    }
+  }
+
+  return {
+    column: compactBuilder.value ? (tile.row === 6 ? 2 : 1) : tile.row,
+    row: compactBuilder.value ? 5 - tile.column : 7 - tile.column,
+  }
+}
+
+const getTileGridStyle = (tile: VtgMatrixTile) => {
+  if (!compactBuilder.value && !classicLayout.value) return undefined
+  const position = getTileGridPosition(tile)
+  return { gridColumn: String(position.column), gridRow: String(position.row) }
+}
+
+const getTileBoardColumn = (tile: VtgMatrixTile) =>
+  classicLayout.value ? getTileGridPosition(tile).column + 1 : tile.boardColumn
+
+const getTileBoardRow = (tile: VtgMatrixTile) =>
+  classicLayout.value ? getTileGridPosition(tile).row : tile.boardRow
+
+const getTileClasses = (tile: VtgMatrixTile): Record<string, boolean> => {
+  const pairedEdge = tile.column % 2 === 0 ? 'top' : 'bottom'
+  const standardPairedEdge = tile.column % 2 === 0 ? 'right' : 'left'
+
+  return {
+    'vtg-tile--highlighted': isTileHighlighted(tile),
+    'vtg-tile--selected': tile.reference === selectedCellReference.value,
+    [`vtg-tile--paired-${classicLayout.value ? pairedEdge : standardPairedEdge}`]:
+      usesPairedPreviewLayout.value,
+  }
+}
+
+const getSpinTogglePositionClasses = (tile: VtgMatrixTile): readonly string[] => {
+  const isTop = classicLayout.value ? tile.column === 6 : tile.row === 5
+  const classes = [`vtg-tile__spin-toggle--${isTop ? 'top' : 'bottom'}`]
+  if (!usesPairedPreviewLayout.value) return classes
+
+  const isLeft = classicLayout.value ? tile.row === 5 : tile.column % 2 === 1
+  classes.push(`vtg-tile__spin-toggle--${isLeft ? 'left' : 'right'}`)
+  return classes
+}
+
 const selectedCell = ref<VtgCellAddress>()
 const patternControlKey = computed(() =>
   JSON.stringify([
@@ -787,8 +861,6 @@ const isTileHighlighted = (tile: VtgMatrixTile) =>
   (tile.column === selectedCell.value.column || tile.row === selectedCell.value.row)
 
 const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(reference)
-const isBottomSpinToggleCell = (reference: VtgCellReference) =>
-  reference === '5-6' || reference === '6-6'
 
 const createPatternSelection = (
   tile: VtgMatrixTile,
@@ -1515,6 +1587,8 @@ const displayedColumnRules = computed(() => {
   })
 })
 
+const classicSideHeaderRules = computed(() => [...displayedColumnRules.value].reverse())
+
 const sideRules: readonly VtgRuleSpec[] = [
   {
     labels: ['TOG', 'OUT'],
@@ -1587,6 +1661,25 @@ const blankHeight = ref(0)
 const blankDimensions = reactive<BlankDimensions[]>(
   pairedPatternPreviewReferences.map(() => ({ width: 0, height: 0 })),
 )
+
+const getPreviewGridStyle = (row: number, column: number) => {
+  if (compactBuilder.value) {
+    return classicLayout.value
+      ? { gridColumn: row === 6 ? '2' : '1', gridRow: `${4 - column} / span 2` }
+      : { gridColumn: `${column} / span 2`, gridRow: row === 6 ? '2' : '1' }
+  }
+
+  if (!classicLayout.value) {
+    return usesPairedPreviewLayout.value
+      ? { gridColumn: `${column} / span 2`, gridRow: String(row) }
+      : { gridColumn: String(column + 1), gridRow: String(row + 1) }
+  }
+
+  return usesPairedPreviewLayout.value
+    ? { gridColumn: String(row), gridRow: `${6 - column} / span 2` }
+    : { gridColumn: String(row + 1), gridRow: String(7 - column) }
+}
+
 const displayedPreviews = computed(() => {
   const references = compactBuilder.value
     ? builderPatternPreviewReferences
@@ -1603,11 +1696,7 @@ const displayedPreviews = computed(() => {
     return {
       reference,
       rendererIndex,
-      style: compactBuilder.value
-        ? { gridColumn: `${column} / span 2`, gridRow: row === 6 ? '2' : '1' }
-        : usesPairedPreviewLayout.value
-          ? { gridColumn: `${column} / span 2`, gridRow: `${row}` }
-          : { gridColumn: `${column + 1}`, gridRow: `${row + 1}` },
+      style: getPreviewGridStyle(row, column),
     }
   })
 })
@@ -2042,7 +2131,7 @@ defineExpose({
     inset 0 0.15cqi 0.15cqi color-mix(in srgb, var(--vtg-color-rule-text) 12%, transparent),
     0 0.45cqi 1cqi color-mix(in srgb, var(--vtg-color-preview) 22%, transparent);
   font-family: 'Arial Narrow', var(--font-family-sans);
-  font-size: max(0.78rem, 2.55cqi);
+  font-size: max(0.68rem, 2.55cqi);
   font-weight: 700;
   letter-spacing: 0.025em;
   line-height: 1;
@@ -2083,23 +2172,27 @@ defineExpose({
   transform: translateX(-50%);
 }
 
+.vtg-tile__spin-toggle--top {
+  inset-block-start: max(0.2rem, 0.6cqi);
+  inset-block-end: auto;
+}
+
 .vtg-tile__spin-toggle--bottom {
   inset-block-start: auto;
   inset-block-end: max(0.2rem, 0.6cqi);
 }
 
-.vtg-tile__spin-toggle--paired-left,
-.vtg-tile__spin-toggle--paired-right {
-  inset-block-start: auto;
-  inset-block-end: max(0.2rem, 0.6cqi);
+.vtg-tile__spin-toggle--left,
+.vtg-tile__spin-toggle--right {
   transform: none;
 }
 
-.vtg-tile__spin-toggle--paired-left {
+.vtg-tile__spin-toggle--left {
   inset-inline-start: max(0.2rem, 0.6cqi);
+  inset-inline-end: auto;
 }
 
-.vtg-tile__spin-toggle--paired-right {
+.vtg-tile__spin-toggle--right {
   inset-inline-start: auto;
   inset-inline-end: max(0.2rem, 0.6cqi);
 }
@@ -2140,20 +2233,33 @@ defineExpose({
   transform: none;
 }
 
+.vtg-pane--classic .vtg-blank--paired {
+  width: 78%;
+}
+
+.vtg-tile--paired-left .vtg-tile__label,
+.vtg-tile--paired-right .vtg-tile__label,
+.vtg-tile--paired-top .vtg-tile__label,
+.vtg-tile--paired-bottom .vtg-tile__label {
+  position: absolute;
+  display: grid;
+  place-items: center;
+}
+
 .vtg-tile--paired-left .vtg-tile__label,
 .vtg-tile--paired-right .vtg-tile__label {
-  position: absolute;
   inset-block: 0;
-  display: grid;
   inline-size: calc(100% - var(--vtg-paired-preview-width));
-  place-items: center;
+  transform: translateX(-0.08em);
 }
 
 .vtg-tile--paired-left .vtg-tile__label {
   inset-inline-start: 0;
+  inset-inline-end: auto;
 }
 
 .vtg-tile--paired-right .vtg-tile__label {
+  inset-inline-start: auto;
   inset-inline-end: 0;
 }
 
@@ -2168,6 +2274,28 @@ defineExpose({
 .vtg-tile--paired-left .vtg-tile__label-text,
 .vtg-tile--paired-right .vtg-tile__label-text {
   white-space: nowrap;
+}
+
+.vtg-tile--paired-top .vtg-tile__label,
+.vtg-tile--paired-bottom .vtg-tile__label {
+  inset-inline: 0;
+  inline-size: 100%;
+  block-size: calc(100% - var(--vtg-paired-preview-width));
+}
+
+.vtg-tile--paired-top .vtg-tile__label {
+  inset-block-start: 0;
+  inset-block-end: auto;
+}
+
+.vtg-tile--paired-bottom .vtg-tile__label {
+  inset-block-start: auto;
+  inset-block-end: 0;
+}
+
+.vtg-tile--paired-top .vtg-tile__label-text,
+.vtg-tile--paired-bottom .vtg-tile__label-text {
+  transform: none;
 }
 
 .vtg-blank__preview {
@@ -2221,6 +2349,53 @@ defineExpose({
   grid-column: 2 / span 6;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--vtg-board-gap);
+}
+
+.vtg-pane--classic .vtg-shuffle-tooltip,
+.vtg-pane--classic .vtg-shuffle {
+  grid-row: 7;
+}
+
+.vtg-pane--classic .vtg-column-headers {
+  grid-row: 7;
+}
+
+.vtg-pane--classic .vtg-sidebar,
+.vtg-pane--classic .vtg-matrix {
+  grid-row: 1 / span 6;
+}
+
+.vtg-pane--builder-active.vtg-pane--classic .vtg-board {
+  aspect-ratio: 3 / 5;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+}
+
+.vtg-pane--builder-active.vtg-pane--classic .vtg-shuffle-tooltip,
+.vtg-pane--builder-active.vtg-pane--classic .vtg-shuffle {
+  grid-row: 5;
+}
+
+.vtg-pane--builder-active.vtg-pane--classic .vtg-column-headers {
+  grid-row: 5;
+  grid-column: 2 / span 2;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.vtg-pane--builder-active.vtg-pane--classic .vtg-sidebar {
+  grid-row: 1 / span 4;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+}
+
+.vtg-pane--builder-active.vtg-pane--classic .vtg-matrix {
+  grid-row: 1 / span 4;
+  grid-column: 2 / span 2;
+}
+
+.vtg-pane--builder-active.vtg-pane--classic .vtg-tile-grid,
+.vtg-pane--builder-active.vtg-pane--classic .vtg-blank-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
 }
 
 .vtg-pane__visually-hidden {

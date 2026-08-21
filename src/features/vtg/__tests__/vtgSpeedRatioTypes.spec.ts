@@ -7,6 +7,7 @@ import {
   getVtgPropSpeedRatios,
   isVtgSpeedRatio,
   parseVtgIndividualSpeedRatio,
+  requiresPairedVtgPreviewLayout,
 } from '@/features/vtg/types'
 
 describe('VTG speed ratio helpers', () => {
@@ -43,4 +44,24 @@ describe('VTG speed ratio helpers', () => {
   it.each(['2:1', '2:3', '2:5'] as const)('defaults %s to -90 degrees', (speedRatio) => {
     expect(getDefaultVtgPatternOrientation(speedRatio)).toBe(-90)
   })
+
+  it.each([
+    ['1:1', false],
+    ['1:2', true],
+    ['1:3', false],
+    ['1:4', true],
+    ['1:5', false],
+    ['2:1', true],
+    ['2:3', true],
+    ['2:5', true],
+    ['1:1v3', false],
+    ['1:1v2', true],
+    ['1:1v2:3', true],
+    ['3:1', true],
+  ] as const)(
+    'derives whether %s needs independently paired path previews',
+    (speedRatio, expected) => {
+      expect(requiresPairedVtgPreviewLayout(speedRatio)).toBe(expected)
+    },
+  )
 })
