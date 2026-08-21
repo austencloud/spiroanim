@@ -20,7 +20,17 @@ import {
   videoExportFrameTimeMs,
 } from '@/math/videoExportTiming'
 
-import { WebGLRenderer, Scene, PerspectiveCamera, Raycaster, Vector2, Mesh } from 'three'
+import {
+  DirectionalLight,
+  HemisphereLight,
+  Mesh,
+  PerspectiveCamera,
+  Raycaster,
+  Scene,
+  Vector2,
+  Vector3,
+  WebGLRenderer,
+} from 'three'
 import { Color } from 'three'
 import type { Output, VideoCodec } from 'mediabunny'
 
@@ -54,7 +64,13 @@ let canvas: OffscreenCanvas
 let scene: Scene
 let animators: ReturnType<typeof createSpiroAnimator>[] = []
 let cameraAnimator: ReturnType<typeof createCameraAnimator> | undefined
+let propKeyLight: DirectionalLight | undefined
+let propRimLight: DirectionalLight | undefined
+const propLightDirection = new Vector3()
+const propLightRight = new Vector3()
+const propLightUp = new Vector3()
 let timeline = false
+let progressivePaths = false
 let cameraGuides = { visible: false, color: 0xffffff }
 
 let playing = false
@@ -171,9 +187,17 @@ on('stop', () => (playing = false))
 
 // Doesn't clear the animations, leaving trails
 on('tracer', (val) => (renderer.autoClear = !val))
+on('progressivePaths', (val) => {
+  progressivePaths = val
+  for (const animator of animators) animator.setProgressivePaths(val && !timeline && !selection)
+})
 
 // Selection options
-on('selection', (val) => (selection = val))
+on('selection', (val) => {
+  selection = val
+  for (const animator of animators)
+    animator.setProgressivePaths(progressivePaths && !timeline && !selection)
+})
 on('range', ({ min: mi, max: ma }) => {
   min = mi
   max = ma
@@ -211,6 +235,13 @@ on('data', (compiled) => {
   const manualPose = manualWasActive ? cameraAnimator?.acquire() : undefined
   if (scene) disposeScene(scene)
   scene = new Scene()
+  scene.add(new HemisphereLight(0xbadfff, 0x1b1028, 0.68))
+  propKeyLight = new DirectionalLight(0xffe2bb, 1.05)
+  propKeyLight.target.position.set(0, 0, 0)
+  scene.add(propKeyLight, propKeyLight.target)
+  propRimLight = new DirectionalLight(0x74cfff, 0.38)
+  propRimLight.target.position.set(0, 0, 0)
+  scene.add(propRimLight, propRimLight.target)
   animators = []
 
   cameraAnimator = createCameraAnimator({
@@ -271,6 +302,9 @@ on('data', (compiled) => {
       }),
     )
 
+  for (const animator of animators)
+    animator.setProgressivePaths(progressivePaths && !timeline && !selection)
+
   currentMs = Math.min(currentMs, unqTimes.at(-1) ?? 0)
   playbackStartedAt = performance.now()
   if (manualPose) cameraAnimator.transform(manualPose)
@@ -327,7 +361,7 @@ register('reqimgs', async (vals) => {
   if (canvas instanceof OffscreenCanvas)
     for (const { index, time } of vals) {
       jump(time)
-      renderer.render(scene, camera)
+      renderScene()
 
       const blob = await canvas.convertToBlob({ type: 'image/png' })
       urls[index] = URL.createObjectURL(blob)
@@ -382,7 +416,7 @@ register(
       renderer.setClearColor(backgroundColor, transparent ? 0 : 1)
       for (const animator of animators) animator.setExportHidden(hiddenFeatures, true)
       jump(positionMs)
-      renderer.render(scene, camera)
+      renderScene()
 
       return await canvas.convertToBlob(
         fileType === 'image/png' ? { type: fileType } : { type: fileType, quality },
@@ -397,7 +431,7 @@ register(
       renderer.autoClear = previous.autoClear
       renderer.setClearColor(previous.clearColor, previous.clearAlpha)
       jump(positionMs)
-      renderer.render(scene, camera)
+      renderScene()
 
       playing = previous.playing
       animating = previous.animating
@@ -494,7 +528,7 @@ register(
             playbackSpeed,
           ),
         )
-        renderer.render(scene, camera)
+        renderScene()
         await source.add(timestamp, frameDuration)
         send('exportVideoProgress', {
           completedFrames: frame + 1,
@@ -530,7 +564,7 @@ register(
       renderer.autoClear = previous.autoClear
       renderer.setClearColor(previous.clearColor, previous.clearAlpha)
       jump(restorePositionMs)
-      renderer.render(scene, camera)
+      renderScene()
 
       playing = previous.playing
       animating = previous.animating
@@ -591,6 +625,32 @@ function animatorDim() {
     animators[i]!.dimensions(dim.width, dim.height, distance, camera.fov)
 }
 
+function renderScene() {
+  if (propKeyLight) {
+    const target = cameraAnimator?.target ?? scene.position
+    const lightOffset = Math.max(camera.position.distanceTo(target), 1)
+    camera.getWorldDirection(propLightDirection)
+    propLightUp.set(0, 1, 0).applyQuaternion(camera.quaternion)
+    propLightRight.crossVectors(propLightDirection, propLightUp).normalize()
+    propKeyLight.position
+      .copy(camera.position)
+      .addScaledVector(propLightUp, lightOffset * 0.28)
+      .addScaledVector(propLightRight, lightOffset * 0.18)
+    propKeyLight.target.position.copy(target)
+    propKeyLight.target.updateMatrixWorld()
+    if (propRimLight) {
+      propRimLight.position
+        .copy(target)
+        .addScaledVector(propLightDirection, lightOffset * 0.75)
+        .addScaledVector(propLightRight, lightOffset * -0.45)
+        .addScaledVector(propLightUp, lightOffset * 0.12)
+      propRimLight.target.position.copy(target)
+      propRimLight.target.updateMatrixWorld()
+    }
+  }
+  renderer.render(scene, camera)
+}
+
 function animate(time: number | undefined = undefined, render: boolean | undefined = true) {
   if (time === undefined) time = performance.now()
 
@@ -646,7 +706,7 @@ function animate(time: number | undefined = undefined, render: boolean | undefin
   //  aspect: camera.aspect,
   //})
 
-  if (render) renderer.render(scene, camera)
+  if (render) renderScene()
 }
 
 function stopAnimationLoop() {

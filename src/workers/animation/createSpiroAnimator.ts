@@ -8,7 +8,7 @@ import {
   Scene,
   SphereGeometry,
   Mesh,
-  MeshBasicMaterial,
+  MeshToonMaterial,
   Group,
   CatmullRomCurve3,
   type InterleavedBufferAttribute,
@@ -46,7 +46,11 @@ import type {
   PointTypes,
 } from '@/types/AnimTypes'
 
-export type LineMaterial2 = LineMaterial & { linewidth2: number }
+export type LineMaterial2 = LineMaterial & {
+  linewidth2: number
+  depthCenterUniform?: { value: number }
+  depthRangeUniform?: { value: number }
+}
 
 import * as props from '@/domain/animation/AnimModels'
 import { closestPoint } from '@/math/animation/AnimFunc'
@@ -61,6 +65,9 @@ const multi = RADIUS / ORIGRADIUS, // Multiplier for sizes
   Adju = new Vector3(),
   blendedRotation = new Quaternion(),
   crot = new Vector3()
+
+const createMarkerMaterial = (color: number) =>
+  new MeshToonMaterial({ color, emissive: color, emissiveIntensity: 0.025 })
 
 export const createSpiroAnimator = (vars: {
   scene: Scene
@@ -82,6 +89,7 @@ export const createSpiroAnimator = (vars: {
   readonly click: number
   readonly pobjs: Record<number, Mesh>
   setExportHidden: (features: readonly ImageExportFeature[], hidden: boolean) => void
+  setProgressivePaths: (enabled: boolean) => void
   animate: (time: number, forward?: number, force?: boolean) => void
   seek: (milliseconds: number) => void
   dimensions: (
@@ -141,6 +149,8 @@ export const createSpiroAnimator = (vars: {
     posLines: Line2[] = [],
     rotLines: Line2[] = [],
     pathMotionOffset = new Vector3(),
+    pathSampleTimes: number[] = [],
+    progressivePathLines: Line2[] = [],
     motionTimes = FRAMESTARTS(motion, bpm),
     animationTimes = FRAMESTARTS(anim, bpm)
 
@@ -165,7 +175,26 @@ export const createSpiroAnimator = (vars: {
     scalePerc = 0,
     depthDiff = 0,
     depthPerc = 0,
-    pathsIndex = -1
+    pathsIndex = -1,
+    progressivePaths = false,
+    currentMilliseconds = 0
+
+  const updateProgressivePaths = () => {
+    let low = 0
+    let high = pathSampleTimes.length
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2)
+      if (pathSampleTimes[middle]! <= currentMilliseconds) low = middle + 1
+      else high = middle
+    }
+    const visibleSegments = Math.max(0, low - 1)
+    for (const line of progressivePathLines) {
+      const geometry = line.geometry as LineGeometry
+      geometry.instanceCount = progressivePaths
+        ? visibleSegments
+        : Math.max(0, pathSampleTimes.length - 1)
+    }
+  }
 
   modelProp.visible = visible
 
@@ -312,6 +341,8 @@ export const createSpiroAnimator = (vars: {
       motionOffsetAt(milliseconds, motionGroup.position)
     },
     seek = (milliseconds: number) => {
+      currentMilliseconds = milliseconds
+      updateProgressivePaths()
       applyMotion(milliseconds)
       if (anim.length === 0) return
 
@@ -381,22 +412,76 @@ export const createSpiroAnimator = (vars: {
       lineMats.forEach((material) => {
         material.linewidth = material.linewidth2 * inverseScaleFactor
         material.resolution.set(width, height)
+        if (material.depthCenterUniform) material.depthCenterUniform.value = distance
+        if (material.depthRangeUniform)
+          material.depthRangeUniform.value = Math.max(distance * 0.3, 1)
       })
     },
     lineMaterials: LineMaterial2[] = [],
-    createLine2 = (points: Vector3[], color: number, linewidth: number) => {
+    createLine2 = (
+      points: Vector3[],
+      color: number,
+      linewidth: number,
+      flowContour = false,
+      contourOffset = 0,
+    ) => {
+      const geometry = new LineGeometry().setPositions(points.flatMap((point) => point.toArray()))
+      if (flowContour && points.length > 1) {
+        const colors = points.flatMap((_point, index) => {
+          const phase = (index / (points.length - 1)) * Math.PI * 6 + contourOffset
+          const intensity = 0.32 + (Math.sin(phase) * 0.5 + 0.5) * 0.68
+          return [intensity, intensity, intensity]
+        })
+        geometry.setColors(colors)
+      }
       const lineMaterial = new LineMaterial({
           color: color,
           linewidth: linewidth, // Line thickness in pixels
           resolution: new Vector2(width, height), // Required for LineMaterial
+          vertexColors: flowContour,
         }) as LineMaterial2,
-        line = new Line2(
-          new LineGeometry().setPositions(points.flatMap((point) => point.toArray())),
-          lineMaterial,
-        )
+        line = new Line2(geometry, lineMaterial)
 
       // Store linewidth for updateLines() to reference
       lineMaterial.linewidth2 = linewidth
+
+      if (flowContour) {
+        lineMaterial.depthCenterUniform = { value: distance }
+        lineMaterial.depthRangeUniform = { value: Math.max(distance * 0.3, 1) }
+        lineMaterial.onBeforeCompile = (shader) => {
+          shader.uniforms.propLineDepthCenter = lineMaterial.depthCenterUniform!
+          shader.uniforms.propLineDepthRange = lineMaterial.depthRangeUniform!
+          shader.vertexShader = shader.vertexShader
+            .replace(
+              'uniform vec2 resolution;',
+              `uniform vec2 resolution;
+               varying float vPropLineViewDepth;`,
+            )
+            .replace(
+              'vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );',
+              `vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );
+               vPropLineViewDepth = -((position.y < 0.5) ? start.z : end.z);`,
+            )
+          shader.fragmentShader = shader.fragmentShader
+            .replace(
+              'uniform float linewidth;',
+              `uniform float linewidth;
+               uniform float propLineDepthCenter;
+               uniform float propLineDepthRange;
+               varying float vPropLineViewDepth;`,
+            )
+            .replace(
+              'gl_FragColor = vec4( diffuseColor.rgb, alpha );',
+              `float propLineDepthDelta = clamp(
+                 (vPropLineViewDepth - propLineDepthCenter) / propLineDepthRange,
+                 -1.0,
+                 1.0
+               );
+               diffuseColor.rgb *= 1.0 - propLineDepthDelta * 0.12;
+               gl_FragColor = vec4( diffuseColor.rgb, alpha );`,
+            )
+        }
+      }
 
       // Track material for resolution / linewidth updates
       lineMaterials.push(lineMaterial)
@@ -412,6 +497,15 @@ export const createSpiroAnimator = (vars: {
       (rsize + 0.04) * girth * multi,
     )
     const armGeometry = armLine.geometry as LineGeometry
+    const armMaterial = armLine.material as LineMaterial2
+    armMaterial.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        'gl_FragColor = vec4( diffuseColor.rgb, alpha );',
+        `float armSurfaceHighlight = pow(max(0.0, 1.0 - abs(vUv.x + 0.18)), 2.0);
+         diffuseColor.rgb *= 1.0 + armSurfaceHighlight * 0.06;
+         gl_FragColor = vec4( diffuseColor.rgb, alpha );`,
+      )
+    }
 
     // The arm's bounds move every frame; bypass stale bounds instead of recomputing them each tick.
     armLine.frustumCulled = false
@@ -464,7 +558,7 @@ export const createSpiroAnimator = (vars: {
   }
 
   if (active && !timeline) {
-    const rot1Mat = new MeshBasicMaterial({ color: COLSET[color]![0] })
+    const rot1Mat = createMarkerMaterial(COLSET[color]![0])
     apoint = new Mesh(rot1Geo, rot1Mat)
     apoint.scale.set(girth, girth, girth)
     motionGroup.add(apoint)
@@ -539,6 +633,13 @@ export const createSpiroAnimator = (vars: {
           ),
           stepPos = Pos.clone().multiplyScalar(RADIUS)
 
+        if (paths || hands)
+          pathSampleTimes.push(
+            ...uniqueSamplePercentages.map(
+              (percentage) => segmentStart + (segmentEnd - segmentStart) * percentage,
+            ),
+          )
+
         // Spherical Path
         if (PathType == TTYPE.SPHE)
           posPoints = catmPointsAt(angleApply, stepPos, PosX, uniqueSamplePercentages)
@@ -602,7 +703,7 @@ export const createSpiroAnimator = (vars: {
         if (paths) rotTmp.push(...rotPoints)
         else if (active) {
           // Otherwise create individual lines for each frame
-          const rotLine = createLine2(rotPoints, COLSET[color]![0], rsize * girth * multi)
+          const rotLine = createLine2(rotPoints, COLSET[color]![0], rsize * girth * multi, true)
           rotLines.push(rotLine)
           scene.add(rotLine)
         }
@@ -612,7 +713,13 @@ export const createSpiroAnimator = (vars: {
         if (hands) posTmp.push(...posPoints)
         else if (active) {
           // Otherwise create individual lines for each frame
-          const posLine = createLine2(posPoints, COLSET[color]![2], rsize * girth * multi)
+          const posLine = createLine2(
+            posPoints,
+            COLSET[color]![2],
+            rsize * girth * multi,
+            true,
+            Math.PI,
+          )
           posLines.push(posLine)
           scene.add(posLine)
         }
@@ -657,14 +764,21 @@ export const createSpiroAnimator = (vars: {
         motionOffsetAt(time, pathMotionOffset)
         if (paths) rotTmp.push(finalPath.clone().add(pathMotionOffset))
         if (hands) posTmp.push(finalHand.clone().add(pathMotionOffset))
+        pathSampleTimes.push(time)
       }
     }
 
     // Creates lines when Paths or Hands are enabled
-    if (rotTmp.length > 0)
-      pathsGroup.add(createLine2(rotTmp, COLSET[color]![0], rsize * girth * multi))
-    if (posTmp.length > 0)
-      handsGroup.add(createLine2(posTmp, COLSET[color]![2], rsize * girth * multi))
+    if (rotTmp.length > 0) {
+      const line = createLine2(rotTmp, COLSET[color]![0], rsize * girth * multi, true)
+      progressivePathLines.push(line)
+      pathsGroup.add(line)
+    }
+    if (posTmp.length > 0) {
+      const line = createLine2(posTmp, COLSET[color]![2], rsize * girth * multi, true, Math.PI)
+      progressivePathLines.push(line)
+      handsGroup.add(line)
+    }
   }
 
   if (guides) {
@@ -752,6 +866,10 @@ export const createSpiroAnimator = (vars: {
     setExportHidden(features, hidden) {
       for (const feature of features) exportGroups[feature].visible = !hidden
     },
+    setProgressivePaths(enabled) {
+      progressivePaths = enabled
+      updateProgressivePaths()
+    },
 
     animate,
     seek,
@@ -821,8 +939,8 @@ const radBase = MathUtils.degToRad(5), // Number of degrees for each base point
           geometry: new SphereGeometry(properties.size * multi, 20, 20),
           geoclick: new SphereGeometry(properties.click * multi, 20, 20),
           geonode: new SphereGeometry(properties.node * multi * 1.4, 20, 20),
-          material: new MeshBasicMaterial({ color: COLSET[properties.color]![2] }),
-          matnode: new MeshBasicMaterial({ color: COLSET[properties.color]![0] }),
+          material: createMarkerMaterial(COLSET[properties.color]![2]),
+          matnode: createMarkerMaterial(COLSET[properties.color]![0]),
         },
       ]
     }),
@@ -832,8 +950,8 @@ const radBase = MathUtils.degToRad(5), // Number of degrees for each base point
       geometry: SphereGeometry
       geoclick: SphereGeometry
       geonode: SphereGeometry
-      material: MeshBasicMaterial
-      matnode: MeshBasicMaterial
+      material: MeshToonMaterial
+      matnode: MeshToonMaterial
     }
   >,
   //  rot1Mat = new MeshBasicMaterial({ color: 0xff0000 }),

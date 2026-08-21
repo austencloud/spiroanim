@@ -117,6 +117,7 @@ export const usePlayerStore = (id: string) => {
 
         PLAYING: playing, //      Turns loaded ROOT playing on/off
         TRACER: ref(false), //    Turns tracer mode on/off
+        PROGRESSIVE_PATHS: ref(false), // Draws Player paths through the current playback time
 
         PTIMES: ref<number[][]>([[]]), // Individual times for each prop
         MTIMES: ref<number[][]>([[]]), // Individual Motion times for each prop
@@ -236,10 +237,21 @@ export const usePlayerStore = (id: string) => {
 
       // Manually save, as persist module appears to be saving anytime any value is modified
       watch(
-        [v.PLAYING, v.TRACER, v.freeCamera],
-        debounce(([PLAYING, TRACER, freeCamera]: [boolean, boolean, boolean]) => {
-          localStorage.setItem(`sa-player-${id}`, JSON.stringify({ PLAYING, TRACER, freeCamera }))
-        }, 100),
+        [v.PLAYING, v.TRACER, v.PROGRESSIVE_PATHS, v.freeCamera],
+        debounce(
+          ([PLAYING, TRACER, PROGRESSIVE_PATHS, freeCamera]: [
+            boolean,
+            boolean,
+            boolean,
+            boolean,
+          ]) => {
+            localStorage.setItem(
+              `sa-player-${id}`,
+              JSON.stringify({ PLAYING, TRACER, PROGRESSIVE_PATHS, freeCamera }),
+            )
+          },
+          100,
+        ),
       )
 
       // Load from localStorage on init
@@ -249,10 +261,12 @@ export const usePlayerStore = (id: string) => {
           const parsed = JSON.parse(saved) as {
             PLAYING?: boolean
             TRACER?: boolean
+            PROGRESSIVE_PATHS?: boolean
             freeCamera?: boolean
           }
           v.PLAYING.value = parsed.PLAYING ?? v.PLAYING.value
           v.TRACER.value = parsed.TRACER ?? v.TRACER.value
+          v.PROGRESSIVE_PATHS.value = parsed.PROGRESSIVE_PATHS ?? v.PROGRESSIVE_PATHS.value
           v.freeCamera.value = parsed.freeCamera ?? v.freeCamera.value
         } catch (e) {
           console.warn('Failed to parse saved player settings:', e)

@@ -1,4 +1,11 @@
-import { Group, Scene, Vector3, type InterleavedBufferAttribute } from 'three'
+import {
+  Group,
+  Mesh,
+  MeshToonMaterial,
+  Scene,
+  Vector3,
+  type InterleavedBufferAttribute,
+} from 'three'
 import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { describe, expect, it } from 'vitest'
 
@@ -123,6 +130,9 @@ describe('createSpiroAnimator Arms rendering', () => {
     const material = armLine.material as LineMaterial2
     expect(material.color.getHex()).toBe(COLSET[2]![1])
     expect(material.linewidth2).toBeCloseTo(0.22)
+    expect(material.vertexColors).toBe(false)
+    expect(armLine.children).toHaveLength(0)
+    expect(material.customProgramCacheKey()).toContain('armSurfaceHighlight')
 
     animator.seek(500)
 
@@ -329,8 +339,26 @@ describe('createSpiroAnimator linear scaling', () => {
     const handEndpoints = getLineEndpoints(handLine)
     expect(pathEndpoints.last.x - pathEndpoints.first.x).toBeCloseTo(5)
     expect(handEndpoints.last.x - handEndpoints.first.x).toBeCloseTo(5)
+    expect((pathLine.material as LineMaterial2).vertexColors).toBe(true)
+    expect((handLine.material as LineMaterial2).vertexColors).toBe(true)
+    expect((pathLine.material as LineMaterial2).customProgramCacheKey()).toContain(
+      'vPropLineViewDepth',
+    )
+    expect((handLine.material as LineMaterial2).depthCenterUniform?.value).toBe(22)
+    expect(pathLine.geometry.getAttribute('instanceColorStart')).toBeDefined()
+    expect(handLine.geometry.getAttribute('instanceColorStart')).toBeDefined()
     expect(pathLine.parent?.parent).toBe(scene)
     expect(handLine.parent?.parent).toBe(scene)
+
+    const pathSegmentCount = pathLine.geometry.getAttribute('instanceStart').count
+    animator.setProgressivePaths(true)
+    animator.seek(0)
+    expect(pathLine.geometry.instanceCount).toBe(0)
+    animator.seek(500)
+    expect(pathLine.geometry.instanceCount).toBeGreaterThan(0)
+    expect(pathLine.geometry.instanceCount).toBeLessThan(pathSegmentCount)
+    animator.setProgressivePaths(false)
+    expect(pathLine.geometry.instanceCount).toBe(pathSegmentCount)
 
     const nodesGroup = scene.children.find(
       (child): child is Group =>
@@ -338,6 +366,10 @@ describe('createSpiroAnimator linear scaling', () => {
     )
     if (!nodesGroup) throw new Error('Expected the Nodes group')
     expect(nodesGroup.children).toHaveLength(2)
+    const firstNode = nodesGroup.children[0]
+    if (!(firstNode instanceof Mesh) || !(firstNode.material instanceof MeshToonMaterial))
+      throw new Error('Expected a toon-shaded node Mesh')
+    expect(firstNode.material.emissiveIntensity).toBe(0.025)
     expect(nodesGroup.children[1]!.position.x - nodesGroup.children[0]!.position.x).toBeCloseTo(5)
 
     animator.seek(500)

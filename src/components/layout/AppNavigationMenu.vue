@@ -95,6 +95,16 @@
             <span>Export Video</span>
           </button>
           <button
+            class="menu-link menu-action progressive-paths-menu-item"
+            type="button"
+            role="menuitem"
+            :aria-pressed="PROGRESSIVE_PATHS"
+            @click="toggleProgressivePaths"
+          >
+            <BaseIcon :path="mdiAnimationPlayOutline" :size="22" />
+            <span>{{ progressivePathsLabel }}</span>
+          </button>
+          <button
             class="menu-link menu-action tracer-menu-item"
             type="button"
             role="menuitem"
@@ -161,6 +171,7 @@
 
 <script setup lang="ts">
 import {
+  mdiAnimationPlayOutline,
   mdiChevronDown,
   mdiFirework,
   mdiFireworkOff,
@@ -250,6 +261,7 @@ const {
   PLAYBACK_MAX,
   PLAYBACK_ROOT,
   TRACER,
+  PROGRESSIVE_PATHS,
   imageExportRequest,
   videoExportRequest,
   videoExportCancel,
@@ -262,6 +274,9 @@ const playerVisible = computed(() => viewVisible.value.player)
 const videoExportAvailable = ref(false)
 const tracerIcon = computed(() => (TRACER.value ? mdiFirework : mdiFireworkOff))
 const tracerLabel = computed(() => (TRACER.value ? 'Tracer: On' : 'Tracer: Off'))
+const progressivePathsLabel = computed(() =>
+  PROGRESSIVE_PATHS.value ? 'Path Tracing: On' : 'Path Tracing: Off',
+)
 const { editorEnabled } = storeToRefs(useEditorAccessStore())
 const editorAccessIcon = computed(() => (editorEnabled.value ? mdiPencilOff : mdiPencil))
 const editorAccessLabel = computed(() => (editorEnabled.value ? 'Disable Editor' : 'Enable Editor'))
@@ -297,6 +312,11 @@ function toggleFullscreenMode() {
 
 function toggleTracerMode() {
   TRACER.value = !TRACER.value
+  closeMenu()
+}
+
+function toggleProgressivePaths() {
+  PROGRESSIVE_PATHS.value = !PROGRESSIVE_PATHS.value
   closeMenu()
 }
 

@@ -1,9 +1,47 @@
 import { SphereGeometry, /*TorusGeometry,*/ CylinderGeometry } from 'three'
-import { Mesh, MeshBasicMaterial, Group } from 'three'
+import { Group, Mesh, MeshStandardMaterial, MeshToonMaterial } from 'three'
 
 import { COLSET } from '@/domain/animation/AnimStruct'
 
 import { type ColorInd, type ModelGroup } from '@/types/AnimTypes'
+
+const applyOpaqueRimTint = <T extends MeshStandardMaterial | MeshToonMaterial>(material: T): T => {
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <opaque_fragment>',
+      `float propRim = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);
+       outgoingLight += diffuseColor.rgb * propRim * 0.1;
+       #include <opaque_fragment>`,
+    )
+  }
+  return material
+}
+
+const createPropMaterial = (color: number) =>
+  applyOpaqueRimTint(
+    new MeshToonMaterial({
+      color,
+      emissive: color,
+      emissiveIntensity: 0.015,
+    }),
+  )
+
+const createFacetedSphere = (radius: number) => {
+  const geometry = new SphereGeometry(radius, 20, 20).toNonIndexed()
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+const createTetherMaterial = (color: number) =>
+  applyOpaqueRimTint(
+    new MeshStandardMaterial({
+      color,
+      emissive: color,
+      emissiveIntensity: 0.01,
+      metalness: 0.035,
+      roughness: 0.5,
+    }),
+  )
 
 export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGroup => {
     const emptyGroup = new Group() as ModelGroup
@@ -15,20 +53,14 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
 
     const cylinder = new Mesh(
       new CylinderGeometry(0.05 * multi * girth, 0.05 * multi * girth, 2.7 * multi, 32),
-      new MeshBasicMaterial({ color: cset[2] }),
+      createTetherMaterial(cset[2]),
     )
     cylinder.position.y = 1.2 * multi
 
-    const handle = new Mesh(
-      new SphereGeometry(0.06 * multi * girth, 20, 20),
-      new MeshBasicMaterial({ color: cset[1] }),
-    )
+    const handle = new Mesh(createFacetedSphere(0.06 * multi * girth), createPropMaterial(cset[1]))
     handle.position.y = -0.12 * multi
 
-    const head = new Mesh(
-      new SphereGeometry(0.2 * multi * girth, 20, 20),
-      new MeshBasicMaterial({ color: cset[0] }),
-    )
+    const head = new Mesh(createFacetedSphere(0.2 * multi * girth), createPropMaterial(cset[0]))
     head.position.y = 2.4 * multi
     /*
     const test1 = new Mesh(
@@ -61,26 +93,17 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
 
     const cylinder = new Mesh(
       new CylinderGeometry(0.05 * multi * girth, 0.05 * multi * girth, 4.8 * multi, 32),
-      new MeshBasicMaterial({ color: cset[2] }),
+      createTetherMaterial(cset[2]),
     )
     cylinder.position.y = 0
 
-    const handle = new Mesh(
-      new SphereGeometry(0.06 * multi * girth, 20, 20),
-      new MeshBasicMaterial({ color: cset[1] }),
-    )
+    const handle = new Mesh(createFacetedSphere(0.06 * multi * girth), createPropMaterial(cset[1]))
     handle.position.y = -0.12 * multi
 
-    const head1 = new Mesh(
-      new SphereGeometry(0.2 * multi * girth, 20, 20),
-      new MeshBasicMaterial({ color: cset[0] }),
-    )
+    const head1 = new Mesh(createFacetedSphere(0.2 * multi * girth), createPropMaterial(cset[0]))
     head1.position.y = 2.4 * multi
 
-    const head2 = new Mesh(
-      new SphereGeometry(0.2 * multi * girth, 20, 20),
-      new MeshBasicMaterial({ color: cset[1] }),
-    )
+    const head2 = new Mesh(createFacetedSphere(0.2 * multi * girth), createPropMaterial(cset[1]))
     head2.position.y = -2.4 * multi
 
     const model2 = new Group() as ModelGroup

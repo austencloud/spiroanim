@@ -134,6 +134,11 @@ export interface AnimBridgeMap {
     arg: boolean
   }
 
+  // Draw completed prop and hand paths only through the current playback time
+  progressivePaths: {
+    arg: boolean
+  }
+
   // ========== UI Feedback / Utility ==========
 
   // For UI / Editor, determines "points" which can be clicked

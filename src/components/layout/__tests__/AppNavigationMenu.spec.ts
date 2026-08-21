@@ -109,6 +109,7 @@ describe('AppNavigationMenu', () => {
       'Quick Slots',
       'Export Image',
       'Export Video',
+      'Path Tracing: Off',
       'Tracer: Off',
       'Enable Editor',
       'Home',
@@ -169,6 +170,9 @@ describe('AppNavigationMenu', () => {
     expect(document.activeElement?.textContent).toContain('Export Video')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement?.textContent).toContain('Path Tracing: Off')
+
+    await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Tracer: Off')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
@@ -215,7 +219,27 @@ describe('AppNavigationMenu', () => {
     wrapper.unmount()
   })
 
-  it('places the tracer item beneath both export actions', async () => {
+  it('toggles progressive paths independently from Tracer', async () => {
+    const playerStore = usePlayerStore('main')
+    const { wrapper } = await mountMenu()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    const progressiveItem = wrapper.get('.progressive-paths-menu-item')
+    expect(progressiveItem.text()).toBe('Path Tracing: Off')
+    expect(progressiveItem.attributes('aria-pressed')).toBe('false')
+
+    await progressiveItem.trigger('click')
+
+    expect(playerStore.PROGRESSIVE_PATHS).toBe(true)
+    expect(playerStore.TRACER).toBe(false)
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    expect(wrapper.get('.progressive-paths-menu-item').text()).toBe('Path Tracing: On')
+
+    wrapper.unmount()
+  })
+
+  it('places Path Tracing and Tracer beneath both export actions', async () => {
     const playerStore = usePlayerStore('main')
     playerStore.CANVAS_DIM = { width: 1280, height: 720 }
     const { wrapper } = await mountMenu()
@@ -231,7 +255,11 @@ describe('AppNavigationMenu', () => {
     )
 
     expect(exportVideoIndex).toBe(exportImageIndex + 1)
-    expect(tracerIndex).toBe(exportVideoIndex + 1)
+    const progressivePathsIndex = menuItems.findIndex((item) =>
+      item.classes().includes('progressive-paths-menu-item'),
+    )
+    expect(progressivePathsIndex).toBe(exportVideoIndex + 1)
+    expect(tracerIndex).toBe(progressivePathsIndex + 1)
     await wrapper.get('.export-image-menu-item').trigger('click')
 
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
@@ -358,6 +386,7 @@ describe('AppNavigationMenu', () => {
       'Quick Slots',
       'Export Image',
       'Export Video',
+      'Path Tracing: Off',
       'Tracer: Off',
       'Enable Editor',
     ])
@@ -480,6 +509,7 @@ describe('AppNavigationMenu', () => {
       'Quick Slots',
       'Export Image',
       'Export Video',
+      'Path Tracing: Off',
       'Tracer: Off',
       'Enable Editor',
       'Home',

@@ -100,6 +100,7 @@ const {
   PREVIEW_PLAYING,
   PLAYBACK_TEMPORARY_ACTIVE,
   TRACER,
+  PROGRESSIVE_PATHS,
   ETIMES,
   PLAYBACK_ASPECT,
   CANVAS_DIM,
@@ -229,6 +230,19 @@ onMounted(() => {
 
   // Send "Tracer" toggles
   watchImmediate(TRACER, (val) => send('tracer', val))
+
+  // Builder previews, temporary previews, and timeline selection continue to display paths using
+  // their established behavior. The normal Player may trace paths while Editor controls are open.
+  watchImmediate(
+    computed(
+      () =>
+        PROGRESSIVE_PATHS.value &&
+        !props.minimal &&
+        !SELECTION.value &&
+        !PLAYBACK_TEMPORARY_ACTIVE.value,
+    ),
+    (val) => send('progressivePaths', val),
+  )
 
   // Stop animating when page isn't visible
   watchImmediate(isVisible, (val) => send('animate', { val }))
