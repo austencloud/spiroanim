@@ -541,7 +541,11 @@ const patternMatchingEnabled = true
 const createQSlots = async () => {
   quickSlotCreationError.value = undefined
   if (!props.animation) return
-  const candidates = createVtgTransitionQuickSlotAnimationCandidates(props.animation)
+  const quickSlotBeatCount = getVtgTimingCycleCount(speedRatio.value) * 4
+  const candidates = createVtgTransitionQuickSlotAnimationCandidates(
+    props.animation,
+    quickSlotBeatCount,
+  )
   if (!candidates) return
 
   const preferences = {

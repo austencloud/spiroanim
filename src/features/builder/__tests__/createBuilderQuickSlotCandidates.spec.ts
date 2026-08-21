@@ -26,4 +26,20 @@ describe('createBuilderQuickSlotCandidates', () => {
     expect(candidates[0]).toBe(current)
     expect(candidates.slice(1).map(getVtgTransitionPreviewBeatCount)).toEqual(previews.map(() => 4))
   })
+
+  it('keeps eight beats for each extracted 2:3 slot', () => {
+    const current = createDefaultVtgAnimation({
+      reference: '5-1',
+      speedRatio: '2:3',
+      transition: true,
+      transitionBeats: 5,
+    })
+    if (!current) throw new Error('Expected a supported VTG transition')
+    const previews = createVtgTransitionPreviewAnimations(current)
+    if (!previews) throw new Error('Expected Builder previews')
+
+    const candidates = createBuilderQuickSlotCandidates(current, previews)
+
+    expect(candidates.slice(1).map(getVtgTransitionPreviewBeatCount)).toEqual(previews.map(() => 8))
+  })
 })

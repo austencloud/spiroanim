@@ -1,9 +1,8 @@
 import { resizeVtgTransitionPatternPreview } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import { getVtgQuickSlotBeatCount } from '@/features/vtg/math/getVtgQuickSlotBeatCount'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
-const quickSlotPatternBeatCount = 4
-
-/** Keeps the complete Builder pattern first and normalizes every extracted slot to four beats. */
+/** Keeps the complete Builder pattern first and normalizes each slot to its complete timing cycle. */
 export const createBuilderQuickSlotCandidates = (
   currentPattern: RootDataFinal,
   previews: readonly RootDataFinal[],
@@ -11,6 +10,6 @@ export const createBuilderQuickSlotCandidates = (
   currentPattern,
   ...previews.map(
     (preview) =>
-      resizeVtgTransitionPatternPreview(preview, 0, quickSlotPatternBeatCount) ?? preview,
+      resizeVtgTransitionPatternPreview(preview, 0, getVtgQuickSlotBeatCount(preview)) ?? preview,
   ),
 ]

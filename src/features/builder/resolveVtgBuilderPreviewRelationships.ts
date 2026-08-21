@@ -1,19 +1,9 @@
 import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
 import type { PatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { resizeVtgTransitionPatternPreview } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
-import { inferVtgSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
-import { getVtgTimingCycleCount } from '@/features/vtg/types'
+import { getVtgQuickSlotBeatCount } from '@/features/vtg/math/getVtgQuickSlotBeatCount'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
-
-const beatsPerHandRotation = 4
-
-const getNormalizedPreviewBeatCount = (preview: RootDataFinal): number => {
-  const speedRatio = inferVtgSpeedRatio(preview)
-  return speedRatio === undefined
-    ? beatsPerHandRotation
-    : getVtgTimingCycleCount(speedRatio) * beatsPerHandRotation
-}
 
 /** Resolves Builder labels from the same catalog selections used to label VTG cells. */
 export const resolveVtgBuilderPreviewRelationships = async (
@@ -23,8 +13,7 @@ export const resolveVtgBuilderPreviewRelationships = async (
   const relationships = await Promise.all(
     previews.map(async (preview) => {
       const candidate =
-        resizeVtgTransitionPatternPreview(preview, 0, getNormalizedPreviewBeatCount(preview)) ??
-        preview
+        resizeVtgTransitionPatternPreview(preview, 0, getVtgQuickSlotBeatCount(preview)) ?? preview
       const result = await matchVtg({
         animation: candidate,
         preferences: { swapProps: false, reversePlane: false, quarters: 1 },

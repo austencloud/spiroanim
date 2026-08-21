@@ -484,6 +484,23 @@ describe('createVtgTransitionQuickSlotAnimations', () => {
     },
   )
 
+  it('stores a complete eight-beat cycle for 2:3 transition Quick Slots', () => {
+    const animation = createDefaultVtgAnimation({
+      reference: '5-1',
+      speedRatio: '2:3',
+      transition: true,
+      transitionBeats: 4,
+    })
+    if (!animation) throw new Error('Expected a supported VTG transition')
+
+    const quickSlotCandidates = createVtgTransitionQuickSlotAnimationCandidates(animation, 8)
+
+    expect(quickSlotCandidates).toHaveLength(5)
+    expect(quickSlotCandidates?.slice(1).map(getVtgTransitionPreviewBeatCount)).toEqual(
+      Array(4).fill(8),
+    )
+  })
+
   it('detects pattern boundaries from authored Plane or Turns frames instead of beat spacing', () => {
     const base = createDefaultVtgAnimation({ reference: '5-1', speedRatio: '1:3' })
     if (!base) throw new Error('Expected a supported VTG animation')

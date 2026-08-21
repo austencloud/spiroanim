@@ -12,7 +12,7 @@ import type { VtgPatternRotationFilter } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const extractedPatternSourceFrameCount = 2
-const doubledVtgFrameCount = 9
+const defaultQuickSlotBeatCount = 4
 const transitionSegmentCount = 4
 export type VtgTransitionQuickSlotCandidates = readonly RootDataFinal[]
 export type VtgTransitionPreviewAnimations = readonly RootDataFinal[]
@@ -340,6 +340,7 @@ export const createVtgTransitionPreviewAnimations = (
  */
 export const createVtgTransitionQuickSlotAnimationCandidates = (
   animation: RootDataFinal,
+  beatCount = defaultQuickSlotBeatCount,
 ): VtgTransitionQuickSlotCandidates | undefined => {
   const firstProp = animation.props[0]
   if (
@@ -370,7 +371,8 @@ export const createVtgTransitionQuickSlotAnimationCandidates = (
 
   const segments = segmentShiftCounts.map((shiftCount) => {
     const shifted = shiftClosedAnimation(animation, shiftCount)
-    return shifted ? extractDoubledCycle(shifted, doubledVtgFrameCount) : undefined
+    const frameCount = beatCount * doublePlaybackMultiplier + 1
+    return shifted ? extractDoubledCycle(shifted, frameCount) : undefined
   })
   if (segments.some((segment) => segment === undefined)) return undefined
 
