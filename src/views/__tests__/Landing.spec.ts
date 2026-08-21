@@ -36,7 +36,7 @@ describe('Landing view', () => {
     expect(wrapper.get('.project-note').text()).not.toContain('More features are on the way')
     expect(wrapper.get('.project-note').text()).not.toContain('rough edges')
     expect(wrapper.get('.project-note').text()).toContain(
-      'Now includes a VTG3 Generator, a duplicate of Vulkan Tech Gospel v3',
+      'Now includes a VTG3 Generator, a duplicate of Vulcan Tech Gospel v3',
     )
     expect(wrapper.get('.project-note').text()).toContain('Credit to:')
     expect(wrapper.get('.project-note').findAll('br')).toHaveLength(2)

@@ -787,7 +787,7 @@ describe('SpiroAnim view', () => {
       history: createMemoryHistory(),
       routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
     })
-    await router.push('/vulkan-tech-gospel?r=future-format&p0=untouched&v=999')
+    await router.push('/vulcan-tech-gospel?r=future-format&p0=untouched&v=999')
     await router.isReady()
     const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
 

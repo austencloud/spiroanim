@@ -42,7 +42,7 @@ test('hydrates a VTG selection through the lazy pattern-matching worker', async 
     }
   })
 
-  await page.goto('/vulkan-tech-gospel')
+  await page.goto('/vulcan-tech-gospel')
   const pane = page.locator('[data-role="vtg-pane"]')
   const cell = page.locator('[data-cell-reference="5-6"]')
   await expect(pane).toBeVisible()

@@ -12,7 +12,7 @@
           <h2 id="preview-title">A playground for advanced flow arts concepts</h2>
           <p>
             SpiroAnim is an exploration and visualization tool for advanced flow arts concepts.<br />
-            Now includes a VTG3 Generator, a duplicate of Vulkan Tech Gospel v3 with several
+            Now includes a VTG3 Generator, a duplicate of Vulcan Tech Gospel v3 with several
             functional additions and upgrades.<br />
             Credit to:
             <a

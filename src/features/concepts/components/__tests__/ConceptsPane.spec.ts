@@ -82,7 +82,7 @@ describe('ConceptsPane', () => {
     expect(selector.element.value).toBe('vtg')
     expect(selector.attributes('aria-label')).toBe('Concept')
     expect(selector.findAll('option').map((option) => option.text())).toEqual([
-      'Vulkan Tech Gospel',
+      'Vulcan Tech Gospel',
       'Eight Step',
       'Quarter Space Tech',
       'Third Order',

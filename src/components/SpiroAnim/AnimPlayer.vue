@@ -55,6 +55,7 @@ import { useAnimWorkerCamera } from '@/composables/useAnimWorkerCamera'
 import { fitToAspect } from '@/math/aspectRatio'
 import { videoExportFrameCount } from '@/math/videoExportTiming'
 import { getPointerClientPosition } from '@/utils/pointerEvent'
+import { isTouchDevice } from '@/utils/device'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
@@ -276,9 +277,10 @@ onMounted(() => {
     }
   })
 
-  // Register canvas click or touchend
-  const prefersTouch = matchMedia('(pointer: coarse)').matches
-  if (!props.minimal) useEventListener(eCanvas, prefersTouch ? 'touchend' : 'click', canvasClick)
+  if (!props.minimal) {
+    if (isTouchDevice()) registerTouchCanvasPlayback()
+    else useEventListener(eCanvas, 'click', canvasClick)
+  }
 })
 
 async function exportImage(requestId: symbol, settings: ImageExportSettings) {
@@ -352,7 +354,7 @@ onBeforeUnmount(() => {
 })
 
 // Forward clicks to the worker
-const canvasClick = (e: MouseEvent | TouchEvent) => {
+const canvasClick = (e: MouseEvent | PointerEvent | TouchEvent) => {
   if (eCanvas.value === undefined) return
 
   const xy = getPointerClientPosition(e)
@@ -369,6 +371,59 @@ const canvasClick = (e: MouseEvent | TouchEvent) => {
     // Receive data about the click
     if (type == CMODES.points && point !== undefined && prop != undefined)
       trackClicks.value.push([type, point as PointInd, prop])
+  })
+}
+
+const touchTapMovementThreshold = 8
+
+const hasCanvasInteraction = () =>
+  PLAYBACK_COMPILED.value.props.some(
+    (prop) => typeof prop.click === 'number' && prop.click >= 0,
+  )
+
+const registerTouchCanvasPlayback = () => {
+  type TouchGesture = {
+    pointerId: number
+    startX: number
+    startY: number
+    moved: boolean
+  }
+
+  let gesture: TouchGesture | undefined
+
+  useEventListener(eCanvas, 'pointerdown', (event: PointerEvent) => {
+    if (!event.isPrimary) {
+      if (gesture) gesture.moved = true
+      return
+    }
+    gesture = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    }
+  })
+
+  useEventListener(eCanvas, 'pointermove', (event: PointerEvent) => {
+    if (!gesture || event.pointerId !== gesture.pointerId || gesture.moved) return
+    const horizontalMovement = event.clientX - gesture.startX
+    const verticalMovement = event.clientY - gesture.startY
+    gesture.moved =
+      Math.hypot(horizontalMovement, verticalMovement) > touchTapMovementThreshold
+  })
+
+  useEventListener(eCanvas, 'pointercancel', (event: PointerEvent) => {
+    if (gesture?.pointerId === event.pointerId) gesture = undefined
+  })
+
+  useEventListener(eCanvas, 'pointerup', (event: PointerEvent) => {
+    if (!gesture || event.pointerId !== gesture.pointerId) return
+    const completedGesture = gesture
+    gesture = undefined
+    if (completedGesture.moved) return
+
+    if (hasCanvasInteraction()) canvasClick(event)
+    else rendererPlaying.value = !rendererPlaying.value
   })
 }
 

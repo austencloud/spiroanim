@@ -6,7 +6,7 @@
       'vtg-pane--touch': touchDevice,
       'vtg-pane--builder-active': compactBuilder,
       'vtg-pane--builder-drag-active': builderActive,
-      'vtg-pane--classic': classicLayout,
+      'vtg-pane--classic': usesClassicLayout,
     }"
     aria-labelledby="vtg-pane-title"
     data-role="vtg-pane"
@@ -83,7 +83,7 @@
         v-model:classic="classicLayout"
         confirm-reset
         show-more
-        show-classic
+        :show-classic="!compactBuilder"
         :show-swap="!builderActive"
         :reverse-label="isQtr ? 'Flip' : '180°'"
         :reverse-description="
@@ -110,7 +110,7 @@
       </AppTooltip>
 
       <div class="vtg-column-headers" data-role="vtg-column-headers">
-        <template v-if="classicLayout">
+        <template v-if="usesClassicLayout">
           <VtgRuleCard
             v-for="rule in displayedSideRules"
             :key="`column-${rule.number}`"
@@ -154,7 +154,7 @@
       </div>
 
       <div class="vtg-sidebar" data-role="vtg-sidebar">
-        <template v-if="classicLayout">
+        <template v-if="usesClassicLayout">
           <VtgRuleCard
             v-for="header in classicSideHeaderRules"
             :key="`side-${header.column}`"
@@ -179,15 +179,22 @@
           v-for="rule in displayedSideRules"
           :key="`side-${rule.number}`"
           :labels="rule.labels"
-          :display-labels="isQtr ? qtrSideRuleLabels[rule.sourceNumber ?? rule.number] : undefined"
+          :display-labels="
+            compactBuilder
+              ? qtrSideRuleLabels[rule.sourceNumber ?? rule.number]
+              : isQtr
+                ? qtrSideRuleLabels[rule.sourceNumber ?? rule.number]
+                : undefined
+          "
           :number="rule.number"
           :diagram="rule.diagram"
           :description="rule.description"
           :orientation="sideHeaderOrientation"
           :accent="(rule.sourceNumber ?? rule.number) === selectedCell?.row"
-          :show-divider="!isQtr"
+          :show-divider="!isQtr && !compactBuilder"
+          :show-props="!compactBuilder"
           :prop-colors="isQtr ? vtgHeaderPropColors : undefined"
-          :tooltip-disabled="isQtr"
+          :tooltip-disabled="isQtr || compactBuilder"
           :reversed="sideHeaderReversed"
           :mirror-props="!isQtr"
           :diagram-rotation="isQtr ? orientation : 0"
@@ -529,11 +536,14 @@ const hasPopulatedQuickSlots = computed(
 )
 const showStaticPropsTransitionNote = computed(() => transition.value && speedRatio.value === '1:1')
 const compactBuilder = computed(() => props.builderActive && !props.builderFullCatalog)
+const usesClassicLayout = computed(() => classicLayout.value && !compactBuilder.value)
 const usesPairedPreviewLayout = computed(
   () => compactBuilder.value || requiresPairedVtgPreviewLayout(speedRatio.value),
 )
 const topHeaderRule = computed(() => getVtgTopHeaderRule(speedRatio.value))
-const hideColumnHeaderDetails = computed(() => isQtr.value || !topHeaderRule.value.showDetails)
+const hideColumnHeaderDetails = computed(
+  () => compactBuilder.value || isQtr.value || !topHeaderRule.value.showDetails,
+)
 const usesQuarterTurnHeaderLayout = computed(
   () =>
     supportsVtgPatternOrientation(speedRatio.value) &&
@@ -699,7 +709,7 @@ const displayCellReference = (tile: VtgMatrixTile): string =>
 const getTileDescription = (tile: VtgMatrixTile) => tile.description
 
 const getTileGridPosition = (tile: VtgMatrixTile) => {
-  if (!classicLayout.value) {
+  if (!usesClassicLayout.value) {
     return {
       column: tile.column,
       row: compactBuilder.value ? (tile.row === 6 ? 2 : 1) : tile.row,
@@ -713,16 +723,16 @@ const getTileGridPosition = (tile: VtgMatrixTile) => {
 }
 
 const getTileGridStyle = (tile: VtgMatrixTile) => {
-  if (!compactBuilder.value && !classicLayout.value) return undefined
+  if (!compactBuilder.value && !usesClassicLayout.value) return undefined
   const position = getTileGridPosition(tile)
   return { gridColumn: String(position.column), gridRow: String(position.row) }
 }
 
 const getTileBoardColumn = (tile: VtgMatrixTile) =>
-  classicLayout.value ? getTileGridPosition(tile).column + 1 : tile.boardColumn
+  usesClassicLayout.value ? getTileGridPosition(tile).column + 1 : tile.boardColumn
 
 const getTileBoardRow = (tile: VtgMatrixTile) =>
-  classicLayout.value ? getTileGridPosition(tile).row : tile.boardRow
+  usesClassicLayout.value ? getTileGridPosition(tile).row : tile.boardRow
 
 const getTileClasses = (tile: VtgMatrixTile): Record<string, boolean> => {
   const pairedEdge = tile.column % 2 === 0 ? 'top' : 'bottom'
@@ -731,17 +741,17 @@ const getTileClasses = (tile: VtgMatrixTile): Record<string, boolean> => {
   return {
     'vtg-tile--highlighted': isTileHighlighted(tile),
     'vtg-tile--selected': tile.reference === selectedCellReference.value,
-    [`vtg-tile--paired-${classicLayout.value ? pairedEdge : standardPairedEdge}`]:
+    [`vtg-tile--paired-${usesClassicLayout.value ? pairedEdge : standardPairedEdge}`]:
       usesPairedPreviewLayout.value,
   }
 }
 
 const getSpinTogglePositionClasses = (tile: VtgMatrixTile): readonly string[] => {
-  const isTop = classicLayout.value ? tile.column === 6 : tile.row === 5
+  const isTop = usesClassicLayout.value ? tile.column === 6 : tile.row === 5
   const classes = [`vtg-tile__spin-toggle--${isTop ? 'top' : 'bottom'}`]
   if (!usesPairedPreviewLayout.value) return classes
 
-  const isLeft = classicLayout.value ? tile.row === 5 : tile.column % 2 === 1
+  const isLeft = usesClassicLayout.value ? tile.row === 5 : tile.column % 2 === 1
   classes.push(`vtg-tile__spin-toggle--${isLeft ? 'left' : 'right'}`)
   return classes
 }
@@ -1667,12 +1677,10 @@ const blankDimensions = reactive<BlankDimensions[]>(
 
 const getPreviewGridStyle = (row: number, column: number) => {
   if (compactBuilder.value) {
-    return classicLayout.value
-      ? { gridColumn: row === 6 ? '2' : '1', gridRow: `${4 - column} / span 2` }
-      : { gridColumn: `${column} / span 2`, gridRow: row === 6 ? '2' : '1' }
+    return { gridColumn: `${column} / span 2`, gridRow: row === 6 ? '2' : '1' }
   }
 
-  if (!classicLayout.value) {
+  if (!usesClassicLayout.value) {
     return usesPairedPreviewLayout.value
       ? { gridColumn: `${column} / span 2`, gridRow: String(row) }
       : { gridColumn: String(column + 1), gridRow: String(row + 1) }
@@ -2366,39 +2374,6 @@ defineExpose({
 .vtg-pane--classic .vtg-sidebar,
 .vtg-pane--classic .vtg-matrix {
   grid-row: 1 / span 6;
-}
-
-.vtg-pane--builder-active.vtg-pane--classic .vtg-board {
-  aspect-ratio: 3 / 5;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(5, minmax(0, 1fr));
-}
-
-.vtg-pane--builder-active.vtg-pane--classic .vtg-shuffle-tooltip,
-.vtg-pane--builder-active.vtg-pane--classic .vtg-shuffle {
-  grid-row: 5;
-}
-
-.vtg-pane--builder-active.vtg-pane--classic .vtg-column-headers {
-  grid-row: 5;
-  grid-column: 2 / span 2;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.vtg-pane--builder-active.vtg-pane--classic .vtg-sidebar {
-  grid-row: 1 / span 4;
-  grid-template-rows: repeat(4, minmax(0, 1fr));
-}
-
-.vtg-pane--builder-active.vtg-pane--classic .vtg-matrix {
-  grid-row: 1 / span 4;
-  grid-column: 2 / span 2;
-}
-
-.vtg-pane--builder-active.vtg-pane--classic .vtg-tile-grid,
-.vtg-pane--builder-active.vtg-pane--classic .vtg-blank-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(4, minmax(0, 1fr));
 }
 
 .vtg-pane__visually-hidden {

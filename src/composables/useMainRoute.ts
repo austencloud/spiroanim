@@ -36,7 +36,7 @@ const fullToView = {
   editor: 'editor',
   timeline: 'timeline',
   concepts: 'concepts',
-  'vulkan-tech-gospel': 'concepts',
+  'vulcan-tech-gospel': 'concepts',
   quarterspacing: 'concepts',
   'eight-step': 'concepts',
   'quarter-space-tech': 'concepts',

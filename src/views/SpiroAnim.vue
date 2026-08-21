@@ -300,7 +300,7 @@ const quickSlotViewByRoutePart: Readonly<Record<string, QuickSlotTargetView>> = 
   qst: 'concepts',
   to: 'concepts',
   tka: 'concepts',
-  'vulkan-tech-gospel': 'concepts',
+  'vulcan-tech-gospel': 'concepts',
   quarterspacing: 'concepts',
   'eight-step': 'concepts',
   'quarter-space-tech': 'concepts',

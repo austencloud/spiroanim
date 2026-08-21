@@ -1,7 +1,7 @@
 import type { ConceptKey } from '@/features/concepts/types'
 
 export const fullPathByConcept = {
-  vtg: 'vulkan-tech-gospel',
+  vtg: 'vulcan-tech-gospel',
   '8stp': 'eight-step',
   qst: 'quarter-space-tech',
   to: 'third-order',

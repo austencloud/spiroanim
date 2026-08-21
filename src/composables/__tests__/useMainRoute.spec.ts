@@ -401,9 +401,9 @@ describe('useMainRoute', () => {
     expect(router.currentRoute.value.path).toBe('/play-vtg')
   })
 
-  it('maps the Vulkan Tech Gospel route to the full-width Concepts pane', async () => {
+  it('maps the Vulcan Tech Gospel route to the full-width Concepts pane', async () => {
     const { paneStore, conceptsStore, router, splitterStore } = await mountRoute(
-      '/vulkan-tech-gospel',
+      '/vulcan-tech-gospel',
       createLoadedAnimation(),
     )
 
@@ -415,7 +415,7 @@ describe('useMainRoute', () => {
     })
     expect(conceptsStore.selectedConcept).toBe('vtg')
     expect(splitterStore.leftPerc).toBe(0)
-    expect(router.currentRoute.value.path).toBe('/vulkan-tech-gospel')
+    expect(router.currentRoute.value.path).toBe('/vulcan-tech-gospel')
   })
 
   it('maps the legacy Quarter Spacing route to full-width VTG with QTR enabled', async () => {
@@ -434,7 +434,7 @@ describe('useMainRoute', () => {
     expect(conceptsStore.selectedConcept).toBe('vtg')
     expect(conceptsStore.qtrEnabled).toBe(true)
     expect(splitterStore.leftPerc).toBe(0)
-    expect(router.currentRoute.value.path).toBe('/vulkan-tech-gospel')
+    expect(router.currentRoute.value.path).toBe('/vulcan-tech-gospel')
   })
 
   it('maps the Eight Step route to the full-width Eight Step pane', async () => {
@@ -455,7 +455,7 @@ describe('useMainRoute', () => {
 
     conceptsStore.selectedConcept = 'vtg'
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/vulkan-tech-gospel')
+    expect(router.currentRoute.value.path).toBe('/vulcan-tech-gospel')
 
     conceptsStore.selectedConcept = '8stp'
     await flushPromises()
@@ -535,6 +535,6 @@ describe('useMainRoute', () => {
     await flushPromises()
 
     expect(conceptsStore.selectedConcept).toBe('vtg')
-    expect(router.currentRoute.value.path).toBe('/vulkan-tech-gospel')
+    expect(router.currentRoute.value.path).toBe('/vulcan-tech-gospel')
   })
 })

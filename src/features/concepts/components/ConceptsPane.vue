@@ -17,7 +17,7 @@
         aria-label="Concept"
         data-role="concept-selector"
       >
-        <option value="vtg">Vulkan Tech Gospel</option>
+        <option value="vtg">Vulcan Tech Gospel</option>
         <option value="8stp">Eight Step</option>
         <option value="qst">Quarter Space Tech</option>
         <option value="to">Third Order</option>

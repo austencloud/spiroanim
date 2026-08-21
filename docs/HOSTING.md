@@ -11,7 +11,7 @@ Production hosting must:
 - serve the generated directory index files so `/`, `/index`, `/about`, and `/tips` return their
   prerendered HTML;
 - serve the generated client-only directory index files for `/app`, `/player`, `/editor`,
-  `/timeline`, `/concepts`, `/vulkan-tech-gospel`, `/quarterspacing`, `/eight-step`,
+  `/timeline`, `/concepts`, `/vulcan-tech-gospel`, `/quarterspacing`, `/eight-step`,
   `/quarter-space-tech`, `/third-order`, `/the-kinetic-alphabet`, and the pane-layout aliases. A
   blanket rewrite to `/index.html` would
   replace this separation and should not be used;

@@ -30,7 +30,7 @@ an LLM:
   The tiny spherical center accent is optional and must remain subordinate to the paths. The mark
   should suggest a spirographic animation path and remain legible at 48-64 pixels.
 - Preserve a violet-to-blue-to-cyan/teal palette and luminous technical character. The high-level
-  inspiration is Vulkan Tech Gospel's dark, neon, flow-art mood; do not copy its skull, lettering,
+  inspiration is Vulcan Tech Gospel's dark, neon, flow-art mood; do not copy its skull, lettering,
   diagram, or any other specific artwork.
 - Avoid four-way rotational symmetry, hooked or right-angled arms, bent arrows, pinwheels, crosses,
   and any silhouette that could resemble a swastika or another religious or political symbol.

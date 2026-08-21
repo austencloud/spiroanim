@@ -2741,6 +2741,7 @@ describe('VtgPane', () => {
     expect(wrapper.find('[data-role="vtg-beat"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="vtg-tile"]').attributes('draggable')).toBe('true')
+    expect(wrapper.find('[data-role="vtg-classic"]').exists()).toBe(true)
   })
 
   it('limits Builder to the eight final relationship sources at every ratio', async () => {
@@ -2758,24 +2759,23 @@ describe('VtgPane', () => {
     }
   })
 
-  it('keeps Classic visible and transposes the compact Builder table', () => {
+  it('uses the non-Classic compact Builder table and hides its Classic control', () => {
     const wrapper = mount(VtgPane, { props: { builderActive: true } })
-    const classic = wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]')
     const first = wrapper.get('[data-cell-reference="1-1"]')
     const last = wrapper.get('[data-cell-reference="2-4"]')
 
-    expect(classic.element.checked).toBe(true)
-    expect(wrapper.get('[data-role="vtg-pane"]').classes()).toContain('vtg-pane--classic')
+    expect(wrapper.find('[data-role="vtg-classic"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="vtg-pane"]').classes()).not.toContain('vtg-pane--classic')
     expect(first.element.parentElement?.getAttribute('style')).toContain('grid-column: 1')
-    expect(first.element.parentElement?.getAttribute('style')).toContain('grid-row: 4')
-    expect(last.element.parentElement?.getAttribute('style')).toContain('grid-column: 2')
-    expect(last.element.parentElement?.getAttribute('style')).toContain('grid-row: 1')
+    expect(first.element.parentElement?.getAttribute('style')).toContain('grid-row: 1')
+    expect(last.element.parentElement?.getAttribute('style')).toContain('grid-column: 4')
+    expect(last.element.parentElement?.getAttribute('style')).toContain('grid-row: 2')
     expect(
       wrapper.get('[data-role="vtg-sidebar"]').findAll('[data-role="vtg-rule-card"]'),
-    ).toHaveLength(4)
+    ).toHaveLength(2)
     expect(
       wrapper.get('[data-role="vtg-column-headers"]').findAll('[data-role="vtg-rule-card"]'),
-    ).toHaveLength(2)
+    ).toHaveLength(4)
   })
 
   it('preserves each compact Builder header rule and its ratio-specific behavior', async () => {
@@ -2785,18 +2785,19 @@ describe('VtgPane', () => {
 
     await selectSpeedRatio(wrapper, '1:1')
     expect(columns().findAll('[data-role="vtg-rule-card"]')).toHaveLength(4)
-    columns().get('[aria-label="TOG OUT rule 1"]')
-    expect(columns().findAll('[data-role="vtg-prop"]')).toHaveLength(8)
+    expect(columns().findAll('.vtg-rule-card__title').every((title) => title.text() === '')).toBe(
+      true,
+    )
+    expect(columns().findAll('[data-role="vtg-prop"]')).toHaveLength(0)
     expect(sides().findAll('[data-role="vtg-rule-card"]')).toHaveLength(2)
-    sides().get('[aria-label="SPLIT TOG rule 2"]')
-    expect(sides().findAll('[data-role="vtg-prop"]')).toHaveLength(4)
+    expect(sides().findAll('.vtg-rule-card__title').every((title) => title.text() === '')).toBe(true)
+    expect(sides().findAll('[data-role="vtg-prop"]')).toHaveLength(0)
 
     await selectSpeedRatio(wrapper, '1:2')
-    columns().get('[aria-label="TOG OUT rule 1"]')
     expect(columns().findAll('[data-role="vtg-prop"]')).toHaveLength(0)
-    expect(sides().findAll('[data-role="vtg-prop"]')).toHaveLength(4)
+    expect(sides().findAll('[data-role="vtg-prop"]')).toHaveLength(0)
 
-    await sides().get('[aria-label="SPLIT TOG rule 2"]').trigger('click')
+    await sides().get('[aria-label$="rule 2"]').trigger('click')
     expect(wrapper.get('.vtg-tile--selected').attributes('data-cell-reference')).toMatch(
       /^2-[1-4]$/,
     )
