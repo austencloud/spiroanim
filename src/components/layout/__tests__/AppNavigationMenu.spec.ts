@@ -109,7 +109,7 @@ describe('AppNavigationMenu', () => {
       'Quick Slots',
       'Export Image',
       'Export Video',
-      'Path Tracing: Off',
+      'Path Tracing: On',
       'Tracer: Off',
       'Enable Editor',
       'Home',
@@ -170,7 +170,7 @@ describe('AppNavigationMenu', () => {
     expect(document.activeElement?.textContent).toContain('Export Video')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
-    expect(document.activeElement?.textContent).toContain('Path Tracing: Off')
+    expect(document.activeElement?.textContent).toContain('Path Tracing: On')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Tracer: Off')
@@ -225,16 +225,16 @@ describe('AppNavigationMenu', () => {
 
     await wrapper.get('.menu-trigger').trigger('click')
     const progressiveItem = wrapper.get('.progressive-paths-menu-item')
-    expect(progressiveItem.text()).toBe('Path Tracing: Off')
-    expect(progressiveItem.attributes('aria-pressed')).toBe('false')
+    expect(progressiveItem.text()).toBe('Path Tracing: On')
+    expect(progressiveItem.attributes('aria-pressed')).toBe('true')
 
     await progressiveItem.trigger('click')
 
-    expect(playerStore.PROGRESSIVE_PATHS).toBe(true)
+    expect(playerStore.PROGRESSIVE_PATHS).toBe(false)
     expect(playerStore.TRACER).toBe(false)
 
     await wrapper.get('.menu-trigger').trigger('click')
-    expect(wrapper.get('.progressive-paths-menu-item').text()).toBe('Path Tracing: On')
+    expect(wrapper.get('.progressive-paths-menu-item').text()).toBe('Path Tracing: Off')
 
     wrapper.unmount()
   })
@@ -302,6 +302,7 @@ describe('AppNavigationMenu', () => {
     expect(wrapper.find('.tracer-menu-item').exists()).toBe(false)
     expect(wrapper.find('.export-image-menu-item').exists()).toBe(false)
     expect(wrapper.find('.export-video-menu-item').exists()).toBe(false)
+    expect(wrapper.get('.progressive-paths-menu-item').text()).toBe('Path Tracing: On')
     expect(wrapper.get('.editor-access-menu-item').text()).toBe('Enable Editor')
 
     wrapper.unmount()
@@ -386,7 +387,7 @@ describe('AppNavigationMenu', () => {
       'Quick Slots',
       'Export Image',
       'Export Video',
-      'Path Tracing: Off',
+      'Path Tracing: On',
       'Tracer: Off',
       'Enable Editor',
     ])
@@ -509,7 +510,7 @@ describe('AppNavigationMenu', () => {
       'Quick Slots',
       'Export Image',
       'Export Video',
-      'Path Tracing: Off',
+      'Path Tracing: On',
       'Tracer: Off',
       'Enable Editor',
       'Home',

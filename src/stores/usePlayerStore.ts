@@ -117,7 +117,7 @@ export const usePlayerStore = (id: string) => {
 
         PLAYING: playing, //      Turns loaded ROOT playing on/off
         TRACER: ref(false), //    Turns tracer mode on/off
-        PROGRESSIVE_PATHS: ref(false), // Draws Player paths through the current playback time
+        PROGRESSIVE_PATHS: ref(true), // Draws paths through the current playback time
 
         PTIMES: ref<number[][]>([[]]), // Individual times for each prop
         MTIMES: ref<number[][]>([[]]), // Individual Motion times for each prop

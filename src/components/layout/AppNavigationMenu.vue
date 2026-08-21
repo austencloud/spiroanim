@@ -94,27 +94,28 @@
             <BaseIcon :path="mdiMovieOpenOutline" :size="22" />
             <span>Export Video</span>
           </button>
-          <button
-            class="menu-link menu-action progressive-paths-menu-item"
-            type="button"
-            role="menuitem"
-            :aria-pressed="PROGRESSIVE_PATHS"
-            @click="toggleProgressivePaths"
-          >
-            <BaseIcon :path="mdiAnimationPlayOutline" :size="22" />
-            <span>{{ progressivePathsLabel }}</span>
-          </button>
-          <button
-            class="menu-link menu-action tracer-menu-item"
-            type="button"
-            role="menuitem"
-            :aria-pressed="TRACER"
-            @click="toggleTracerMode"
-          >
-            <BaseIcon :path="tracerIcon" :size="22" />
-            <span>{{ tracerLabel }}</span>
-          </button>
         </template>
+        <button
+          class="menu-link menu-action progressive-paths-menu-item"
+          type="button"
+          role="menuitem"
+          :aria-pressed="PROGRESSIVE_PATHS"
+          @click="toggleProgressivePaths"
+        >
+          <BaseIcon :path="mdiAnimationPlayOutline" :size="22" />
+          <span>{{ progressivePathsLabel }}</span>
+        </button>
+        <button
+          v-if="playerVisible"
+          class="menu-link menu-action tracer-menu-item"
+          type="button"
+          role="menuitem"
+          :aria-pressed="TRACER"
+          @click="toggleTracerMode"
+        >
+          <BaseIcon :path="tracerIcon" :size="22" />
+          <span>{{ tracerLabel }}</span>
+        </button>
         <button
           class="menu-link menu-action editor-access-menu-item"
           type="button"

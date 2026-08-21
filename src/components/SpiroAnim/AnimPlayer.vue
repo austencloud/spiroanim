@@ -229,18 +229,15 @@ onMounted(() => {
   watchImmediate(SELECTION, (val) => send('selection', val))
 
   // Send "Tracer" toggles
-  watchImmediate(TRACER, (val) => send('tracer', val))
-
-  // Builder previews, temporary previews, and timeline selection continue to display paths using
-  // their established behavior. The normal Player may trace paths while Editor controls are open.
   watchImmediate(
-    computed(
-      () =>
-        PROGRESSIVE_PATHS.value &&
-        !props.minimal &&
-        !SELECTION.value &&
-        !PLAYBACK_TEMPORARY_ACTIVE.value,
-    ),
+    computed(() => TRACER.value && !props.minimal && !props.editorVisible),
+    (val) => send('tracer', val),
+  )
+
+  // Path Tracing includes mini players such as Builder, unlike Tracer. Editor, selection, and the
+  // separate timeline renderer retain their full paths.
+  watchImmediate(
+    computed(() => PROGRESSIVE_PATHS.value && !props.editorVisible && !SELECTION.value),
     (val) => send('progressivePaths', val),
   )
 

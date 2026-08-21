@@ -16,7 +16,7 @@ describe('usePlayerStore', () => {
 
     expect(store.PLAYING).toBe(true)
     expect(store.TRACER).toBe(false)
-    expect(store.PROGRESSIVE_PATHS).toBe(false)
+    expect(store.PROGRESSIVE_PATHS).toBe(true)
     expect(store.ASPECT).toEqual([16, 9])
     expect(store.CANVAS_DIM).toEqual({ width: 0, height: 0 })
     expect(store.raw().COMPILED.value).toMatchObject({
@@ -181,7 +181,7 @@ describe('usePlayerStore', () => {
       JSON.stringify({
         PLAYING: false,
         TRACER: true,
-        PROGRESSIVE_PATHS: true,
+        PROGRESSIVE_PATHS: false,
         freeCamera: true,
         ORBIT: { position: [1, 2, 3], target: [4, 5, 6] },
       }),
@@ -191,7 +191,7 @@ describe('usePlayerStore', () => {
 
     expect(store.PLAYING).toBe(false)
     expect(store.TRACER).toBe(true)
-    expect(store.PROGRESSIVE_PATHS).toBe(true)
+    expect(store.PROGRESSIVE_PATHS).toBe(false)
     expect(store.freeCamera).toBe(true)
   })
 
