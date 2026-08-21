@@ -113,6 +113,50 @@ const createAnimator = (arms: boolean, hands = false) => {
   return { animator, scene }
 }
 
+it('draws and toggles the additional Staff head path', () => {
+  const root = createRoot(false)
+  root.prop = 1
+  root.paths = true
+  const scene = new Scene()
+  const compiled = rootCompile(rootFinal(root))
+  const animator = createSpiroAnimator({
+    scene,
+    speed: 1,
+    girth: 2,
+    bpm: compiled.bpm,
+    smooth: compiled.smooth,
+    prop: compiled.props[0]!,
+    completed: () => undefined,
+    width: 800,
+    height: 600,
+    distance: 22,
+    fov: 45,
+    timeline: false,
+  })
+  const paths = scene
+    .getObjectsByProperty('isLine2', true)
+    .filter(
+      (object): object is Line2 =>
+        object instanceof Line2 &&
+        (object.material as LineMaterial2).color.getHex() === COLSET[2]![0],
+    )
+  const additionalPath = paths.find((path) => path.parent?.parent?.parent === scene)
+
+  expect(paths).toHaveLength(2)
+  expect(additionalPath).toBeDefined()
+  expect(additionalPath?.parent?.visible).toBe(true)
+  const primaryPath = paths.find((path) => path !== additionalPath)
+  if (!primaryPath || !additionalPath) throw new Error('Expected both Staff endpoint paths')
+  expect(getLinePoints(primaryPath)[0]!.distanceTo(getLinePoints(additionalPath)[0]!)).toBeGreaterThan(
+    0,
+  )
+
+  animator.setDoublePaths(false)
+  expect(additionalPath?.parent?.visible).toBe(false)
+  animator.setDoublePaths(true)
+  expect(additionalPath?.parent?.visible).toBe(true)
+})
+
 describe('createSpiroAnimator Arms rendering', () => {
   it('does not create an arm when Arms is false', () => {
     const { scene } = createAnimator(false)

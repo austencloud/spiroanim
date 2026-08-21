@@ -102,6 +102,7 @@ const {
   PLAYBACK_TEMPORARY_ACTIVE,
   TRACER,
   PROGRESSIVE_PATHS,
+  DOUBLE_PATHS,
   ETIMES,
   PLAYBACK_ASPECT,
   CANVAS_DIM,
@@ -241,6 +242,8 @@ onMounted(() => {
     computed(() => PROGRESSIVE_PATHS.value && !props.editorVisible && !SELECTION.value),
     (val) => send('progressivePaths', val),
   )
+
+  watchImmediate(DOUBLE_PATHS, (val) => send('doublePaths', val))
 
   // Stop animating when page isn't visible
   watchImmediate(isVisible, (val) => send('animate', { val }))

@@ -110,6 +110,7 @@ describe('AppNavigationMenu', () => {
       'Export Image',
       'Export Video',
       'Path Tracing: On',
+      'Double Paths: On',
       'Tracer: Off',
       'Enable Editor',
       'Home',
@@ -171,6 +172,9 @@ describe('AppNavigationMenu', () => {
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Path Tracing: On')
+
+    await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
+    expect(document.activeElement?.textContent).toContain('Double Paths: On')
 
     await wrapper.get('[role="menu"]').trigger('keydown', { key: 'ArrowDown' })
     expect(document.activeElement?.textContent).toContain('Tracer: Off')
@@ -239,6 +243,24 @@ describe('AppNavigationMenu', () => {
     wrapper.unmount()
   })
 
+  it('toggles Double Paths independently and defaults it on', async () => {
+    const playerStore = usePlayerStore('main')
+    const { wrapper } = await mountMenu()
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    const doublePathsItem = wrapper.get('.double-paths-menu-item')
+    expect(doublePathsItem.text()).toBe('Double Paths: On')
+    expect(doublePathsItem.attributes('aria-pressed')).toBe('true')
+
+    await doublePathsItem.trigger('click')
+    expect(playerStore.DOUBLE_PATHS).toBe(false)
+
+    await wrapper.get('.menu-trigger').trigger('click')
+    expect(wrapper.get('.double-paths-menu-item').text()).toBe('Double Paths: Off')
+
+    wrapper.unmount()
+  })
+
   it('places Path Tracing and Tracer beneath both export actions', async () => {
     const playerStore = usePlayerStore('main')
     playerStore.CANVAS_DIM = { width: 1280, height: 720 }
@@ -258,8 +280,12 @@ describe('AppNavigationMenu', () => {
     const progressivePathsIndex = menuItems.findIndex((item) =>
       item.classes().includes('progressive-paths-menu-item'),
     )
+    const doublePathsIndex = menuItems.findIndex((item) =>
+      item.classes().includes('double-paths-menu-item'),
+    )
     expect(progressivePathsIndex).toBe(exportVideoIndex + 1)
-    expect(tracerIndex).toBe(progressivePathsIndex + 1)
+    expect(doublePathsIndex).toBe(progressivePathsIndex + 1)
+    expect(tracerIndex).toBe(doublePathsIndex + 1)
     await wrapper.get('.export-image-menu-item').trigger('click')
 
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
@@ -388,6 +414,7 @@ describe('AppNavigationMenu', () => {
       'Export Image',
       'Export Video',
       'Path Tracing: On',
+      'Double Paths: On',
       'Tracer: Off',
       'Enable Editor',
     ])
@@ -511,6 +538,7 @@ describe('AppNavigationMenu', () => {
       'Export Image',
       'Export Video',
       'Path Tracing: On',
+      'Double Paths: On',
       'Tracer: Off',
       'Enable Editor',
       'Home',

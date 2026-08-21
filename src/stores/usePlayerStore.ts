@@ -118,6 +118,7 @@ export const usePlayerStore = (id: string) => {
         PLAYING: playing, //      Turns loaded ROOT playing on/off
         TRACER: ref(false), //    Turns tracer mode on/off
         PROGRESSIVE_PATHS: ref(true), // Draws paths through the current playback time
+        DOUBLE_PATHS: ref(true), // Draws paths for additional prop ends
 
         PTIMES: ref<number[][]>([[]]), // Individual times for each prop
         MTIMES: ref<number[][]>([[]]), // Individual Motion times for each prop
@@ -237,9 +238,10 @@ export const usePlayerStore = (id: string) => {
 
       // Manually save, as persist module appears to be saving anytime any value is modified
       watch(
-        [v.PLAYING, v.TRACER, v.PROGRESSIVE_PATHS, v.freeCamera],
+        [v.PLAYING, v.TRACER, v.PROGRESSIVE_PATHS, v.DOUBLE_PATHS, v.freeCamera],
         debounce(
-          ([PLAYING, TRACER, PROGRESSIVE_PATHS, freeCamera]: [
+          ([PLAYING, TRACER, PROGRESSIVE_PATHS, DOUBLE_PATHS, freeCamera]: [
+            boolean,
             boolean,
             boolean,
             boolean,
@@ -247,7 +249,7 @@ export const usePlayerStore = (id: string) => {
           ]) => {
             localStorage.setItem(
               `sa-player-${id}`,
-              JSON.stringify({ PLAYING, TRACER, PROGRESSIVE_PATHS, freeCamera }),
+              JSON.stringify({ PLAYING, TRACER, PROGRESSIVE_PATHS, DOUBLE_PATHS, freeCamera }),
             )
           },
           100,
@@ -262,11 +264,13 @@ export const usePlayerStore = (id: string) => {
             PLAYING?: boolean
             TRACER?: boolean
             PROGRESSIVE_PATHS?: boolean
+            DOUBLE_PATHS?: boolean
             freeCamera?: boolean
           }
           v.PLAYING.value = parsed.PLAYING ?? v.PLAYING.value
           v.TRACER.value = parsed.TRACER ?? v.TRACER.value
           v.PROGRESSIVE_PATHS.value = parsed.PROGRESSIVE_PATHS ?? v.PROGRESSIVE_PATHS.value
+          v.DOUBLE_PATHS.value = parsed.DOUBLE_PATHS ?? v.DOUBLE_PATHS.value
           v.freeCamera.value = parsed.freeCamera ?? v.freeCamera.value
         } catch (e) {
           console.warn('Failed to parse saved player settings:', e)

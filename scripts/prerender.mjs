@@ -75,6 +75,11 @@ await writeRoute('/tips', pageHtml(tips.appHtml, tips.seo), true)
 
 for (const route of clientOnlyPaths) await writeRoute(route, appShell, true)
 
+const clientOnlyRoutePrecacheIgnores = clientOnlyPaths.flatMap((route) => {
+  const relativeRoute = route.replace(/^\/+/, '')
+  return [`${relativeRoute}.html`, `${relativeRoute}/index.html`]
+})
+
 // Vite Preview and clean-URL hosts resolve /reset through reset.html, while directory-index hosts
 // resolve reset/index.html. Keep both deployment shapes sourced from the standalone public page.
 const resetPageHtml = await readFile(path.join(clientDirectory, 'reset', 'index.html'), 'utf8')
@@ -84,7 +89,14 @@ const serviceWorkerResult = await generateSW({
   cleanupOutdatedCaches: true,
   clientsClaim: true,
   globDirectory: clientDirectory,
-  globIgnores: ['sw.js', 'workbox-*.js', 'reset.html', 'reset/**'],
+  globIgnores: [
+    'sw.js',
+    'workbox-*.js',
+    'docs/**',
+    'reset.html',
+    'reset/**',
+    ...clientOnlyRoutePrecacheIgnores,
+  ],
   globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
   navigateFallback: 'app-shell.html',
   navigateFallbackDenylist: [

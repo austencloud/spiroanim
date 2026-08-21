@@ -106,6 +106,16 @@
           <span>{{ progressivePathsLabel }}</span>
         </button>
         <button
+          class="menu-link menu-action double-paths-menu-item"
+          type="button"
+          role="menuitem"
+          :aria-pressed="DOUBLE_PATHS"
+          @click="toggleDoublePaths"
+        >
+          <BaseIcon :path="mdiVectorPolyline" :size="22" />
+          <span>{{ doublePathsLabel }}</span>
+        </button>
+        <button
           v-if="playerVisible"
           class="menu-link menu-action tracer-menu-item"
           type="button"
@@ -188,6 +198,7 @@ import {
   mdiRestoreAlert,
   mdiShareVariantOutline,
   mdiViewGridOutline,
+  mdiVectorPolyline,
 } from '@mdi/js'
 import { onClickOutside, useFullscreen } from '@vueuse/core'
 import { useId } from 'vue'
@@ -263,6 +274,7 @@ const {
   PLAYBACK_ROOT,
   TRACER,
   PROGRESSIVE_PATHS,
+  DOUBLE_PATHS,
   imageExportRequest,
   videoExportRequest,
   videoExportCancel,
@@ -277,6 +289,9 @@ const tracerIcon = computed(() => (TRACER.value ? mdiFirework : mdiFireworkOff))
 const tracerLabel = computed(() => (TRACER.value ? 'Tracer: On' : 'Tracer: Off'))
 const progressivePathsLabel = computed(() =>
   PROGRESSIVE_PATHS.value ? 'Path Tracing: On' : 'Path Tracing: Off',
+)
+const doublePathsLabel = computed(() =>
+  DOUBLE_PATHS.value ? 'Double Paths: On' : 'Double Paths: Off',
 )
 const { editorEnabled } = storeToRefs(useEditorAccessStore())
 const editorAccessIcon = computed(() => (editorEnabled.value ? mdiPencilOff : mdiPencil))
@@ -318,6 +333,11 @@ function toggleTracerMode() {
 
 function toggleProgressivePaths() {
   PROGRESSIVE_PATHS.value = !PROGRESSIVE_PATHS.value
+  closeMenu()
+}
+
+function toggleDoublePaths() {
+  DOUBLE_PATHS.value = !DOUBLE_PATHS.value
   closeMenu()
 }
 

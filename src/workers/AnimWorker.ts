@@ -71,6 +71,7 @@ const propLightRight = new Vector3()
 const propLightUp = new Vector3()
 let timeline = false
 let progressivePaths = false
+let doublePaths = true
 let cameraGuides = { visible: false, color: 0xffffff }
 
 let playing = false
@@ -191,12 +192,18 @@ on('progressivePaths', (val) => {
   progressivePaths = val
   for (const animator of animators) animator.setProgressivePaths(val && !timeline && !selection)
 })
+on('doublePaths', (val) => {
+  doublePaths = val
+  for (const animator of animators) animator.setDoublePaths(val)
+})
 
 // Selection options
 on('selection', (val) => {
   selection = val
-  for (const animator of animators)
+  for (const animator of animators) {
     animator.setProgressivePaths(progressivePaths && !timeline && !selection)
+    animator.setDoublePaths(doublePaths)
+  }
 })
 on('range', ({ min: mi, max: ma }) => {
   min = mi

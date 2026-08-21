@@ -214,7 +214,11 @@ export interface RootDataCompiled extends Omit<RootDataFinal, 'props' | 'camera'
 
 // Additional property added to Models (for calculating Z Positioning / Depth)
 import { type Group } from 'three'
-export type ModelGroup = Group & { size: number }
+export type ModelGroup = Group & {
+  size: number
+  /** Additional path endpoints expressed as multiples of size along the prop's local axis. */
+  additionalPathEndOffsets?: readonly number[]
+}
 
 export type AnimKeys = keyof AnimData // | 'point' | 'direct' | 'path'
 export type MotionKeys = keyof MotionData

@@ -90,6 +90,7 @@ export const createSpiroAnimator = (vars: {
   readonly pobjs: Record<number, Mesh>
   setExportHidden: (features: readonly ImageExportFeature[], hidden: boolean) => void
   setProgressivePaths: (enabled: boolean) => void
+  setDoublePaths: (enabled: boolean) => void
   animate: (time: number, forward?: number, force?: boolean) => void
   seek: (milliseconds: number) => void
   dimensions: (
@@ -131,6 +132,7 @@ export const createSpiroAnimator = (vars: {
     anchorsGroup: Group = new Group(),
     nodesGroup: Group = new Group(),
     pathsGroup: Group = new Group(),
+    additionalPathsGroup: Group = new Group(),
     travelGroup: Group = new Group(),
     handsGroup: Group = new Group(),
     armsGroup: Group = new Group(),
@@ -197,6 +199,7 @@ export const createSpiroAnimator = (vars: {
   }
 
   modelProp.visible = visible
+  pathsGroup.add(additionalPathsGroup)
 
   const setup = (time: number, forward = 0 /*, force = false*/) => {
       const p1 = anim[index]!,
@@ -586,6 +589,7 @@ export const createSpiroAnimator = (vars: {
   if (nodes || paths || hands || active) {
     const posTmp: Vector3[] = [],
       rotTmp: Vector3[] = [],
+      additionalRotTmp = (modelProp.additionalPathEndOffsets ?? []).map(() => [] as Vector3[]),
       geoType = 'geonode',
       ppos = new Vector3()
 
@@ -679,6 +683,7 @@ export const createSpiroAnimator = (vars: {
 
           // Copy of rot, after adjustment
           cRot.copy(rot)
+          const pathEndAxis = rot.clone()
 
           // Position Transformations
           trans(perc)
@@ -696,6 +701,13 @@ export const createSpiroAnimator = (vars: {
           motionOffsetAt(sampleTime, pathMotionOffset)
           rot.add(pathMotionOffset)
           pos.add(pathMotionOffset)
+
+          if (paths)
+            for (let endIndex = 0; endIndex < additionalRotTmp.length; endIndex++) {
+              const offset = modelProp.additionalPathEndOffsets?.[endIndex]
+              if (offset !== undefined)
+                additionalRotTmp[endIndex]!.push(pos.clone().addScaledVector(pathEndAxis, offset))
+            }
         }
 
         // Collect paths into one collection if enabled
@@ -744,7 +756,10 @@ export const createSpiroAnimator = (vars: {
         .add(finalRotation.clone().multiplyScalar(lastAnimation.depth / 10))
       const finalPath = finalPosition
         .clone()
-        .add(finalRotation.multiplyScalar(1 + lastAnimation.depth / 10))
+        .add(finalRotation.clone().multiplyScalar(1 + lastAnimation.depth / 10))
+      const finalAdditionalPaths = (modelProp.additionalPathEndOffsets ?? []).map((offset) =>
+        finalHand.clone().addScaledVector(finalRotation, offset),
+      )
       const continuationTimes = [animationEnd]
       const samplesPerMotionFrame = 32
 
@@ -763,6 +778,11 @@ export const createSpiroAnimator = (vars: {
       for (const time of continuationTimes) {
         motionOffsetAt(time, pathMotionOffset)
         if (paths) rotTmp.push(finalPath.clone().add(pathMotionOffset))
+        if (paths)
+          for (let endIndex = 0; endIndex < additionalRotTmp.length; endIndex++)
+            additionalRotTmp[endIndex]!.push(
+              finalAdditionalPaths[endIndex]!.clone().add(pathMotionOffset),
+            )
         if (hands) posTmp.push(finalHand.clone().add(pathMotionOffset))
         pathSampleTimes.push(time)
       }
@@ -773,6 +793,12 @@ export const createSpiroAnimator = (vars: {
       const line = createLine2(rotTmp, COLSET[color]![0], rsize * girth * multi, true)
       progressivePathLines.push(line)
       pathsGroup.add(line)
+    }
+    for (const additionalPoints of additionalRotTmp) {
+      if (additionalPoints.length === 0) continue
+      const line = createLine2(additionalPoints, COLSET[color]![0], rsize * girth * multi, true)
+      progressivePathLines.push(line)
+      additionalPathsGroup.add(line)
     }
     if (posTmp.length > 0) {
       const line = createLine2(posTmp, COLSET[color]![2], rsize * girth * multi, true, Math.PI)
@@ -869,6 +895,9 @@ export const createSpiroAnimator = (vars: {
     setProgressivePaths(enabled) {
       progressivePaths = enabled
       updateProgressivePaths()
+    },
+    setDoublePaths(enabled) {
+      additionalPathsGroup.visible = enabled
     },
 
     animate,

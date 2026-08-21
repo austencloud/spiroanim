@@ -139,6 +139,11 @@ export interface AnimBridgeMap {
     arg: boolean
   }
 
+  // Draw paths for every modeled prop end instead of only the primary end
+  doublePaths: {
+    arg: boolean
+  }
+
   // ========== UI Feedback / Utility ==========
 
   // For UI / Editor, determines "points" which can be clicked

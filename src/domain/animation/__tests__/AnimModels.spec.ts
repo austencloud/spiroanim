@@ -54,4 +54,10 @@ describe('AnimModels prop lighting', () => {
     expect(clubBounds.min.y).toBeCloseTo(poiBounds.min.y)
     expect(clubBounds.max.y).toBeCloseTo(poiBounds.max.y)
   })
+
+  it('identifies the Staff second head as an additional path endpoint', () => {
+    expect(STAFF(1, 0, 1).additionalPathEndOffsets).toEqual([-1])
+    expect(POI(1, 0, 1).additionalPathEndOffsets).toBeUndefined()
+    expect(CLUBS(1, 0, 1).additionalPathEndOffsets).toBeUndefined()
+  })
 })

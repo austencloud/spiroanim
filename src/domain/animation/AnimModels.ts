@@ -118,6 +118,7 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
     model2.add(head2)
 
     model2.size = 2.4 * multi // Used for Y offset manipulations, multiplied by -1 to 1
+    model2.additionalPathEndOffsets = [-1]
 
     return model2
   },
