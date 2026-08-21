@@ -60,6 +60,8 @@
         :animation-ready="animationReady"
         :builder-active="paneStore.isPaneHijacked"
         :builder-full-catalog="builderFullCatalog"
+        :builder-full-catalog-forced="builderFullCatalogForced"
+        :builder-full-grid="builderFullGrid"
         data-type="concepts"
         data-role="concepts-view"
         @pattern-select="applyConceptPattern"
@@ -69,12 +71,14 @@
         @quick-slot-save="saveCurrentPatternToQuickSlot"
         @quick-slots-create="saveAnimationsToQuickSlots"
         @builder-open="toggleBuilder"
+        @update:builder-full-grid="builderFullGrid = $event"
       />
       <BuilderPane
         v-if="viewVisible.builder"
         ref="cBuilder"
         data-type="builder"
         data-role="builder-pane-view"
+        :allow-first-drop="builderFullGrid"
         @quick-slots-create="saveAnimationsToQuickSlots"
         @preview-selection-change="selectedBuilderPreviewIndex = $event"
       />
@@ -142,11 +146,13 @@ const qsStore = useQSMainStore()
 const queryVersionStore = useQueryVersionStore()
 const { ROOT } = playerStore.raw()
 const selectedBuilderPreviewIndex = ref<number>()
-const builderFullCatalog = computed(
+const builderFullGrid = ref(false)
+const builderFullCatalogForced = computed(
   () =>
     paneStore.isPaneHijacked &&
     (ROOT.value.props.length === 0 || selectedBuilderPreviewIndex.value === 0),
 )
+const builderFullCatalog = computed(() => builderFullCatalogForced.value || builderFullGrid.value)
 const { ETIMES, PTIMES, UTIMES } = storeToRefs(playerStore)
 const { pSELECTED, showFullTimeline } = storeToRefs(usePropertiesStore('main'))
 const { registerComponentEl } = paneStore
@@ -237,6 +243,7 @@ const previewConceptPattern = (selection: ConceptPatternSelection) => {
 }
 
 const toggleBuilder = () => {
+  builderFullGrid.value = false
   if (paneStore.isPaneHijacked) paneStore.exitPaneHijack()
   else paneStore.hijackOppositePane('builder', 'concepts')
 }

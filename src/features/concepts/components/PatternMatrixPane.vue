@@ -315,6 +315,15 @@
             @q-slots="createQSlots"
           />
         </template>
+        <label v-if="builderActive && !builderFullCatalogForced" class="vtg-pattern-builder-button">
+          <input
+            type="checkbox"
+            :checked="builderFullGrid"
+            data-role="vtg-builder-full-grid"
+            @change="emit('update:builderFullGrid', ($event.target as HTMLInputElement).checked)"
+          />
+          <span>Full Grid</span>
+        </label>
         <label class="vtg-pattern-builder-button">
           <input
             type="checkbox"
@@ -456,11 +465,15 @@ const props = withDefaults(
     patternMatcher?: PatternMatchingClient
     builderActive?: boolean
     builderFullCatalog?: boolean
+    builderFullCatalogForced?: boolean
+    builderFullGrid?: boolean
   }>(),
   {
     animationReady: true,
     builderActive: false,
     builderFullCatalog: false,
+    builderFullCatalogForced: false,
+    builderFullGrid: false,
   },
 )
 
@@ -470,9 +483,11 @@ const emit = defineEmits<{
   customize: [selection: ConceptPatternSelection]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
   builderOpen: []
+  'update:builderFullGrid': [enabled: boolean]
 }>()
 
 const speedRatioRows = vtgSpeedRatioRows
+const standardSpeedRatios = new Set<VtgSpeedRatio>(speedRatioRows.flat())
 const ratioPickerRatios = vtgRatioPickerRatios
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 const conceptsStore = useConceptsStore()
@@ -497,14 +512,19 @@ const {
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
 const isAnti = ref(false)
-const moreRatios = ref(false)
-const firstPropRatio = ref<VtgIndividualSpeedRatio>(getVtgPropSpeedRatios(speedRatio.value)[0])
-const secondPropRatio = ref<VtgIndividualSpeedRatio | ''>('')
+const initialPropRatios = getVtgPropSpeedRatios(speedRatio.value)
+const moreRatios = ref(
+  initialPropRatios[0] !== initialPropRatios[1] || !standardSpeedRatios.has(speedRatio.value),
+)
+const firstPropRatio = ref<VtgIndividualSpeedRatio>(initialPropRatios[0])
+const secondPropRatio = ref<VtgIndividualSpeedRatio | ''>(
+  initialPropRatios[0] === initialPropRatios[1] ? '' : initialPropRatios[1],
+)
 const syncMoreRatioControls = (value: VtgSpeedRatio) => {
   const [first, second] = getVtgPropSpeedRatios(value)
   firstPropRatio.value = first
   secondPropRatio.value = first === second ? '' : second
-  if (first !== second) moreRatios.value = true
+  if (first !== second || !standardSpeedRatios.has(value)) moreRatios.value = true
 }
 const applyMoreRatios = () => {
   speedRatio.value =

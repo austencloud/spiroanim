@@ -73,7 +73,7 @@
               </button>
             </template>
           </AppTooltip>
-          <AppTooltip text="Swap Props">
+          <AppTooltip v-if="swappablePreviews[index]" text="Swap Props">
             <template #activator="{ props: tooltipProps }">
               <button
                 v-bind="tooltipProps"
@@ -183,6 +183,7 @@ import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDis
 import type { PatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { vtgThickControl } from '@/features/vtg/data/vtgPlayerSettings'
 import { inferVtgDoubledPortionSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
+import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
@@ -206,8 +207,9 @@ const props = withDefaults(
     relationships: readonly PatternRelationships[]
     scale: number
     selectedIndex?: number
+    allowFirstDrop?: boolean
   }>(),
-  { columns: 4 },
+  { columns: 4, allowFirstDrop: false },
 )
 const previewReferences = props.animations.map((_, index) => String(index + 1))
 const previewGrid = ref<HTMLElement>()
@@ -232,6 +234,12 @@ const { protectTouchScrolling, beginPointerSlider, endPointerSlider, cancelPoint
 const previewRelationships = computed(() => props.relationships)
 const previewLabels = computed(() => previewRelationships.value.map(({ label }) => label))
 const previewRatios = computed(() => props.animations.map(inferVtgDoubledPortionSpeedRatio))
+const swappablePreviews = computed(() =>
+  props.animations.map((animation) => {
+    const { spins } = getVtgBuilderMotion(animation)
+    return spins[0] !== spins[1]
+  }),
+)
 const pointerPosition = ref<
   { x: number; y: number; preview: BuilderPatternPointerDetail['preview'] } | undefined
 >()
@@ -246,7 +254,9 @@ useEventListener(typeof document === 'undefined' ? null : document, 'drop', () =
 })
 const dragOverIndex = ref<number>()
 const isDropAllowed = (index: number) =>
-  props.animations.length === 0 || (props.selectedIndex === 0 ? index === 0 : index > 0)
+  props.animations.length === 0 ||
+  props.allowFirstDrop ||
+  (props.selectedIndex === 0 ? index === 0 : index > 0)
 const allowPatternDrop = (index: number, event: DragEvent) => {
   if (event.dataTransfer) event.dataTransfer.dropEffect = isDropAllowed(index) ? 'copy' : 'none'
 }

@@ -5,11 +5,14 @@
     :pattern-matcher="patternMatcher"
     :builder-active="builderActive"
     :builder-full-catalog="builderFullCatalog"
+    :builder-full-catalog-forced="builderFullCatalogForced"
+    :builder-full-grid="builderFullGrid"
     @pattern-select="forwardSelection"
     @pattern-preview="emit('patternPreview', $event)"
     @customize="emit('customize', $event)"
     @quick-slots-create="emit('quickSlotsCreate', $event)"
     @builder-open="emit('builderOpen')"
+    @update:builder-full-grid="emit('update:builderFullGrid', $event)"
   />
 </template>
 
@@ -26,8 +29,16 @@ withDefaults(
     patternMatcher?: PatternMatchingClient
     builderActive?: boolean
     builderFullCatalog?: boolean
+    builderFullCatalogForced?: boolean
+    builderFullGrid?: boolean
   }>(),
-  { animationReady: true, builderActive: false, builderFullCatalog: false },
+  {
+    animationReady: true,
+    builderActive: false,
+    builderFullCatalog: false,
+    builderFullCatalogForced: false,
+    builderFullGrid: false,
+  },
 )
 
 const emit = defineEmits<{
@@ -36,6 +47,7 @@ const emit = defineEmits<{
   customize: [selection: ConceptPatternSelection]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
   builderOpen: []
+  'update:builderFullGrid': [enabled: boolean]
 }>()
 
 const forwardSelection = (selection: ConceptPatternSelection) => {

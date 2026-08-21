@@ -49,11 +49,14 @@
       :pattern-matcher="patternMatcher"
       :builder-active="builderActive"
       :builder-full-catalog="builderFullCatalog"
+      :builder-full-catalog-forced="builderFullCatalogForced"
+      :builder-full-grid="builderFullGrid"
       @pattern-select="emit('patternSelect', $event)"
       @pattern-preview="emit('patternPreview', $event)"
       @customize="emit('customize', $event)"
       @quick-slots-create="emit('quickSlotsCreate', $event)"
       @builder-open="emit('builderOpen')"
+      @update:builder-full-grid="emit('update:builderFullGrid', $event)"
     />
     <EightStepPane
       v-else-if="selectedConcept === '8stp'"
@@ -96,6 +99,8 @@ const props = defineProps<{
   animationReady?: boolean
   builderActive?: boolean
   builderFullCatalog?: boolean
+  builderFullCatalogForced?: boolean
+  builderFullGrid?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -106,6 +111,7 @@ const emit = defineEmits<{
   quickSlotSave: [slot: number]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
   builderOpen: []
+  'update:builderFullGrid': [enabled: boolean]
 }>()
 
 const conceptsStore = useConceptsStore()

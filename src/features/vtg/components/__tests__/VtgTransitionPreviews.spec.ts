@@ -18,6 +18,8 @@ vi.mock('@/utils/device', () => ({ isTouchDevice: () => device.touch }))
 
 const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
 if (!animation) throw new Error('Expected a supported VTG pattern')
+const mixedSpinAnimation = createDefaultVtgAnimation({ reference: '5-1', speedRatio: '1:3' })
+if (!mixedSpinAnimation) throw new Error('Expected a supported mixed-spin VTG pattern')
 const relationship = describePatternSelectionRelationships({ reference: '1-1', speedRatio: '1:3' })
 
 describe('VtgTransitionPreviews', () => {
@@ -29,7 +31,7 @@ describe('VtgTransitionPreviews', () => {
   it('emits the exact thumbnail animation when its visual is clicked', async () => {
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
-        animations: [animation],
+        animations: [mixedSpinAnimation],
         relationships: [relationship],
         refreshKey: 'test',
         initialBeatCounts: [1],
@@ -40,7 +42,7 @@ describe('VtgTransitionPreviews', () => {
 
     await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
 
-    expect(wrapper.emitted('patternPreview')).toEqual([[animation, 0]])
+    expect(wrapper.emitted('patternPreview')).toEqual([[mixedSpinAnimation, 0]])
     expect(wrapper.emitted('selectionChange')).toEqual([[0]])
     expect(wrapper.get('.vtg-transition-previews__label').text()).toBe('TS / TS')
     expect(wrapper.get('.vtg-transition-previews__ratio').text()).toBe('1:3')
@@ -67,6 +69,26 @@ describe('VtgTransitionPreviews', () => {
     await wrapper.get('button[aria-label="Delete pattern 1"]').trigger('click')
     expect(wrapper.emitted('patternDelete')).toEqual([[0]])
     expect(wrapper.emitted('patternPreview')).toHaveLength(1)
+  })
+
+  it('hides Swap for portions whose two props are both Anti or both In', () => {
+    const inSpinAnimation = createDefaultVtgAnimation({ reference: '3-1', speedRatio: '1:3' })
+    if (!inSpinAnimation) throw new Error('Expected a supported In/In VTG pattern')
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation, inSpinAnimation, mixedSpinAnimation],
+        relationships: [relationship, relationship, relationship],
+        refreshKey: 'spin-specific-actions',
+        initialBeatCounts: [1, 1, 1],
+        beatCounts: [1, 1, 1],
+        scale: 1,
+      },
+    })
+
+    expect(wrapper.findAll('[data-role="vtg-transition-preview-swap"]')).toHaveLength(1)
+    expect(wrapper.get('[data-role="vtg-transition-preview-swap"]').attributes('aria-label')).toBe(
+      'Swap props in pattern 3',
+    )
   })
 
   it('shows the shared action tooltip when application tooltips are enabled', async () => {
@@ -157,6 +179,32 @@ describe('VtgTransitionPreviews', () => {
     expect(items[1]!.classes()).toContain('vtg-transition-previews__item--drop-blocked')
     await items[1]!.trigger('drop', { dataTransfer })
     expect(wrapper.emitted('patternDrop')).toHaveLength(1)
+  })
+
+  it('allows dropping on the first item while Full Grid is enabled', async () => {
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation, animation],
+        relationships: [relationship, relationship],
+        refreshKey: 'full-grid-drop-rules',
+        initialBeatCounts: [1, 1],
+        beatCounts: [1, 1],
+        scale: 1,
+        allowFirstDrop: true,
+      },
+    })
+    const firstItem = wrapper.findAll('.vtg-transition-previews__item')[0]!
+    const dataTransfer = {
+      dropEffect: 'copy',
+      getData: () => JSON.stringify({ reference: '1-1', speedRatio: '1:3' }),
+    }
+
+    await firstItem.trigger('dragenter')
+    expect(firstItem.classes()).not.toContain('vtg-transition-previews__item--drop-blocked')
+    await firstItem.trigger('drop', { dataTransfer })
+    expect(wrapper.emitted('patternDrop')).toEqual([
+      [{ previewIndex: 0, selection: { reference: '1-1', speedRatio: '1:3' } }],
+    ])
   })
 
   it('labels a half-beat thumbnail without changing the supplied animation', () => {

@@ -72,6 +72,7 @@
             :relationships="previewRelationships"
             :scale="scale"
             :selected-index="selectedPreviewIndex"
+            :allow-first-drop="allowFirstDrop"
             @pattern-drop="acceptPatternDrop"
             @pattern-delete="deletePreview"
             @pattern-reverse="reversePreview"
@@ -240,6 +241,8 @@ import { useBuilderPaneStore } from '@/features/builder/stores/useBuilderPaneSto
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { usePatternMatchingClient } from '@/features/concepts/composables/usePatternMatchingWorker'
 import { createBuilderQuickSlotCandidates } from '@/features/builder/createBuilderQuickSlotCandidates'
+
+const props = withDefaults(defineProps<{ allowFirstDrop?: boolean }>(), { allowFirstDrop: false })
 
 const emit = defineEmits<{
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
@@ -466,6 +469,7 @@ const acceptPatternDrop = (drop: BuilderPatternDrop) => {
   if (previewCount === undefined || !isVtgPatternSelection(drop.selection)) return
   const dropAllowed =
     previewCount === 0 ||
+    props.allowFirstDrop ||
     (selectedPreviewIndex.value === 0 ? drop.previewIndex === 0 : drop.previewIndex > 0)
   if (!dropAllowed) return
 

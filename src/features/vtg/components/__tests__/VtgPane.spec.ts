@@ -200,7 +200,10 @@ describe('VtgPane', () => {
       .get('[data-role="vtg-sidebar"]')
       .findAll('[data-role="vtg-rule-card"]')
       .map((header) =>
-        header.findAll('[data-role="vtg-prop"]').map((prop) => prop.html()).join('|'),
+        header
+          .findAll('[data-role="vtg-prop"]')
+          .map((prop) => prop.html())
+          .join('|'),
       )
     expect(new Set(sideHeaderSignatures)).toHaveLength(6)
     const firstSideProps = wrapper.findAll(
@@ -1759,6 +1762,42 @@ describe('VtgPane', () => {
     ).toContain('23°')
   })
 
+  it('opens More when pattern matching detects a speed ratio outside the radio options', async () => {
+    const store = useConceptsStore()
+    store.speedRatio = '1:1v1:3'
+    const animation = createDefaultVtgAnimation({ reference: '3-5', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const patternMatcher: PatternMatchingClient = {
+      getUniqueVtgPatternOrientations: async () => [0],
+      matchVtg: async () => ({
+        status: 'matched',
+        source: 'vtg',
+        match: {
+          reference: '3-5',
+          speedRatio: '1:1v1:3',
+          isAnti: false,
+          swapProps: false,
+          reversePlane: false,
+          bpm: 40,
+          scale: 0.8,
+        },
+      }),
+      matchEightStep: async () => ({ status: 'unmatched' }),
+      matchQst: async () => ({ status: 'unmatched' }),
+    }
+    const wrapper = mount(VtgPane, { props: { animation, patternMatcher } })
+
+    await vi.waitFor(() => {
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-more"]').element.checked).toBe(true)
+    })
+    expect(
+      wrapper.get<HTMLSelectElement>('[aria-label="Left prop timing ratio"]').element.value,
+    ).toBe('1:1')
+    expect(
+      wrapper.get<HTMLSelectElement>('[aria-label="Right prop timing ratio"]').element.value,
+    ).toBe('1:3')
+  })
+
   it.each(['1:1', '1:3', '1:5'] as const)(
     'hydrates the row-first lower-table cells after query serialization at %s',
     async (speedRatio) => {
@@ -2726,7 +2765,11 @@ describe('VtgPane', () => {
 
   it('shows the full VTG grid and source controls for an empty Builder', () => {
     const wrapper = mount(VtgPane, {
-      props: { builderActive: true, builderFullCatalog: true },
+      props: {
+        builderActive: true,
+        builderFullCatalog: true,
+        builderFullCatalogForced: true,
+      },
     })
 
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
@@ -2742,6 +2785,24 @@ describe('VtgPane', () => {
     expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="vtg-tile"]').attributes('draggable')).toBe('true')
     expect(wrapper.find('[data-role="vtg-classic"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-builder-full-grid"]').exists()).toBe(false)
+  })
+
+  it('offers an opt-in Full Grid control for the compact Builder catalog', async () => {
+    const wrapper = mount(VtgPane, { props: { builderActive: true } })
+    const fullGrid = wrapper.get<HTMLInputElement>('[data-role="vtg-builder-full-grid"]')
+
+    expect(fullGrid.element.checked).toBe(false)
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(8)
+
+    await fullGrid.setValue(true)
+    expect(wrapper.emitted('update:builderFullGrid')).toEqual([[true]])
+
+    await wrapper.setProps({ builderFullGrid: true, builderFullCatalog: true })
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
+    expect(
+      wrapper.get<HTMLInputElement>('[data-role="vtg-builder-full-grid"]').element.checked,
+    ).toBe(true)
   })
 
   it('limits Builder to the eight final relationship sources at every ratio', async () => {
@@ -2785,12 +2846,18 @@ describe('VtgPane', () => {
 
     await selectSpeedRatio(wrapper, '1:1')
     expect(columns().findAll('[data-role="vtg-rule-card"]')).toHaveLength(4)
-    expect(columns().findAll('.vtg-rule-card__title').every((title) => title.text() === '')).toBe(
-      true,
-    )
+    expect(
+      columns()
+        .findAll('.vtg-rule-card__title')
+        .every((title) => title.text() === ''),
+    ).toBe(true)
     expect(columns().findAll('[data-role="vtg-prop"]')).toHaveLength(0)
     expect(sides().findAll('[data-role="vtg-rule-card"]')).toHaveLength(2)
-    expect(sides().findAll('.vtg-rule-card__title').every((title) => title.text() === '')).toBe(true)
+    expect(
+      sides()
+        .findAll('.vtg-rule-card__title')
+        .every((title) => title.text() === ''),
+    ).toBe(true)
     expect(sides().findAll('[data-role="vtg-prop"]')).toHaveLength(0)
 
     await selectSpeedRatio(wrapper, '1:2')
