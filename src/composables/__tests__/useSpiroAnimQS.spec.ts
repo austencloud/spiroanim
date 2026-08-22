@@ -10,6 +10,7 @@ import { CHARSET as CHARSET_V5, VDEF as VDEF_V5 } from '@/services/query/version
 import { CHARSET as CHARSET_V6, VDEF as VDEF_V6 } from '@/services/query/versions/SpiroAnimQSv6'
 import { CHARSET as CHARSET_V7, VDEF as VDEF_V7 } from '@/services/query/versions/SpiroAnimQSv7'
 import { CHARSET as CHARSET_V8, VDEF as VDEF_V8 } from '@/services/query/versions/SpiroAnimQSv8'
+import { CHARSET as CHARSET_V9, VDEF as VDEF_V9 } from '@/services/query/versions/SpiroAnimQSv9'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -318,6 +319,20 @@ describe('useSpiroAnimQS', () => {
     expect(encoded.v).toBe('8')
     expect(decoded.prop).toBe(2)
     expect(decoded.props[0]!.prop).toBe(2)
+  })
+
+  it('round-trips Fans as prop index 3 in version 9', async () => {
+    const query = await useSpiroAnimQS(VDEF_V9, useBaseQS(VDEF_V9, { charset: CHARSET_V9 }), 9)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    root.prop = 3
+    root.props[0]!.prop = 3
+
+    const encoded = query.encodeQS(root, false)
+    const decoded = query.decodeQS(encoded)
+
+    expect(encoded.v).toBe('9')
+    expect(decoded.prop).toBe(3)
+    expect(decoded.props[0]!.prop).toBe(3)
   })
 
   it('migrates the existing multi-prop MOVE query into optional m values', async () => {

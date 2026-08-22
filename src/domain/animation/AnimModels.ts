@@ -3,6 +3,7 @@ import {
   /*TorusGeometry,*/ CylinderGeometry,
   LatheGeometry,
   SplineCurve,
+  TorusGeometry,
   Vector2,
 } from 'three'
 import { Group, Mesh, MeshStandardMaterial, MeshToonMaterial } from 'three'
@@ -160,5 +161,53 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
     model.add(knob, handle, body, tip)
     model.size = 2.4 * multi // Used for Y offset manipulations, multiplied by -1 to 1
 
+    return model
+  },
+  FANS = (multi: number, color: ColorInd, girth: number): ModelGroup => {
+    const cset = COLSET[color]!
+    const model = new Group() as ModelGroup
+    const frameMaterial = createTetherMaterial(cset[2])
+    const wickMaterial = createPropMaterial(cset[0])
+    const frameRadius = 0.045 * multi * girth
+    const spokeStart = 0.32 * multi
+    const spokeEnd = 2.08 * multi
+    const wickLength = 0.42 * multi
+
+    const ring = new Mesh(
+      new TorusGeometry(0.28 * multi, 0.055 * multi * girth, 12, 32),
+      frameMaterial,
+    )
+    model.add(ring)
+
+    for (const angle of [-60, -30, 0, 30, 60]) {
+      const radians = (angle * Math.PI) / 180
+      const spoke = new Mesh(
+        new CylinderGeometry(frameRadius, frameRadius, spokeEnd - spokeStart, 12),
+        frameMaterial,
+      )
+      const spokeMidpoint = (spokeStart + spokeEnd) / 2
+      spoke.position.set(Math.sin(radians) * spokeMidpoint, Math.cos(radians) * spokeMidpoint, 0)
+      spoke.rotation.z = -radians
+
+      const wick = new Mesh(
+        new CylinderGeometry(0.13 * multi * girth, 0.13 * multi * girth, wickLength, 16),
+        wickMaterial,
+      )
+      const wickMidpoint = spokeEnd + wickLength / 2
+      wick.position.set(Math.sin(radians) * wickMidpoint, Math.cos(radians) * wickMidpoint, 0)
+      wick.rotation.z = -radians
+      model.add(spoke, wick)
+    }
+
+    for (const radius of [1.1, 1.58]) {
+      const brace = new Mesh(
+        new TorusGeometry(radius * multi, frameRadius, 8, 32, (Math.PI * 2) / 3),
+        frameMaterial,
+      )
+      brace.rotation.z = Math.PI / 6
+      model.add(brace)
+    }
+
+    model.size = spokeEnd + wickLength
     return model
   }

@@ -254,20 +254,26 @@ const toggleBuilder = () => {
 }
 
 watch(
-  () => paneStore.isPaneHijacked,
+  [() => paneStore.isPaneHijacked, builderFullGrid, builderFullCatalogForced],
   async () => {
     await nextTick()
     const conceptsPane = parents.value.concepts
     const pane =
       conceptsPane === 'left' ? eLeft.value : conceptsPane === 'right' ? eRight.value : undefined
-    if (!pane) return
+    const concepts = eConcepts.value
+    if (!pane || !concepts) return
 
-    // Changing Builder controls above the focused toggle can make Chromium scroll an
-    // overflow-hidden pane to retain the focus position. Reset that inaccessible offset after
+    // Android Chromium can scroll both the visible pane and the nested Concepts scroller to keep
+    // the focused Full Grid control in place while the catalog changes height. Reset both after
     // the DOM update and once more after layout settles.
-    pane.scrollTop = 0
-    requestAnimationFrame(() => {
+    const resetConceptsScroll = () => {
       pane.scrollTop = 0
+      concepts.scrollTop = 0
+    }
+    resetConceptsScroll()
+    requestAnimationFrame(() => {
+      resetConceptsScroll()
+      requestAnimationFrame(resetConceptsScroll)
     })
   },
   { flush: 'post' },

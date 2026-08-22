@@ -129,6 +129,15 @@ describe('SpiroAnim view', () => {
     expect(rightPane.element.scrollTop).toBe(0)
     expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
     await flushPromises()
+    const conceptsPane = wrapper.get<HTMLElement>('[data-concepts-pane]')
+    rightPane.element.scrollTop = 47
+    conceptsPane.element.scrollTop = 91
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-builder-full-grid"]').setValue(true)
+    await flushPromises()
+    expect(rightPane.element.scrollTop).toBe(0)
+    expect(conceptsPane.element.scrollTop).toBe(0)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-builder-full-grid"]').setValue(false)
+    await flushPromises()
     expect(wrapper.find('[data-role="player-view"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-transition-support-error"]').exists()).toBe(false)
     wrapper.get('[data-role="builder-player"]')

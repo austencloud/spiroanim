@@ -4,7 +4,7 @@ import { COLORS, GREF, GUIDES, INDPNT, PPOS, PTEXT, TTEXT } from '@/domain/anima
 
 describe('AnimStruct', () => {
   it('preserves stable serialized catalog ordering', () => {
-    expect(PTEXT).toEqual(['POI', 'Staff', 'Juggling Clubs'])
+    expect(PTEXT).toEqual(['POI', 'Staff', 'Juggling Clubs', 'Fans'])
     expect(COLORS).toEqual(['Red', 'Green', 'Blue', 'Yellow', 'Cyan', 'Magenta', 'Orange'])
     expect(TTEXT).toEqual(['Spherical', 'Linear'])
   })

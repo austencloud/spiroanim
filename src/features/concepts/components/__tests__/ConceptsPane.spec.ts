@@ -221,6 +221,7 @@ describe('ConceptsPane', () => {
       'POI',
       'Staff',
       'Juggling Clubs',
+      'Fans',
     ])
     await propSelect.setValue('0')
     await wrapper.get<HTMLSelectElement>('[data-role="vtg-left-color"]').setValue('Blue')

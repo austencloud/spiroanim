@@ -138,6 +138,7 @@ const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
   min-inline-size: 0;
   min-block-size: 0;
   overflow: auto;
+  overflow-anchor: none;
   overscroll-behavior: contain;
   color: var(--color-text);
 }

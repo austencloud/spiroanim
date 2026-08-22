@@ -1,7 +1,7 @@
 import { Box3, Mesh, MeshStandardMaterial, MeshToonMaterial } from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { CLUBS, POI, STAFF } from '@/domain/animation/AnimModels'
+import { CLUBS, FANS, POI, STAFF } from '@/domain/animation/AnimModels'
 
 describe('AnimModels prop lighting', () => {
   it.each([
@@ -59,5 +59,16 @@ describe('AnimModels prop lighting', () => {
     expect(STAFF(1, 0, 1).additionalPathEndOffsets).toEqual([-1])
     expect(POI(1, 0, 1).additionalPathEndOffsets).toBeUndefined()
     expect(CLUBS(1, 0, 1).additionalPathEndOffsets).toBeUndefined()
+    expect(FANS(1, 0, 1).additionalPathEndOffsets).toBeUndefined()
+  })
+
+  it('builds Fans with one ring, five spokes, five wicks, and two braces', () => {
+    const fans = FANS(1, 4, 1)
+    const bounds = new Box3().setFromObject(fans)
+
+    expect(fans.children).toHaveLength(13)
+    expect(fans.size).toBe(2.5)
+    expect(bounds.min.y).toBeLessThan(0)
+    expect(bounds.max.y).toBeCloseTo(2.5, 1)
   })
 })
