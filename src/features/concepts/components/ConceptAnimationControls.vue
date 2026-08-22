@@ -236,10 +236,17 @@
           </select>
         </label>
       </fieldset>
-      <label class="concept-customize__sliders">
-        <input v-model="sliders" type="checkbox" :data-role="`${rolePrefix}-sliders`" />
-        <span>Sliders</span>
-      </label>
+      <div
+        class="concept-pattern-options concept-customize__display-options"
+        role="group"
+        aria-label="Usability Settings"
+      >
+        <span class="concept-customize__display-title">Usability Settings</span>
+        <label>
+          <input v-model="sliders" type="checkbox" :data-role="`${rolePrefix}-sliders`" />
+          <span>Sliders</span>
+        </label>
+      </div>
     </div>
   </details>
 </template>
@@ -417,44 +424,6 @@ onBeforeUnmount(endSliderHistory)
   width: 100%;
 }
 
-.concept-customize__sliders {
-  position: relative;
-  display: flex;
-  width: fit-content;
-  margin-inline: auto;
-  cursor: pointer;
-  align-items: center;
-}
-
-.concept-customize__sliders input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-}
-
-.concept-customize__sliders span {
-  padding-block: var(--space-1);
-  padding-inline: var(--space-3);
-  color: var(--color-text);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-}
-
-.concept-customize__sliders input:checked + span {
-  color: var(--color-on-action-primary);
-  background: var(--color-action-primary);
-  border-color: var(--color-action-primary);
-}
-
-.concept-customize__sliders input:focus-visible + span {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: 2px;
-}
-
 .concept-slider-controls > div {
   display: grid;
   flex: 1 1 9rem;
@@ -499,6 +468,27 @@ onBeforeUnmount(endSliderHistory)
   margin: 0;
   border: 0;
   gap: var(--space-1);
+}
+
+.concept-pattern-options.concept-customize__display-options {
+  display: grid;
+  box-sizing: border-box;
+  width: min(100%, 45rem);
+  padding: var(--space-2);
+  margin: var(--space-1) auto 0;
+  border-block-start: 1px solid var(--color-border);
+  grid-auto-flow: column;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+}
+
+.concept-customize__display-title {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .concept-pattern-options label {
