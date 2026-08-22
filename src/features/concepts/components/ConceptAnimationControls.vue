@@ -99,12 +99,13 @@
         :class="{ 'concept-slider-controls--touch': protectTouchScrolling }"
       >
         <legend class="concept-controls__visually-hidden">Animation settings</legend>
-        <label>
+        <div>
           <span class="concept-slider-controls__label vtg-slider-controls__label">
             <span>Scale</span>
-            <output>{{ scale.toFixed(1) }}</output>
+            <output v-if="sliders">{{ scale.toFixed(1) }}</output>
           </span>
           <input
+            v-if="sliders"
             v-model.number="scale"
             type="range"
             :min="vtgScaleControl.min"
@@ -115,13 +116,24 @@
             @pointerup="endPointerSlider"
             @pointercancel="cancelPointerSlider"
           />
-        </label>
-        <label>
+          <ConceptStepper
+            v-else
+            v-model="scale"
+            label="Scale"
+            :data-role="`${rolePrefix}-scale-stepper`"
+            :min="vtgScaleControl.min"
+            :max="vtgScaleControl.max"
+            :step="vtgScaleControl.step"
+            :display-value="scale.toFixed(1)"
+          />
+        </div>
+        <div>
           <span class="concept-slider-controls__label vtg-slider-controls__label">
             <span>Thick</span>
-            <output>{{ thick }}</output>
+            <output v-if="sliders">{{ thick }}</output>
           </span>
           <input
+            v-if="sliders"
             v-model.number="thick"
             type="range"
             :min="vtgThickControl.min"
@@ -132,13 +144,24 @@
             @pointerup="endPointerSlider"
             @pointercancel="cancelPointerSlider"
           />
-        </label>
-        <label>
+          <ConceptStepper
+            v-else
+            v-model="thick"
+            label="Thick"
+            :data-role="`${rolePrefix}-thick-stepper`"
+            :min="vtgThickControl.min"
+            :max="vtgThickControl.max"
+            :step="vtgThickControl.step"
+            :display-value="String(thick)"
+          />
+        </div>
+        <div>
           <span class="concept-slider-controls__label vtg-slider-controls__label">
             <span>Spacing</span>
-            <output>{{ spacing }}</output>
+            <output v-if="sliders">{{ spacing }}</output>
           </span>
           <input
+            v-if="sliders"
             v-model.number="spacing"
             type="range"
             :min="vtgSpacingControl.min"
@@ -149,13 +172,24 @@
             @pointerup="endPointerSlider"
             @pointercancel="cancelPointerSlider"
           />
-        </label>
-        <label>
+          <ConceptStepper
+            v-else
+            v-model="spacing"
+            label="Spacing"
+            :data-role="`${rolePrefix}-spacing-stepper`"
+            :min="vtgSpacingControl.min"
+            :max="vtgSpacingControl.max"
+            :step="vtgSpacingControl.step"
+            :display-value="String(spacing)"
+          />
+        </div>
+        <div>
           <span class="concept-slider-controls__label vtg-slider-controls__label">
             <span>BPM</span>
-            <output>{{ bpm }}</output>
+            <output v-if="sliders">{{ bpm }}</output>
           </span>
           <input
+            v-if="sliders"
             v-model.number="bpm"
             type="range"
             :min="vtgBpmControl.min"
@@ -166,7 +200,17 @@
             @pointerup="endPointerSlider"
             @pointercancel="cancelPointerSlider"
           />
-        </label>
+          <ConceptStepper
+            v-else
+            v-model="bpm"
+            label="BPM"
+            :data-role="`${rolePrefix}-bpm-stepper`"
+            :min="vtgBpmControl.min"
+            :max="vtgBpmControl.max"
+            :step="10"
+            :display-value="String(bpm)"
+          />
+        </div>
       </fieldset>
 
       <fieldset class="concept-color-controls">
@@ -192,6 +236,10 @@
           </select>
         </label>
       </fieldset>
+      <label class="concept-customize__sliders">
+        <input v-model="sliders" type="checkbox" :data-role="`${rolePrefix}-sliders`" />
+        <span>Sliders</span>
+      </label>
     </div>
   </details>
 </template>
@@ -209,6 +257,7 @@ import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { useTouchSafeRangeSlider } from '@/composables/useTouchSafeRangeSlider'
 import { COLORS, PTEXT } from '@/domain/animation/AnimStruct'
+import ConceptStepper from '@/features/concepts/components/ConceptStepper.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -232,6 +281,7 @@ const {
   leftPropColor,
   rightPropColor,
   prop,
+  sliders,
 } = storeToRefs(useConceptsStore())
 const propColors = COLORS
 const propTypes = PTEXT
@@ -367,7 +417,45 @@ onBeforeUnmount(endSliderHistory)
   width: 100%;
 }
 
-.concept-slider-controls label {
+.concept-customize__sliders {
+  position: relative;
+  display: flex;
+  width: fit-content;
+  margin-inline: auto;
+  cursor: pointer;
+  align-items: center;
+}
+
+.concept-customize__sliders input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.concept-customize__sliders span {
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+
+.concept-customize__sliders input:checked + span {
+  color: var(--color-on-action-primary);
+  background: var(--color-action-primary);
+  border-color: var(--color-action-primary);
+}
+
+.concept-customize__sliders input:focus-visible + span {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+.concept-slider-controls > div {
   display: grid;
   flex: 1 1 9rem;
   min-width: 9rem;

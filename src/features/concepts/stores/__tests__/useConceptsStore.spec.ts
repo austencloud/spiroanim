@@ -54,6 +54,7 @@ describe('useConceptsStore', () => {
     expect(store.leftPropColor).toBe('Cyan')
     expect(store.rightPropColor).toBe('Green')
     expect(store.prop).toBe(2)
+    expect(store.sliders).toBe(true)
     expect(store.customizeExpanded).toBe(false)
     expect(store.classicLayout).toBe(true)
     app.unmount()
@@ -67,6 +68,27 @@ describe('useConceptsStore', () => {
     const second = mountStore()
     expect(second.store.classicLayout).toBe(false)
     second.app.unmount()
+  })
+
+  it('defaults Sliders off for an iPad using a desktop-class user agent', () => {
+    const userAgent = Object.getOwnPropertyDescriptor(navigator, 'userAgent')
+    const maxTouchPoints = Object.getOwnPropertyDescriptor(navigator, 'maxTouchPoints')
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)',
+    })
+    Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 5 })
+
+    try {
+      const { app, store } = mountStore()
+      expect(store.sliders).toBe(false)
+      app.unmount()
+    } finally {
+      if (userAgent) Object.defineProperty(navigator, 'userAgent', userAgent)
+      else Reflect.deleteProperty(navigator, 'userAgent')
+      if (maxTouchPoints) Object.defineProperty(navigator, 'maxTouchPoints', maxTouchPoints)
+      else Reflect.deleteProperty(navigator, 'maxTouchPoints')
+    }
   })
 
   it('persists the selected pattern orientation', () => {
@@ -94,6 +116,7 @@ describe('useConceptsStore', () => {
       leftPropColor: 'Blue',
       rightPropColor: 'Magenta',
       prop: 3,
+      sliders: false,
     })
     first.app.unmount()
 
@@ -111,6 +134,7 @@ describe('useConceptsStore', () => {
       leftPropColor: second.store.leftPropColor,
       rightPropColor: second.store.rightPropColor,
       prop: second.store.prop,
+      sliders: second.store.sliders,
     }).toEqual({
       bpm: 91,
       scale: 1.2,
@@ -124,6 +148,7 @@ describe('useConceptsStore', () => {
       leftPropColor: 'Blue',
       rightPropColor: 'Magenta',
       prop: 3,
+      sliders: false,
     })
     second.app.unmount()
   })
@@ -335,6 +360,7 @@ describe('useConceptsStore', () => {
     store.leftPropColor = 'Blue'
     store.rightPropColor = 'Magenta'
     store.prop = 3
+    store.sliders = false
 
     store.resetPatternControls()
 
@@ -354,6 +380,7 @@ describe('useConceptsStore', () => {
       leftPropColor: store.leftPropColor,
       rightPropColor: store.rightPropColor,
       prop: store.prop,
+      sliders: store.sliders,
     }).toEqual({
       speedRatio: '1:3',
       swapProps: false,
@@ -370,6 +397,7 @@ describe('useConceptsStore', () => {
       leftPropColor: 'Cyan',
       rightPropColor: 'Green',
       prop: 3,
+      sliders: true,
     })
     app.unmount()
   })

@@ -1559,6 +1559,37 @@ describe('VtgPane', () => {
     }
   })
 
+  it('replaces every Concepts slider with the compact step controls when Sliders is off', async () => {
+    const store = useConceptsStore()
+    store.sliders = false
+    const wrapper = mount(VtgPane)
+
+    expect(wrapper.find('[data-role="vtg-scale"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-thick"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-spacing"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-bpm"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-beat"]').exists()).toBe(false)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-sliders"]').element.checked).toBe(false)
+
+    await wrapper.get('[data-role="vtg-scale-stepper-increase"]').trigger('click')
+    await wrapper.get('[data-role="vtg-thick-stepper-increase"]').trigger('click')
+    await wrapper.get('[data-role="vtg-spacing-stepper-increase"]').trigger('click')
+    await wrapper.get('[data-role="vtg-bpm-stepper-increase"]').trigger('click')
+    await wrapper.get('[data-role="vtg-beat-stepper-increase"]').trigger('click')
+
+    expect({
+      scale: store.scale,
+      thick: store.thick,
+      spacing: store.spacing,
+      bpm: store.bpm,
+      beat: wrapper.get('[data-role="vtg-beat-stepper"]').text(),
+    }).toEqual({ scale: 0.9, thick: 6, spacing: 2, bpm: 50, beat: '1.5' })
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-sliders"]').setValue(true)
+    expect(wrapper.find('[data-role="vtg-scale"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-beat"]').exists()).toBe(true)
+  })
+
   it('reapplies the selected pattern when rendering checkboxes change', async () => {
     const wrapper = mount(VtgPane)
     const paths = wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]')

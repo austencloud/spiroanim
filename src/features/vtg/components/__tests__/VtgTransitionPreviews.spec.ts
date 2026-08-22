@@ -6,6 +6,7 @@ import AppTooltip from '@/components/AppTooltip.vue'
 import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { useViewportStore } from '@/stores/useViewportStore'
+import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
 import {
   builderPatternPointerDropEvent,
@@ -53,6 +54,7 @@ describe('VtgTransitionPreviews', () => {
       'false',
     )
     expect(wrapper.findAllComponents(AppTooltip).map((tooltip) => tooltip.props('text'))).toEqual([
+      relationship.description,
       'Reverse',
       'Swap Props',
       'Delete',
@@ -112,6 +114,40 @@ describe('VtgTransitionPreviews', () => {
     await nextTick()
 
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe('Reverse')
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it('respects the global tooltip setting for thumbnail descriptions', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [relationship],
+        refreshKey: 'thumbnail-tooltip',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        scale: 1,
+      },
+    })
+    const thumbnail = wrapper.get('button[aria-label="Preview pattern 1"]')
+    const viewport = useViewportStore()
+
+    viewport.showTooltips = false
+    await thumbnail.trigger('mouseenter')
+    vi.advanceTimersByTime(0)
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
+
+    viewport.showTooltips = true
+    await nextTick()
+    await thumbnail.trigger('mouseenter')
+    vi.advanceTimersByTime(0)
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
+      relationship.description,
+    )
+
     wrapper.unmount()
     vi.useRealTimers()
   })
@@ -231,6 +267,7 @@ describe('VtgTransitionPreviews', () => {
 
   it('uses the shared touch slider behavior for Builder beat controls', async () => {
     device.touch = true
+    useConceptsStore().sliders = true
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
         animations: [animation],
@@ -253,6 +290,27 @@ describe('VtgTransitionPreviews', () => {
       [0, 2],
       [0, 1],
     ])
+    expect(wrapper.emitted('sliderStart')).toHaveLength(1)
+    expect(wrapper.emitted('sliderEnd')).toHaveLength(1)
+  })
+
+  it('uses step controls for Builder beats when Sliders is off', async () => {
+    useConceptsStore().sliders = false
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [relationship],
+        refreshKey: 'beat-stepper',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        scale: 1,
+      },
+    })
+
+    expect(wrapper.find('[data-role="vtg-transition-preview-beats"]').exists()).toBe(false)
+    await wrapper.get('[data-role="vtg-transition-preview-beats-0-increase"]').trigger('click')
+
+    expect(wrapper.emitted('beatChange')).toEqual([[0, 1.5]])
     expect(wrapper.emitted('sliderStart')).toHaveLength(1)
     expect(wrapper.emitted('sliderEnd')).toHaveLength(1)
   })

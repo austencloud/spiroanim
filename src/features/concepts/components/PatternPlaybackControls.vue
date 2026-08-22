@@ -38,9 +38,10 @@
 
     <AppTooltip :text="`Start on beat ${beat}`">
       <template #activator="{ props: activatorProps }">
-        <label v-bind="activatorProps" class="pattern-playback-controls__beat-slider">
+        <div v-bind="activatorProps" class="pattern-playback-controls__beat-slider">
           <span class="pattern-playback-controls__visually-hidden">Starting beat</span>
           <input
+            v-if="sliders"
             v-model.number="beat"
             type="range"
             :min="vtgBeats[0]"
@@ -56,8 +57,19 @@
             @keyup="emit('sliderEnd')"
             @blur="emit('sliderEnd')"
           />
-          <output>{{ beat }}</output>
-        </label>
+          <output v-if="sliders">{{ beat }}</output>
+          <ConceptStepper
+            v-else
+            :model-value="beat"
+            label="Starting beat"
+            :data-role="`${concept}-beat-stepper`"
+            :min="vtgBeats[0]"
+            :max="vtgBeats.at(-1) ?? vtgBeats[0]"
+            :step="0.5"
+            :display-value="String(beat)"
+            @update:model-value="updateBeat"
+          />
+        </div>
       </template>
     </AppTooltip>
   </fieldset>
@@ -67,6 +79,8 @@
 import AppTooltip from '@/components/AppTooltip.vue'
 import { vtgBeats, vtgPatternOrientations } from '@/features/vtg/types'
 import type { VtgBeat, VtgPatternOrientation } from '@/features/vtg/types'
+import ConceptStepper from '@/features/concepts/components/ConceptStepper.vue'
+import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 
 withDefaults(
   defineProps<{
@@ -87,6 +101,11 @@ const emit = defineEmits<{
 const beat = defineModel<VtgBeat>('beat', { required: true })
 const qtr = defineModel<boolean>('qtr', { required: true })
 const orientation = defineModel<VtgPatternOrientation>('orientation', { default: 0 })
+const { sliders } = storeToRefs(useConceptsStore())
+
+const updateBeat = (value: number) => {
+  if (vtgBeats.includes(value as VtgBeat)) beat.value = value as VtgBeat
+}
 </script>
 
 <style scoped>
@@ -191,6 +210,11 @@ const orientation = defineModel<VtgPatternOrientation>('orientation', { default:
   min-width: 2em;
   text-align: end;
   white-space: nowrap;
+}
+
+.pattern-playback-controls__beat-slider .concept-stepper {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .pattern-playback-controls__visually-hidden {

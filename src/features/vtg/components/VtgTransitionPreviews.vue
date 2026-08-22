@@ -26,7 +26,7 @@
       @dragleave="leavePatternDrop(index, $event)"
       @drop.prevent="dropPattern(index, $event)"
     >
-      <BaseTooltip
+      <AppTooltip
         class="vtg-transition-previews__tooltip"
         :text="previewRelationships[index]?.description"
       >
@@ -56,7 +56,7 @@
             <span class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>
           </button>
         </template>
-      </BaseTooltip>
+      </AppTooltip>
       <div :id="`vtg-transition-preview-actions-${index}`" class="vtg-transition-previews__actions">
         <div class="vtg-transition-previews__transform-actions">
           <AppTooltip text="Reverse">
@@ -104,11 +104,12 @@
           </AppTooltip>
         </div>
       </div>
-      <label class="vtg-transition-previews__beats">
+      <div class="vtg-transition-previews__beats">
         <span class="vtg-transition-previews__visually-hidden">
           Pattern {{ index + 1 }} beats
         </span>
         <input
+          v-if="sliders"
           type="range"
           :min="minimumBeatCount(index)"
           :max="maximumBeatCount(index)"
@@ -125,8 +126,19 @@
           @keyup="emit('sliderEnd')"
           @blur="emit('sliderEnd')"
         />
-        <output>{{ beatCounts[index] }}</output>
-      </label>
+        <output v-if="sliders">{{ beatCounts[index] }}</output>
+        <ConceptStepper
+          v-else
+          :model-value="beatCounts[index] ?? minimumBeatCount(index)"
+          label="Pattern beats"
+          :data-role="`vtg-transition-preview-beats-${index}`"
+          :min="minimumBeatCount(index)"
+          :max="maximumBeatCount(index)"
+          :step="0.5"
+          :display-value="String(beatCounts[index])"
+          @update:model-value="updateBeatCountValue(index, $event)"
+        />
+      </div>
     </div>
 
     <div
@@ -189,7 +201,6 @@ import { inferVtgDoubledPortionSpeedRatio } from '@/features/vtg/math/inferVtgSp
 import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
-import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import { mdiRotate3dVariant, mdiSwapHorizontal, mdiTrashCanOutline } from '@mdi/js'
 import { isTouchDevice } from '@/utils/device'
 import { useTouchSafeRangeSlider } from '@/composables/useTouchSafeRangeSlider'
@@ -199,6 +210,8 @@ import {
   builderPatternPointerMoveEvent,
 } from '@/features/builder/patternPointerDrag'
 import type { BuilderPatternPointerDetail } from '@/features/builder/patternPointerDrag'
+import ConceptStepper from '@/features/concepts/components/ConceptStepper.vue'
+import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 
 const props = withDefaults(
   defineProps<{
@@ -215,6 +228,7 @@ const props = withDefaults(
   }>(),
   { columns: 4, allowFirstDrop: false },
 )
+const { sliders } = storeToRefs(useConceptsStore())
 const previewReferences = props.animations.map((_, index) => String(index + 1))
 const previewGrid = ref<HTMLElement>()
 const emit = defineEmits<{
@@ -337,6 +351,11 @@ const maximumBeatCount = (index: number) => Math.min(8, (props.initialBeatCounts
 const updateBeatCount = (index: number, event: Event) => {
   if (event.target instanceof HTMLInputElement)
     emit('beatChange', index, event.target.valueAsNumber)
+}
+const updateBeatCountValue = (index: number, value: number) => {
+  emit('sliderStart')
+  emit('beatChange', index, value)
+  emit('sliderEnd')
 }
 const previewPattern = (index: number) => {
   const nextIndex = props.selectedIndex === index ? undefined : index
@@ -649,6 +668,11 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
 .vtg-transition-previews__beats output {
   min-width: 2em;
   text-align: end;
+}
+
+.vtg-transition-previews__beats .concept-stepper {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .vtg-transition-previews__visually-hidden {

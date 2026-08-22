@@ -11,6 +11,7 @@ import { isVtgSpeedRatio, vtgDefaultSpeedRatio, vtgPatternOrientations } from '@
 import type { VtgPatternOrientation, VtgSpeedRatio } from '@/features/vtg/types'
 import type { PropInd } from '@/types/AnimTypes'
 import { COLORS, PROPSR } from '@/domain/animation/AnimStruct'
+import { isTouchDevice } from '@/utils/device'
 import {
   defaultPatternPropColors,
   type PatternPropColor,
@@ -60,6 +61,7 @@ export const useConceptsStore = defineStore(
     const leftPropColor = ref<PatternPropColor>(defaultPatternPropColors[0])
     const rightPropColor = ref<PatternPropColor>(defaultPatternPropColors[1])
     const prop = ref<PropInd>(2)
+    const sliders = ref(!isTouchDevice())
 
     const resetPatternControls = () => {
       speedRatio.value = vtgDefaultSpeedRatio
@@ -77,6 +79,7 @@ export const useConceptsStore = defineStore(
       rightPropVisible.value = true
       leftPropColor.value = defaultPatternPropColors[0]
       rightPropColor.value = defaultPatternPropColors[1]
+      sliders.value = !isTouchDevice()
     }
 
     const addQuickSlot = () => {
@@ -232,6 +235,7 @@ export const useConceptsStore = defineStore(
       leftPropColor,
       rightPropColor,
       prop,
+      sliders,
       resetPatternControls,
       addQuickSlot,
       removeQuickSlot,
@@ -276,6 +280,7 @@ export const useConceptsStore = defineStore(
         'leftPropColor',
         'rightPropColor',
         'prop',
+        'sliders',
         'customizeExpanded',
         'classicLayout',
       ],
@@ -397,6 +402,7 @@ export const useConceptsStore = defineStore(
         if (!Number.isInteger(store.prop) || store.prop < 0 || store.prop >= PROPSR.length) {
           store.prop = 2
         }
+        if (typeof store.sliders !== 'boolean') store.sliders = !isTouchDevice()
         if (typeof store.customizeExpanded !== 'boolean') store.customizeExpanded = false
         if (typeof store.classicLayout !== 'boolean') store.classicLayout = true
       },
