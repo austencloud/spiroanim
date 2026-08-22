@@ -95,12 +95,6 @@
             />
             <p v-if="quickSlotCreationError" role="alert">{{ quickSlotCreationError }}</p>
           </div>
-
-          <p class="builder-pane__development-warning" role="note">
-            Pattern Builder is under active development. Features and generated patterns may change.
-            <br />
-            <strong>Not yet tested on MOBILE.</strong>
-          </p>
         </div>
 
         <div class="builder-pane__column-control" role="group" aria-label="Builder Columns">
@@ -729,22 +723,6 @@ const exit = () => {
 .builder-pane__player-revert-button:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
-}
-
-.builder-pane__development-warning {
-  box-sizing: border-box;
-  width: min(calc(100% - var(--space-4)), 45rem);
-  padding: var(--space-2) var(--space-3);
-  margin: var(--space-4) auto var(--space-6);
-  color: var(--color-text);
-  font-size: var(--font-size-concept-control);
-  font-weight: 700;
-  line-height: 1.4;
-  text-align: center;
-  background: color-mix(in srgb, var(--color-status-warning) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-status-warning) 55%, var(--color-border));
-  border-inline-start-width: 3px;
-  border-radius: var(--radius-sm);
 }
 
 .builder-pane__qslots {
