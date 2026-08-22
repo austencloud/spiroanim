@@ -23,12 +23,13 @@ import type {
 import {
   formatVtgSpeedRatio,
   getVtgPropSpeedRatios,
+  getVtgTimingCycleCount,
   vtgBeats,
   vtgDefaultBeat,
 } from '@/features/vtg/types'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
-import { analyzeAlternatingPatternPlayback } from '@/math/animation/alternatePatternPlayback'
+import { analyzeAlternatingPatternPlaybacks } from '@/math/animation/alternatePatternPlayback'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -254,18 +255,25 @@ const findInternal = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
 ): readonly VtgPatternMatch[] => {
-  const alternating = analyzeAlternatingPatternPlayback(animation)
-  return findBaseMatches(alternating?.base ?? animation, rotationFilter).map((match) =>
-    alternating
-      ? {
+  const alternating = analyzeAlternatingPatternPlaybacks(animation)
+  if (alternating.length === 0) return findBaseMatches(animation, rotationFilter)
+  return alternating.flatMap((analysis) =>
+    findBaseMatches(analysis.base, rotationFilter)
+      .filter(
+        (match) =>
+          getVtgTimingCycleCount(match.speedRatio) ===
+          ((analysis.base.props[0]?.anim.length ?? 1) - 1) / 8,
+      )
+      .map((match) => {
+        return {
           ...match,
           transition: true,
-          transitionBeats: alternating.transitionBeats,
-          ...(alternating.transitionAfterBeat ? { transitionAfterBeat: true } : undefined),
-          ...(alternating.transitionQuad ? { transitionQuad: true } : undefined),
-          ...(alternating.transitionSecond ? { transitionSecond: true } : undefined),
+          transitionBeats: analysis.transitionBeats,
+          ...(analysis.transitionAfterBeat ? { transitionAfterBeat: true } : undefined),
+          ...(analysis.transitionQuad ? { transitionQuad: true } : undefined),
+          ...(analysis.transitionSecond ? { transitionSecond: true } : undefined),
         }
-      : match,
+      }),
   )
 }
 

@@ -7,13 +7,10 @@ import {
   vtgSpacingControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
-import {
-  isVtgSpeedRatio,
-  vtgDefaultSpeedRatio,
-  vtgPatternOrientations,
-} from '@/features/vtg/types'
+import { isVtgSpeedRatio, vtgDefaultSpeedRatio, vtgPatternOrientations } from '@/features/vtg/types'
 import type { VtgPatternOrientation, VtgSpeedRatio } from '@/features/vtg/types'
 import type { PropInd } from '@/types/AnimTypes'
+import { COLORS, PROPSR } from '@/domain/animation/AnimStruct'
 import {
   defaultPatternPropColors,
   type PatternPropColor,
@@ -80,7 +77,6 @@ export const useConceptsStore = defineStore(
       rightPropVisible.value = true
       leftPropColor.value = defaultPatternPropColors[0]
       rightPropColor.value = defaultPatternPropColors[1]
-      prop.value = 2
     }
 
     const addQuickSlot = () => {
@@ -268,7 +264,18 @@ export const useConceptsStore = defineStore(
         'swapProps',
         'reversePlane',
         'orientation',
+        'bpm',
+        'scale',
+        'thick',
         'spacing',
+        'paths',
+        'hands',
+        'arms',
+        'leftPropVisible',
+        'rightPropVisible',
+        'leftPropColor',
+        'rightPropColor',
+        'prop',
         'customizeExpanded',
         'classicLayout',
       ],
@@ -347,11 +354,48 @@ export const useConceptsStore = defineStore(
         }
         if (!vtgPatternOrientations.includes(store.orientation)) store.orientation = 0
         if (
+          !Number.isInteger(store.bpm) ||
+          store.bpm < vtgBpmControl.min ||
+          store.bpm > vtgBpmControl.max
+        ) {
+          store.bpm = vtgBpmControl.default
+        }
+        if (
+          typeof store.scale !== 'number' ||
+          !Number.isFinite(store.scale) ||
+          store.scale < vtgScaleControl.min ||
+          store.scale > vtgScaleControl.max
+        ) {
+          store.scale = vtgScaleControl.default
+        }
+        if (
+          !Number.isInteger(store.thick) ||
+          store.thick < vtgThickControl.min ||
+          store.thick > vtgThickControl.max
+        ) {
+          store.thick = vtgThickControl.default
+        }
+        if (
           !Number.isInteger(store.spacing) ||
           store.spacing < vtgSpacingControl.min ||
           store.spacing > vtgSpacingControl.max
         ) {
           store.spacing = vtgSpacingControl.default
+        }
+        if (typeof store.paths !== 'boolean') store.paths = vtgPlayerSettings.paths
+        if (typeof store.hands !== 'boolean') store.hands = vtgPlayerSettings.hands
+        if (typeof store.arms !== 'boolean') store.arms = vtgPlayerSettings.arms
+        if (typeof store.leftPropVisible !== 'boolean') store.leftPropVisible = true
+        if (typeof store.rightPropVisible !== 'boolean') store.rightPropVisible = true
+        if (!store.leftPropVisible && !store.rightPropVisible) store.rightPropVisible = true
+        if (!COLORS.includes(store.leftPropColor)) {
+          store.leftPropColor = defaultPatternPropColors[0]
+        }
+        if (!COLORS.includes(store.rightPropColor)) {
+          store.rightPropColor = defaultPatternPropColors[1]
+        }
+        if (!Number.isInteger(store.prop) || store.prop < 0 || store.prop >= PROPSR.length) {
+          store.prop = 2
         }
         if (typeof store.customizeExpanded !== 'boolean') store.customizeExpanded = false
         if (typeof store.classicLayout !== 'boolean') store.classicLayout = true

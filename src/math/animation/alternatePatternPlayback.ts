@@ -153,12 +153,13 @@ const isTransitionBeatCount = (value: number): value is VtgTransitionBeats =>
  */
 export const analyzeAlternatingPatternPlayback = (
   animation: RootDataFinal,
+  timingCycleCounts: readonly (1 | 2)[] = [1, 2],
 ): AlternatingPatternPlaybackAnalysis | undefined => {
   const firstProp = animation.props[0]
   if (!firstProp || animation.props.length < 1) return undefined
   if (animation.props.some((prop) => prop.anim.length !== firstProp.anim.length)) return undefined
 
-  const mode = ([1, 2] as const)
+  const mode = timingCycleCounts
     .flatMap((timingCycleCount) =>
       ([false, true] as const).flatMap((quad) =>
         ([1, 0] as const).map((frameOffset) => ({ timingCycleCount, quad, frameOffset })),
@@ -215,3 +216,12 @@ export const analyzeAlternatingPatternPlayback = (
     transitionAfterBeat: frameOffset === 1,
   }
 }
+
+/** Returns every structurally valid interpretation when transition frame counts are ambiguous. */
+export const analyzeAlternatingPatternPlaybacks = (
+  animation: RootDataFinal,
+): readonly AlternatingPatternPlaybackAnalysis[] =>
+  ([1, 2] as const).flatMap((timingCycleCount) => {
+    const analysis = analyzeAlternatingPatternPlayback(animation, [timingCycleCount])
+    return analysis ? [analysis] : []
+  })

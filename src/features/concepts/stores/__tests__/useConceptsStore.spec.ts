@@ -79,6 +79,55 @@ describe('useConceptsStore', () => {
     second.app.unmount()
   })
 
+  it('persists every shared Customize setting', () => {
+    const first = mountStore()
+    Object.assign(first.store, {
+      bpm: 91,
+      scale: 1.2,
+      thick: 9,
+      spacing: 6,
+      paths: false,
+      hands: true,
+      arms: false,
+      leftPropVisible: false,
+      rightPropVisible: true,
+      leftPropColor: 'Blue',
+      rightPropColor: 'Magenta',
+      prop: 3,
+    })
+    first.app.unmount()
+
+    const second = mountStore()
+    expect({
+      bpm: second.store.bpm,
+      scale: second.store.scale,
+      thick: second.store.thick,
+      spacing: second.store.spacing,
+      paths: second.store.paths,
+      hands: second.store.hands,
+      arms: second.store.arms,
+      leftPropVisible: second.store.leftPropVisible,
+      rightPropVisible: second.store.rightPropVisible,
+      leftPropColor: second.store.leftPropColor,
+      rightPropColor: second.store.rightPropColor,
+      prop: second.store.prop,
+    }).toEqual({
+      bpm: 91,
+      scale: 1.2,
+      thick: 9,
+      spacing: 6,
+      paths: false,
+      hands: true,
+      arms: false,
+      leftPropVisible: false,
+      rightPropVisible: true,
+      leftPropColor: 'Blue',
+      rightPropColor: 'Magenta',
+      prop: 3,
+    })
+    second.app.unmount()
+  })
+
   it('restores four Quick Slots and allows removing all of them', () => {
     const { app, store } = mountStore()
 
@@ -285,6 +334,7 @@ describe('useConceptsStore', () => {
     store.rightPropVisible = false
     store.leftPropColor = 'Blue'
     store.rightPropColor = 'Magenta'
+    store.prop = 3
 
     store.resetPatternControls()
 
@@ -303,6 +353,7 @@ describe('useConceptsStore', () => {
       rightPropVisible: store.rightPropVisible,
       leftPropColor: store.leftPropColor,
       rightPropColor: store.rightPropColor,
+      prop: store.prop,
     }).toEqual({
       speedRatio: '1:3',
       swapProps: false,
@@ -318,6 +369,7 @@ describe('useConceptsStore', () => {
       rightPropVisible: true,
       leftPropColor: 'Cyan',
       rightPropColor: 'Green',
+      prop: 3,
     })
     app.unmount()
   })

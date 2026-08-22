@@ -37,6 +37,48 @@ const canonicalRotationMatches = (matches: readonly VtgPatternMatch[]) => {
 }
 
 describe('VTG animation matching', () => {
+  it('retains matching when the supplied 2:3 transition changes to 3 beats', async () => {
+    const version = await loadSpiroAnimQSVersion(9)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      9,
+    )
+    const supplied = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew68Yk11Y&p0=Q__.mBE_______q_.5JEQzP...............&m0=_1_mxqv__&p1=N__.mBE_______q_.5L_QzP...............&c=_f_bhq&v=9',
+        ),
+      ),
+    )
+    const suppliedMatch = findVtgPatternMatch(supplied)
+    expect(suppliedMatch).toBeDefined()
+    if (!suppliedMatch) return
+
+    const threeBeat = createAnimation({
+      ...suppliedMatch,
+      transition: true,
+      transitionBeats: 3,
+    })
+
+    expect(findVtgPatternMatch(threeBeat)).toMatchObject({
+      ...suppliedMatch,
+      transition: true,
+      transitionBeats: 3,
+    })
+
+    const quad = createAnimation({
+      ...suppliedMatch,
+      transition: true,
+      transitionQuad: true,
+    })
+    expect(findVtgPatternMatch(quad)).toMatchObject({
+      ...suppliedMatch,
+      transition: true,
+      transitionQuad: true,
+    })
+  })
+
   it('matches a generalized timing ratio', () => {
     const source = createAnimation({ reference: '1-1', speedRatio: '2:1' })
 
