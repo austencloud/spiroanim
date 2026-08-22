@@ -179,7 +179,10 @@ import type { RootDataFinal } from '@/types/AnimTypes'
 import { builderPatternDragType } from '@/features/builder/types'
 import type { BuilderPatternDrop } from '@/features/builder/types'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
-import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
+import {
+  toVtgBuilderDisplayAnimation,
+  type VtgBuilderDisplaySettings,
+} from '@/features/builder/toVtgBuilderDisplayAnimation'
 import type { PatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { vtgThickControl } from '@/features/vtg/data/vtgPlayerSettings'
 import { inferVtgDoubledPortionSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
@@ -206,6 +209,7 @@ const props = withDefaults(
     beatCounts: readonly number[]
     relationships: readonly PatternRelationships[]
     scale: number
+    displaySettings?: VtgBuilderDisplaySettings
     selectedIndex?: number
     allowFirstDrop?: boolean
   }>(),
@@ -352,6 +356,9 @@ const { previewUrls, requestPreviews } = useConceptPreviewRenderer({
   createAnimation: (reference) => {
     const animation = props.animations[Number(reference) - 1]
     if (!animation) return undefined
+
+    if (props.displaySettings)
+      return toVtgBuilderDisplayAnimation(animation, props.displaySettings, { thumbnail: true })
 
     const display = toVtgBuilderDisplayAnimation(animation, props.scale)
     return {

@@ -282,7 +282,7 @@ describe('EightStepPane', () => {
     expect(FakeWorker.maxActivePreviewRequests).toBe(1)
     expect(
       FakeWorker.instances[0]?.messages.find(({ type }) => type === 'initialize')?.data,
-    ).toEqual({ girth: 2, timeline: false })
+    ).toEqual({ girth: 2, timeline: false, thumbnail: true })
   })
 
   it('refreshes row previews for resize, Swap, 180°, and Scale only', async () => {
@@ -587,6 +587,21 @@ describe('EightStepPane', () => {
         },
       ],
     ])
+  })
+
+  it('emits shared control changes separately from pattern selections', async () => {
+    const wrapper = mount(EightStepPane)
+    await wrapper.get('[data-cell-reference="7-IE"]').trigger('click')
+    const patternSelections = wrapper.emitted('patternSelect')?.length
+
+    await wrapper.get<HTMLInputElement>('[data-role="eight-step-scale"]').setValue(1.2)
+
+    expect(wrapper.emitted('patternSelect')).toHaveLength(patternSelections ?? 0)
+    expect(wrapper.emitted('customize')?.at(-1)?.[0]).toMatchObject({
+      concept: '8stp',
+      reference: '7-IE',
+      scale: 1.2,
+    })
   })
 
   it('hydrates the selected cell and controls from compiled Eight Step data', async () => {

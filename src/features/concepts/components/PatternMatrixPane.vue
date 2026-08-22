@@ -952,6 +952,13 @@ const createPatternSelection = (
   return selection
 }
 
+const createCustomizationSelection = () => {
+  const tile =
+    matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value) ??
+    matrixTiles.value[0]
+  return tile === undefined ? undefined : createPatternSelection(tile)
+}
+
 const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (props.builderActive) return
   const selection = createPatternSelection(tile)
@@ -1232,11 +1239,12 @@ const resetPatternControls = async () => {
   propRotationOffsets.value = undefined
   await nextTick()
   releasePatternEmitSuppression(suppressionOwner)
-  if (tile !== undefined) {
-    if (props.builderActive) {
-      emit('customize', createPatternSelection(tile))
-      emitBuilderPreview(tile)
-    } else emitPatternSelection(tile)
+  if (props.builderActive) {
+    const selection = createCustomizationSelection()
+    if (selection !== undefined) emit('customize', selection)
+    if (tile !== undefined) emitBuilderPreview(tile)
+  } else if (tile !== undefined) {
+    emitPatternSelection(tile)
   }
 }
 
@@ -1300,12 +1308,8 @@ watch(
   () => {
     if (suppressPatternEmit) return
 
-    const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
-    if (tile !== undefined) {
-      if (props.builderActive) {
-        emit('customize', createPatternSelection(tile))
-      } else emitPatternSelection(tile)
-    }
+    const selection = createCustomizationSelection()
+    if (selection !== undefined) emit('customize', selection)
   },
   { flush: 'sync' },
 )

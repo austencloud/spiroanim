@@ -64,6 +64,7 @@
       :animation-ready="animationReady"
       :pattern-matcher="patternMatcher"
       @pattern-select="emit('patternSelect', $event)"
+      @customize="emit('customize', $event)"
     />
     <QuarterSpaceTechPane
       v-else-if="selectedConcept === 'qst'"
@@ -71,6 +72,7 @@
       :animation-ready="animationReady"
       :pattern-matcher="patternMatcher"
       @pattern-select="emit('patternSelect', $event)"
+      @customize="emit('customize', $event)"
     />
     <ThirdOrderPane v-else-if="selectedConcept === 'to'" />
     <KineticAlphabetPane v-else />

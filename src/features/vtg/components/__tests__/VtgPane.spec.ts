@@ -2434,6 +2434,15 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-blank-index="0"]').attributes('data-height')).toBe('68.5')
   })
 
+  it('disables Double Paths in VTG thumbnail workers', async () => {
+    mount(VtgPane)
+    await settlePreviewRendering()
+
+    expect(
+      FakeWorker.instances[0]?.messages.find(({ type }) => type === 'initialize')?.data,
+    ).toEqual({ girth: 2, timeline: false, thumbnail: true })
+  })
+
   it('renders the top-left cell for each intersection through one sequential worker queue', async () => {
     const wrapper = mount(VtgPane)
     await settlePreviewRendering()
@@ -2452,7 +2461,7 @@ describe('VtgPane', () => {
     expect(FakeWorker.maxActivePreviewRequests).toBe(1)
     expect(
       FakeWorker.instances[0]?.messages.find(({ type }) => type === 'initialize')?.data,
-    ).toEqual({ girth: 2, timeline: false })
+    ).toEqual({ girth: 2, timeline: false, thumbnail: true })
 
     const renderMessages = FakeWorker.instances[0]?.messages
       .filter(({ type }) => type === 'data' || type === 'reqimgs')

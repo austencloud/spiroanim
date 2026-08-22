@@ -231,6 +231,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   patternSelect: [selection: EightStepPatternSelection]
+  customize: [selection: EightStepPatternSelection]
 }>()
 
 interface EightStepCell extends EightStepPatternDefinition {
@@ -471,11 +472,12 @@ const resetPatternControls = async () => {
   if (selectedCell.value) emitPatternSelection(selectedCell.value)
 }
 
+watch([swapProps, reversePlane, shape], () => {
+  if (!suppressPatternEmit && selectedCell.value) emitPatternSelection(selectedCell.value)
+})
+
 watch(
   [
-    swapProps,
-    reversePlane,
-    shape,
     bpm,
     scale,
     thick,
@@ -490,7 +492,8 @@ watch(
     prop,
   ],
   () => {
-    if (!suppressPatternEmit && selectedCell.value) emitPatternSelection(selectedCell.value)
+    if (!suppressPatternEmit && selectedCell.value)
+      emit('customize', createSelection(selectedCell.value))
   },
 )
 

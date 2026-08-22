@@ -167,7 +167,11 @@ export const useConceptPreviewRenderer = <Reference extends string>({
       channel.warnStr(await channel.call('warnStr', `${label} Previews`))
       if (disposed) return
 
-      initialized = await channel.call('initialize', { girth: 2, timeline: false })
+      initialized = await channel.call('initialize', {
+        girth: 2,
+        timeline: false,
+        thumbnail: true,
+      })
       if (!initialized) console.warn(`${label} preview worker reported a failure to initialize.`)
     } catch (error) {
       console.warn(`Initialization of ${label} preview worker failed.`, error)

@@ -298,7 +298,7 @@ onMounted(() => {
   })
 
   // Initialize worker, which creates the offscreenCanvas
-  call('initialize', { girth, timeline: true })
+  call('initialize', { girth, timeline: true, thumbnail: true })
     .then((success) => {
       if (!success) console.warn('Timeline Worker reported a failure to initialize.')
     })

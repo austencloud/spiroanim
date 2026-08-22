@@ -114,9 +114,6 @@
             @pointerdown="beginPointerSlider"
             @pointerup="endPointerSlider"
             @pointercancel="cancelPointerSlider"
-            @keydown="beginSliderHistory"
-            @keyup="endSliderHistory"
-            @blur="endSliderHistory"
           />
         </label>
         <label>
@@ -134,9 +131,6 @@
             @pointerdown="beginPointerSlider"
             @pointerup="endPointerSlider"
             @pointercancel="cancelPointerSlider"
-            @keydown="beginSliderHistory"
-            @keyup="endSliderHistory"
-            @blur="endSliderHistory"
           />
         </label>
         <label>
@@ -154,9 +148,6 @@
             @pointerdown="beginPointerSlider"
             @pointerup="endPointerSlider"
             @pointercancel="cancelPointerSlider"
-            @keydown="beginSliderHistory"
-            @keyup="endSliderHistory"
-            @blur="endSliderHistory"
           />
         </label>
         <label>
@@ -174,9 +165,6 @@
             @pointerdown="beginPointerSlider"
             @pointerup="endPointerSlider"
             @pointercancel="cancelPointerSlider"
-            @keydown="beginSliderHistory"
-            @keyup="endSliderHistory"
-            @blur="endSliderHistory"
           />
         </label>
       </fieldset>
@@ -278,7 +266,7 @@ const endSliderHistory = () => {
 }
 
 const { protectTouchScrolling, beginPointerSlider, endPointerSlider, cancelPointerSlider } =
-  useTouchSafeRangeSlider({ begin: beginSliderHistory, end: endSliderHistory })
+  useTouchSafeRangeSlider({ begin: () => {}, end: () => {} })
 
 onBeforeUnmount(endSliderHistory)
 </script>

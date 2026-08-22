@@ -246,6 +246,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   patternSelect: [selection: QstPatternSelection]
+  customize: [selection: QstPatternSelection]
 }>()
 
 const conceptsStore = useConceptsStore()
@@ -400,10 +401,12 @@ const resetPatternControls = async () => {
   if (selectedPattern.value) emitPatternSelection(selectedPattern.value)
 }
 
+watch([swapProps, reversePlane], () => {
+  if (!suppressPatternEmit && selectedPattern.value) emitPatternSelection(selectedPattern.value)
+})
+
 watch(
   [
-    swapProps,
-    reversePlane,
     bpm,
     scale,
     thick,
@@ -419,7 +422,7 @@ watch(
   ],
   () => {
     if (!suppressPatternEmit && selectedPattern.value) {
-      emitPatternSelection(selectedPattern.value)
+      emit('customize', createSelection(selectedPattern.value))
     }
   },
 )

@@ -7,6 +7,7 @@ import {
   replaceFirstVtgBuilderPattern,
   swapVtgBuilderPatternProps,
 } from '@/features/builder/appendVtgBuilderPattern'
+import { preserveVtgBuilderScale } from '@/features/builder/preserveVtgBuilderScale'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import {
   createVtgTransitionPreviewAnimations,
@@ -491,11 +492,16 @@ describe('appendVtgBuilderPattern', () => {
     if (!second) throw new Error('Expected two Builder patterns')
     const before = createVtgTransitionPreviewAnimations(second)
 
-    const result = removeVtgTransitionPatternPreview(second, 0)
+    second.props.forEach((prop, index) => {
+      prop.anim[0] = { ...prop.anim[0], scale: 11 + index }
+    })
+    const removed = removeVtgTransitionPatternPreview(second, 0)
+    const result = removed ? preserveVtgBuilderScale(second, removed) : undefined
     const remaining = result ? createVtgTransitionPreviewAnimations(result) : undefined
 
     expect(remaining).toHaveLength(1)
     expectSameMotionAndDuration(remaining![0]!, before![1]!)
+    expect(result?.props.map((prop) => prop.anim[0]?.scale)).toEqual([11, 12])
   })
 
   it('returns to the empty Builder state when deleting its only pattern', () => {
@@ -519,14 +525,19 @@ describe('appendVtgBuilderPattern', () => {
     if (!source) throw new Error('Expected three Builder patterns')
     const followingBefore = createVtgTransitionPreviewAnimations(source)?.slice(1)
 
-    const result = replaceFirstVtgBuilderPattern(source, {
+    source.props.forEach((prop, index) => {
+      prop.anim[0] = { ...prop.anim[0], scale: 13 + index }
+    })
+    const replaced = replaceFirstVtgBuilderPattern(source, {
       reference: '3-4',
       speedRatio: '1:3',
       beat: 2,
     })
+    const result = replaced ? preserveVtgBuilderScale(source, replaced) : undefined
     const previews = result ? createVtgTransitionPreviewAnimations(result) : undefined
 
     expect(previews).toHaveLength(3)
+    expect(result?.props.map((prop) => prop.anim[0]?.scale)).toEqual([13, 14])
     expect(findVtgPatternMatch(previews![0]!)).toMatchObject({
       reference: '3-4',
       speedRatio: '1:3',

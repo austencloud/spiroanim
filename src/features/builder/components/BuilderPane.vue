@@ -71,6 +71,7 @@
             :beat-counts="currentBeatCounts"
             :relationships="previewRelationships"
             :scale="scale"
+            :display-settings="builderDisplaySettings"
             :selected-index="selectedPreviewIndex"
             :allow-first-drop="allowFirstDrop"
             @pattern-drop="acceptPatternDrop"
@@ -241,6 +242,7 @@ import { useBuilderPaneStore } from '@/features/builder/stores/useBuilderPaneSto
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { usePatternMatchingClient } from '@/features/concepts/composables/usePatternMatchingWorker'
 import { createBuilderQuickSlotCandidates } from '@/features/builder/createBuilderQuickSlotCandidates'
+import { preserveVtgBuilderScale } from '@/features/builder/preserveVtgBuilderScale'
 
 const props = withDefaults(defineProps<{ allowFirstDrop?: boolean }>(), { allowFirstDrop: false })
 
@@ -314,6 +316,7 @@ const conceptsStore = useConceptsStore()
 const {
   bpm,
   scale,
+  thick,
   spacing,
   paths,
   hands,
@@ -322,6 +325,7 @@ const {
   rightPropVisible,
   leftPropColor,
   rightPropColor,
+  prop,
 } = storeToRefs(conceptsStore)
 const canUndo = computed(() => qsHistory.value.length > 1)
 const hasPopulatedQuickSlots = computed(
@@ -403,27 +407,37 @@ const createBuilderQSlots = async () => {
     console.warn('Builder Quick Slot normalization failed.', error)
   }
 }
-const builderDisplayAnimation = computed(() =>
-  toVtgBuilderDisplayAnimation(ROOT.value, scale.value),
-)
+const builderDisplaySettings = computed(() => ({
+  bpm: bpm.value,
+  scale: scale.value,
+  thick: thick.value,
+  spacing: spacing.value,
+  paths: paths.value,
+  hands: hands.value,
+  arms: arms.value,
+  leftPropVisible: leftPropVisible.value,
+  rightPropVisible: rightPropVisible.value,
+  propColors: [leftPropColor.value, rightPropColor.value] as const,
+  prop: prop.value,
+}))
 const selectedPreviewIndex = ref<number>()
 const previewRevision = ref(0)
 const selectedPreviewAnimation = computed(() => {
   const index = selectedPreviewIndex.value
   const animation = index === undefined ? undefined : resizedPreviewAnimations.value?.[index]
-  return animation === undefined ? undefined : toVtgBuilderDisplayAnimation(animation, scale.value)
+  return animation === undefined
+    ? undefined
+    : toVtgBuilderDisplayAnimation(animation, builderDisplaySettings.value)
 })
-const builderPlaybackAnimation = computed(
-  () => selectedPreviewAnimation.value ?? builderDisplayAnimation.value,
-)
-const restoreBuilderPlayback = () =>
-  playerStore.setPlaybackOverride(
-    builderPlaybackAnimation.value,
-    selectedPreviewAnimation.value !== undefined,
-  )
-watchImmediate(builderPlaybackAnimation, (animation) => {
-  if (!PLAYBACK_PREVIEW_ACTIVE.value)
-    playerStore.setPlaybackOverride(animation, selectedPreviewAnimation.value !== undefined)
+const restoreBuilderPlayback = () => {
+  const animation = selectedPreviewAnimation.value
+  if (animation === undefined) playerStore.clearPlaybackOverride()
+  else playerStore.setPlaybackOverride(animation, true)
+}
+watchImmediate(selectedPreviewAnimation, (animation) => {
+  if (PLAYBACK_PREVIEW_ACTIVE.value) return
+  if (animation === undefined) playerStore.clearPlaybackOverride()
+  else playerStore.setPlaybackOverride(animation, true)
 })
 watch(PLAYBACK_PREVIEW_ACTIVE, (active) => {
   if (!active) restoreBuilderPlayback()
@@ -474,12 +488,13 @@ const acceptPatternDrop = (drop: BuilderPatternDrop) => {
   if (!dropAllowed) return
 
   const replacesFirst = selectedPreviewIndex.value === 0 && drop.previewIndex === 0
-  const updated = replacesFirst
+  const generated = replacesFirst
     ? replaceFirstVtgBuilderPattern(preparedPattern.value.pattern, drop.selection)
     : drop.previewIndex === previewCount
       ? appendVtgBuilderPattern(preparedPattern.value.pattern, drop.selection)
       : insertVtgBuilderPattern(preparedPattern.value.pattern, drop.selection, drop.previewIndex)
-  if (!updated) return
+  if (!generated) return
+  const updated = replacesFirst ? preserveVtgBuilderScale(ROOT.value, generated) : generated
 
   const insertedStartMS = getPreviewStartMS(updated, drop.previewIndex)
 
@@ -490,8 +505,9 @@ const updatePreviewBeatCount = (index: number, beatCount: number) => {
   if (updated !== undefined) applyBuilderPatternUpdate(updated)
 }
 const deletePreview = (index: number) => {
-  const updated = removeVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
-  if (updated === undefined) return
+  const generated = removeVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
+  if (generated === undefined) return
+  const updated = index === 0 ? preserveVtgBuilderScale(ROOT.value, generated) : generated
 
   const nextPreviewStartMS =
     selectedPreviewIndex.value === index ? getPreviewStartMS(updated, index) : undefined
@@ -525,10 +541,9 @@ const previewRefreshKey = computed(() =>
     paths.value,
     hands.value,
     arms.value,
-    leftPropVisible.value,
-    rightPropVisible.value,
     leftPropColor.value,
     rightPropColor.value,
+    prop.value,
     previewRevision.value,
   ].join('|'),
 )

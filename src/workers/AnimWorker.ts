@@ -11,6 +11,7 @@
 
 import { createSpiroAnimator } from '@/workers/animation/createSpiroAnimator'
 import { createCameraAnimator } from '@/workers/animation/createCameraAnimator'
+import { applyAnimatorPathModes } from '@/workers/animation/applyAnimatorPathModes'
 
 import { CMODES } from '@/domain/animation/AnimStruct'
 import { CAMERATIMES, MOTIONTIMES, PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
@@ -70,6 +71,7 @@ const propLightDirection = new Vector3()
 const propLightRight = new Vector3()
 const propLightUp = new Vector3()
 let timeline = false
+let thumbnail = false
 let progressivePaths = false
 let doublePaths = true
 let cameraGuides = { visible: false, color: 0xffffff }
@@ -190,20 +192,17 @@ on('stop', () => (playing = false))
 on('tracer', (val) => (renderer.autoClear = !val))
 on('progressivePaths', (val) => {
   progressivePaths = val
-  for (const animator of animators) animator.setProgressivePaths(val && !timeline && !selection)
+  applyPathModes()
 })
 on('doublePaths', (val) => {
   doublePaths = val
-  for (const animator of animators) animator.setDoublePaths(val)
+  applyPathModes()
 })
 
 // Selection options
 on('selection', (val) => {
   selection = val
-  for (const animator of animators) {
-    animator.setProgressivePaths(progressivePaths && !timeline && !selection)
-    animator.setDoublePaths(doublePaths)
-  }
+  applyPathModes()
 })
 on('range', ({ min: mi, max: ma }) => {
   min = mi
@@ -211,30 +210,35 @@ on('range', ({ min: mi, max: ma }) => {
 })
 
 // Receive offscreen canvas (or create one)
-register('initialize', ({ offscreen, girth: g, timeline: tl /*RADIUS,*/ }) => {
-  timeline = tl ?? false
+register(
+  'initialize',
+  ({ offscreen, girth: g, timeline: tl, thumbnail: thumb, doublePaths: initialDoublePaths }) => {
+    timeline = tl ?? false
+    thumbnail = thumb ?? false
+    if (initialDoublePaths !== undefined) doublePaths = initialDoublePaths
 
-  // Girth is used in Timeline (makes props thicker)
-  if (g !== undefined) girth = g
+    // Girth is used in Timeline (makes props thicker)
+    if (g !== undefined) girth = g
 
-  // Player supplies the canvas
-  if (offscreen) canvas = offscreen
-  // Timeline doesn't supply the canvas
-  else canvas = new OffscreenCanvas(dim.width, dim.height)
+    // Player supplies the canvas
+    if (offscreen) canvas = offscreen
+    // Timeline doesn't supply the canvas
+    else canvas = new OffscreenCanvas(dim.width, dim.height)
 
-  // Create Three.js Renderer
-  renderer = new WebGLRenderer({
-    canvas: canvas,
-    antialias: true,
-    alpha: true,
-    preserveDrawingBuffer: true,
-  })
-  renderer.autoClear = true
-  renderer.setClearColor(0x000000, 0)
-  resize(dim) // trigger resize to make sure renderer dimensions get set
+    // Create Three.js Renderer
+    renderer = new WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+      alpha: true,
+      preserveDrawingBuffer: true,
+    })
+    renderer.autoClear = true
+    renderer.setClearColor(0x000000, 0)
+    resize(dim) // trigger resize to make sure renderer dimensions get set
 
-  return true // Set canvas visibility to visible in main thread
-})
+    return true // Set canvas visibility to visible in main thread
+  },
+)
 
 // Setup scene and SpiroAnimators when "compiled" data is received
 on('data', (compiled) => {
@@ -309,8 +313,9 @@ on('data', (compiled) => {
       }),
     )
 
-  for (const animator of animators)
-    animator.setProgressivePaths(progressivePaths && !timeline && !selection)
+  // Fresh animators default to showing all modeled prop-end paths, so every data rebuild must
+  // reapply the current controls and renderer-specific restrictions.
+  applyPathModes()
 
   currentMs = Math.min(currentMs, unqTimes.at(-1) ?? 0)
   playbackStartedAt = performance.now()
@@ -328,6 +333,16 @@ on('data', (compiled) => {
   // (appears to affect lines when new data is received, if this isn't called)
   animatorDim()
 })
+
+function applyPathModes() {
+  applyAnimatorPathModes(animators, {
+    progressivePaths,
+    doublePaths,
+    timeline,
+    thumbnail,
+    selection,
+  })
+}
 
 // Handles click event requests
 register('click', ({ x, y }) => {

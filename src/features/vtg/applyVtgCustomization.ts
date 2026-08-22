@@ -28,6 +28,12 @@ const applyVisibility = (prop: PropDataFinal, visible: boolean): PropDataFinal =
   return result
 }
 
+const applyScale = (prop: PropDataFinal, scale: number): PropDataFinal => {
+  const firstFrame = prop.anim[0]
+  if (firstFrame === undefined) return prop
+  return { ...prop, anim: [{ ...firstFrame, scale }, ...prop.anim.slice(1)] }
+}
+
 /** Applies only VTG Customize fields, preserving the current pattern frames and transforms. */
 export const applyVtgCustomization = (
   animation: RootDataFinal,
@@ -47,15 +53,17 @@ export const applyVtgCustomization = (
   const props = animation.props.map((original, index) => {
     const visible = (index === 0 ? selection.left : selection.right) !== false
     const prop = applyVisibility(
-      {
-        ...original,
-        paths,
-        hands,
-        arms,
-        thick,
-        motion: createSpacingMotion(moves[index] ?? 0),
-        anim: original.anim.map((frame) => ({ ...frame, scale: internalScale })),
-      },
+      applyScale(
+        {
+          ...original,
+          paths,
+          hands,
+          arms,
+          thick,
+          motion: createSpacingMotion(moves[index] ?? 0),
+        },
+        internalScale,
+      ),
       visible,
     )
     return prop
@@ -64,6 +72,7 @@ export const applyVtgCustomization = (
   return applyPatternPropColors(
     {
       ...animation,
+      prop: selection.prop ?? animation.prop,
       bpm: clampVtgBpm(selection.bpm ?? vtgBpmControl.default) * 2,
       paths,
       hands,

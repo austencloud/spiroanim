@@ -16,6 +16,8 @@ export interface AnimBridgeMap {
       offscreen?: OffscreenCanvas
       girth?: number
       timeline?: boolean
+      thumbnail?: boolean
+      doublePaths?: boolean
     }
     ret: boolean
   }

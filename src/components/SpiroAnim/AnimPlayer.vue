@@ -201,7 +201,9 @@ onMounted(() => {
   // Send offscreen canvas to the worker
   ;(() => {
     const offscreen = eCanvas.value?.transferControlToOffscreen()
-    call('initialize', { offscreen }, [offscreen as OffscreenCanvas])
+    call('initialize', { offscreen, doublePaths: DOUBLE_PATHS.value }, [
+      offscreen as OffscreenCanvas,
+    ])
       .then((success) => {
         if (success) canvasVisibility.value = 'visible'
         else console.warn('Player Worker reported a failure to initialize.')

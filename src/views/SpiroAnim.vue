@@ -66,11 +66,11 @@
         data-role="concepts-view"
         @pattern-select="applyConceptPattern"
         @pattern-preview="previewConceptPattern"
-        @customize="applyBuilderCustomization"
         @quick-slot-apply="applyQuickSlotFromView($event, 'concepts')"
         @quick-slot-save="saveCurrentPatternToQuickSlot"
         @quick-slots-create="saveAnimationsToQuickSlots"
         @builder-open="toggleBuilder"
+        @customize="applyBuilderCustomization"
         @update:builder-full-grid="builderFullGrid = $event"
       />
       <BuilderPane
@@ -108,10 +108,9 @@ import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
 import BuilderPane from '@/features/builder/components/BuilderPane.vue'
 import { applyConceptPattern as createConceptPattern } from '@/features/concepts/applyConceptPattern'
-import type { ConceptPatternSelection } from '@/features/concepts/types'
-import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
+import { isVtgPatternSelection, type ConceptPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
-import type { VtgPatternSelection } from '@/features/vtg/types'
+import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useScrollSelectScale } from '@/composables/useScrollSelectScale'
@@ -229,17 +228,23 @@ const applyConceptPattern = (selection: ConceptPatternSelection) => {
   }
 }
 
-const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
-  if (playerStore.PLAYBACK_PREVIEW_ACTIVE) playerStore.endPlaybackPreview()
-  ROOT.value = applyVtgCustomization(ROOT.value, selection as VtgPatternSelection)
-}
-
 const previewConceptPattern = (selection: ConceptPatternSelection) => {
   if (!paneStore.isPaneHijacked) return
   const animation = createConceptPattern(ROOT.value, selection)
   if (!animation) return
 
   playerStore.startPlaybackPreview(toVtgBuilderDisplayAnimation(animation, conceptsStore.scale))
+}
+
+const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
+  if (selectedBuilderPreviewIndex.value !== undefined) return
+  if (playerStore.PLAYBACK_PREVIEW_ACTIVE) playerStore.endPlaybackPreview()
+  const animation = isVtgPatternSelection(selection)
+    ? applyVtgCustomization(ROOT.value, selection)
+    : createConceptPattern(ROOT.value, selection)
+  if (!animation) return
+  qsStore.qsSkip = true
+  ROOT.value = animation
 }
 
 const toggleBuilder = () => {
