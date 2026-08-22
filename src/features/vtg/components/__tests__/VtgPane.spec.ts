@@ -2797,18 +2797,32 @@ describe('VtgPane', () => {
     expect(wrapper.find('[data-role="vtg-builder-full-grid"]').exists()).toBe(false)
   })
 
+  it('shows Swap in the forced full Builder grid', () => {
+    const wrapper = mount(VtgPane, {
+      props: {
+        builderActive: true,
+        builderFullCatalog: true,
+        builderFullCatalogForced: true,
+      },
+    })
+
+    expect(wrapper.find('[data-role="vtg-swap"]').exists()).toBe(true)
+  })
+
   it('offers an opt-in Full Grid control for the compact Builder catalog', async () => {
     const wrapper = mount(VtgPane, { props: { builderActive: true } })
     const fullGrid = wrapper.get<HTMLInputElement>('[data-role="vtg-builder-full-grid"]')
 
     expect(fullGrid.element.checked).toBe(false)
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(8)
+    expect(wrapper.find('[data-role="vtg-swap"]').exists()).toBe(false)
 
     await fullGrid.setValue(true)
     expect(wrapper.emitted('update:builderFullGrid')).toEqual([[true]])
 
     await wrapper.setProps({ builderFullGrid: true, builderFullCatalog: true })
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
+    expect(wrapper.find('[data-role="vtg-swap"]').exists()).toBe(true)
     expect(
       wrapper.get<HTMLInputElement>('[data-role="vtg-builder-full-grid"]').element.checked,
     ).toBe(true)

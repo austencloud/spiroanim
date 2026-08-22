@@ -84,7 +84,7 @@
         confirm-reset
         show-more
         :show-classic="!compactBuilder"
-        :show-swap="!builderActive"
+        :show-swap="!compactBuilder"
         :reverse-label="isQtr ? 'Flip' : '180°'"
         :reverse-description="
           isQtr ? 'Flip QTR orientation and direction' : 'Rotate floor plane by 180 degrees'
