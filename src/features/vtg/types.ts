@@ -139,8 +139,11 @@ export const isVtgSpeedRatio = (value: string): value is VtgSpeedRatio => {
   }
 }
 
-export const vtgBeats = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5] as const
+const vtgOneCycleBeats = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5] as const
+export const vtgBeats = [...vtgOneCycleBeats, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5] as const
 export type VtgBeat = (typeof vtgBeats)[number]
+export const getVtgBeats = (speedRatio: VtgSpeedRatio): readonly VtgBeat[] =>
+  getVtgTimingCycleCount(speedRatio) === 1 ? vtgOneCycleBeats : vtgBeats
 export const vtgDefaultBeat = 1 satisfies VtgBeat
 export const vtgTransitionBeats = [6, 5, 4, 3, 2] as const
 export type VtgTransitionBeats = (typeof vtgTransitionBeats)[number]

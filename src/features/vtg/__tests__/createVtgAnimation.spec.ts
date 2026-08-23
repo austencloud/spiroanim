@@ -12,7 +12,7 @@ import {
   vtgPlayerSettings,
   vtgScaleAdjustmentByDenominator,
 } from '@/features/vtg/data/vtgPlayerSettings'
-import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { getVtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { reverseAngle } from '@/math/animation/AngleFunc'
@@ -132,7 +132,7 @@ describe('createVtgAnimation', () => {
         for (const speedRatio of vtgSpeedRatios) {
           for (const isAnti of antiOptions) {
             for (const shape of patternShapes) {
-              for (const beat of vtgBeats) {
+              for (const beat of getVtgBeats(speedRatio)) {
                 for (const swapProps of booleanOptions) {
                   for (const reversePlane of booleanOptions) {
                     const animation = createDefaultVtgAnimation({
@@ -161,7 +161,7 @@ describe('createVtgAnimation', () => {
     }
   }, 15_000)
 
-  it.each(vtgBeats)('uses Shift to start the closed cycle on beat %s', (beat) => {
+  it.each(getVtgBeats('1:3'))('uses Shift to start the closed cycle on beat %s', (beat) => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:3',

@@ -22,7 +22,7 @@ import type {
   VtgSpeedRatio,
   VtgTransitionBeats,
 } from '@/features/vtg/types'
-import { vtgBeats, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
+import { getVtgBeats, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import type { PatternShape } from '@/types/PatternTypes'
@@ -206,7 +206,7 @@ describe('VTG 45 transition catalog audit', () => {
           for (const column of ruleNumbers) {
             const reference: VtgCellReference = `${row}-${column}`
             for (const shape of shapes) {
-              for (const beat of vtgBeats) {
+              for (const beat of getVtgBeats(speedRatio)) {
                 for (const mode of transitionModes) {
                   const animation = createDefaultVtgAnimation({
                     reference,

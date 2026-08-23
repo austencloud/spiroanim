@@ -13,7 +13,7 @@ import {
   getVtgTransitionPreviewBeatCount,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
-import { vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { getVtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 export const auditTimeout = 10 * 60 * 1000
@@ -54,7 +54,7 @@ export const coreCompactSelections: readonly VtgPatternSelection[] = compactRefe
 export const phasedCompactSelections: readonly VtgPatternSelection[] = compactReferences.flatMap(
   (reference) =>
     vtgSpeedRatios.flatMap((speedRatio) =>
-      vtgBeats.map((beat) => ({ reference, speedRatio, beat })),
+      getVtgBeats(speedRatio).map((beat) => ({ reference, speedRatio, beat })),
     ),
 )
 
@@ -65,7 +65,7 @@ export const variedFullSelections: readonly VtgPatternSelection[] = fullCatalogS
     ...vtgSpeedRatios
       .filter((speedRatio) => speedRatio !== '1:3')
       .map((speedRatio) => ({ reference, speedRatio })),
-    ...vtgBeats
+    ...getVtgBeats('1:3')
       .filter((beat) => beat !== 1)
       .map((beat) => ({ reference, speedRatio: '1:3' as const, beat })),
   ],

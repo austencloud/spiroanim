@@ -79,10 +79,12 @@ describe('VTG animation matching', () => {
     })
   })
 
-  it('matches a generalized timing ratio', () => {
-    const source = createAnimation({ reference: '1-1', speedRatio: '2:1' })
+  it('matches the highest starting beat of a two-cycle timing ratio', () => {
+    const source = createAnimation({ reference: '1-1', speedRatio: '2:1', beat: 8.5 })
 
-    expect(findVtgPatternMatch(source)).toMatchObject({ reference: '1-1', speedRatio: '2:1' })
+    expect(findVtgPatternMatches(source)).toContainEqual(
+      expect.objectContaining({ reference: '1-1', speedRatio: '2:1', beat: 8.5 }),
+    )
   })
 
   it('regenerates serialized reversed orientation at 1:2 without changing compiled motion', async () => {

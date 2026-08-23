@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatVtgSpeedRatio,
   getDefaultVtgPatternOrientation,
+  getVtgBeats,
   getVtgTimingCycleCount,
   getVtgPropSpeedRatios,
   isVtgSpeedRatio,
@@ -39,6 +40,12 @@ describe('VTG speed ratio helpers', () => {
     expect(getVtgTimingCycleCount('1:3v2')).toBe(1)
     expect(getVtgTimingCycleCount('2:3v5')).toBe(2)
     expect(getVtgTimingCycleCount('1:1v2:3')).toBe(2)
+  })
+
+  it('offers starting beats across the complete timing cycle', () => {
+    expect(getVtgBeats('1:3').at(-1)).toBe(4.5)
+    expect(getVtgBeats('2:1').at(-1)).toBe(8.5)
+    expect(getVtgBeats('2:1v1:1').at(-1)).toBe(8.5)
   })
 
   it.each(['2:1', '2:3', '2:5'] as const)('defaults %s to -90 degrees', (speedRatio) => {

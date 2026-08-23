@@ -16,7 +16,7 @@ import type {
   VtgPatternSelection,
   VtgRuleNumber,
 } from '@/features/vtg/types'
-import { getVtgPatternOrientations, vtgBeats } from '@/features/vtg/types'
+import { getVtgBeats, getVtgPatternOrientations } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import { shiftVtgStartingFrames } from '@/features/vtg/math/shiftVtgStartingBeat'
@@ -98,7 +98,7 @@ describe('45 Trans initial-turn matching', () => {
       const original = create(selection)
       if (!original) throw new Error('Expected a transition-derived pattern')
 
-      for (const beat of vtgBeats) {
+      for (const beat of getVtgBeats(selection.speedRatio)) {
         const actual = create({ ...selection, beat, initialTurnsOffsetBeat: 2 })
         const relativeFrameShifts = ((beat - 2) * doublePlaybackMultiplier + 8) % 8
         const expected = shiftVtgStartingFrames(original, relativeFrameShifts)
@@ -110,6 +110,29 @@ describe('45 Trans initial-turn matching', () => {
       }
     },
   )
+
+  it('transports a detected initial-turn state through every beat of a two-cycle timing', () => {
+    const selection = {
+      reference: '6-3',
+      speedRatio: '2:1',
+      beat: 2,
+      reversePlane: true,
+      orientation: -90,
+      initialTurnsOffset: -45,
+    } as const satisfies VtgPatternSelection
+    const original = createDefaultVtgAnimation(selection)
+    if (!original) throw new Error('Expected a two-cycle transition-derived pattern')
+
+    for (const beat of getVtgBeats(selection.speedRatio)) {
+      const actual = createDefaultVtgAnimation({ ...selection, beat, initialTurnsOffsetBeat: 2 })
+      const relativeFrameShifts = ((beat - 2) * doublePlaybackMultiplier + 16) % 16
+      const expected = shiftVtgStartingFrames(original, relativeFrameShifts)
+      if (!actual || !expected) throw new Error(`Expected Beat ${beat} animations`)
+
+      expect(createVtgAnimationSignature(actual)).toBe(createVtgAnimationSignature(expected))
+      expectCompiledGeometryToMatch(actual, expected)
+    }
+  })
 
   it('resolves the supplied Q3 and Q5 and regenerates their exact doubled result', async () => {
     const version = await loadSpiroAnimQSVersion(6)

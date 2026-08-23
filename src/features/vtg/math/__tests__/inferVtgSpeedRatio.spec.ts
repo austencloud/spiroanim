@@ -6,14 +6,14 @@ import {
   inferVtgSpeedRatio,
 } from '@/features/vtg/math/inferVtgSpeedRatio'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
-import { getVtgTimingCycleCount, vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { getVtgBeats, getVtgTimingCycleCount, vtgSpeedRatios } from '@/features/vtg/types'
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 
 describe('inferVtgSpeedRatio', () => {
   it.each(vtgSpeedRatios)('infers %s through every half-beat starting position', (speedRatio) => {
-    for (const beat of vtgBeats) {
+    for (const beat of getVtgBeats(speedRatio)) {
       const selection = { reference: '5-6', speedRatio, beat, isAnti: true } as const
       const animations = [createDefaultVtgAnimation(selection)]
       if (getVtgTimingCycleCount(speedRatio) === 1) {

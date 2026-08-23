@@ -1,5 +1,6 @@
 import {
   vtgDefaultBeat,
+  getVtgTimingCycleCount,
   type VtgPatternSelection,
   type VtgTransitionInitialTurnsOffset,
 } from '@/features/vtg/types'
@@ -52,6 +53,8 @@ export const applyVtgInitialTurnsPlayback = (
   const offset = applyVtgInitialTurnsOffset(animation, selection.initialTurnsOffset)
   const originBeat = selection.initialTurnsOffsetBeat ?? selection.beat ?? vtgDefaultBeat
   const requestedBeat = selection.beat ?? vtgDefaultBeat
-  const relativeFrameShifts = ((requestedBeat - originBeat) * doublePlaybackMultiplier + 8) % 8
+  const cycleFrameCount = getVtgTimingCycleCount(selection.speedRatio) * 8
+  const relativeFrameShifts =
+    ((requestedBeat - originBeat) * doublePlaybackMultiplier + cycleFrameCount) % cycleFrameCount
   return shiftVtgStartingFrames(offset, relativeFrameShifts)
 }

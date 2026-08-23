@@ -18,9 +18,9 @@ import {
 import { inferVtgSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
 import type { VtgCellReference, VtgRuleNumber, VtgSpeedRatio } from '@/features/vtg/types'
 import {
+  getVtgBeats,
   getVtgPatternOrientations,
   supportsVtgPatternOrientation,
-  vtgBeats,
   vtgDefaultBeat,
   vtgTransitionInitialTurnsOffsets,
 } from '@/features/vtg/types'
@@ -94,7 +94,7 @@ const buildCandidateCache = (
               }
               if (!baseAnimation) continue
 
-              for (const beat of vtgBeats) {
+              for (const beat of getVtgBeats(speedRatio)) {
                 const candidate: QtrCandidateMatch = {
                   reference,
                   speedRatio,

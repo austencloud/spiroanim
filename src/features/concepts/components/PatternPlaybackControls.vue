@@ -44,8 +44,8 @@
             v-if="sliders"
             v-model.number="beat"
             type="range"
-            :min="vtgBeats[0]"
-            :max="vtgBeats.at(-1)"
+            :min="minimumBeat"
+            :max="maximumBeat"
             step="0.5"
             aria-label="Starting beat"
             :aria-valuetext="`Beat ${beat}`"
@@ -63,8 +63,8 @@
             :model-value="beat"
             label="Starting beat"
             :data-role="`${concept}-beat-stepper`"
-            :min="vtgBeats[0]"
-            :max="vtgBeats.at(-1) ?? vtgBeats[0]"
+            :min="minimumBeat"
+            :max="maximumBeat"
             :step="0.5"
             :display-value="String(beat)"
             @update:model-value="updateBeat"
@@ -77,14 +77,15 @@
 
 <script setup lang="ts">
 import AppTooltip from '@/components/AppTooltip.vue'
-import { vtgBeats, vtgPatternOrientations } from '@/features/vtg/types'
-import type { VtgBeat, VtgPatternOrientation } from '@/features/vtg/types'
+import { getVtgBeats, vtgDefaultBeat, vtgPatternOrientations } from '@/features/vtg/types'
+import type { VtgBeat, VtgPatternOrientation, VtgSpeedRatio } from '@/features/vtg/types'
 import ConceptStepper from '@/features/concepts/components/ConceptStepper.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     concept: 'vtg' | 'qtr'
+    speedRatio: VtgSpeedRatio
     showOrientation?: boolean
     orientationOptions?: readonly VtgPatternOrientation[]
   }>(),
@@ -102,9 +103,12 @@ const beat = defineModel<VtgBeat>('beat', { required: true })
 const qtr = defineModel<boolean>('qtr', { required: true })
 const orientation = defineModel<VtgPatternOrientation>('orientation', { default: 0 })
 const { sliders } = storeToRefs(useConceptsStore())
+const availableBeats = computed(() => getVtgBeats(props.speedRatio))
+const minimumBeat = computed(() => availableBeats.value[0] ?? vtgDefaultBeat)
+const maximumBeat = computed(() => availableBeats.value.at(-1) ?? vtgDefaultBeat)
 
 const updateBeat = (value: number) => {
-  if (vtgBeats.includes(value as VtgBeat)) beat.value = value as VtgBeat
+  if (availableBeats.value.includes(value as VtgBeat)) beat.value = value as VtgBeat
 }
 </script>
 

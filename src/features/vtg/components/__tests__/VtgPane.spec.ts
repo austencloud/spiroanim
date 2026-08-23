@@ -983,6 +983,34 @@ describe('VtgPane', () => {
     }
   })
 
+  it('extends the starting-beat range for two-cycle timings', async () => {
+    const wrapper = await mountVtgPane(false)
+    const beat = wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]')
+
+    expect(beat.attributes('max')).toBe('4.5')
+
+    await selectSpeedRatio(wrapper, '2:1')
+    expect(beat.attributes('max')).toBe('8.5')
+    await beat.setValue(8.5)
+    await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      speedRatio: '2:1',
+      beat: 8.5,
+    })
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-more"]').setValue(true)
+    await wrapper.get<HTMLSelectElement>('[aria-label="Right prop timing ratio"]').setValue('1:1')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('2:1v1:1')
+    expect(beat.attributes('max')).toBe('8.5')
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-more"]').setValue(false)
+    await selectSpeedRatio(wrapper, '1:3')
+    expect(beat.attributes('max')).toBe('4.5')
+    expect(beat.element.value).toBe('4.5')
+
+    wrapper.unmount()
+  })
+
   it.each(['1:1', '1:2'] as const)(
     'enables the reciprocal transition controls at %s',
     async (speedRatio) => {

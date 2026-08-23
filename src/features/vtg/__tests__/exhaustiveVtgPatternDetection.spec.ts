@@ -9,7 +9,7 @@ import type {
   VtgPatternSelection,
   VtgRuleNumber,
 } from '@/features/vtg/types'
-import { getVtgPatternOrientations, vtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
+import { getVtgBeats, getVtgPatternOrientations, vtgSpeedRatios } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
@@ -129,7 +129,7 @@ const createSelections = (speedRatio: VtgPatternSelection['speedRatio']) => {
       const reference = `${row}-${column}` as VtgCellReference
       const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
       for (const isAnti of antiOptions) {
-        for (const beat of vtgBeats) {
+        for (const beat of getVtgBeats(speedRatio)) {
           for (const swapProps of booleanOptions) {
             for (const reversePlane of booleanOptions) {
               for (const orientation of getVtgPatternOrientations(speedRatio)) {

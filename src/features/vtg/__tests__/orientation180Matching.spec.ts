@@ -11,7 +11,7 @@ import type {
   VtgPatternSelection,
   VtgRuleNumber,
 } from '@/features/vtg/types'
-import { vtgBeats } from '@/features/vtg/types'
+import { getVtgBeats } from '@/features/vtg/types'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
 const booleanOptions = [false, true] as const
@@ -42,7 +42,7 @@ describe('180-degree VTG orientation matching', () => {
           for (const isAnti of antiOptions) {
             for (const swapProps of booleanOptions) {
               for (const reversePlane of booleanOptions) {
-                for (const beat of vtgBeats) {
+                for (const beat of getVtgBeats(speedRatio)) {
                   const selection = {
                     reference,
                     speedRatio,

@@ -22,9 +22,9 @@ import type {
 } from '@/features/vtg/types'
 import {
   formatVtgSpeedRatio,
+  getVtgBeats,
   getVtgPropSpeedRatios,
   getVtgTimingCycleCount,
-  vtgBeats,
   vtgDefaultBeat,
 } from '@/features/vtg/types'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
@@ -145,7 +145,7 @@ const buildCandidateIndex = (speedRatio: VtgSpeedRatio) => {
             orientation: 0,
           })
           if (!base) continue
-          for (const beat of vtgBeats) {
+          for (const beat of getVtgBeats(candidateRatio)) {
             const playback = applyVtgPlaybackControls(base, { speedRatio: candidateRatio, beat })
             if (!playback) continue
             for (const swapProps of booleanOptions) {

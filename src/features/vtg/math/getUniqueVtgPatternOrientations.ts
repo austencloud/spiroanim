@@ -8,7 +8,7 @@ import type {
   VtgPatternOrientation,
   VtgPatternSelection,
 } from '@/features/vtg/types'
-import { getVtgPatternOrientations, vtgBeats } from '@/features/vtg/types'
+import { getVtgBeats, getVtgPatternOrientations } from '@/features/vtg/types'
 
 const getUniqueOrientationsForBeat = (
   selection: VtgPatternSelection | QtrPatternSelection,
@@ -56,7 +56,7 @@ const getUniqueOrientationsForBeat = (
 /**
  * Retains rotations that create a distinct animation which cannot already be represented by an
  * unrotated VTG or QTR selection. Rotation describes the pattern family rather than one starting
- * phase, so an orientation is retained only when it remains distinct across all eight starting
+ * phase, so an orientation is retained only when it remains distinct across all starting
  * frames. Swap and 180 are reversible final transforms applied equally to the animation and the
  * catalog, so they cannot change whether an unrotated representation exists. The result therefore
  * cannot change when Beat, Swap, or 180 is toggled. Matcher indexes are separated by orientation,
@@ -73,7 +73,7 @@ export const getUniqueVtgPatternOrientations = (
   } = selection
   const available = new Set<VtgPatternOrientation>(getVtgPatternOrientations(selection.speedRatio))
 
-  for (const beat of vtgBeats) {
+  for (const beat of getVtgBeats(selection.speedRatio)) {
     const availableForBeat = new Set<VtgPatternOrientation>(
       getUniqueOrientationsForBeat({ ...baseSelection, beat }, available),
     )

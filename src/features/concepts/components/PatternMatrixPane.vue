@@ -297,6 +297,7 @@
           v-model:qtr="isQtr"
           v-model:orientation="orientation"
           concept="vtg"
+          :speed-ratio="speedRatio"
           :orientation-options="availablePatternOrientations"
           :show-orientation="!builderActive || builderFullCatalog"
           @slider-start="beginSliderHistory"
@@ -422,6 +423,7 @@ import type {
 } from '@/features/vtg/types'
 import {
   formatVtgSpeedRatio,
+  getVtgBeats,
   getVtgPropSpeedRatios,
   supportsVtgPatternOrientation,
   getDefaultVtgPatternOrientation,
@@ -1321,6 +1323,8 @@ watch(
     ratioOrientationChangeActive = true
     try {
       propRotationOffsets.value = undefined
+      const nextBeats = getVtgBeats(nextSpeedRatio)
+      if (!nextBeats.includes(beat.value)) beat.value = nextBeats.at(-1) ?? 1
       if (orientation.value === getDefaultVtgPatternOrientation(previousSpeedRatio)) {
         orientation.value = getDefaultVtgPatternOrientation(nextSpeedRatio)
       }
