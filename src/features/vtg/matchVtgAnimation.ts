@@ -300,6 +300,11 @@ export const findVtgPatternMatch = (
       (exactRegenerationDifferenceByMatch.get(second) ?? 0)
     if (exactRegenerationDifference) return exactRegenerationDifference
 
+    const propRotationOffsetDifference =
+      Number(first.propRotationOffsets !== undefined) -
+      Number(second.propRotationOffsets !== undefined)
+    if (propRotationOffsetDifference) return propRotationOffsetDifference
+
     const orientedSignatureDifference =
       (orientedSignatureDifferenceByMatch.get(first) ?? 0) -
       (orientedSignatureDifferenceByMatch.get(second) ?? 0)

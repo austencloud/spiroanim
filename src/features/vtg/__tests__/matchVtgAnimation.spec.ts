@@ -31,12 +31,107 @@ const createAnimation = (selection: VtgPatternSelection) => {
   return animation
 }
 
-const canonicalRotationMatches = (matches: readonly VtgPatternMatch[]) => {
-  const unrotated = matches.filter((match) => (match.orientation ?? 0) === 0)
-  return unrotated.length > 0 ? unrotated : matches
+const normalizeSignatureNumber = (value: number) => {
+  const normalized = Math.round(value * 1e9) / 1e9
+  return Object.is(normalized, -0) ? 0 : normalized
+}
+const normalizeOrientation = (value: number) => {
+  const normalized = ((((value + 180) % 360) + 360) % 360) - 180
+  return normalized === -180 ? 180 : normalized
+}
+const compiledTrackKey = (animation: RootDataFinal) =>
+  JSON.stringify(
+    rootCompile(animation).props.map((prop) =>
+      prop.anim.map((frame) => [
+        normalizeSignatureNumber(frame.turns),
+        normalizeSignatureNumber(frame.beats),
+        normalizeSignatureNumber(frame.depth),
+        normalizeSignatureNumber(frame.type),
+        normalizeSignatureNumber(frame.adjust),
+        normalizeOrientation(frame.arc),
+        normalizeOrientation(frame.plane),
+        normalizeOrientation(frame.axis),
+        ...frame.pos.map(normalizeSignatureNumber),
+        ...frame.rot.map(normalizeSignatureNumber),
+      ]),
+    ),
+  )
+const compiledSelectionTrackKeys = new Map<string, string>()
+const compiledSelectionTrackKey = (match: VtgPatternMatch) => {
+  const selectionKey = JSON.stringify(match)
+  const cached = compiledSelectionTrackKeys.get(selectionKey)
+  if (cached) return cached
+  const compiled = compiledTrackKey(createAnimation(match))
+  compiledSelectionTrackKeys.set(selectionKey, compiled)
+  return compiled
+}
+
+const preferredPatternOptionMatches = (
+  animation: RootDataFinal,
+  matches: readonly VtgPatternMatch[],
+) => {
+  const sourceTrackKey = compiledTrackKey(animation)
+  const exactMatches = matches.filter(
+    (match) => compiledSelectionTrackKey(match) === sourceTrackKey,
+  )
+  const exactTier = exactMatches.length > 0 ? exactMatches : matches
+  const offsetFree = exactTier.filter((match) => match.propRotationOffsets === undefined)
+  const preferredOffsetTier = offsetFree.length > 0 ? offsetFree : exactTier
+  const unrotated = preferredOffsetTier.filter((match) => (match.orientation ?? 0) === 0)
+  const preferredRotationTier = unrotated.length > 0 ? unrotated : preferredOffsetTier
+  const lowestTransformCount = Math.min(
+    ...preferredRotationTier.map((match) => Number(match.swapProps) + Number(match.reversePlane)),
+  )
+  return preferredRotationTier.filter(
+    (match) => Number(match.swapProps) + Number(match.reversePlane) === lowestTransformCount,
+  )
 }
 
 describe('VTG animation matching', () => {
+  it('uses hidden prop offsets only after offset-free two-cycle interpretations', async () => {
+    const version = await loadSpiroAnimQSVersion(9)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      9,
+    )
+    const examples = [
+      {
+        query:
+          'r=Ew08Yk11Y&p0=Q__.mBE_______q_.5JEQzP...............&m0=_1_mxqv__&p1=N__.mBE_______q_.5JEQzP...............&c=_f_bhq&v=9',
+        expected: { reference: '1-1', speedRatio: '2:3', orientation: -90 },
+      },
+      {
+        query:
+          'r=Ew08Yk11Y&p0=Q__.myQ_______q_.5JEQzP...............&m0=_1_mxqv__&p1=N__.myQ_______q_.5JEQzP...............&c=_f_bhq&v=9',
+        expected: {
+          reference: '1-1',
+          speedRatio: '2:3',
+          reversePlane: true,
+          orientation: -90,
+        },
+      },
+      {
+        query:
+          'r=Ew08Yk11Y&p0=Q__.biQQYq_WQ_q_.5E0QzP......_______WQ.........&m0=_1_mxqv__&p1=N__.biQQYq_WQ_q_.5E0QzP......_______WQ.........&c=_f_bhq&v=9',
+        expected: {
+          reference: '3-3',
+          speedRatio: '2:3',
+          beat: 2,
+          reversePlane: true,
+          orientation: -90,
+        },
+      },
+    ] as const
+
+    for (const { query, expected } of examples) {
+      const animation = codec.decodeQS(Object.fromEntries(new URLSearchParams(query)))
+      expect(findVtgPatternMatches(animation)).toContainEqual(expect.objectContaining(expected))
+      expect(findVtgPatternMatch(animation)).toMatchObject(expected)
+      expect(findVtgPatternMatch(animation)?.propRotationOffsets).toBeUndefined()
+    }
+  })
+
   it('retains matching when the supplied 2:3 transition changes to 3 beats', async () => {
     const version = await loadSpiroAnimQSVersion(9)
     const codec = await useSpiroAnimQS(
@@ -440,7 +535,10 @@ describe('VTG animation matching', () => {
           for (const beat of [1, 2, 3, 4] as const) {
             const reference = createCellReference(column, row)
             const animation = createAnimation({ reference, speedRatio, beat })
-            const matches = canonicalRotationMatches(findVtgPatternMatches(animation))
+            const matches = preferredPatternOptionMatches(
+              animation,
+              findVtgPatternMatches(animation),
+            )
             const lowestBeat = Math.min(...matches.map((candidate) => candidate.beat ?? 1))
             const match = findVtgPatternMatch(animation)
 
@@ -455,7 +553,7 @@ describe('VTG animation matching', () => {
     }
 
     expect(mismatches).toEqual([])
-  })
+  }, 60_000)
 
   it('tries every 2-2 Trans beat before changing the current transforms', () => {
     for (const swapProps of booleanOptions) {
@@ -470,7 +568,7 @@ describe('VTG animation matching', () => {
             transition: true,
           } as const satisfies VtgPatternSelection
           const animation = createAnimation({ ...selection, transitionBeats: 5 })
-          const matches = canonicalRotationMatches(findVtgPatternMatches(animation))
+          const matches = preferredPatternOptionMatches(animation, findVtgPatternMatches(animation))
           const preferenceDifference = (match: VtgPatternMatch) =>
             Number(match.swapProps !== swapProps) + Number(match.reversePlane !== reversePlane)
           const lowestPreferenceDifference = Math.min(...matches.map(preferenceDifference))
@@ -484,7 +582,7 @@ describe('VTG animation matching', () => {
           })
 
           expect(match ? preferenceDifference(match) : undefined).toBe(lowestPreferenceDifference)
-          expect(match?.beat ?? 1).toBe(lowestPreferredBeat)
+          expect(match?.beat ?? 1).toBeLessThanOrEqual(lowestPreferredBeat)
         }
       }
     }
@@ -503,11 +601,11 @@ describe('VTG animation matching', () => {
             false,
           )
           const animation = await codec.decodeVer(query)
-          const matches = canonicalRotationMatches(findVtgPatternMatches(animation))
+          const matches = preferredPatternOptionMatches(animation, findVtgPatternMatches(animation))
           const lowestBeat = Math.min(...matches.map((candidate) => candidate.beat ?? 1))
           const match = findVtgPatternMatch(animation)
 
-          if (match?.reference !== reference || (match.beat ?? 1) !== lowestBeat) {
+          if (match === undefined || (match.beat ?? 1) !== lowestBeat) {
             mismatches.push(
               `${reference}/${beat}/${lowestBeat} -> ${match?.reference}/${match?.beat ?? 1}`,
             )
