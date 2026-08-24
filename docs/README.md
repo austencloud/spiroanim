@@ -44,6 +44,11 @@ details.
 - [`HOSTING.md`](./HOSTING.md) - production route handling, cache rules, Cloudflare Pages behavior,
   and deployment validation.
 
+## Future candidates
+
+- [`todo/VTG_ZERO_TIMING.md`](./todo/VTG_ZERO_TIMING.md) - deferred `0:0` stationary timing design,
+  unresolved per-prop Turns behavior, semantic safeguards, and matcher simulation findings.
+
 ## Change routing
 
 | When changing...                                  | Start with...                  |
