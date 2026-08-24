@@ -1,26 +1,57 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
-import type { AnimData, AnimDataCompiled, RootDataFinal } from '@/types/AnimTypes'
+import { compactAnimationFrames } from '@/math/animation/compressFrames'
+import { resolveMotionFrames } from '@/math/animation/frameSemantics'
+import type {
+  AnimData,
+  AnimDataCompiled,
+  CameraData,
+  MotionData,
+  RootDataFinal,
+} from '@/types/AnimTypes'
 
 export const doublePlaybackMultiplier = 2
 const transportedContinuationAngle = 0
 
-type InheritedFrameValues = Pick<
-  AnimDataCompiled,
-  'turns' | 'twist' | 'beats' | 'scale' | 'depth' | 'type' | 'adjust' | 'arc'
->
-
 const interpolate = (start: number, end: number, progress: number) =>
   start + (end - start) * progress
+
+const scaleMotionTrackBeats = (frames: readonly MotionData[], multiplier: number): MotionData[] => {
+  if (frames.length <= 1) return frames.map((frame) => ({ ...frame }))
+
+  const resolved = resolveMotionFrames(frames)
+  return frames.map((frame, index) => ({
+    ...frame,
+    beats: resolved[index]!.beats * multiplier,
+  }))
+}
+
+const scaleCameraTrackBeats = (frames: readonly CameraData[], multiplier: number): CameraData[] => {
+  if (frames.length <= 1) {
+    return frames.map((frame) => ({
+      ...frame,
+      ...(frame.orbit === undefined ? {} : { orbit: { ...frame.orbit } }),
+      ...(frame.center === undefined ? {} : { center: { ...frame.center } }),
+    }))
+  }
+
+  const resolvedOrbit = resolveMotionFrames(frames.map((frame) => frame.orbit ?? {}))
+  return frames.map((frame, index) => ({
+    ...frame,
+    orbit: {
+      ...frame.orbit,
+      beats: resolvedOrbit[index]!.beats * multiplier,
+    },
+  }))
+}
 
 const subdivideFrame = (
   start: AnimDataCompiled,
   target: AnimDataCompiled,
   step: number,
   subdivisionCount: number,
-  inherited: InheritedFrameValues,
 ): AnimData => {
   const progress = step / subdivisionCount
-  const desired = {
+  return {
     turns: target.turns / subdivisionCount,
     twist: target.twist / subdivisionCount,
     beats: step === subdivisionCount ? target.beats : start.beats,
@@ -32,29 +63,6 @@ const subdivideFrame = (
     plane: step === 1 ? target.plane : transportedContinuationAngle,
     axis: step === 1 ? target.axis : transportedContinuationAngle,
   }
-  const frame: AnimData = {}
-
-  if (desired.turns !== inherited.turns) frame.turns = desired.turns
-  if (desired.twist !== inherited.twist) frame.twist = desired.twist
-  if (desired.beats !== inherited.beats) frame.beats = desired.beats
-  if (desired.scale !== inherited.scale) frame.scale = desired.scale
-  if (desired.depth !== inherited.depth) frame.depth = desired.depth
-  if (desired.type !== inherited.type) frame.type = desired.type
-  if (desired.adjust !== inherited.adjust) frame.adjust = desired.adjust
-  if (desired.arc !== inherited.arc) frame.arc = desired.arc
-  if (desired.plane !== transportedContinuationAngle) frame.plane = desired.plane
-  if (desired.axis !== desired.plane) frame.axis = desired.axis
-
-  inherited.turns = desired.turns
-  inherited.twist = desired.twist
-  inherited.beats = desired.beats
-  inherited.scale = desired.scale
-  inherited.depth = desired.depth
-  inherited.type = desired.type
-  inherited.adjust = desired.adjust
-  inherited.arc = desired.arc
-
-  return frame
 }
 
 const subdivideFrames = (
@@ -73,16 +81,6 @@ const subdivideFrames = (
   }
 
   const subdivided: AnimData[] = [{ ...firstFrame }]
-  const inherited: InheritedFrameValues = {
-    turns: firstCompiledFrame.turns,
-    twist: firstCompiledFrame.twist,
-    beats: firstCompiledFrame.beats,
-    scale: firstCompiledFrame.scale,
-    depth: firstCompiledFrame.depth,
-    type: firstCompiledFrame.type,
-    adjust: firstCompiledFrame.adjust,
-    arc: firstCompiledFrame.arc,
-  }
 
   for (let frameIndex = 1; frameIndex < compiled.length; frameIndex += 1) {
     const start = compiled[frameIndex - 1]
@@ -90,11 +88,14 @@ const subdivideFrames = (
     if (!start || !target) return undefined
 
     for (let step = 1; step <= subdivisionCount; step += 1) {
-      subdivided.push(subdivideFrame(start, target, step, subdivisionCount, inherited))
+      subdivided.push(subdivideFrame(start, target, step, subdivisionCount))
     }
   }
 
-  return subdivided
+  return compactAnimationFrames(subdivided, {
+    // The starting frame is an authored pattern boundary inspected by VTG matching callers.
+    preserve: (frameIndex) => frameIndex === 0,
+  })
 }
 
 /**
@@ -118,12 +119,17 @@ export const subdivideAnimationPlayback = (
 
     const anim = subdivideFrames(prop.anim, compiledProp.anim, subdivisionCount)
     if (!anim) return undefined
-    props.push({ ...prop, anim })
+    props.push({
+      ...prop,
+      anim,
+      motion: scaleMotionTrackBeats(prop.motion, subdivisionCount),
+    })
   }
 
   return {
     ...animation,
     bpm: animation.bpm * subdivisionCount,
+    camera: scaleCameraTrackBeats(animation.camera, subdivisionCount),
     props,
   }
 }
@@ -188,13 +194,21 @@ export const consolidateAnimationPlayback = (
         axis: first.axis,
       })
     }
-    return { ...prop, anim }
+    return {
+      ...prop,
+      anim: compactAnimationFrames(anim, {
+        // Consolidation retains the source's authored starting boundary.
+        preserve: (frameIndex) => frameIndex === 0,
+      }),
+      motion: scaleMotionTrackBeats(prop.motion, 1 / consolidationCount),
+    }
   })
   if (props.some((prop) => prop === undefined)) return undefined
 
   return {
     ...animation,
     bpm: animation.bpm / consolidationCount,
+    camera: scaleCameraTrackBeats(animation.camera, 1 / consolidationCount),
     props: props.map((prop) => prop!),
   }
 }

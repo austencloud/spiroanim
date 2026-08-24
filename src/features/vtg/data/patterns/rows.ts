@@ -1,5 +1,10 @@
 import { vtgBaseFrameSettings, vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { getVtgPropSpeedRatios, parseVtgIndividualSpeedRatio } from '@/features/vtg/types'
+import { compactReadableAnimationFrames } from '@/math/animation/compressFrames'
+import {
+  resolveReadableAnimationFrames,
+  type ResolvedAnimationFrame,
+} from '@/math/animation/frameSemantics'
 import type {
   VtgCellReference,
   VtgPatternDefinition,
@@ -8,7 +13,7 @@ import type {
   VtgRuleNumber,
   VtgSpeedRatio,
 } from '@/features/vtg/types'
-import type { AnimReadable } from '@/types/AnimTypes'
+import type { AnimReadable, TypeStr } from '@/types/AnimTypes'
 
 type VtgSpinDirection = 'anti' | 'in'
 type VtgContinuation = Omit<AnimReadable, 'turns'> & { spin: VtgSpinDirection }
@@ -30,12 +35,19 @@ interface VtgRowPattern {
   swapProps?: boolean
 }
 
-const createFirstFrame = (start: AnimReadable): AnimReadable => {
-  const frame = { ...vtgBaseFrameSettings, ...start }
-  if (frame.plane === 0) delete frame.plane
-  if (frame.turns === 0) delete frame.turns
-  return frame
-}
+const compactVtgDefinitionFrame = (
+  frame: AnimReadable,
+  preceding?: ResolvedAnimationFrame<TypeStr>,
+): AnimReadable =>
+  compactReadableAnimationFrames([frame], {
+    preceding,
+    // Later VTG transformations inspect authored values; only the two historically compacted
+    // fields may be removed while this is still a pattern definition.
+    preserve: (_frameIndex, key) => key !== 'plane' && key !== 'turns',
+  })[0]!
+
+const createFirstFrame = (start: AnimReadable): AnimReadable =>
+  compactVtgDefinitionFrame({ ...vtgBaseFrameSettings, ...start })
 
 const createTurns = (
   arc: number,
@@ -61,9 +73,7 @@ const createContinuationFrame = (
     ...frameValues,
     turns: createTurns(continuation.arc ?? 0, spin, speedRatio),
   }
-  if (frame.plane === 0) delete frame.plane
-  if (frame.turns === (start.turns ?? 0)) delete frame.turns
-  return frame
+  return compactVtgDefinitionFrame(frame, resolveReadableAnimationFrames([start])[0])
 }
 
 const getDefinitionSpeedRatio = (speedRatio: VtgIndividualSpeedRatio): VtgIndividualSpeedRatio => {

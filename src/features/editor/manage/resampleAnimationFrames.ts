@@ -1,5 +1,6 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
-import { compressAnimationFrames } from '@/features/editor/manage/compressAnimation'
+import { compiledMotionFramesHaveEqualPlayback } from '@/math/animation/compressFrames'
+import { compressAnimation } from '@/features/editor/manage/compressAnimation'
 import {
   consolidateAnimationPlayback,
   doubleAnimationPlayback,
@@ -51,7 +52,16 @@ const isRepresentableFrame = (frame: AnimData): boolean => {
 
 const isRepresentableAnimation = (animation: RootDataFinal): boolean =>
   isRepresentableValue('bpm', animation.bpm) &&
-  animation.props.every((prop) => prop.anim.every(isRepresentableFrame))
+  animation.props.every(
+    (prop) =>
+      prop.anim.every(isRepresentableFrame) &&
+      prop.motion.every(
+        (frame) => frame.beats === undefined || isRepresentableValue('beats', frame.beats),
+      ),
+  ) &&
+  animation.camera.every(
+    (frame) => frame.orbit?.beats === undefined || isRepresentableValue('beats', frame.orbit.beats),
+  )
 
 const compiledFramesEqual = (
   first: readonly AnimDataCompiled[],
@@ -71,10 +81,25 @@ const animationsHaveEqualFrameValues = (first: RootDataFinal, second: RootDataFi
 
   const firstCompiled = rootCompile(first)
   const secondCompiled = rootCompile(second)
-  return firstCompiled.props.every((prop, index) => {
-    const comparison = secondCompiled.props[index]
-    return comparison !== undefined && compiledFramesEqual(prop.anim, comparison.anim)
-  })
+  return (
+    firstCompiled.camera.length === secondCompiled.camera.length &&
+    firstCompiled.camera.every((frame, index) => {
+      const comparison = secondCompiled.camera[index]
+      return (
+        comparison !== undefined &&
+        compiledMotionFramesHaveEqualPlayback([frame.orbit], [comparison.orbit]) &&
+        compiledMotionFramesHaveEqualPlayback([frame.center], [comparison.center])
+      )
+    }) &&
+    firstCompiled.props.every((prop, index) => {
+      const comparison = secondCompiled.props[index]
+      return (
+        comparison !== undefined &&
+        compiledFramesEqual(prop.anim, comparison.anim) &&
+        compiledMotionFramesHaveEqualPlayback(prop.motion, comparison.motion)
+      )
+    })
+  )
 }
 
 const hasIntervals = (animation: RootDataFinal, minimumFrameCount: number): boolean =>
@@ -84,11 +109,11 @@ const compressRepresentableResult = (
   animation: RootDataFinal | undefined,
 ): RootDataFinal | undefined => {
   if (!animation) return undefined
-  for (const prop of animation.props) compressAnimationFrames(prop.anim)
+  compressAnimation(animation, { propValues: false })
   return isRepresentableAnimation(animation) ? animation : undefined
 }
 
-/** Doubles authored animation intervals only when every generated value remains representable. */
+/** Doubles authored Animation intervals and preserves Motion/Camera timing when all values fit. */
 export const doubleAnimationFrames = (animation: RootDataFinal): RootDataFinal | undefined => {
   if (!hasIntervals(animation, doublePlaybackMultiplier)) return undefined
 

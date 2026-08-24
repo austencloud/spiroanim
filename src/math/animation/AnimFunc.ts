@@ -5,6 +5,7 @@ import { TTYPE, RADIUS, PPOS, PROPCP } from '@/domain/animation/AnimStruct'
 
 import { orthoNext, InitialPoint, InitialOrtho } from './OrthogonalFunc'
 import { compileMotionTrack, createDefaultCameraFrame } from './MotionFunc'
+import { resolveAnimationFrames } from './frameSemantics'
 
 import type {
   RootDataFinal,
@@ -114,11 +115,8 @@ export const rootCompile = (orig: RootDataFinal): RootDataCompiled => {
 const compileCameraTrack = (frames: RootDataFinal['camera']): RootDataCompiled['camera'] => {
   const defaultOrbit = createDefaultCameraFrame().orbit!
   const orbit = compileMotionTrack(
-    frames.map((frame, index) =>
-      index === 0 && frame.orbit?.distance === undefined
-        ? { ...defaultOrbit, ...frame.orbit }
-        : (frame.orbit ?? {}),
-    ),
+    frames.map((frame) => frame.orbit ?? {}),
+    { firstFrameDefaults: defaultOrbit },
   )
   const center = compileMotionTrack(frames.map((frame) => frame.center ?? {}))
 
@@ -145,35 +143,8 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     axis = InitialOrtho.clone()
   let twistRoll = 0
 
-  for (let ai = 1; ai < prop.anim.length; ai++) {
-    const anim = prop.anim[ai]!,
-      prev = prop.anim[ai - 1]!
-    if (anim.type === undefined) anim.type = prev.type
-    if (anim.turns === undefined) anim.turns = prev.turns
-    if (anim.twist === undefined) anim.twist = prev.twist
-    if (anim.adjust === undefined) anim.adjust = prev.adjust
-    if (anim.scale === undefined) anim.scale = prev.scale
-    if (anim.depth === undefined) anim.depth = prev.depth
-    if (anim.beats === undefined) anim.beats = prev.beats
-    if (anim.arc === undefined) anim.arc = prev.arc
-  }
-
-  for (let ai = 0; ai < prop.anim.length; ai++) {
-    const anim = prop.anim[ai]!
-
-    const vars = {
-        turns: anim.turns ?? 0,
-        twist: anim.twist ?? 0,
-        scale: anim.scale ?? 10,
-        depth: anim.depth ?? 0,
-        beats: anim.beats ?? 1,
-        adjust: anim.adjust ?? 0,
-        arc: anim.arc ?? 0,
-        plane: anim.plane ?? 0,
-        axis: anim.axis ?? anim.plane ?? 0,
-        type: anim.type ?? TTYPE.SPHE,
-      },
-      // Angle on Orthogonal Plane
+  for (const vars of resolveAnimationFrames(prop.anim)) {
+    const // Angle on Orthogonal Plane
       radPlane = MathUtils.degToRad(vars.plane),
       radAxis = MathUtils.degToRad(vars.axis),
       // Angle to the next point
@@ -187,7 +158,7 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     orthoNext(radAxis, radRot, rot, axis, rotx)
 
     // Rotation Adjustment which gets blended during animation
-    adju.copy(rot).applyAxisAngle(rotx, MathUtils.degToRad(vars.adjust ?? 0))
+    adju.copy(rot).applyAxisAngle(rotx, MathUtils.degToRad(vars.adjust))
 
     // Compiled prop, ready to be sent to the Worker
     const push: AnimDataCompiled = {

@@ -14,14 +14,17 @@ interface RelativePhase {
   orientation: 1 | -1
 }
 
+export const patternRelationshipErrorLabel = 'XX / XX' as const
+export type PatternRelationshipLabel = VtgPatternLabel | typeof patternRelationshipErrorLabel
+
 export interface PatternRelationships {
-  label: VtgPatternLabel
+  label: PatternRelationshipLabel
   description: string
-  hands: {
+  hands?: {
     timing: VtgTimingCode
     direction: VtgDirectionCode
   }
-  props: {
+  props?: {
     timing: VtgTimingCode
     direction: VtgDirectionCode
   }
@@ -118,7 +121,7 @@ const directionDescriptions = {
 const describeRelationship = (timing: VtgTimingCode, direction: VtgDirectionCode): string =>
   `${timingDescriptions[timing]} / ${directionDescriptions[direction]}`
 
-export const describePatternRelationships = (
+const describePatternRelationshipsUnsafe = (
   animation: RootDataFinal,
   checkpoint: PatternRelationshipCheckpoint = 'destination',
 ): PatternRelationships => {
@@ -173,5 +176,28 @@ export const describePatternRelationships = (
     description: `Hands: ${describeRelationship(handPhase.timing, handDirection)}\nProps: ${describeRelationship(propPhase.timing, propDirection)}`,
     hands: { timing: handPhase.timing, direction: handDirection },
     props: { timing: propPhase.timing, direction: propDirection },
+  }
+}
+
+export const createPatternRelationshipError = (
+  error: unknown,
+  context?: Readonly<Record<string, unknown>>,
+): PatternRelationships => {
+  const message = error instanceof Error ? error.message : String(error)
+  console.warn('Unable to classify pattern relationships.', { ...context, error })
+  return {
+    label: patternRelationshipErrorLabel,
+    description: `Pattern relationship error: ${message}`,
+  }
+}
+
+export const describePatternRelationships = (
+  animation: RootDataFinal,
+  checkpoint: PatternRelationshipCheckpoint = 'destination',
+): PatternRelationships => {
+  try {
+    return describePatternRelationshipsUnsafe(animation, checkpoint)
+  } catch (error) {
+    return createPatternRelationshipError(error, { checkpoint })
   }
 }

@@ -6,6 +6,7 @@ import {
 } from '@/features/editor/manage/resampleAnimationFrames'
 import { compressAnimationFrames } from '@/features/editor/manage/compressAnimation'
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -122,6 +123,57 @@ describe('resampleAnimationFrames', () => {
     const excessiveBpm = createAnimation()
     excessiveBpm.bpm = 300
     expect(doubleAnimationFrames(excessiveBpm)).toBeUndefined()
+
+    const excessiveMotionBeats = createAnimation()
+    excessiveMotionBeats.props[0]!.motion = [{ beats: 40 }, {}]
+    expect(doubleAnimationFrames(excessiveMotionBeats)).toBeUndefined()
+  })
+
+  it('preserves Prop Motion and Camera timing while BPM changes', () => {
+    const original = createAnimation()
+    original.props[0]!.motion = [
+      { beats: 1, distance: 2 },
+      { beats: 3, distance: 4 },
+    ]
+    original.camera = [
+      {
+        ...createDefaultCameraFrame(),
+        orbit: { ...createDefaultCameraFrame().orbit, beats: 1 },
+      },
+      { orbit: { beats: 3, distance: 20 }, center: {} },
+    ]
+    const before = rootCompile(original)
+
+    const doubled = doubleAnimationFrames(original)!
+    const doubledCompiled = rootCompile(doubled)
+    expect(doubledCompiled.props[0]!.motion.map(({ beats }) => beats)).toEqual([2, 6])
+    expect(doubledCompiled.camera.map(({ orbit }) => orbit.beats)).toEqual([2, 6])
+
+    const halved = halveAnimationFrames(doubled)!
+    const restored = rootCompile(halved)
+    expect(restored.props[0]!.motion).toEqual(before.props[0]!.motion)
+    expect(restored.camera).toEqual(before.camera)
+  })
+
+  it('leaves Beats unchanged on single-frame Prop Motion and Camera tracks', () => {
+    const original = createAnimation()
+    original.props[0]!.motion = [{ beats: 1, distance: 2 }]
+    original.camera = [
+      {
+        ...createDefaultCameraFrame(),
+        orbit: { ...createDefaultCameraFrame().orbit, beats: 1 },
+      },
+    ]
+
+    const doubled = doubleAnimationFrames(original)!
+    const doubledCompiled = rootCompile(doubled)
+    expect(doubledCompiled.props[0]!.motion[0]?.beats).toBe(1)
+    expect(doubledCompiled.camera[0]?.orbit.beats).toBe(1)
+
+    const halved = halveAnimationFrames(doubled)!
+    const halvedCompiled = rootCompile(halved)
+    expect(halvedCompiled.props[0]!.motion[0]?.beats).toBe(1)
+    expect(halvedCompiled.camera[0]?.orbit.beats).toBe(1)
   })
 
   it('rejects halving when alternating frames are not exact generated intermediates', () => {
@@ -151,6 +203,18 @@ describe('resampleAnimationFrames', () => {
     const lowBpm = doubleAnimationFrames(createAnimation())!
     lowBpm.bpm = 30
     expect(halveAnimationFrames(lowBpm)).toBeUndefined()
+
+    const fractionalMotionBeats = doubleAnimationFrames(createAnimation())!
+    fractionalMotionBeats.props[0]!.motion = [{ beats: 3 }, {}]
+    expect(halveAnimationFrames(fractionalMotionBeats)).toBeUndefined()
+
+    const fractionalCameraBeats = doubleAnimationFrames(createAnimation())!
+    const cameraFrame = fractionalCameraBeats.camera[0]!
+    fractionalCameraBeats.camera = [
+      { ...cameraFrame, orbit: { ...cameraFrame.orbit, beats: 3 } },
+      { orbit: {}, center: {} },
+    ]
+    expect(halveAnimationFrames(fractionalCameraBeats)).toBeUndefined()
   })
 
   it('requires at least one interval in the requested direction', () => {

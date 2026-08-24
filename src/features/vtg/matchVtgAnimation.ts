@@ -13,6 +13,7 @@ import {
 import { inferVtgTiming } from '@/features/vtg/math/inferVtgSpeedRatio'
 import type {
   VtgCellReference,
+  VtgBeat,
   VtgPatternMatch,
   VtgPatternMatchPreferences,
   VtgPatternRotationFilter,
@@ -50,7 +51,10 @@ const orientedSignatureDifferenceByMatch = new WeakMap<VtgPatternMatch, number>(
 const exactRegenerationDifferenceByMatch = new WeakMap<VtgPatternMatch, number>()
 const orientedStateByCandidate = new WeakMap<Candidate, Map<number, OrientedCandidateState>>()
 
-const candidateIndexes = new Map<VtgSpeedRatio, ReadonlyMap<string, readonly Candidate[]>>()
+const candidateIndexes = new Map<
+  VtgSpeedRatio,
+  Map<VtgBeat, ReadonlyMap<string, readonly Candidate[]>>
+>()
 const normalizeOrientation = (value: number) => {
   const normalized = ((((value + 180) % 360) + 360) % 360) - 180
   return normalized === -180 ? 180 : normalized
@@ -130,9 +134,10 @@ const getOrientedCandidateState = (
   return state
 }
 
-const buildCandidateIndex = (speedRatio: VtgSpeedRatio) => {
+const buildCandidateIndex = (speedRatio: VtgSpeedRatio, beat: VtgBeat) => {
   const index = new Map<string, Candidate[]>()
   for (const candidateRatio of getCandidateRatios(speedRatio)) {
+    if (!getVtgBeats(candidateRatio).includes(beat)) continue
     for (const column of ruleNumbers) {
       for (const row of ruleNumbers) {
         const reference = createCellReference(row, column)
@@ -145,40 +150,51 @@ const buildCandidateIndex = (speedRatio: VtgSpeedRatio) => {
             orientation: 0,
           })
           if (!base) continue
-          for (const beat of getVtgBeats(candidateRatio)) {
-            const playback = applyVtgPlaybackControls(base, { speedRatio: candidateRatio, beat })
-            if (!playback) continue
-            for (const swapProps of booleanOptions) {
-              for (const reversePlane of booleanOptions) {
-                const transformed = applyPatternFinalTransforms(playback, {
-                  swapProps,
-                  reversePlane,
-                })
-                if (inferVtgTiming(transformed)?.speedRatio !== speedRatio) continue
-                const signature = createVtgDirectionSignature(transformed)
-                const startingTurns = getVtgStartingTurns(transformed)
-                if (!signature || !startingTurns) continue
-                const candidates = index.get(signature.key) ?? []
-                candidates.push({
-                  reference,
-                  speedRatio: candidateRatio,
-                  isAnti,
-                  swapProps,
-                  reversePlane,
-                  ...(beat === vtgDefaultBeat ? undefined : { beat }),
-                  baseOrientation: signature.orientation,
-                  startingTurns,
-                })
-                index.set(signature.key, candidates)
-              }
+          const playback = applyVtgPlaybackControls(base, { speedRatio: candidateRatio, beat })
+          if (!playback) continue
+          for (const swapProps of booleanOptions) {
+            for (const reversePlane of booleanOptions) {
+              const transformed = applyPatternFinalTransforms(playback, {
+                swapProps,
+                reversePlane,
+              })
+              if (inferVtgTiming(transformed)?.speedRatio !== speedRatio) continue
+              const signature = createVtgDirectionSignature(transformed)
+              const startingTurns = getVtgStartingTurns(transformed)
+              if (!signature || !startingTurns) continue
+              const candidates = index.get(signature.key) ?? []
+              candidates.push({
+                reference,
+                speedRatio: candidateRatio,
+                isAnti,
+                swapProps,
+                reversePlane,
+                ...(beat === vtgDefaultBeat ? undefined : { beat }),
+                baseOrientation: signature.orientation,
+                startingTurns,
+              })
+              index.set(signature.key, candidates)
             }
           }
         }
       }
     }
   }
-  candidateIndexes.set(speedRatio, index)
+  const speedRatioIndexes = candidateIndexes.get(speedRatio) ?? new Map()
+  speedRatioIndexes.set(beat, index)
+  candidateIndexes.set(speedRatio, speedRatioIndexes)
   return index
+}
+
+const findCandidates = (speedRatio: VtgSpeedRatio, signature: string) => {
+  const matches: Candidate[] = []
+  for (const beat of getVtgBeats(speedRatio)) {
+    const index =
+      candidateIndexes.get(speedRatio)?.get(beat) ?? buildCandidateIndex(speedRatio, beat)
+    const beatMatches = index.get(signature) ?? []
+    matches.push(...beatMatches)
+  }
+  return matches
 }
 
 const findBaseMatches = (
@@ -192,10 +208,7 @@ const findBaseMatches = (
   if (!timing || !signature || !startingTurns || adjustedScale === undefined) return []
   const exactAnimationSignature = createCompiledPatternSignature(animation)
 
-  const candidates =
-    (candidateIndexes.get(timing.speedRatio) ?? buildCandidateIndex(timing.speedRatio)).get(
-      signature.key,
-    ) ?? []
+  const candidates = findCandidates(timing.speedRatio, signature.key)
   const scale = getVtgScaleControlValue(adjustedScale, timing.speedRatio)
   return candidates.flatMap((candidate) => {
     const orientationDifference = signature.orientation - candidate.baseOrientation

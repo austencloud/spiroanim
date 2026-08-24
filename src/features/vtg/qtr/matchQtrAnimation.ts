@@ -8,6 +8,7 @@ import type {
   QtrPatternMatch,
   QtrPatternMatchPreferences,
   QtrPatternSelection,
+  VtgBeat,
   VtgPatternRotationFilter,
 } from '@/features/vtg/types'
 import {
@@ -35,13 +36,13 @@ const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5
 type QtrCandidateMatch = Omit<QtrPatternMatch, 'bpm' | 'scale'>
 
 interface QtrCandidateCache {
-  exact: ReadonlyMap<string, readonly QtrCandidateMatch[]>
-  transitionTurns: ReadonlyMap<string, readonly QtrCandidateMatch[]>
+  exact?: ReadonlyMap<string, readonly QtrCandidateMatch[]>
+  transitionTurns?: ReadonlyMap<string, readonly QtrCandidateMatch[]>
 }
 
 const candidateCaches = new Map<
   VtgSpeedRatio,
-  Map<QtrPatternSelection['orientation'], QtrCandidateCache>
+  Map<QtrPatternSelection['orientation'], Map<VtgBeat, QtrCandidateCache>>
 >()
 
 const createCellReference = (row: VtgRuleNumber, column: VtgRuleNumber): VtgCellReference =>
@@ -62,9 +63,10 @@ const addCandidate = (
 const buildCandidateCache = (
   speedRatio: VtgSpeedRatio,
   orientation: NonNullable<QtrPatternSelection['orientation']>,
+  beat: VtgBeat,
+  cacheKind: keyof QtrCandidateCache,
 ) => {
-  const exactCandidates = new Map<string, QtrCandidateMatch[]>()
-  const transitionTurnsCandidates = new Map<string, QtrCandidateMatch[]>()
+  const candidates = new Map<string, QtrCandidateMatch[]>()
 
   for (const column of ruleNumbers) {
     for (const row of ruleNumbers) {
@@ -77,60 +79,60 @@ const buildCandidateCache = (
 
         for (const swapProps of booleanOptions) {
           for (const reversePlane of booleanOptions) {
-              const selection: QtrPatternSelection = {
-                reference,
-                speedRatio,
-                quarters: 1,
-                isAnti,
-                swapProps,
-                reversePlane,
-                ...(orientation === 0 ? undefined : { orientation }),
-              }
-              const baseKey = `${reversePlane}:${orientation}`
-              let baseAnimation = baseAnimations.get(baseKey)
-              if (!baseAnimations.has(baseKey)) {
-                baseAnimation = createDefaultQtrBaseAnimation(selection)
-                baseAnimations.set(baseKey, baseAnimation)
-              }
-              if (!baseAnimation) continue
+            const selection: QtrPatternSelection = {
+              reference,
+              speedRatio,
+              quarters: 1,
+              isAnti,
+              swapProps,
+              reversePlane,
+              ...(orientation === 0 ? undefined : { orientation }),
+            }
+            const baseKey = `${reversePlane}:${orientation}`
+            let baseAnimation = baseAnimations.get(baseKey)
+            if (!baseAnimations.has(baseKey)) {
+              baseAnimation = createDefaultQtrBaseAnimation(selection)
+              baseAnimations.set(baseKey, baseAnimation)
+            }
+            if (!baseAnimation) continue
 
-              for (const beat of getVtgBeats(speedRatio)) {
-                const candidate: QtrCandidateMatch = {
-                  reference,
-                  speedRatio,
-                  quarters: 1,
-                  isAnti,
-                  swapProps,
-                  reversePlane,
-                  ...(orientation === 0 ? undefined : { orientation }),
-                  ...(beat === 1 ? undefined : { beat }),
-                }
-                const playbackKey = `${baseKey}:${beat}`
-                let playback = playbackAnimations.get(playbackKey)
-                if (!playback) {
-                  playback = applyVtgPlaybackControls(baseAnimation, { speedRatio, beat })
-                  if (!playback) continue
-                  playbackAnimations.set(playbackKey, playback)
-                }
+            const candidate: QtrCandidateMatch = {
+              reference,
+              speedRatio,
+              quarters: 1,
+              isAnti,
+              swapProps,
+              reversePlane,
+              ...(orientation === 0 ? undefined : { orientation }),
+              ...(beat === 1 ? undefined : { beat }),
+            }
+            const playbackKey = `${baseKey}:${beat}`
+            let playback = playbackAnimations.get(playbackKey)
+            if (!playback) {
+              playback = applyVtgPlaybackControls(baseAnimation, { speedRatio, beat })
+              if (!playback) continue
+              playbackAnimations.set(playbackKey, playback)
+            }
 
-                const finalTransforms = { swapProps, reversePlane }
+            const finalTransforms = { swapProps, reversePlane }
+            if (cacheKind === 'exact') {
+              addCandidate(
+                candidates,
+                createFinalTransformedVtgAnimationSignature(playback, finalTransforms),
+                candidate,
+              )
+            } else {
+              for (const initialTurnsOffset of vtgTransitionInitialTurnsOffsets) {
                 addCandidate(
-                  exactCandidates,
-                  createFinalTransformedVtgAnimationSignature(playback, finalTransforms),
-                  candidate,
+                  candidates,
+                  createFinalTransformedVtgAnimationSignature(playback, {
+                    ...finalTransforms,
+                    initialTurnsOffset,
+                  }),
+                  { ...candidate, initialTurnsOffset },
                 )
-
-                for (const initialTurnsOffset of vtgTransitionInitialTurnsOffsets) {
-                  addCandidate(
-                    transitionTurnsCandidates,
-                    createFinalTransformedVtgAnimationSignature(playback, {
-                      ...finalTransforms,
-                      initialTurnsOffset,
-                    }),
-                    { ...candidate, initialTurnsOffset },
-                  )
-                }
               }
+            }
           }
         }
       }
@@ -138,8 +140,11 @@ const buildCandidateCache = (
   }
 
   const speedRatioCaches = candidateCaches.get(speedRatio) ?? new Map()
-  const candidates = { exact: exactCandidates, transitionTurns: transitionTurnsCandidates }
-  speedRatioCaches.set(orientation, candidates)
+  const orientationCaches = speedRatioCaches.get(orientation) ?? new Map()
+  const orientationCache = orientationCaches.get(beat) ?? {}
+  orientationCache[cacheKind] = candidates
+  orientationCaches.set(beat, orientationCache)
+  speedRatioCaches.set(orientation, orientationCaches)
   candidateCaches.set(speedRatio, speedRatioCaches)
   return candidates
 }
@@ -147,8 +152,11 @@ const buildCandidateCache = (
 const getCandidateCache = (
   speedRatio: VtgSpeedRatio,
   orientation: NonNullable<QtrPatternSelection['orientation']>,
+  beat: VtgBeat,
+  cacheKind: keyof QtrCandidateCache,
 ) =>
-  candidateCaches.get(speedRatio)?.get(orientation) ?? buildCandidateCache(speedRatio, orientation)
+  candidateCaches.get(speedRatio)?.get(orientation)?.get(beat)?.[cacheKind] ??
+  buildCandidateCache(speedRatio, orientation, beat, cacheKind)
 
 const getMatchingOrientations = (
   speedRatio: VtgSpeedRatio,
@@ -167,23 +175,33 @@ const getMatchingOrientations = (
 const findCachedCandidates = (
   speedRatio: VtgSpeedRatio,
   rotationFilter: VtgPatternRotationFilter | undefined,
+  preferredOrientation: number | undefined,
   signature: string,
   cacheKind: keyof QtrCandidateCache,
   stopAtFirstMatchingTier: boolean,
 ): readonly QtrCandidateMatch[] => {
   const orientations = getMatchingOrientations(speedRatio, rotationFilter)
-  const orientationTiers = [
-    orientations.filter((orientation) => orientation === 0),
-    orientations.filter((orientation) => orientation !== 0),
-  ]
+  const preferred = orientations.filter((orientation) => orientation === preferredOrientation)
+  const unrotated = orientations.filter(
+    (orientation) => orientation === 0 && orientation !== preferredOrientation,
+  )
+  const remaining = orientations.filter(
+    (orientation) => orientation !== 0 && orientation !== preferredOrientation,
+  )
+  const orientationTiers = [preferred, unrotated, remaining].filter((tier) => tier.length > 0)
 
   const allMatches: QtrCandidateMatch[] = []
   for (const tier of orientationTiers) {
-    const matches = tier.flatMap(
-      (orientation) => getCandidateCache(speedRatio, orientation)[cacheKind].get(signature) ?? [],
-    )
-    if (matches.length > 0 && stopAtFirstMatchingTier) return matches
-    allMatches.push(...matches)
+    const tierMatches: QtrCandidateMatch[] = []
+    for (const beat of getVtgBeats(speedRatio)) {
+      const matches = tier.flatMap(
+        (orientation) =>
+          getCandidateCache(speedRatio, orientation, beat, cacheKind).get(signature) ?? [],
+      )
+      tierMatches.push(...matches)
+    }
+    if (tierMatches.length > 0 && stopAtFirstMatchingTier) return tierMatches
+    allMatches.push(...tierMatches)
   }
 
   return allMatches
@@ -193,6 +211,7 @@ const findQtrPatternMatchesInternal = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
   stopAtFirstMatchingOrientationTier = false,
+  preferredOrientation?: number,
 ): readonly QtrPatternMatch[] => {
   const alternating = analyzeAlternatingPatternPlayback(animation)
   const matchingAnimation = alternating?.base ?? animation
@@ -209,6 +228,7 @@ const findQtrPatternMatchesInternal = (
   const exactMatches = findCachedCandidates(
     speedRatio,
     rotationFilter,
+    preferredOrientation,
     signature,
     'exact',
     stopAtFirstMatchingOrientationTier,
@@ -219,6 +239,7 @@ const findQtrPatternMatchesInternal = (
       : findCachedCandidates(
           speedRatio,
           rotationFilter,
+          preferredOrientation,
           signature,
           'transitionTurns',
           stopAtFirstMatchingOrientationTier,
@@ -279,28 +300,22 @@ export const findQtrPatternMatch = (
 ): QtrPatternMatch | undefined =>
   [
     ...preferUnrotatedMatches(
-      findQtrPatternMatchesInternal(
-        animation,
-        rotationFilter,
-        preferences?.orientation === undefined || preferences.orientation === 0,
-      ),
+      findQtrPatternMatchesInternal(animation, rotationFilter, true, preferences?.orientation),
       preferences,
     ),
-  ].sort(
-    (first, second) => {
-      if (preferences) {
-        const preferenceDifference =
-          preferenceDifferenceCount(first, preferences) -
-          preferenceDifferenceCount(second, preferences)
-        if (preferenceDifference !== 0) return preferenceDifference
-      }
+  ].sort((first, second) => {
+    if (preferences) {
+      const preferenceDifference =
+        preferenceDifferenceCount(first, preferences) -
+        preferenceDifferenceCount(second, preferences)
+      if (preferenceDifference !== 0) return preferenceDifference
+    }
 
-      const beatDifference = startingBeat(first) - startingBeat(second)
-      if (beatDifference !== 0) return beatDifference
+    const beatDifference = startingBeat(first) - startingBeat(second)
+    if (beatDifference !== 0) return beatDifference
 
-      return playbackTransformationCount(first) - playbackTransformationCount(second)
-    },
-  )[0]
+    return playbackTransformationCount(first) - playbackTransformationCount(second)
+  })[0]
 
 export const matchesQtrSelection = (
   animation: RootDataFinal,

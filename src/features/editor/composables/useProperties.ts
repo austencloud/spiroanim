@@ -9,13 +9,13 @@ import {
   PPOS,
   TTYPE,
   MOTION_SHAPES,
-  TWIST_INCREMENT,
 } from '@/domain/animation/AnimStruct'
 
 import { VDEF } from '@/stores/useQSMainStore'
 
 import { orthoModify, InitialPoint } from '@/math/animation/OrthogonalFunc'
 import { closestPoint } from '@/math/animation/AnimFunc'
+import { compressMotionFrames } from '@/math/animation/compressFrames'
 import {
   MAX_MOTION_DISTANCE,
   cartesianToMotionAngles,
@@ -202,10 +202,6 @@ export function useProperties(store: string = 'main') {
   const animSet: SetterFunc = (key, val) => {
     if (PLAYING.value) return
     val = constraints(key, val)
-    if (key === 'twist' && typeof val === 'number') {
-      val = Math.round(val / TWIST_INCREMENT) * TWIST_INCREMENT
-    }
-
     switch (key) {
       case 'path':
       case 'point':
@@ -542,21 +538,13 @@ export function useProperties(store: string = 'main') {
         current.axis,
       )
       const authored = (ROOT.value.camera[index]![path] ??= {})
-      const defaultOrbit = createDefaultCameraFrame().orbit!
-      const usesFirstOrbitDefault =
-        path === 'orbit' &&
-        index === 0 &&
-        plane === defaultOrbit.plane &&
-        arc === defaultOrbit.arc &&
-        distance === defaultOrbit.distance
-
-      if (usesFirstOrbitDefault || plane === 0) delete authored.plane
-      else authored.plane = plane
-      if (usesFirstOrbitDefault || arc === 0) delete authored.arc
-      else authored.arc = arc
-      if (usesFirstOrbitDefault || (distance === 0 && !(path === 'orbit' && index === 0)))
-        delete authored.distance
-      else authored.distance = distance
+      authored.plane = plane
+      authored.arc = arc
+      authored.distance = distance
+      compressMotionFrames(
+        ROOT.value.camera.map((frame) => frame[path] ?? {}),
+        path === 'orbit' ? { firstFrameDefaults: createDefaultCameraFrame().orbit! } : {},
+      )
     }
 
     triggerRef(ROOT)

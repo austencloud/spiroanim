@@ -7,6 +7,9 @@ management operation is documented separately in [`SHIFT.md`](./SHIFT.md).
 The authoritative implementations are:
 
 - `src/math/animation/AnimFunc.ts` for compilation.
+- `src/math/animation/frameSemantics.ts` for the compiler's sparse-frame defaults, inheritance,
+  derived values, and Motion command-presence rules.
+- `src/math/animation/compressFrames.ts` for compiler-backed sparse-frame compaction.
 - `src/math/animation/OrthogonalFunc.ts` for chained spherical rotations.
 - `src/workers/animation/createSpiroAnimator.ts` for playback and path rendering.
 - `src/composables/useSpiroAnimQS.ts` and `src/services/query/versions/` for query-string
@@ -59,8 +62,9 @@ per-frame default. These are different behaviors.
 cannot be deleted merely because the previous frame used the same value. `axis` can be deleted
 when it equals the current frame's `plane`.
 
-`rootCompile()` JSON-clones the root before filling inherited values, so compilation does not
-expand the editor's sparse source objects.
+`rootCompile()` JSON-clones the root, then resolves sparse values without expanding the editor's
+source objects. The compiler, compression, pattern generators, and frame-management operations use
+the same resolver.
 
 ## Compilation
 
@@ -161,16 +165,21 @@ X/Y/Z is not stored in Motion frames.
 The Manage pane follows the selected frame set. Animation exposes its point and prop management
 tools. Motion exposes Insert Frame and Delete Selection; Insert Frame adds an empty frame before or
 after the current position or selected range without invoking player point selection. Compress
-applies the declared default, inheritance, and applicability rules to props, Motion, Camera Orbit,
-and Camera Center. Fields without a declared compression rule are preserved.
+applies the compiler's default, inheritance, derived-value, and playback rules to props, Motion,
+Camera Orbit, and Camera Center. Callers can independently include or exclude inherited Prop values,
+Animation, Motion, and Camera tracks.
 
 Animation Manage also exposes Double Frames and Halve Frames across every prop. Double Frames
 inserts the exact intermediate frame in each authored interval and doubles BPM. Turns, Twist, and Arc are
 split between the two intervals; Scale, Depth, and Adjust are interpolated; and Plane and Axis are
-transported through the continuation frame. The action is disabled when BPM or any generated value
-cannot be represented by the current property range and precision. Halve Frames is enabled only
-when consolidating alternating frames and doubling the result reproduces every effective Animation
-frame value exactly.
+transported through the continuation frame. Because Prop Motion and Camera are independent
+timelines, effective Beats values on multi-frame tracks are multiplied by two so doubling BPM does
+not change their absolute playback timing. A single-frame Motion or Camera track has no interval, so
+its Beats value remains unchanged. Camera Orbit owns Camera Beats; Camera Center remains beatless.
+The action is disabled when BPM or any generated or adjusted value cannot be represented by the
+current property range and precision. Halve Frames is enabled only when consolidating alternating
+Animation frames, halving Beats on multi-frame Motion and Camera tracks, and doubling the result
+reproduces the complete compiled playback exactly.
 
 Motion `beats` defaults to `1` on the first frame and inherits afterward. Precision initially
 defaults to `false`; Shape initially defaults to Linear and Amount initially defaults to 50%.
@@ -268,13 +277,20 @@ value as `false`.
 
 ## Sparse frame compaction
 
-After a management operation, frames should be compacted against the same rules used by the
-compiler:
+After a management operation, frames are compacted through the compiler-owned semantic resolver:
 
 - Delete inherited values when they equal the preceding effective value.
 - On the first frame, delete inherited values when they equal their first-frame default.
 - Delete `plane` only when it is zero.
 - Delete `axis` only when it equals the current frame's `plane`.
+
+Animation compaction proves that removing a field leaves every resolved frame unchanged. Motion
+compaction recompiles the complete track after each candidate removal because authored zero-valued
+direction commands can advance the chained direction even when they do not move the prop. A
+zero-valued command is removed only when compiled playback remains unchanged.
+
+Pattern-definition callers can preserve selected authored fields and VTG relationship boundaries.
+This prevents compaction from erasing metadata that a later transformation intentionally inspects.
 
 Query values are integer-based. Derived floating-point noise near an integer must be
 snapped before it reaches the editor or serializer.

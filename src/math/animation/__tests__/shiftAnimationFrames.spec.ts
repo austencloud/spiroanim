@@ -100,6 +100,27 @@ describe('shared shiftAnimationFrames', () => {
     })
   })
 
+  it('produces the same compiled result for a direct offset as repeated single shifts', () => {
+    const frames: AnimData[] = [
+      { arc: 0, beats: 1, scale: 8, depth: 1 },
+      { arc: 90, beats: 2, scale: 9, depth: 2 },
+      { arc: 90, beats: 3, scale: 10, depth: 3 },
+      { arc: 90, beats: 4, scale: 11, depth: 4 },
+      { arc: 90, beats: 5, scale: 12, depth: 5 },
+    ]
+
+    for (let shiftCount = 1; shiftCount <= 7; shiftCount += 1) {
+      let repeated = frames
+      for (let repetition = 0; repetition < shiftCount; repetition += 1) {
+        repeated = shiftAnimationFrames(repeated, compileFrames(repeated))!
+      }
+
+      const direct = shiftAnimationFrames(frames, compileFrames(frames), shiftCount)
+      expect(direct).toBeDefined()
+      expect(compileFrames(direct!)).toEqual(compileFrames(repeated))
+    }
+  })
+
   it('omits values that can use defaults or inherit from the preceding frame', () => {
     const frames: AnimData[] = [
       { arc: 0, beats: 2, scale: 8 },

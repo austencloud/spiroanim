@@ -6,7 +6,7 @@ import { formatVtgIndividualSpeedRatio, formatVtgSpeedRatio } from '@/features/v
 const firstContinuationFrameIndex = 1
 const directionTolerance = 0.000_001
 const floatingPointTolerance = 0.000_001
-const serializedTurnsResolution = 0.1
+const legacySerializedTurnsResolution = 1
 const maximumTimingNumerator = 3600
 
 export type VtgSpinDirection = 'anti' | 'in'
@@ -62,11 +62,12 @@ const inferContinuation = (frame: AnimDataCompiled): VtgPropTiming | undefined =
   const direction = signedDirection(frame.posx, frame.arc, frame.rotx, absoluteRotation)
   if (Math.abs(direction) <= directionTolerance) return undefined
 
-  // Turns is serialized to tenths. Half of that resolution, expressed relative to this Arc,
-  // distinguishes an intended reduced ratio from query quantization noise.
+  // Current query strings serialize Turns to tenths, while legacy versions rounded to whole
+  // degrees. Use the widest supported half-step so old compound ratios still reduce to their
+  // intended timing after decoding.
   const ratioTolerance = Math.max(
     floatingPointTolerance,
-    serializedTurnsResolution / 2 / Math.abs(frame.arc) + Number.EPSILON,
+    legacySerializedTurnsResolution / 2 / Math.abs(frame.arc) + Number.EPSILON,
   )
   const ratio = inferReducedRatio(Math.abs(absoluteRotation / frame.arc), ratioTolerance)
   if (!ratio) return undefined

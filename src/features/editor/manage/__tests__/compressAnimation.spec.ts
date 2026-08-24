@@ -86,6 +86,7 @@ describe('compressAnimation', () => {
         shape: before.props[0]!.motion[index]!.shape,
         amount: before.props[0]!.motion[index]!.amount,
         move: before.props[0]!.motion[index]!.move,
+        direction: before.props[0]!.motion[index]!.direction,
         delta: before.props[0]!.motion[index]!.delta,
         offset: before.props[0]!.motion[index]!.offset,
       })
@@ -142,6 +143,38 @@ describe('compressAnimation', () => {
       { distance: 40, precision: false },
     ])
     expect(rootCompile(root).props[0]!.motion.map(({ offset }) => offset)).toEqual(before)
+  })
+
+  it('retains an explicit zero-distance direction command when the compiler uses it', () => {
+    const root = createRoot()
+    root.props[0]!.motion = [{ plane: 90, arc: 90, distance: 0 }, { distance: 5 }]
+    const before = rootCompile(root).props[0]!.motion
+
+    compressAnimation(root)
+
+    expect(root.props[0]!.motion[0]).not.toEqual({})
+    const after = rootCompile(root).props[0]!.motion
+    expect(after.map(({ active, direction, offset }) => ({ active, direction, offset }))).toEqual(
+      before.map(({ active, direction, offset }) => ({ active, direction, offset })),
+    )
+  })
+
+  it('honors track scope options', () => {
+    const root = createRoot()
+    const camera = structuredClone(root.camera)
+    const motion = structuredClone(root.props[0]!.motion)
+
+    compressAnimation(root, {
+      propValues: false,
+      animation: true,
+      motion: false,
+      camera: false,
+    })
+
+    expect(root.props[0]!.anim[0]).toEqual({})
+    expect(root.props[0]!.motion).toEqual(motion)
+    expect(root.camera).toEqual(camera)
+    expect(root.props[0]).toHaveProperty('prop')
   })
 
   it('is idempotent', () => {

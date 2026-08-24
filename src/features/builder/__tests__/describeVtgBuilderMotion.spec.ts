@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   areVtgBuilderMotionsEqual,
@@ -26,6 +26,17 @@ describe('describeVtgBuilderMotion', () => {
     expect(describeVtgBuilderMotionLabel('AA / OS')).toBe(
       'Spin: Anti / Anti\nDirection: Opposite / Same',
     )
+    expect(describeVtgBuilderMotionLabel('XX / XX')).toBe('Builder motion classification error.')
+  })
+
+  it('warns and returns an obvious label when motion classification fails', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Missing VTG animation')
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    expect(describeVtgBuilderMotion({ ...animation, props: [] })).toBe('XX / XX')
+    expect(warning).toHaveBeenCalledOnce()
+    warning.mockRestore()
   })
 
   it('uses signed hand and prop rotation amounts to distinguish Anti from In-Spin', () => {

@@ -394,7 +394,15 @@ describe('useSpiroAnimQS', () => {
     const query = await useSpiroAnimQS(VDEF_V10, useBaseQS(VDEF_V10, { charset: CHARSET_V10 }), 10)
     const { distance: _legacyDistance, ...root } = createRoot()
     delete root.props[0]!.anim[0]!.move
-    root.props[0]!.anim = [{ twist: -360 }, {}, { twist: 0 }, { twist: 360 }]
+    root.props[0]!.anim = [
+      { twist: -360 },
+      { twist: -271 },
+      { twist: -1 },
+      { twist: 0 },
+      { twist: 137 },
+      { twist: 359 },
+      { twist: 360 },
+    ]
 
     const encoded = query.encodeQS(root, false)
 

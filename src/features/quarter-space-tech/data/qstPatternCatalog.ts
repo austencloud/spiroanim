@@ -17,7 +17,7 @@ import type {
   QstPatternSwapPair,
   QstReadableAnimation,
 } from '@/features/quarter-space-tech/types'
-import type { AnimReadable } from '@/types/AnimTypes'
+import { compactReadableAnimationFrames } from '@/math/animation/compressFrames'
 
 const combinePagePairs = (pages: readonly QstCatalogPage[]): readonly QstCatalogPage[] =>
   Array.from({ length: Math.ceil(pages.length / 2) }, (_, index) => ({
@@ -162,26 +162,6 @@ export const getQstPatternDefinition = (
 export const getQstCollectionPatternCount = (collection: QstCollectionDefinition) =>
   collection.pages.reduce((count, page) => count + page.patterns.length, 0)
 
-const compactQstFrames = (frames: readonly AnimReadable[]): AnimReadable[] =>
-  frames.map((frame, index) => {
-    const compacted = { ...frame }
-    const previous = frames[index - 1]
-
-    if (compacted.turns === (previous?.turns ?? 0)) delete compacted.turns
-    if (compacted.beats === (previous?.beats ?? 1)) delete compacted.beats
-    if (compacted.scale === (previous?.scale ?? 10)) delete compacted.scale
-    if (compacted.depth === (previous?.depth ?? 0)) delete compacted.depth
-    if (compacted.adjust === (previous?.adjust ?? 0)) delete compacted.adjust
-    if (compacted.arc === (previous?.arc ?? 0)) delete compacted.arc
-
-    const plane = compacted.plane ?? 0
-    if ((compacted.axis ?? plane) === plane) delete compacted.axis
-    if (compacted.plane === 0) delete compacted.plane
-    if (compacted.move?.every((coordinate) => coordinate === 0)) delete compacted.move
-
-    return compacted
-  })
-
 const normalizeQstArc = (arc: number) => ((arc % 360) + 360) % 360
 
 export const buildQstPattern = (
@@ -199,7 +179,7 @@ export const buildQstPattern = (
         : undefined),
     }))
 
-    return { ...prop, anim: compactQstFrames(frames) }
+    return { ...prop, anim: compactReadableAnimationFrames(frames) }
   })
 
   return {

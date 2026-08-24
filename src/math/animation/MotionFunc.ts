@@ -1,6 +1,11 @@
 import { MathUtils, Quaternion, Vector3 } from 'three'
 
 import { MOTION_SHAPE } from '@/domain/animation/AnimStruct'
+import {
+  DEFAULT_MOTION_AMOUNT,
+  resolveMotionFrames,
+  type ResolveMotionFramesOptions,
+} from '@/math/animation/frameSemantics'
 import { InitialOrtho, InitialPoint, orthoAngle, orthoNext } from '@/math/animation/OrthogonalFunc'
 import type {
   CameraData,
@@ -14,7 +19,7 @@ export type MotionAngles = [plane: number, arc: number, distance: number]
 export type MotionCartesian = [x: number, y: number, z: number]
 
 export const MAX_MOTION_DISTANCE = 62
-export const DEFAULT_MOTION_AMOUNT = 50
+export { DEFAULT_MOTION_AMOUNT }
 export const DEFAULT_CAMERA_DISTANCE = 22
 export const PRECISION_DISTANCE_DIVISOR = 10
 
@@ -215,28 +220,17 @@ export const fitMotionPathEndpoint = (
   return best
 }
 
-export const compileMotionTrack = (frames: readonly MotionData[]): MotionDataCompiled[] => {
-  let beats = 1
-  let precision = false
-  let shape: MotionShapeInd = MOTION_SHAPE.LINE
-  let amount = DEFAULT_MOTION_AMOUNT
+export const compileMotionTrack = (
+  frames: readonly MotionData[],
+  options: ResolveMotionFramesOptions = {},
+): MotionDataCompiled[] => {
   const state = createMotionDirectionState()
   const offset = new Vector3()
   const delta = new Vector3()
 
-  return frames.map((frame) => {
-    beats = frame.beats ?? beats
-    precision = frame.precision ?? precision
-    shape = frame.shape ?? shape
-    amount = frame.amount ?? amount
-
-    const arc = frame.arc ?? 0
-    const plane = frame.plane ?? 0
-    const distance = frame.distance ?? 0
+  return resolveMotionFrames(frames, options).map((frame) => {
+    const { beats, precision, arc, plane, distance, shape, axis, amount, active } = frame
     const renderedDistance = precision ? distance / PRECISION_DISTANCE_DIVISOR : distance
-    const axis = frame.axis ?? 0
-    const active =
-      frame.arc !== undefined || frame.plane !== undefined || frame.distance !== undefined
     const move = active
       ? motionAnglesToCartesian([plane, arc, distance], state)
       : ([0, 0, 0] as MotionCartesian)

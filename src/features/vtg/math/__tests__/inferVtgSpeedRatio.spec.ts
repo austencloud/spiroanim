@@ -95,4 +95,22 @@ describe('inferVtgSpeedRatio', () => {
       expect(inferVtgSpeedRatio(decoded)).toBe(speedRatio)
     },
   )
+
+  it.each(['2:1', '2:3', '2:5'] as const)(
+    'preserves compound timing %s through legacy whole-degree Turns quantization',
+    async (speedRatio) => {
+      const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio })
+      if (!animation) throw new Error(`Missing ${speedRatio} animation`)
+      const version = await loadSpiroAnimQSVersion(6)
+      const codec = await useSpiroAnimQS(
+        version.VDEF,
+        useBaseQS(version.VDEF, { charset: version.CHARSET }),
+        6,
+      )
+
+      const decoded = await codec.decodeVer(codec.encodeQS(animation, false))
+
+      expect(inferVtgSpeedRatio(decoded)).toBe(speedRatio)
+    },
+  )
 })

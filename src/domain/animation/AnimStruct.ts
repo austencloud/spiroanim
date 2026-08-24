@@ -49,7 +49,6 @@ export const MOTION_SHAPE = {
 
 export const TWIST_MIN = -360
 export const TWIST_MAX = 360
-export const TWIST_INCREMENT = 45
 
 export const CMODES = {
   points: 0,

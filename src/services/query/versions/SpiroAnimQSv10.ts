@@ -14,9 +14,8 @@ import {
   omitEmptyCameraCenter,
   omitStandaloneMotionPrefix,
 } from '@/services/query/versions/SpiroAnimQSv9'
-import { TWIST_INCREMENT, TWIST_MAX, TWIST_MIN } from '@/domain/animation/AnimStruct'
+import { TWIST_MAX, TWIST_MIN } from '@/domain/animation/AnimStruct'
 import type { VDefEntry } from '@/services/query/types/BaseQSTypes'
-import type { QueryValueCodec } from '@/services/query/types/BaseQueryCodecTypes'
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 import type { AllVars } from '@/types/AnimTypes'
 
@@ -31,14 +30,9 @@ export {
   omitStandaloneMotionPrefix,
 }
 
-export const TWIST_QUERY_CODEC: QueryValueCodec = {
-  encode: (value) => Math.round(value / TWIST_INCREMENT),
-  decode: (value) => value * TWIST_INCREMENT,
-}
-
 export const VDEF = {
   ...LEGACY_VDEF,
-  twist: [TWIST_MIN, TWIST_MAX, 5, TWIST_QUERY_CODEC],
+  twist: [TWIST_MIN, TWIST_MAX, 10],
 } satisfies Record<AllVars, VDefEntry>
 
 export function createPropConfig(): ConfigData<AllVars> {
@@ -65,7 +59,7 @@ export function createExtendedAnimationConfig(): ConfigData<AllVars> {
       4,
       [
         ['bits', 3, ['beats', 'scale', 'depth']],
-        ['bits', 1, ['twist']],
+        ['bits', 2, ['twist']],
       ],
     ],
   ]

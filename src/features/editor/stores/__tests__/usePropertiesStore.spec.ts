@@ -66,12 +66,12 @@ describe('usePropertiesStore', () => {
     editor.animSet('twist', 100)
     await nextTick()
 
-    expect(player.raw().ROOT.value.props[0]!.anim[0]!.twist).toBe(90)
+    expect(player.raw().ROOT.value.props[0]!.anim[0]!.twist).toBe(100)
     expect(player.raw().COMPILED.value.props[0]!.anim[0]).toMatchObject({
-      twist: 90,
-      twistRoll: 90,
+      twist: 100,
+      twistRoll: 100,
     })
-    expect(editor.animGet('twist')).toEqual([90, true, '90°', false])
+    expect(editor.animGet('twist')).toEqual([100, true, '100°', false])
   })
 
   it('uses independent Motion timing and edits Motion without changing Animation', async () => {

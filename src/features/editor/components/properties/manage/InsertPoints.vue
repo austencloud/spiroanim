@@ -31,6 +31,7 @@ import AppTooltip from '@/components/AppTooltip.vue'
 import { useProperties } from '@/features/editor/composables/useProperties'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useManageProperties } from '@/features/editor/composables/useManageProperties'
+import { compressAnimationFrames } from '@/math/animation/compressFrames'
 import { InitialPoint, InitialOrtho, orthoPoint, orthoAngle } from '@/math/animation/OrthogonalFunc'
 import { Vector3, MathUtils } from 'three'
 import { INDPNT, CMODES, PPOS } from '@/domain/animation/AnimStruct'
@@ -166,10 +167,6 @@ const apply = () => {
           arc: Math.round(MathUtils.radToDeg(pos.angleTo(cur))),
         }
 
-      // If 0, set to undefined by deleting
-      if (push.plane === 0) delete push.plane
-      if (push.arc === 0) delete push.arc
-
       ins.push(push)
 
       // Calculate Ortho and cross it with Pos to get Direction
@@ -186,6 +183,8 @@ const apply = () => {
         ...ins[ins.length - 1]!,
       }
     }
+
+    compressAnimationFrames(ins, { preceding: at >= 0 ? cmpd[at] : undefined })
 
     if (start == -1)
       // && end == -1 )

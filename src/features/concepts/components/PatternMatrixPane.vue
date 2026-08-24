@@ -367,6 +367,7 @@ import PatternPlaybackControls from '@/features/concepts/components/PatternPlayb
 import PatternTransitionControls from '@/features/concepts/components/PatternTransitionControls.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
+import type { PatternRelationshipLabel } from '@/features/concepts/math/describePatternRelationships'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
@@ -409,7 +410,6 @@ import type {
   VtgCellAddress,
   VtgBeat,
   VtgCellReference,
-  VtgPatternLabel,
   VtgPropPlacement,
   VtgRuleDiagram,
   VtgRuleNumber,
@@ -449,7 +449,7 @@ interface BlankDimensions {
 }
 
 interface VtgMatrixTile {
-  label: VtgPatternLabel | VtgBuilderMotionLabel
+  label: PatternRelationshipLabel | VtgBuilderMotionLabel
   description: string
   column: VtgRuleNumber
   row: VtgRuleNumber

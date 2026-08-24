@@ -9,14 +9,17 @@ export interface VtgBuilderMotion {
   directions: readonly [VtgBuilderDirectionCode, VtgBuilderDirectionCode]
 }
 
+export const vtgBuilderMotionErrorLabel = 'XX / XX' as const
 export type VtgBuilderMotionLabel =
-  `${VtgBuilderSpinCode}${VtgBuilderSpinCode} / ${VtgBuilderDirectionCode}${VtgBuilderDirectionCode}`
+  | `${VtgBuilderSpinCode}${VtgBuilderSpinCode} / ${VtgBuilderDirectionCode}${VtgBuilderDirectionCode}`
+  | typeof vtgBuilderMotionErrorLabel
 
 const spinDescription = (code: VtgBuilderSpinCode): string => (code === 'A' ? 'Anti' : 'In')
 const directionDescription = (code: VtgBuilderDirectionCode): string =>
   code === 'S' ? 'Same' : 'Opposite'
 
 export const describeVtgBuilderMotionLabel = (label: VtgBuilderMotionLabel): string => {
+  if (label === vtgBuilderMotionErrorLabel) return 'Builder motion classification error.'
   const [spins, directions] = label.split(' / ')
   const firstSpin = spins?.[0] as VtgBuilderSpinCode | undefined
   const secondSpin = spins?.[1] as VtgBuilderSpinCode | undefined
@@ -113,6 +116,11 @@ export const areVtgBuilderSpinsEqual = (
 
 /** Describes the compiled movement axes used when a VTG cell enters Pattern Builder. */
 export const describeVtgBuilderMotion = (animation: RootDataFinal): VtgBuilderMotionLabel => {
-  const motion = getVtgBuilderMotion(animation)
-  return `${motion.spins[0]}${motion.spins[1]} / ${motion.directions[0]}${motion.directions[1]}`
+  try {
+    const motion = getVtgBuilderMotion(animation)
+    return `${motion.spins[0]}${motion.spins[1]} / ${motion.directions[0]}${motion.directions[1]}`
+  } catch (error) {
+    console.warn('Unable to classify Builder motion.', { error })
+    return vtgBuilderMotionErrorLabel
+  }
 }

@@ -152,29 +152,27 @@ const performShift = async () => {
     : undefined
   beginHistoryGroup(ROOT.value)
   try {
-    for (let repetition = 0; repetition < repetitions; repetition++) {
-      const shiftedProps = targets.map(({ propIndex, startIndex, endIndex }) => {
-        const prop = ROOT.value.props[propIndex]!
-        return shiftAnimationFrameRange(
-          prop.anim,
-          COMPILED.value.props[propIndex]!.anim,
-          startIndex,
-          endIndex,
-          { allowEndpointMismatch: true, preserveFinalOutgoing: true },
-        )
-      })
-      if (shiftedProps.some((frames) => frames === undefined)) return
+    const shiftedProps = targets.map(({ propIndex, startIndex, endIndex }) => {
+      const prop = ROOT.value.props[propIndex]!
+      return shiftAnimationFrameRange(
+        prop.anim,
+        COMPILED.value.props[propIndex]!.anim,
+        startIndex,
+        endIndex,
+        { allowEndpointMismatch: true, preserveFinalOutgoing: true, shiftCount: repetitions },
+      )
+    })
+    if (shiftedProps.some((frames) => frames === undefined)) return
 
-      for (const [selectionIndex, target] of targets.entries()) {
-        ROOT.value.props[target.propIndex]!.anim.splice(
-          target.startIndex,
-          target.endIndex - target.startIndex + 1,
-          ...shiftedProps[selectionIndex]!,
-        )
-      }
-      triggerRef(ROOT)
-      await nextTick()
+    for (const [selectionIndex, target] of targets.entries()) {
+      ROOT.value.props[target.propIndex]!.anim.splice(
+        target.startIndex,
+        target.endIndex - target.startIndex + 1,
+        ...shiftedProps[selectionIndex]!,
+      )
     }
+    triggerRef(ROOT)
+    await nextTick()
 
     if (selectedTimes?.[0] !== undefined && selectedTimes[1] !== undefined) {
       const startIndex = ETIMES.value.indexOf(selectedTimes[0])

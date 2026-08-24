@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
@@ -37,6 +37,19 @@ const quarterLabel = (label: VtgPatternLabel): VtgPatternLabel => {
 }
 
 describe('describePatternRelationships', () => {
+  it('warns and returns an obvious label when classification fails', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Missing VTG animation')
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    expect(describePatternRelationships({ ...animation, props: [] })).toMatchObject({
+      label: 'XX / XX',
+      description: expect.stringContaining('Pattern relationship error:'),
+    })
+    expect(warning).toHaveBeenCalledOnce()
+    warning.mockRestore()
+  })
+
   it('derives even-ratio labels from local path phase without changing 1:3', () => {
     expect(
       describePatternSelectionRelationships({ reference: '2-1', speedRatio: '1:3' }).label,
@@ -83,6 +96,21 @@ describe('describePatternRelationships', () => {
     }
 
     expect(mismatches).toEqual([])
+  })
+
+  it.each([
+    [45, 0],
+    [0, -45],
+    [180, 0],
+  ] as const)('ignores hidden prop rotation alignment %s/%s', (leftOffset, rightOffset) => {
+    const selection = { reference: '1-1', speedRatio: '2:3' } as const
+
+    expect(
+      describePatternSelectionRelationships({
+        ...selection,
+        propRotationOffsets: [leftOffset, rightOffset],
+      }),
+    ).toEqual(describePatternSelectionRelationships(selection))
   })
 
   it.each(['1:2', '1:4'] as const)(

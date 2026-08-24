@@ -3,6 +3,7 @@ import { MathUtils, Vector3 } from 'three'
 // Shared reconstruction math for rotating closed animation-frame ranges.
 
 import { TTYPE } from '@/domain/animation/AnimStruct'
+import { compactAnimationFrames } from '@/math/animation/compressFrames'
 import { InitialOrtho, InitialPoint, orthoAngle, orthoNext } from '@/math/animation/OrthogonalFunc'
 import type { AnimData, AnimDataCompiled } from '@/types/AnimTypes'
 
@@ -12,6 +13,7 @@ const integerSnapTolerance = 1e-9
 export interface ShiftAnimationRangeOptions {
   allowEndpointMismatch?: boolean
   preserveFinalOutgoing?: boolean
+  shiftCount?: number
 }
 
 const vectorsAlign = (first: readonly number[], second: readonly number[]) =>
@@ -73,32 +75,8 @@ const signedRotationAround = (source: Vector3, target: Vector3, axis: Vector3, c
   return Math.atan2(axis.dot(cross), source.dot(target))
 }
 
-const isZeroMove = (move: readonly number[]) => move.every((coordinate) => coordinate === 0)
-
-const compactFrames = (frames: readonly AnimData[], preceding?: AnimDataCompiled) =>
-  frames.map((frame, index) => {
-    const compacted = { ...frame }
-    const previous = index === 0 ? preceding : frames[index - 1]
-
-    if (compacted.turns === (previous?.turns ?? 0)) delete compacted.turns
-    if (compacted.twist === (previous?.twist ?? 0)) delete compacted.twist
-    if (compacted.beats === (previous?.beats ?? 1)) delete compacted.beats
-    if (compacted.scale === (previous?.scale ?? 10)) delete compacted.scale
-    if (compacted.depth === (previous?.depth ?? 0)) delete compacted.depth
-    if (compacted.type === (previous?.type ?? TTYPE.SPHE)) delete compacted.type
-    if (compacted.adjust === (previous?.adjust ?? 0)) delete compacted.adjust
-    if (compacted.arc === (previous?.arc ?? 0)) delete compacted.arc
-
-    const plane = compacted.plane ?? 0
-    if ((compacted.axis ?? plane) === plane) delete compacted.axis
-    if (compacted.plane === 0) delete compacted.plane
-    if (compacted.move !== undefined && isZeroMove(compacted.move)) delete compacted.move
-
-    return compacted
-  })
-
 /**
- * Rotates a closed animation by one displayed interval.
+ * Rotates a closed animation by the requested number of displayed intervals.
  *
  * The first frame in the shifted range is rebuilt from the preceding compiled
  * state, or from the application's fixed basis when the range begins at frame 0.
@@ -129,10 +107,14 @@ export const shiftAnimationFrameRange = (
 
   const rangeLength = endIndex - startIndex + 1
   const lastOutputIndex = rangeLength - 1
-  const targetIndices = [
-    ...Array.from({ length: lastOutputIndex }, (_, index) => startIndex + index + 1),
-    startIndex + 1,
-  ]
+  const requestedShiftCount = Math.trunc(options.shiftCount ?? 1)
+  if (requestedShiftCount === 0) return frames.slice(startIndex, endIndex + 1)
+  const normalizedShiftCount = MathUtils.euclideanModulo(requestedShiftCount, lastOutputIndex)
+  const firstCycleOffset = normalizedShiftCount === 0 ? lastOutputIndex : normalizedShiftCount
+  const targetIndices = Array.from(
+    { length: rangeLength },
+    (_, index) => startIndex + ((firstCycleOffset - 1 + index) % lastOutputIndex) + 1,
+  )
   const preserveFinalOutgoing = options.preserveFinalOutgoing ?? false
   const originalEnd = compiled[endIndex]!
 
@@ -216,8 +198,13 @@ export const shiftAnimationFrameRange = (
       twist: preserveOutgoing ? originalEnd.twist : target.twist,
       beats: preserveOutgoing
         ? originalEnd.beats
-        : compiled[outputIndex < lastOutputIndex - 1 ? startIndex + outputIndex + 1 : startIndex]!
-            .beats,
+        : compiled[
+            outputIndex === lastOutputIndex
+              ? startIndex + MathUtils.euclideanModulo(firstCycleOffset - 1, lastOutputIndex)
+              : targetIndex === endIndex
+                ? startIndex
+                : targetIndex
+          ]!.beats,
       scale: preserveOutgoing ? originalEnd.scale : target.scale,
       depth: preserveOutgoing ? originalEnd.depth : target.depth,
       type: target.type,
@@ -236,10 +223,14 @@ export const shiftAnimationFrameRange = (
     return undefined
   }
 
-  return compactFrames(shifted, startIndex > 0 ? compiled[startIndex - 1] : undefined)
+  return compactAnimationFrames(shifted, {
+    preceding: startIndex > 0 ? compiled[startIndex - 1] : undefined,
+  })
 }
 
 export const shiftAnimationFrames = (
   frames: readonly AnimData[],
   compiled: readonly AnimDataCompiled[],
-): AnimData[] | undefined => shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1)
+  shiftCount = 1,
+): AnimData[] | undefined =>
+  shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1, { shiftCount })

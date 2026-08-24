@@ -121,6 +121,17 @@ const axis = reactive({
   neg: true,
 })
 
+const twist = reactive({
+  name: 'twist',
+  text: 'Twist',
+  component: 'Decimal',
+  undef: true,
+  mult: 45,
+  min: -8,
+  max: 8,
+  neg: true,
+})
+
 const vals = [
   arc,
   turns,
@@ -136,16 +147,7 @@ const vals = [
     max: 18,
     neg: true,
   },
-  {
-    name: 'twist',
-    text: 'Twist',
-    component: 'Decimal',
-    undef: true,
-    mult: 90,
-    min: -4,
-    max: 4,
-    neg: true,
-  },
+  twist,
   { name: 'scale', text: 'Scale', component: 'Decimal', undef: true, mult: 1 },
   { name: 'depth', text: 'Depth', component: 'Decimal', undef: true, mult: 1 },
 ]
@@ -159,9 +161,9 @@ watchEffect(() => {
   turns.max = max // steps forward
   turns.min = -max // steps backward
 
-  arc.mult = plane.mult = axis.mult = arcd // each step = arcd degrees
-  arc.max = max // steps allowed in + direction for ARC
-  arc.min = -max // steps allowed in - direction for ARC
+  arc.mult = plane.mult = axis.mult = twist.mult = arcd // each step = arcd degrees
+  arc.max = twist.max = max // steps allowed in + direction for ARC and TWIST
+  arc.min = twist.min = -max // steps allowed in - direction for ARC and TWIST
 
   plane.max = axis.max = maxhalf // steps allowed in + direction for PLANE and AXIS
   plane.min = axis.min = -maxhalf // steps allowed in - direction for PLANE and AXIS

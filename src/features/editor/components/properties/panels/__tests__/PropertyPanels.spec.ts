@@ -40,6 +40,18 @@ describe('editor property panel organization', () => {
     ])
   })
 
+  it('uses the same dynamic step and full-circle range for Twist as Arc', () => {
+    const wrapper = shallowMount(AnimationsPanel, {
+      global: { provide: { store: ref('animation-panel-twist-step') } },
+    })
+    const vals = wrapper.getComponent(PropertyPanel).props('vals') as DynamicVal[]
+    const arc = vals.find(({ name }) => name === 'arc')
+    const twist = vals.find(({ name }) => name === 'twist')
+
+    expect(twist).toMatchObject({ mult: arc?.mult, min: arc?.min, max: arc?.max })
+    wrapper.unmount()
+  })
+
   it('moves the remaining animation controls into Advanced', () => {
     expect(propertyNames(AdvancedPanel, 'advanced-panel-order')).toEqual([
       'point',
