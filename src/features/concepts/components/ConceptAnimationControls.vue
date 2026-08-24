@@ -9,6 +9,8 @@
     <slot name="between-controls" />
   </div>
 
+  <slot name="before-customize" />
+
   <details
     class="concept-customize"
     :data-role="`${rolePrefix}-customize`"

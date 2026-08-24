@@ -155,6 +155,50 @@ describe('resampleAnimationFrames', () => {
     expect(restored.camera).toEqual(before.camera)
   })
 
+  it('subdivides and restores frame-local Yaw/Rotate instructions', () => {
+    const original = createAnimation()
+    for (const frame of original.props[0]!.anim) {
+      frame.turns = 0
+      frame.arc = 0
+      frame.adjust = 0
+    }
+    original.props[0]!.anim[1]!.yaw = 90
+    original.props[0]!.anim[1]!.rotate = 180
+    original.props[0]!.anim[2]!.yaw = -90
+    original.props[0]!.anim[2]!.rotate = -180
+
+    const originalCompiled = rootCompile(original).props[0]!.anim
+    const doubled = doubleAnimationFrames(original)!
+    const doubledCompiled = rootCompile(doubled).props[0]!.anim
+
+    expect(doubled.props[0]!.anim[1]).toMatchObject({ rotate: 90 })
+    expect(doubled.props[0]!.anim[2]).toMatchObject({ rotate: 90 })
+    expect(doubled.props[0]!.anim[3]).toMatchObject({ yaw: -90, rotate: -90 })
+    expect(doubled.props[0]!.anim[4]).toMatchObject({ yaw: -90, rotate: -90 })
+    for (const [sourceIndex, doubledIndex] of [
+      [0, 0],
+      [1, 2],
+      [2, 4],
+    ] as const) {
+      doubledCompiled[doubledIndex]!.rot.forEach((value, coordinate) =>
+        expect(value).toBeCloseTo(originalCompiled[sourceIndex]!.rot[coordinate]!),
+      )
+    }
+
+    const halved = halveAnimationFrames(doubled)
+    expect(halved?.props[0]?.anim[1]).toMatchObject({ rotate: 180 })
+    expect(halved?.props[0]?.anim[2]).toMatchObject({ yaw: -90, rotate: -180 })
+  })
+
+  it('preserves simultaneous primary and secondary rotations through independent channels', () => {
+    const animation = createAnimation()
+    animation.props[0]!.anim[1]!.rotate = 180
+
+    const doubled = doubleAnimationFrames(animation)
+    expect(doubled).toBeDefined()
+    expect(halveAnimationFrames(doubled!)).toBeDefined()
+  })
+
   it('leaves Beats unchanged on single-frame Prop Motion and Camera tracks', () => {
     const original = createAnimation()
     original.props[0]!.motion = [{ beats: 1, distance: 2 }]

@@ -24,6 +24,7 @@ export async function useSpiroAnimQS(
     createRootConfig,
     createPropConfig,
     createExtendedAnimationConfig,
+    createRotationAnimationConfig,
     createMotionConfig,
     createCameraConfig,
     encodeMotionFrame,
@@ -68,8 +69,14 @@ export async function useSpiroAnimQS(
   const rootConfig = createRootConfig()
   const propConfig = createPropConfig()
   const extendedAnimationConfig = createExtendedAnimationConfig?.()
+  const rotationAnimationConfig = createRotationAnimationConfig?.()
   const motionConfig = createMotionConfig?.()
   const cameraConfig = createCameraConfig?.()
+
+  const encodeOptionalAnimationTrack = (
+    config: ConfigType,
+    frames: RootDataFinal['props'][number]['anim'],
+  ): string => encodeVar(config, { anim: frames }).replace(/^\./, '').replace(/\.+$/, '')
 
   const qsUpdateHistory = (args: Record<string, string>) => {
     const encoded = new URLSearchParams(args).toString()
@@ -106,10 +113,12 @@ export async function useSpiroAnimQS(
       if (prop !== undefined) {
         query[`p${i}`] = encodeVar(propConfig, prop)
         if (extendedAnimationConfig) {
-          const extendedAnimation = encodeVar(extendedAnimationConfig, { anim: prop.anim })
-            .replace(/^\./, '')
-            .replace(/\.+$/, '')
+          const extendedAnimation = encodeOptionalAnimationTrack(extendedAnimationConfig, prop.anim)
           if (extendedAnimation !== '') query[`x${i}`] = extendedAnimation
+        }
+        if (rotationAnimationConfig) {
+          const rotationAnimation = encodeOptionalAnimationTrack(rotationAnimationConfig, prop.anim)
+          if (rotationAnimation !== '') query[`r${i}`] = rotationAnimation
         }
         if (motionConfig && (prop.motion?.length ?? 0) > 0) {
           const encodedMotion = encodeVar(motionConfig, {
@@ -206,14 +215,19 @@ export async function useSpiroAnimQS(
     let val: string | undefined
     while ((val = route[`p${i++}`] as string | undefined)) {
       const prop = Object.assign({ anim: [], motion: [] }, decodeVar(propConfig, val)) as PropData
-      const extendedAnimation = route[`x${i - 1}`] as string | undefined
-      if (extendedAnimationConfig && extendedAnimation) {
-        const decoded = decodeVar(extendedAnimationConfig, `.${extendedAnimation}`)
+      const mergeAnimationTrack = (config: ConfigType, encoded: string) => {
+        const decoded = decodeVar(config, `.${encoded}`)
         const frames: AnimFrame[] = Array.isArray(decoded.anim) ? (decoded.anim as AnimFrame[]) : []
         for (const [frameIndex, frame] of frames.entries()) {
           Object.assign((prop.anim[frameIndex] ??= {}), frame)
         }
       }
+      const extendedAnimation = route[`x${i - 1}`] as string | undefined
+      if (extendedAnimationConfig && extendedAnimation)
+        mergeAnimationTrack(extendedAnimationConfig, extendedAnimation)
+      const rotationAnimation = route[`r${i - 1}`] as string | undefined
+      if (rotationAnimationConfig && rotationAnimation)
+        mergeAnimationTrack(rotationAnimationConfig, rotationAnimation)
       const motion = route[`m${i - 1}`] as string | undefined
       if (motionConfig && motion) {
         const encodedMotion = omitStandaloneMotionPrefix ? `.${motion}` : motion

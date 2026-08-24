@@ -82,4 +82,82 @@ describe('AnimFunc', () => {
     expect(frames.map(({ twist }) => twist)).toEqual([0, 90, 90, 0, 0])
     expect(frames.map(({ twistRoll }) => twistRoll)).toEqual([0, 90, 180, 180, 180])
   })
+
+  it('compiles frame-local Yaw/Rotate into persistent orientation state', () => {
+    const root: RootData = {
+      bpm: 60,
+      prop: 3,
+      color: 2,
+      smooth: true,
+      guides: false,
+      paths: false,
+      arms: false,
+      nodes: false,
+      anchors: false,
+      props: [{ anim: [{}, { rotate: 180 }, {}, { yaw: -90, rotate: 90 }, {}] }],
+      aspectx: 16,
+      aspecty: 9,
+      distance: 22,
+      thick: 4,
+    }
+
+    const frames = rootCompile(rootFinal(root)).props[0]!.anim
+
+    expect(frames.map(({ yaw, rotate }) => ({ yaw, rotate }))).toEqual([
+      { yaw: 90, rotate: 0 },
+      { yaw: 90, rotate: 180 },
+      { yaw: 90, rotate: 0 },
+      { yaw: -90, rotate: 90 },
+      { yaw: 90, rotate: 0 },
+    ])
+    expect(
+      frames.every(({ rot }) => rot.every((value, index) => value === frames[0]!.rot[index])),
+    ).toBe(true)
+    expect(frames[1]!.orient).not.toEqual(frames[0]!.orient)
+    expect(frames[2]!.orient).toEqual(frames[1]!.orient)
+    expect(frames[3]!.orient).not.toEqual(frames[2]!.orient)
+    expect(frames[4]!.orient).toEqual(frames[3]!.orient)
+    expect(frames[1]!.primaryOrient).toEqual(frames[0]!.primaryOrient)
+    expect(frames[1]!.secondaryOrient).not.toEqual(frames[0]!.secondaryOrient)
+    expect(frames[2]!.secondaryOrient).toEqual(frames[1]!.secondaryOrient)
+    expect(frames[2]!.primaryOrient).toEqual(frames[1]!.primaryOrient)
+  })
+
+  it('does not let Yaw/Rotate alter later primary Axis/Turns state', () => {
+    const createRoot = (withSecondary: boolean): RootData => ({
+      bpm: 60,
+      prop: 3,
+      color: 2,
+      smooth: true,
+      guides: false,
+      paths: false,
+      arms: false,
+      nodes: false,
+      anchors: false,
+      props: [
+        {
+          anim: [
+            {},
+            ...(withSecondary ? [{ yaw: 90, rotate: 180 }] : [{}]),
+            { turns: 90 },
+            { axis: -90, turns: 90 },
+          ],
+        },
+      ],
+      aspectx: 16,
+      aspecty: 9,
+      distance: 22,
+      thick: 4,
+    })
+
+    const compiled = rootCompile(rootFinal(createRoot(true))).props[0]!.anim
+    const primaryOnly = rootCompile(rootFinal(createRoot(false))).props[0]!.anim
+
+    for (const [index, frame] of compiled.entries()) {
+      expect(frame.rot).toEqual(primaryOnly[index]!.rot)
+      expect(frame.rotx).toEqual(primaryOnly[index]!.rotx)
+    }
+    expect(compiled[1]!.orient).not.toEqual(primaryOnly[1]!.orient)
+    expect(compiled.at(-1)!.orient).not.toEqual(primaryOnly.at(-1)!.orient)
+  })
 })

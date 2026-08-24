@@ -13,6 +13,8 @@ const numericTolerance = 0.000_000_001
 const animationValueKeys = [
   'turns',
   'twist',
+  'yaw',
+  'rotate',
   'beats',
   'scale',
   'depth',
@@ -25,6 +27,14 @@ const animationValueKeys = [
 
 const nearlyEqual = (first: number, second: number): boolean =>
   Math.abs(first - second) <= numericTolerance
+
+const vectorsNearlyEqual = (first: readonly number[], second: readonly number[]): boolean =>
+  first.length === second.length &&
+  first.every((value, index) => nearlyEqual(value, second[index]!))
+
+const quaternionsNearlyEqual = (first: readonly number[], second: readonly number[]): boolean =>
+  first.length === second.length &&
+  nearlyEqual(Math.abs(first.reduce((sum, value, index) => sum + value * second[index]!, 0)), 1)
 
 const isRepresentableValue = (key: AllVars, value: number): boolean => {
   const [minimum, maximum, _bits, transform] = VDEF[key]
@@ -72,7 +82,17 @@ const compiledFramesEqual = (
     const comparison = second[index]
     return (
       comparison !== undefined &&
-      animationValueKeys.every((key) => nearlyEqual(frame[key], comparison[key]))
+      animationValueKeys.every((key) => nearlyEqual(frame[key], comparison[key])) &&
+      nearlyEqual(frame.twistRoll, comparison.twistRoll) &&
+      vectorsNearlyEqual(frame.pos, comparison.pos) &&
+      vectorsNearlyEqual(frame.rot, comparison.rot) &&
+      vectorsNearlyEqual(frame.posx, comparison.posx) &&
+      vectorsNearlyEqual(frame.rotx, comparison.rotx) &&
+      vectorsNearlyEqual(frame.yawx, comparison.yawx) &&
+      vectorsNearlyEqual(frame.adjustx, comparison.adjustx) &&
+      quaternionsNearlyEqual(frame.primaryOrient, comparison.primaryOrient) &&
+      quaternionsNearlyEqual(frame.secondaryOrient, comparison.secondaryOrient) &&
+      quaternionsNearlyEqual(frame.orient, comparison.orient)
     )
   })
 

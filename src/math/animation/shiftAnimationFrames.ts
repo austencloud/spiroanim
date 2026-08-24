@@ -20,6 +20,12 @@ const vectorsAlign = (first: readonly number[], second: readonly number[]) =>
   first.length === second.length &&
   first.every((value, index) => Math.abs(value - second[index]!) <= endpointTolerance)
 
+const quaternionsAlign = (first: readonly number[], second: readonly number[]) => {
+  if (first.length !== second.length) return false
+  const dot = first.reduce((sum, value, index) => sum + value * second[index]!, 0)
+  return Math.abs(1 - Math.abs(dot)) <= endpointTolerance
+}
+
 const rollsAlign = (first: number, second: number) => {
   const difference = MathUtils.euclideanModulo(second - first, 360)
   return difference <= endpointTolerance || 360 - difference <= endpointTolerance
@@ -38,6 +44,9 @@ export const animationRangeEndpointsAlign = (
     last !== undefined &&
     vectorsAlign(first.pos, last.pos) &&
     vectorsAlign(first.rot, last.rot) &&
+    quaternionsAlign(first.primaryOrient, last.primaryOrient) &&
+    quaternionsAlign(first.secondaryOrient, last.secondaryOrient) &&
+    quaternionsAlign(first.orient, last.orient) &&
     rollsAlign(first.twistRoll, last.twistRoll)
   )
 }
@@ -196,6 +205,8 @@ export const shiftAnimationFrameRange = (
           (target.type === TTYPE.SPHE ? MathUtils.radToDeg(arcRadians) : 0),
       ),
       twist: preserveOutgoing ? originalEnd.twist : target.twist,
+      yaw: target.yaw,
+      rotate: target.rotate,
       beats: preserveOutgoing
         ? originalEnd.beats
         : compiled[

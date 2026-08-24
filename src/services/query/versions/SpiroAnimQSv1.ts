@@ -1,6 +1,15 @@
 // src/services/query/versions/SpiroAnimQSv1.ts
 
-import { COLORS, TTEXT, TWIST_MAX, TWIST_MIN } from '@/domain/animation/AnimStruct'
+import {
+  COLORS,
+  ROTATE_MAX,
+  ROTATE_MIN,
+  TTEXT,
+  TWIST_MAX,
+  TWIST_MIN,
+  YAW_MAX,
+  YAW_MIN,
+} from '@/domain/animation/AnimStruct'
 
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 import type { VDefEntry } from '@/services/query/types/BaseQSTypes'
@@ -35,6 +44,9 @@ export const VDEF = {
   turns: [-1980, 1980, 12], // 4094
   // Reserved for QS v10's extended Animation track.
   twist: [TWIST_MIN, TWIST_MAX, 10],
+  // Reserved for QS v11's extended Animation track.
+  yaw: [YAW_MIN, YAW_MAX, 9],
+  rotate: [ROTATE_MIN, ROTATE_MAX, 10],
   adjust: [-180, 180, 9], //
   arc: [0, 360, 9], //
   plane: [-180, 180, 9], //

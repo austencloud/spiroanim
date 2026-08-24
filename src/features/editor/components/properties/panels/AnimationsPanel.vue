@@ -29,6 +29,29 @@
       <br /><i>When undefined, this property mirrors Plane, keeping them aligned.</i>
     </template>
 
+    <template #twist>
+      <strong>Twist</strong><br />
+      Rolls the prop around its own transported local axis while leaving its path and Turns
+      unchanged.<br />
+      The signed value is added during each frame interval and inherited by following frames.
+      Setting Twist to zero stops adding roll without undoing the accumulated orientation.<br />
+      <br /><i>When undefined, this property inherits from the previous frame.</i>
+    </template>
+
+    <template #yaw>
+      <strong>Yaw</strong><br />
+      Selects the axis used by <strong>Rotate</strong>. It defaults to 90° when Rotate is set and
+      has no effect by itself.<br />
+      <br /><i>Yaw applies only to this frame and is not inherited.</i>
+    </template>
+
+    <template #rotate>
+      <strong>Rotate</strong><br />
+      Rotates the prop around the frame's <strong>Yaw</strong> axis without replacing Turns or Axis.
+      Positive and negative values select the direction.<br />
+      <br /><i>Rotate applies only to this frame and is not inherited.</i>
+    </template>
+
     <template #adjust>
       <strong>Adjust</strong><br />
       Applies an offset on top of the current <strong>Axis</strong> intended for fine-tuning 3D
@@ -36,15 +59,6 @@
       This does not redefine <strong>Plane</strong> or <strong>Arc</strong>; instead, it adds or
       subtracts degrees from the established axis and smoothly interpolates toward that new
       orientation.<br />
-      <br /><i>When undefined, this property inherits from the previous frame.</i>
-    </template>
-
-    <template #twist>
-      <strong>Twist</strong><br />
-      Rolls the prop around its own transported local axis while leaving its path and Turns
-      unchanged.<br />
-      The signed value is added during each frame interval and inherited by following frames.
-      Setting Twist to zero stops adding roll without undoing the accumulated orientation.<br />
       <br /><i>When undefined, this property inherits from the previous frame.</i>
     </template>
 
@@ -132,11 +146,36 @@ const twist = reactive({
   neg: true,
 })
 
+const yaw = reactive({
+  name: 'yaw',
+  text: 'Yaw',
+  component: 'Yaw',
+  undef: true,
+  mult: 45,
+  min: -4,
+  max: 4,
+  neg: true,
+})
+
+const rotate = reactive({
+  name: 'rotate',
+  text: 'Rotate',
+  component: 'Decimal',
+  undef: true,
+  mult: 45,
+  min: -8,
+  max: 8,
+  neg: true,
+})
+
 const vals = [
   arc,
   turns,
   plane,
   axis,
+  twist,
+  yaw,
+  rotate,
   {
     name: 'adjust',
     text: 'Adjust',
@@ -147,7 +186,6 @@ const vals = [
     max: 18,
     neg: true,
   },
-  twist,
   { name: 'scale', text: 'Scale', component: 'Decimal', undef: true, mult: 1 },
   { name: 'depth', text: 'Depth', component: 'Decimal', undef: true, mult: 1 },
 ]
@@ -161,12 +199,12 @@ watchEffect(() => {
   turns.max = max // steps forward
   turns.min = -max // steps backward
 
-  arc.mult = plane.mult = axis.mult = twist.mult = arcd // each step = arcd degrees
-  arc.max = twist.max = max // steps allowed in + direction for ARC and TWIST
-  arc.min = twist.min = -max // steps allowed in - direction for ARC and TWIST
+  arc.mult = plane.mult = axis.mult = twist.mult = yaw.mult = rotate.mult = arcd
+  arc.max = twist.max = rotate.max = max
+  arc.min = twist.min = rotate.min = -max
 
-  plane.max = axis.max = maxhalf // steps allowed in + direction for PLANE and AXIS
-  plane.min = axis.min = -maxhalf // steps allowed in - direction for PLANE and AXIS
+  plane.max = axis.max = yaw.max = maxhalf
+  plane.min = axis.min = yaw.min = -maxhalf
 })
 
 panelWatcher(ANIMS, data, vals, animGet)

@@ -31,7 +31,7 @@ export {
   omitStandaloneMotionPrefix,
 }
 
-const WHOLE_DEGREE_QUERY_CODEC: QueryValueCodec = {
+export const WHOLE_DEGREE_QUERY_CODEC: QueryValueCodec = {
   encode: Math.round,
   decode: (value) => value,
 }

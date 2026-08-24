@@ -121,6 +121,20 @@ describe('shared shiftAnimationFrames', () => {
     }
   })
 
+  it('preserves secondary rotation state while shifting a closed range', () => {
+    const frames: AnimData[] = [{ arc: 0, turns: 0, rotate: 0 }, { rotate: 180 }, { rotate: 180 }]
+    const compiled = compileFrames(frames)
+    expect(animationEndpointsAlign(compiled)).toBe(true)
+
+    const shifted = shiftAnimationFrames(frames, compiled)
+    expect(shifted).toBeDefined()
+    const result = compileFrames(shifted!)
+
+    expectVectorClose(result[0]!.rot, compiled[1]!.rot)
+    expectVectorClose(result[1]!.rot, compiled[2]!.rot)
+    expectVectorClose(result[2]!.rot, compiled[1]!.rot)
+  })
+
   it('omits values that can use defaults or inherit from the preceding frame', () => {
     const frames: AnimData[] = [
       { arc: 0, beats: 2, scale: 8 },

@@ -12,7 +12,14 @@ import { CHARSET as CHARSET_V7, VDEF as VDEF_V7 } from '@/services/query/version
 import { CHARSET as CHARSET_V8, VDEF as VDEF_V8 } from '@/services/query/versions/SpiroAnimQSv8'
 import { CHARSET as CHARSET_V9, VDEF as VDEF_V9 } from '@/services/query/versions/SpiroAnimQSv9'
 import { CHARSET as CHARSET_V10, VDEF as VDEF_V10 } from '@/services/query/versions/SpiroAnimQSv10'
+import {
+  CHARSET as CHARSET_V11,
+  VDEF as VDEF_V11,
+  createExtendedAnimationConfig as createExtendedAnimationConfigV11,
+  createRotationAnimationConfig as createRotationAnimationConfigV11,
+} from '@/services/query/versions/SpiroAnimQSv11'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
+import { doubleAnimationFrames } from '@/features/editor/manage/resampleAnimationFrames'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const createRoot = (): RootDataFinal & { distance: number } => ({
@@ -409,6 +416,84 @@ describe('useSpiroAnimQS', () => {
     expect(encoded.x0).not.toMatch(/^\./)
     expect(encoded.x0).not.toMatch(/\.$/)
     expect(query.decodeQS(encoded).props[0]!.anim).toEqual(root.props[0]!.anim)
+  })
+
+  it('round-trips sparse v11 xN and rN animation tracks independently', async () => {
+    const query = await useSpiroAnimQS(VDEF_V11, useBaseQS(VDEF_V11, { charset: CHARSET_V11 }), 11)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props[0]!.anim = [
+      { beats: 2, yaw: -180, rotate: -360, twist: -360 },
+      { scale: 11, yaw: 90, rotate: 180, twist: 45 },
+      { depth: 1, yaw: 180, rotate: 360, twist: 360 },
+      {},
+    ]
+
+    const encoded = query.encodeQS(root, false)
+
+    expect(encoded.v).toBe('11')
+    expect(encoded.x0).not.toMatch(/^\./)
+    expect(encoded.x0).not.toMatch(/\.$/)
+    expect(encoded.r0).not.toMatch(/^\./)
+    expect(encoded.r0).not.toMatch(/\.$/)
+    expect(encoded.x0!.split('.')[0]).toHaveLength(3)
+    expect(encoded.r0!.split('.')[0]).toHaveLength(5)
+    expect(query.decodeQS(encoded).props[0]!.anim).toEqual(root.props[0]!.anim)
+    expect(query.encodeQS(query.decodeQS(encoded), false)).toEqual(encoded)
+  })
+
+  it('defines separate v11 xN and rN tracks with visible Yaw, Rotate, Twist order', () => {
+    expect(createExtendedAnimationConfigV11()).toEqual([
+      ['anim', 3, [['bits', 3, ['beats', 'scale', 'depth']]]],
+    ])
+    expect(createRotationAnimationConfigV11()).toEqual([
+      ['anim', 5, [['bits', 5, ['twist', 'rotate', 'yaw']]]],
+    ])
+  })
+
+  it('omits unused v11 rN tracks without affecting xN tracks', async () => {
+    const query = await useSpiroAnimQS(VDEF_V11, useBaseQS(VDEF_V11, { charset: CHARSET_V11 }), 11)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props[0]!.anim = [{ scale: 11 }]
+
+    const encoded = query.encodeQS(root, false)
+
+    expect(encoded.x0).toBeDefined()
+    expect(encoded).not.toHaveProperty('r0')
+  })
+
+  it('decodes the reported v11 Rotate animation', async () => {
+    const query = await useSpiroAnimQS(VDEF_V11, useBaseQS(VDEF_V11, { charset: CHARSET_V11 }), 11)
+    const decoded = query.decodeQS({
+      r: 'Ew68kk11Y',
+      p0: 'N__.xT_.bn_..',
+      r0: '._-7f_',
+      c: '_j_bhq',
+      v: '11',
+    })
+
+    expect(decoded.props[0]!.anim).toEqual([{ arc: 270 }, { arc: 90, rotate: 180 }, {}, {}])
+    expect(doubleAnimationFrames(decoded)).toBeDefined()
+  })
+
+  it('decodes the reported v11 Rotate animation with inherited Turns', async () => {
+    const query = await useSpiroAnimQS(VDEF_V11, useBaseQS(VDEF_V11, { charset: CHARSET_V11 }), 11)
+    const decoded = query.decodeQS({
+      r: 'Ew68kk11Y',
+      p0: 'N__.xT_.bn_Rhw..',
+      r0: '._-7f_',
+      c: '_j_bhq',
+      v: '11',
+    })
+
+    expect(decoded.props[0]!.anim).toEqual([
+      { arc: 270 },
+      { arc: 90, turns: 180, rotate: 180 },
+      {},
+      {},
+    ])
+    expect(doubleAnimationFrames(decoded)).toBeDefined()
   })
 
   it('rounds version 10 whole-degree Animation angles instead of truncating floating noise', async () => {

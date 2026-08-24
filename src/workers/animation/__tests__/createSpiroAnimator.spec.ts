@@ -11,6 +11,7 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { describe, expect, it } from 'vitest'
 
 import { COLSET, MOTION_SHAPE, RADIUS, TTYPE } from '@/domain/animation/AnimStruct'
+import { doubleAnimationFrames } from '@/features/editor/manage/resampleAnimationFrames'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { cartesianToMotionAngles, createMotionDirectionState } from '@/math/animation/MotionFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
@@ -318,6 +319,66 @@ describe('createSpiroAnimator export rendering', () => {
 })
 
 describe('createSpiroAnimator prop orientation', () => {
+  it('keeps the same smooth orientation and baked path after doubling Rotate', () => {
+    const root = createRoot(false)
+    root.paths = true
+    root.props[0]!.motion = []
+    root.props[0]!.anim = [{ arc: 270 }, { arc: 90, turns: 180, rotate: 180 }, {}, {}]
+
+    const original = rootFinal(root)
+    const doubled = doubleAnimationFrames(original)
+    if (!doubled) throw new Error('Expected the animation to be safely doubled')
+
+    const createTestAnimator = (animation: ReturnType<typeof rootFinal>) => {
+      const scene = new Scene()
+      const compiled = rootCompile(animation)
+      const animator = createSpiroAnimator({
+        scene,
+        speed: 1,
+        girth: 2,
+        bpm: compiled.bpm,
+        smooth: compiled.smooth,
+        prop: compiled.props[0]!,
+        completed: () => undefined,
+        width: 800,
+        height: 600,
+        distance: 22,
+        fov: 45,
+        timeline: false,
+      })
+      return { animator, model: getAnimatedModelGroup(scene), scene }
+    }
+
+    const originalResult = createTestAnimator(original)
+    const doubledResult = createTestAnimator(doubled)
+    for (let milliseconds = 0; milliseconds <= 3000; milliseconds += 25) {
+      originalResult.animator.seek(milliseconds)
+      doubledResult.animator.seek(milliseconds)
+      expect(
+        Math.abs(originalResult.model.quaternion.dot(doubledResult.model.quaternion)),
+      ).toBeCloseTo(1, 10)
+      expect(originalResult.model.position.distanceTo(doubledResult.model.position)).toBeLessThan(
+        1e-9,
+      )
+    }
+
+    const originalPath = getLineByColor(originalResult.scene, COLSET[2]![0])
+    const doubledPath = getLineByColor(doubledResult.scene, COLSET[2]![0])
+    if (!originalPath || !doubledPath) throw new Error('Expected both baked Paths')
+    const originalPoints = getLinePoints(originalPath)
+    const doubledPoints = getLinePoints(doubledPath)
+    expect(doubledPoints).toHaveLength(originalPoints.length * 2)
+    const pointDifferences = originalPoints.map((point, index) => {
+      const segmentIndex = Math.floor(index / 100)
+      const segmentPointIndex = index % 100
+      const doubledIndex =
+        segmentIndex * 200 +
+        (segmentPointIndex <= 49 ? segmentPointIndex * 2 : segmentPointIndex * 2 + 1)
+      return point.distanceTo(doubledPoints[doubledIndex]!)
+    })
+    expect(Math.max(...pointDifferences)).toBeLessThan(1e-6)
+  })
+
   it('applies precompiled inherited Twist around the transported local prop axis', () => {
     const root = createRoot(false)
     root.prop = 3

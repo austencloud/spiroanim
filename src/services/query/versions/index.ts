@@ -2,7 +2,7 @@ import type { AllVars, MotionData } from '@/types/AnimTypes'
 import type { VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 
-export const CURRENT_SPIRO_ANIM_QS_VERSION = 10
+export const CURRENT_SPIRO_ANIM_QS_VERSION = 11
 
 export interface SpiroAnimQSVersion {
   CHARSET: string
@@ -10,6 +10,7 @@ export interface SpiroAnimQSVersion {
   createRootConfig(): ConfigData<AllVars>
   createPropConfig(): ConfigData<AllVars>
   createExtendedAnimationConfig?(): ConfigData<AllVars>
+  createRotationAnimationConfig?(): ConfigData<AllVars>
   createMotionConfig?(): ConfigData<AllVars>
   createCameraConfig?(): ConfigData<AllVars>
   encodeMotionFrame?(frame: MotionData): MotionData
@@ -54,6 +55,8 @@ export async function loadSpiroAnimQSVersion(version: number): Promise<SpiroAnim
       return import('@/services/query/versions/SpiroAnimQSv9')
     case 10:
       return import('@/services/query/versions/SpiroAnimQSv10')
+    case 11:
+      return import('@/services/query/versions/SpiroAnimQSv11')
     default:
       throw new UnsupportedSpiroAnimQSVersionError(version)
   }

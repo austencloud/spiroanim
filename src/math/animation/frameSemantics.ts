@@ -19,7 +19,13 @@ export const ANIMATION_INHERITED_KEYS = [
   'arc',
 ] as const
 
-export const ANIMATION_FRAME_KEYS = [...ANIMATION_INHERITED_KEYS, 'plane', 'axis'] as const
+export const ANIMATION_FRAME_KEYS = [
+  ...ANIMATION_INHERITED_KEYS,
+  'plane',
+  'axis',
+  'yaw',
+  'rotate',
+] as const
 
 export type AnimationInheritedKey = (typeof ANIMATION_INHERITED_KEYS)[number]
 export type AnimationFrameKey = (typeof ANIMATION_FRAME_KEYS)[number]
@@ -31,6 +37,8 @@ type AnimationFrameLike<TType extends number | string> = Omit<AnimData, 'type'> 
 export interface ResolvedAnimationFrame<TType extends number | string = TypeInd> {
   turns: number
   twist: number
+  yaw: number
+  rotate: number
   beats: number
   scale: number
   depth: number
@@ -46,6 +54,8 @@ const createInitialAnimationFrame = <TType extends number | string>(
 ): ResolvedAnimationFrame<TType> => ({
   turns: 0,
   twist: 0,
+  yaw: 90,
+  rotate: 0,
   beats: 1,
   scale: 10,
   depth: 0,
@@ -70,6 +80,8 @@ const resolveAnimationFrame = <TType extends number | string>(
   return {
     turns: frame.turns ?? previous.turns,
     twist: frame.twist ?? previous.twist,
+    yaw: frame.yaw ?? 90,
+    rotate: frame.rotate ?? 0,
     beats: frame.beats ?? previous.beats,
     scale: frame.scale ?? previous.scale,
     depth: frame.depth ?? previous.depth,

@@ -33,11 +33,26 @@ describe('editor property panel organization', () => {
       'turns',
       'plane',
       'axis',
-      'adjust',
       'twist',
+      'yaw',
+      'rotate',
+      'adjust',
       'scale',
       'depth',
     ])
+  })
+
+  it('uses a half-circle Yaw range and full-circle Rotate range', () => {
+    const wrapper = shallowMount(AnimationsPanel, {
+      global: { provide: { store: ref('animation-panel-yaw-rotate-range') } },
+    })
+    const vals = wrapper.getComponent(PropertyPanel).props('vals') as DynamicVal[]
+    const yaw = vals.find(({ name }) => name === 'yaw')
+    const rotate = vals.find(({ name }) => name === 'rotate')
+
+    expect(yaw).toMatchObject({ mult: 45, min: -4, max: 4 })
+    expect(rotate).toMatchObject({ mult: 45, min: -8, max: 8 })
+    wrapper.unmount()
   })
 
   it('uses the same dynamic step and full-circle range for Twist as Arc', () => {

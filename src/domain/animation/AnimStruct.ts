@@ -49,6 +49,10 @@ export const MOTION_SHAPE = {
 
 export const TWIST_MIN = -360
 export const TWIST_MAX = 360
+export const YAW_MIN = -180
+export const YAW_MAX = 180
+export const ROTATE_MIN = -360
+export const ROTATE_MAX = 360
 
 export const CMODES = {
   points: 0,

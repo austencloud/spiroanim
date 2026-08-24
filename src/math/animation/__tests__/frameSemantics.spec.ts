@@ -17,6 +17,8 @@ describe('compiler frame semantics', () => {
       {
         turns: 90,
         twist: 45,
+        yaw: 90,
+        rotate: 0,
         beats: 2,
         scale: 10,
         depth: 0,
@@ -29,6 +31,8 @@ describe('compiler frame semantics', () => {
       {
         turns: 90,
         twist: 45,
+        yaw: 90,
+        rotate: 0,
         beats: 2,
         scale: 10,
         depth: 0,
@@ -41,6 +45,8 @@ describe('compiler frame semantics', () => {
       {
         turns: 90,
         twist: 45,
+        yaw: 90,
+        rotate: 0,
         beats: 2,
         scale: 10,
         depth: 0,
@@ -50,6 +56,14 @@ describe('compiler frame semantics', () => {
         plane: -45,
         axis: 60,
       },
+    ])
+  })
+
+  it('defaults Yaw only for the current frame and never inherits Rotate', () => {
+    expect(resolveAnimationFrames([{ yaw: -90, rotate: 180 }, {}, { rotate: -90 }])).toMatchObject([
+      { yaw: -90, rotate: 180 },
+      { yaw: 90, rotate: 0 },
+      { yaw: 90, rotate: -90 },
     ])
   })
 

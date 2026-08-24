@@ -82,6 +82,22 @@ const compressResolvedAnimationFrames = <TFrame extends AnimData | AnimReadable>
       delete frame.axis
       removed++
     }
+    if (
+      frame.rotate !== undefined &&
+      preserve?.(frameIndex, 'rotate') !== true &&
+      resolved.rotate === 0
+    ) {
+      delete frame.rotate
+      removed++
+    }
+    if (
+      frame.yaw !== undefined &&
+      preserve?.(frameIndex, 'yaw') !== true &&
+      (resolved.rotate === 0 || resolved.yaw === 90)
+    ) {
+      delete frame.yaw
+      removed++
+    }
     if (removeZeroMove(frame)) removed++
   })
 

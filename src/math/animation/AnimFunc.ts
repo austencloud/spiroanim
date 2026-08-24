@@ -1,9 +1,9 @@
 // src\func\AnimFunc.ts
 
-import { Vector3, MathUtils } from 'three'
+import { Vector3, Quaternion, MathUtils } from 'three'
 import { TTYPE, RADIUS, PPOS, PROPCP } from '@/domain/animation/AnimStruct'
 
-import { orthoNext, InitialPoint, InitialOrtho } from './OrthogonalFunc'
+import { orthoNext, orthoPoint, InitialPoint, InitialOrtho } from './OrthogonalFunc'
 import { compileMotionTrack, createDefaultCameraFrame } from './MotionFunc'
 import { resolveAnimationFrames } from './frameSemantics'
 
@@ -130,6 +130,9 @@ const withoutBeats = ({ beats: _beats, ...frame }: MotionDataCompiled) => frame
 
 const posx = new Vector3(),
   rotx = new Vector3(),
+  yawx = new Vector3(),
+  yawProjected = new Vector3(),
+  adjustx = new Vector3(),
   adju = new Vector3()
 
 // Converts an individual prop to be used by the animator
@@ -140,7 +143,12 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     pos = InitialPoint.clone(),
     rot = InitialPoint.clone(),
     plane = InitialOrtho.clone(),
-    axis = InitialOrtho.clone()
+    axis = InitialOrtho.clone(),
+    primaryOrientation = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), InitialPoint),
+    secondaryOrientation = new Quaternion(),
+    orientation = new Quaternion(),
+    primaryRotation = new Quaternion(),
+    secondaryRotation = new Quaternion()
   let twistRoll = 0
 
   for (const vars of resolveAnimationFrames(prop.anim)) {
@@ -149,7 +157,8 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
       radAxis = MathUtils.degToRad(vars.axis),
       // Angle to the next point
       radArc = MathUtils.degToRad(vars.arc),
-      radRot = MathUtils.degToRad(vars.turns) + (vars.type == TTYPE.LINE ? 0 : radArc)
+      radRot = MathUtils.degToRad(vars.turns) + (vars.type == TTYPE.LINE ? 0 : radArc),
+      radRotate = MathUtils.degToRad(vars.rotate)
 
     twistRoll += vars.twist
 
@@ -157,8 +166,22 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     orthoNext(radPlane, radArc, pos, plane, posx)
     orthoNext(radAxis, radRot, rot, axis, rotx)
 
+    // Primary and secondary rotations accumulate independently. Yaw is measured against the
+    // fixed model basis, so subdividing one interval retains the same world axis on every piece.
+    orthoPoint(MathUtils.degToRad(vars.yaw), InitialPoint, InitialOrtho, yawProjected)
+    yawx.crossVectors(InitialPoint, yawProjected).normalize()
+    primaryOrientation.premultiply(primaryRotation.setFromAxisAngle(rotx, radRot)).normalize()
+    secondaryOrientation
+      .premultiply(secondaryRotation.setFromAxisAngle(yawx, radRotate))
+      .normalize()
+    orientation.copy(secondaryOrientation).multiply(primaryOrientation).normalize()
+    adjustx.copy(rotx)
+
     // Rotation Adjustment which gets blended during animation
-    adju.copy(rot).applyAxisAngle(rotx, MathUtils.degToRad(vars.adjust))
+    adju
+      .set(0, 1, 0)
+      .applyQuaternion(orientation)
+      .applyAxisAngle(adjustx, MathUtils.degToRad(vars.adjust))
 
     // Compiled prop, ready to be sent to the Worker
     const push: AnimDataCompiled = {
@@ -173,6 +196,11 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
       // Directions for computing from applyAxisAngle during animation
       posx: posx.toArray(),
       rotx: rotx.toArray(),
+      yawx: yawx.toArray(),
+      adjustx: adjustx.toArray(),
+      primaryOrient: primaryOrientation.toArray(),
+      secondaryOrient: secondaryOrientation.toArray(),
+      orient: orientation.toArray(),
     }
 
     anims.push(push)

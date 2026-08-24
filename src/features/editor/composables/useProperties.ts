@@ -111,6 +111,8 @@ function stringGet(key: string, val?: VarTypes) {
         case 'arc':
         case 'plane':
         case 'axis':
+        case 'yaw':
+        case 'rotate':
         case 'adjust':
         case 'twist':
           return val + '°'

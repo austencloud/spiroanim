@@ -39,7 +39,6 @@ import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 
 import type { ImageExportFeature } from '@/types/ImageExportTypes'
 import type {
-  AnimDataCompiled,
   PropDataCompiled,
   PointInd,
   ModelGroup,
@@ -62,36 +61,10 @@ const multi = RADIUS / ORIGRADIUS, // Multiplier for sizes
   //axis1 = new Vector3(1,0,0),
   axis2 = new Vector3(0, 1, 0),
   axis3 = new Vector3(0, 0, 1),
-  identity = new Quaternion().identity(),
-  Adju = new Vector3(),
-  blendedRotation = new Quaternion(),
-  crot = new Vector3()
+  identity = new Quaternion().identity()
 
 const createMarkerMaterial = (color: number) =>
   new MeshToonMaterial({ color, emissive: color, emissiveIntensity: 0.025 })
-
-const createFrameOrientations = (frames: readonly AnimDataCompiled[]): Quaternion[] => {
-  const firstFrame = frames[0]
-  if (!firstFrame) return []
-
-  const rotationAxis = new Vector3()
-  const stepRotation = new Quaternion()
-  const orientation = new Quaternion().setFromUnitVectors(
-    axis2,
-    rotationAxis.fromArray(firstFrame.rot),
-  )
-  const orientations = [orientation.clone()]
-
-  for (let index = 1; index < frames.length; index++) {
-    const frame = frames[index]!
-    const rotation = frame.turns + (frame.type === TTYPE.LINE ? 0 : frame.arc)
-    stepRotation.setFromAxisAngle(rotationAxis.fromArray(frame.rotx), MathUtils.degToRad(rotation))
-    orientation.premultiply(stepRotation).normalize()
-    orientations.push(orientation.clone())
-  }
-
-  return orientations
-}
 
 export const createSpiroAnimator = (vars: {
   scene: Scene
@@ -166,22 +139,30 @@ export const createSpiroAnimator = (vars: {
     modelGroup: Group = new Group(),
     modelProp: ModelGroup = props[PROPSR[prop]](multi, color, girth),
     // Vectors used for computations over continuous cycles
-    Rot = new Vector3(), // Initial Rotation
     RotX = new Vector3(), // Direction we're rotating
+    YawX = new Vector3(), // Direction of the optional secondary rotation
+    AdjustX = new Vector3(), // Primary Turns axis used by Adjust
     Pos = new Vector3(), // Position of the Prop
     Pos2 = new Vector3(), // Second point used for linear animations
     scaledPos2 = new Vector3(), // Scaled endpoint used for linear animations
     PosX = new Vector3(), // Direction we're animating for spherical animations
-    rotationDiff = new Quaternion(),
-    frameOrientations = createFrameOrientations(anim),
-    modelStartOrientation = new Quaternion(),
+    modelStartPrimaryOrientation = new Quaternion(),
+    modelStartSecondaryOrientation = new Quaternion(),
+    modelPrimaryOrientation = new Quaternion(),
+    modelSecondaryOrientation = new Quaternion(),
     modelStartAdjustment = new Quaternion(),
     modelSegmentRotation = new Quaternion(),
+    modelYawRotation = new Quaternion(),
+    modelCurrentAdjustment = new Quaternion(),
     modelBlendedAdjustment = new Quaternion(),
     modelTwistRotation = new Quaternion(),
     modelAdjustmentAxis = new Vector3(),
     pathOrientation = new Quaternion(),
+    pathPrimaryOrientation = new Quaternion(),
+    pathSecondaryOrientation = new Quaternion(),
     pathSegmentRotation = new Quaternion(),
+    pathYawRotation = new Quaternion(),
+    pathCurrentAdjustment = new Quaternion(),
     pathBlendedAdjustment = new Quaternion(),
     pathTwistRotation = new Quaternion(),
     pathHeadPosition = new Vector3(),
@@ -206,6 +187,8 @@ export const createSpiroAnimator = (vars: {
     PathType = 0,
     angleApply = 0,
     RotationPerform = 0,
+    RotatePerform = 0,
+    AdjustPerform = 0,
     TwistStart = 0,
     TwistPerform = 0,
     scale1 = 0,
@@ -253,17 +236,20 @@ export const createSpiroAnimator = (vars: {
 
       PathType = p2.type
 
-      Rot.fromArray(p1.rot) // Initial rotation
       Pos.fromArray(p1.pos) // Initial position
       Pos2.fromArray(p2.pos) // Final position - for linear animations
 
-      RotX.fromArray(p2.rotx) // Rotation direction
+      RotX.fromArray(p2.rotx) // Primary rotation direction
+      YawX.fromArray(p2.yawx) // Secondary rotation direction
+      AdjustX.fromArray(p2.adjustx) // Primary adjustment direction
       PosX.fromArray(p2.posx) // Position direction for Spherical Animations
 
       // For spherical animations, we add the Arc to Rotation
       angleApply = PathType == TTYPE.LINE ? 0 : MathUtils.degToRad(p2.arc)
 
-      RotationPerform = MathUtils.degToRad(p2.turns + p2.adjust)
+      RotationPerform = MathUtils.degToRad(p2.turns)
+      RotatePerform = MathUtils.degToRad(p2.rotate)
+      AdjustPerform = MathUtils.degToRad(p2.adjust)
       TwistStart = MathUtils.degToRad(p1.twistRoll)
       TwistPerform = MathUtils.degToRad(p2.twist)
 
@@ -274,26 +260,18 @@ export const createSpiroAnimator = (vars: {
       depth2 = p2.depth / 10
       depthDiff = depth2 - depth1
 
-      // The following was updated to reflect changes in the path / rotation lines
-      // Keeping for now in case I find a reason they need to be added back in
-      //if (index > 0 || force)
-      // Allows easing between rotations when replaying
-      Adju.fromArray(p1.adju)
-      //else Adju.fromArray(anim[anim.length - 1].adju)
-
       // Adjust: Rotation Blending
       if (smooth) {
-        rotationDiff.setFromUnitVectors(Rot, Adju)
         modelStartAdjustment.setFromAxisAngle(
-          modelAdjustmentAxis.fromArray(p1.rotx),
+          modelAdjustmentAxis.fromArray(p1.adjustx),
           MathUtils.degToRad(p1.adjust),
         )
       } else {
-        rotationDiff.identity() // No blending
         modelStartAdjustment.identity()
       }
 
-      modelStartOrientation.copy(frameOrientations[index] ?? identity)
+      modelStartPrimaryOrientation.fromArray(p1.primaryOrient)
+      modelStartSecondaryOrientation.fromArray(p1.secondaryOrient)
 
       //for (let i = 0; i < posLines.length; i++)
       //  posLines[i].visible = rotLines[i].visible = i + 1 == index
@@ -371,23 +349,17 @@ export const createSpiroAnimator = (vars: {
         armPositionAttribute.needsUpdate = true
       }
 
-      // Calculate the current rotation based on RotationPerform and angleApply
-      crot.copy(Rot).applyAxisAngle(RotX, perc * angleApply + RotationPerform * perc)
-
-      // Update active point before blending
-      if (apoint && !timeline) apoint.position.copy(crot).multiplyScalar(RADIUS * scalePerc)
-
-      // Apply the blended quaternion to crot
-      if (smooth)
-        crot.applyQuaternion(
-          // Blend rotationDiff based on percNeg (interpolating between identity quaternion and rotationDiff)
-          blendedRotation.copy(rotationDiff).slerp(identity, perc), // Gradual interpolation
-        )
-
-      // Preserve the model's complete orientation as it rotates. Reconstructing a quaternion from
-      // only the prop direction loses roll and becomes singular when the direction reaches -Y.
-      modelSegmentRotation.setFromAxisAngle(RotX, perc * angleApply + RotationPerform * perc)
-      modelGroup.quaternion.copy(modelSegmentRotation).multiply(modelStartOrientation)
+      // Primary Axis/Turns and secondary Yaw/Rotate are sampled independently, then composed.
+      // Keeping the channels separate makes subdividing an interval exactly path-preserving.
+      modelSegmentRotation.setFromAxisAngle(RotX, (angleApply + RotationPerform) * perc)
+      modelPrimaryOrientation.copy(modelSegmentRotation).multiply(modelStartPrimaryOrientation)
+      modelSecondaryOrientation
+        .copy(modelYawRotation.setFromAxisAngle(YawX, RotatePerform * perc))
+        .multiply(modelStartSecondaryOrientation)
+      modelGroup.quaternion.copy(modelSecondaryOrientation).multiply(modelPrimaryOrientation)
+      modelGroup.quaternion.premultiply(
+        modelCurrentAdjustment.setFromAxisAngle(AdjustX, AdjustPerform * perc),
+      )
       if (smooth)
         modelGroup.quaternion.premultiply(
           modelBlendedAdjustment.copy(modelStartAdjustment).slerp(identity, perc),
@@ -395,6 +367,14 @@ export const createSpiroAnimator = (vars: {
       modelGroup.quaternion.multiply(
         modelTwistRotation.setFromAxisAngle(axis2, TwistStart + TwistPerform * perc),
       )
+
+      // The active prop point follows the complete visual orientation. Yaw/Rotate is deliberately
+      // absent from the primary compiled `rot`, so deriving this from the quaternion is required.
+      if (apoint && !timeline)
+        apoint.position
+          .copy(axis2)
+          .applyQuaternion(modelGroup.quaternion)
+          .multiplyScalar(RADIUS * scalePerc)
 
       loop++
     },
@@ -707,7 +687,7 @@ export const createSpiroAnimator = (vars: {
 
         // Spherical Path
         if (PathType == TTYPE.SPHE)
-          posPoints = catmPointsAt(angleApply, stepPos, PosX, uniqueSamplePercentages)
+          posPoints = rotationPointsAt(angleApply, stepPos, PosX, uniqueSamplePercentages)
         // Linear Path
         else {
           stepPos.multiplyScalar(scale1)
@@ -716,13 +696,7 @@ export const createSpiroAnimator = (vars: {
             posPoints.push(stepPos.clone().lerp(stepPos2, percentage))
         }
 
-        // Rotation Path
-        rotPoints = catmPointsAt(
-          angleApply + RotationPerform,
-          Rot.clone().multiplyScalar(modelProp.size),
-          RotX,
-          uniqueSamplePercentages,
-        )
+        rotPoints = uniqueSamplePercentages.map(() => new Vector3())
 
         const cRot = new Vector3()
 
@@ -734,13 +708,24 @@ export const createSpiroAnimator = (vars: {
             pos = posPoints[j]!,
             rot = rotPoints[j]!
 
-          // Rotation interpolation caused by ADJUST property
+          pathSegmentRotation.setFromAxisAngle(RotX, (angleApply + RotationPerform) * perc)
+          pathPrimaryOrientation.copy(pathSegmentRotation).multiply(modelStartPrimaryOrientation)
+          pathSecondaryOrientation
+            .copy(pathYawRotation.setFromAxisAngle(YawX, RotatePerform * perc))
+            .multiply(modelStartSecondaryOrientation)
+          pathOrientation.copy(pathSecondaryOrientation).multiply(pathPrimaryOrientation)
+          pathOrientation.premultiply(
+            pathCurrentAdjustment.setFromAxisAngle(AdjustX, AdjustPerform * perc),
+          )
           if (smooth)
-            //&& index > 0) // No blending for first item
-            // 1. Not sure why I did this originally? But removal resolved the first frame's ADJUST property
-            // 2. Found the issue: when setting the second frame Adjust while leaving the first at 0, the hand path line is incorrect!
-            // 3. Commenting out index > 0 logic with Adju in setup() seems to make everything work!
-            rot.applyQuaternion(blendedRotation.copy(rotationDiff).slerp(identity, perc))
+            pathOrientation.premultiply(
+              pathBlendedAdjustment.copy(modelStartAdjustment).slerp(identity, perc),
+            )
+          pathOrientation.multiply(
+            pathTwistRotation.setFromAxisAngle(axis2, TwistStart + TwistPerform * perc),
+          )
+
+          rot.copy(axis2).applyQuaternion(pathOrientation).multiplyScalar(modelProp.size)
 
           // Copy of rot, after adjustment
           cRot.copy(rot)
@@ -762,16 +747,6 @@ export const createSpiroAnimator = (vars: {
           pos.add(pathMotionOffset)
 
           if (paths) {
-            pathSegmentRotation.setFromAxisAngle(RotX, perc * angleApply + RotationPerform * perc)
-            pathOrientation.copy(pathSegmentRotation).multiply(modelStartOrientation)
-            if (smooth)
-              pathOrientation.premultiply(
-                pathBlendedAdjustment.copy(modelStartAdjustment).slerp(identity, perc),
-              )
-            pathOrientation.multiply(
-              pathTwistRotation.setFromAxisAngle(axis2, TwistStart + TwistPerform * perc),
-            )
-
             for (let endIndex = 0; endIndex < additionalRotTmp.length; endIndex++) {
               const headPosition = modelProp.additionalPathHeadPositions?.[endIndex]
               if (headPosition !== undefined)
@@ -827,8 +802,19 @@ export const createSpiroAnimator = (vars: {
       const finalPosition = new Vector3()
         .fromArray(lastAnimation.pos)
         .multiplyScalar((RADIUS * lastAnimation.scale) / 10)
+      const finalOrientation = pathOrientation.fromArray(lastAnimation.orient)
+      finalOrientation.premultiply(
+        pathBlendedAdjustment.setFromAxisAngle(
+          pathHeadPosition.fromArray(lastAnimation.adjustx),
+          MathUtils.degToRad(lastAnimation.adjust),
+        ),
+      )
+      finalOrientation.multiply(
+        pathTwistRotation.setFromAxisAngle(axis2, MathUtils.degToRad(lastAnimation.twistRoll)),
+      )
       const finalRotation = new Vector3()
-        .fromArray(lastAnimation.rot)
+        .copy(axis2)
+        .applyQuaternion(finalOrientation)
         .multiplyScalar(modelProp.size)
       const finalHand = finalPosition
         .clone()
@@ -836,17 +822,6 @@ export const createSpiroAnimator = (vars: {
       const finalPath = finalPosition
         .clone()
         .add(finalRotation.clone().multiplyScalar(1 + lastAnimation.depth / 10))
-      const finalOrientation = pathOrientation.copy(frameOrientations.at(-1) ?? identity)
-      if (smooth)
-        finalOrientation.premultiply(
-          pathBlendedAdjustment.setFromAxisAngle(
-            pathHeadPosition.fromArray(lastAnimation.rotx),
-            MathUtils.degToRad(lastAnimation.adjust),
-          ),
-        )
-      finalOrientation.multiply(
-        pathTwistRotation.setFromAxisAngle(axis2, MathUtils.degToRad(lastAnimation.twistRoll)),
-      )
       const finalAdditionalPaths = (modelProp.additionalPathHeadPositions ?? []).map(
         (headPosition) =>
           finalHand
@@ -1035,15 +1010,15 @@ const radBase = MathUtils.degToRad(5), // Number of degrees for each base point
     radStep: number = radBase,
     Total: number = catmCount,
   ) => catmCurve(radRotation, Position, Direction, radStep).getPoints(Total - 1),
-  catmPointsAt = (
+  rotationPointsAt = (
     radRotation: number,
     Position: Vector3,
     Direction: Vector3,
     percentages: readonly number[],
-  ) => {
-    const curve = catmCurve(radRotation, Position, Direction)
-    return percentages.map((percentage) => curve.getPoint(percentage))
-  },
+  ) =>
+    percentages.map((percentage) =>
+      Position.clone().applyAxisAngle(Direction, radRotation * percentage),
+    ),
   // Guide points to create a circle
   guidePoints = catmPoints(
     MathUtils.degToRad(360),

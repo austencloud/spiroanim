@@ -1587,6 +1587,23 @@ describe('VtgPane', () => {
     }
   })
 
+  it('places VTG Properties above Customize and omits them from the Builder catalog', () => {
+    const wrapper = mount(VtgPane)
+    const properties = wrapper.get('[data-role="vtg-properties"]').element
+    const customize = wrapper.get('[data-role="vtg-customize"]').element
+
+    expect(
+      properties.compareDocumentPosition(customize) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+
+    wrapper.unmount()
+
+    const builderWrapper = mount(VtgPane, {
+      props: { builderActive: true, builderFullCatalog: true },
+    })
+    expect(builderWrapper.find('[data-role="vtg-properties"]').exists()).toBe(false)
+  })
+
   it('replaces every Concepts slider with the compact step controls when Sliders is off', async () => {
     const store = useConceptsStore()
     store.sliders = false

@@ -1,6 +1,7 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { compactAnimationFrames } from '@/math/animation/compressFrames'
 import { resolveMotionFrames } from '@/math/animation/frameSemantics'
+import { MathUtils, Quaternion, Vector3 } from 'three'
 import type {
   AnimData,
   AnimDataCompiled,
@@ -14,6 +15,67 @@ const transportedContinuationAngle = 0
 
 const interpolate = (start: number, end: number, progress: number) =>
   start + (end - start) * progress
+
+const playbackTolerance = 0.000_000_001
+const nearlyEqual = (first: number, second: number): boolean =>
+  Math.abs(first - second) <= playbackTolerance
+const vectorsNearlyEqual = (first: readonly number[], second: readonly number[]): boolean =>
+  first.length === second.length &&
+  first.every((value, index) => nearlyEqual(value, second[index]!))
+const quaternionsNearlyEqual = (first: readonly number[], second: readonly number[]): boolean =>
+  first.length === second.length &&
+  nearlyEqual(Math.abs(first.reduce((sum, value, index) => sum + value * second[index]!, 0)), 1)
+
+const adjustedOrientation = (frame: AnimDataCompiled): Quaternion =>
+  new Quaternion()
+    .fromArray(frame.orient)
+    .premultiply(
+      new Quaternion().setFromAxisAngle(
+        new Vector3().fromArray(frame.adjustx),
+        MathUtils.degToRad(frame.adjust),
+      ),
+    )
+
+const compiledBoundaryStateMatches = (
+  expected: AnimDataCompiled,
+  actual: AnimDataCompiled,
+): boolean =>
+  expected.beats === actual.beats &&
+  expected.scale === actual.scale &&
+  expected.depth === actual.depth &&
+  expected.type === actual.type &&
+  expected.adjust === actual.adjust &&
+  nearlyEqual(expected.twistRoll, actual.twistRoll) &&
+  vectorsNearlyEqual(expected.pos, actual.pos) &&
+  vectorsNearlyEqual(expected.rot, actual.rot) &&
+  vectorsNearlyEqual(expected.posx, actual.posx) &&
+  vectorsNearlyEqual(expected.rotx, actual.rotx) &&
+  vectorsNearlyEqual(expected.yawx, actual.yawx) &&
+  quaternionsNearlyEqual(expected.primaryOrient, actual.primaryOrient) &&
+  quaternionsNearlyEqual(expected.secondaryOrient, actual.secondaryOrient) &&
+  quaternionsNearlyEqual(expected.orient, actual.orient) &&
+  quaternionsNearlyEqual(
+    adjustedOrientation(expected).toArray(),
+    adjustedOrientation(actual).toArray(),
+  )
+
+const subdivisionPreservesCompiledBoundaries = (
+  expected: ReturnType<typeof rootCompile>,
+  actual: ReturnType<typeof rootCompile>,
+  subdivisionCount: number,
+): boolean =>
+  expected.props.length === actual.props.length &&
+  expected.props.every((prop, propIndex) => {
+    const actualProp = actual.props[propIndex]
+    return (
+      actualProp !== undefined &&
+      actualProp.anim.length === (prop.anim.length - 1) * subdivisionCount + 1 &&
+      prop.anim.every((frame, frameIndex) => {
+        const actualFrame = actualProp.anim[frameIndex * subdivisionCount]
+        return actualFrame !== undefined && compiledBoundaryStateMatches(frame, actualFrame)
+      })
+    )
+  })
 
 const scaleMotionTrackBeats = (frames: readonly MotionData[], multiplier: number): MotionData[] => {
   if (frames.length <= 1) return frames.map((frame) => ({ ...frame }))
@@ -54,6 +116,8 @@ const subdivideFrame = (
   return {
     turns: target.turns / subdivisionCount,
     twist: target.twist / subdivisionCount,
+    yaw: target.yaw,
+    rotate: target.rotate / subdivisionCount,
     beats: step === subdivisionCount ? target.beats : start.beats,
     scale: interpolate(start.scale, target.scale, progress),
     depth: interpolate(start.depth, target.depth, progress),
@@ -126,12 +190,15 @@ export const subdivideAnimationPlayback = (
     })
   }
 
-  return {
+  const subdivided: RootDataFinal = {
     ...animation,
     bpm: animation.bpm * subdivisionCount,
     camera: scaleCameraTrackBeats(animation.camera, subdivisionCount),
     props,
   }
+  return subdivisionPreservesCompiledBoundaries(compiled, rootCompile(subdivided), subdivisionCount)
+    ? subdivided
+    : undefined
 }
 
 export const doubleAnimationPlayback = (animation: RootDataFinal): RootDataFinal | undefined =>
@@ -181,6 +248,11 @@ export const consolidateAnimationPlayback = (
           { length: consolidationCount },
           (_, offset) => compiledProp.anim[startIndex + offset]?.twist,
         ).reduce<number>((sum, twist) => sum + (twist ?? 0), 0),
+        yaw: first.yaw,
+        rotate: Array.from(
+          { length: consolidationCount },
+          (_, offset) => compiledProp.anim[startIndex + offset]?.rotate,
+        ).reduce<number>((sum, rotate) => sum + (rotate ?? 0), 0),
         beats: last.beats,
         scale: last.scale,
         depth: last.depth,

@@ -49,6 +49,10 @@ export interface AnimData {
   turns?: number
   /** Signed local-axis roll added during this frame interval and inherited by following frames. */
   twist?: number
+  /** Secondary rotation-axis angle for this frame. Defaults to 90 when Rotate is authored. */
+  yaw?: number
+  /** Signed secondary rotation performed during this frame. */
+  rotate?: number
   beats?: number
   scale?: number
   depth?: number
@@ -169,6 +173,8 @@ export interface AnimDataCompiled {
   twist: number
   /** Total local-axis roll accumulated through this frame. */
   twistRoll: number
+  yaw: number
+  rotate: number
   beats: number
   scale: number
   depth: number
@@ -182,6 +188,14 @@ export interface AnimDataCompiled {
   rot: [number, number, number]
   posx: [number, number, number]
   rotx: [number, number, number]
+  yawx: [number, number, number]
+  adjustx: [number, number, number]
+  /** Complete accumulated primary rendering orientation. */
+  primaryOrient: [number, number, number, number]
+  /** Complete accumulated secondary Yaw/Rotate orientation. */
+  secondaryOrient: [number, number, number, number]
+  /** Complete compiled model orientation after primary and secondary rotation. */
+  orient: [number, number, number, number]
 }
 
 export interface MotionDataCompiled {
@@ -250,7 +264,11 @@ export type AllVars =
   | keyof Omit<PropData, 'anim' | 'motion'>
   | keyof AnimData
   | keyof MotionData
-export type VarTypes = number | [number, number, number] | boolean
+export type VarTypes =
+  | number
+  | [number, number, number]
+  | [number, number, number, number]
+  | boolean
 
 export type ValRetType = [VarTypes | undefined, boolean, string, boolean]
 export type DynamicVal = {

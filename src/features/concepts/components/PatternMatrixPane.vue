@@ -351,6 +351,9 @@
           selection.
         </p>
       </template>
+      <template #before-customize>
+        <PatternPropertyControls v-if="!builderActive" context="vtg" />
+      </template>
     </ConceptAnimationControls>
   </section>
 </template>
@@ -361,6 +364,7 @@ import { mdiShuffleVariant } from '@mdi/js'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
+import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
 import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
