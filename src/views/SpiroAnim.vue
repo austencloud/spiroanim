@@ -127,6 +127,7 @@ import { findConceptForPath } from '@/features/concepts/conceptRoutes'
 import { useQueryVersionStore } from '@/stores/useQueryVersionStore'
 import { UnsupportedSpiroAnimQSVersionError } from '@/services/query/versions'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { useEditorPaneAvailability } from '@/features/editor/composables/useEditorPaneAvailability'
 import { mdiFilterOff } from '@mdi/js'
 
 useScrollSelectScale()
@@ -139,6 +140,7 @@ const splitterStore = useSplitterStore('main')
 const { leftWidth, leftHeight, rightWidth, rightHeight, leftPerc } = storeToRefs(splitterStore)
 
 const paneStore = useMainPaneStore()
+useEditorPaneAvailability()
 const playerStore = usePlayerStore('main')
 const conceptsStore = useConceptsStore()
 const qsStore = useQSMainStore()
