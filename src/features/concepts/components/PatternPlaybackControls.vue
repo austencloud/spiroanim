@@ -38,7 +38,11 @@
 
     <AppTooltip :text="`Start on beat ${beat}`">
       <template #activator="{ props: activatorProps }">
-        <div v-bind="activatorProps" class="pattern-playback-controls__beat-slider">
+        <div
+          v-bind="activatorProps"
+          class="pattern-playback-controls__beat-slider"
+          :class="{ 'pattern-playback-controls__beat-slider--stepper': !sliders }"
+        >
           <span class="pattern-playback-controls__visually-hidden">Starting beat</span>
           <input
             v-if="sliders"
@@ -219,6 +223,10 @@ const updateBeat = (value: number) => {
 .pattern-playback-controls__beat-slider .concept-stepper {
   grid-column: 1 / -1;
   width: 100%;
+}
+
+.pattern-playback-controls__beat-slider--stepper {
+  padding-block: 0;
 }
 
 .pattern-playback-controls__visually-hidden {

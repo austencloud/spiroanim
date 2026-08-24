@@ -113,6 +113,20 @@ const createAnimator = (arms: boolean, hands = false) => {
   return { animator, scene }
 }
 
+const getAnimatedModelGroup = (scene: Scene): Group => {
+  let modelGroup: Group | undefined
+  scene.traverse((child) => {
+    if (
+      modelGroup === undefined &&
+      child instanceof Group &&
+      child.children.some((item) => 'size' in item)
+    )
+      modelGroup = child
+  })
+  if (!modelGroup) throw new Error('Expected the animated model group')
+  return modelGroup
+}
+
 it('draws and toggles the additional Staff head path', () => {
   const root = createRoot(false)
   root.prop = 1
@@ -147,9 +161,9 @@ it('draws and toggles the additional Staff head path', () => {
   expect(additionalPath?.parent?.visible).toBe(true)
   const primaryPath = paths.find((path) => path !== additionalPath)
   if (!primaryPath || !additionalPath) throw new Error('Expected both Staff endpoint paths')
-  expect(getLinePoints(primaryPath)[0]!.distanceTo(getLinePoints(additionalPath)[0]!)).toBeGreaterThan(
-    0,
-  )
+  expect(
+    getLinePoints(primaryPath)[0]!.distanceTo(getLinePoints(additionalPath)[0]!),
+  ).toBeGreaterThan(0)
 
   animator.setDoublePaths(false)
   expect(additionalPath?.parent?.visible).toBe(false)
@@ -224,6 +238,96 @@ describe('createSpiroAnimator Arms rendering', () => {
   })
 })
 
+describe('createSpiroAnimator export rendering', () => {
+  it('hides editor-only active lines without hiding authored path lines', () => {
+    const root = createRoot(false)
+    root.paths = true
+    root.hands = false
+    const scene = new Scene()
+    const finalized = rootFinal(root)
+    finalized.props[0]!.active = true
+    const compiled = rootCompile(finalized)
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+    const authoredPath = getLineByColor(scene, COLSET[2]![0])
+    const editorHandPath = getLineByColor(scene, COLSET[2]![2])
+    if (!authoredPath || !editorHandPath) throw new Error('Expected authored and editor path lines')
+
+    animator.setExporting(true)
+    expect(authoredPath.parent?.visible).toBe(true)
+    expect(editorHandPath.parent?.visible).toBe(false)
+
+    animator.setExporting(false)
+    expect(authoredPath.parent?.visible).toBe(true)
+    expect(editorHandPath.parent?.visible).toBe(true)
+  })
+})
+
+describe('createSpiroAnimator prop orientation', () => {
+  it('keeps Fans roll continuous while crossing the local +Y antipode', () => {
+    const root = createRoot(false)
+    root.prop = 3
+    root.props[0]!.motion = []
+    root.props[0]!.anim = [
+      { arc: 180, scale: 7 },
+      { arc: 90, turns: -360 },
+      { plane: 90 },
+      {},
+      { plane: 90 },
+      {},
+      {},
+      {},
+      {},
+    ]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+    const modelGroup = getAnimatedModelGroup(scene)
+    const sampleNormal = (milliseconds: number) => {
+      animator.seek(milliseconds)
+      return new Vector3(0, 0, 1).applyQuaternion(modelGroup.quaternion)
+    }
+
+    const before = sampleNormal(5999)
+    const antipode = sampleNormal(6000)
+    const after = sampleNormal(6001)
+    animator.seek(6000)
+    const directionAtAntipode = new Vector3(0, 1, 0).applyQuaternion(modelGroup.quaternion)
+
+    expect(before.angleTo(antipode)).toBeLessThan(0.01)
+    expect(antipode.angleTo(after)).toBeLessThan(0.01)
+    expect(
+      directionAtAntipode.distanceTo(new Vector3().fromArray(compiled.props[0]!.anim[6]!.rot)),
+    ).toBeLessThan(1e-9)
+  })
+})
+
 describe('createSpiroAnimator linear scaling', () => {
   it('moves through the straight midpoint between scaled endpoints', () => {
     const root = createRoot(false)
@@ -247,16 +351,7 @@ describe('createSpiroAnimator linear scaling', () => {
       fov: 45,
       timeline: false,
     })
-    let modelGroup: Group | undefined
-    scene.traverse((child) => {
-      if (
-        modelGroup === undefined &&
-        child instanceof Group &&
-        child.children.some((item) => 'size' in item)
-      )
-        modelGroup = child
-    })
-    if (!modelGroup) throw new Error('Expected the animated model group')
+    const modelGroup = getAnimatedModelGroup(scene)
 
     animator.seek(500)
 

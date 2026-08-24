@@ -39,6 +39,7 @@ import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 
 import type { ImageExportFeature } from '@/types/ImageExportTypes'
 import type {
+  AnimDataCompiled,
   PropDataCompiled,
   PointInd,
   ModelGroup,
@@ -69,6 +70,29 @@ const multi = RADIUS / ORIGRADIUS, // Multiplier for sizes
 const createMarkerMaterial = (color: number) =>
   new MeshToonMaterial({ color, emissive: color, emissiveIntensity: 0.025 })
 
+const createFrameOrientations = (frames: readonly AnimDataCompiled[]): Quaternion[] => {
+  const firstFrame = frames[0]
+  if (!firstFrame) return []
+
+  const rotationAxis = new Vector3()
+  const stepRotation = new Quaternion()
+  const orientation = new Quaternion().setFromUnitVectors(
+    axis2,
+    rotationAxis.fromArray(firstFrame.rot),
+  )
+  const orientations = [orientation.clone()]
+
+  for (let index = 1; index < frames.length; index++) {
+    const frame = frames[index]!
+    const rotation = frame.turns + (frame.type === TTYPE.LINE ? 0 : frame.arc)
+    stepRotation.setFromAxisAngle(rotationAxis.fromArray(frame.rotx), MathUtils.degToRad(rotation))
+    orientation.premultiply(stepRotation).normalize()
+    orientations.push(orientation.clone())
+  }
+
+  return orientations
+}
+
 export const createSpiroAnimator = (vars: {
   scene: Scene
   speed: number
@@ -89,6 +113,7 @@ export const createSpiroAnimator = (vars: {
   readonly click: number
   readonly pobjs: Record<number, Mesh>
   setExportHidden: (features: readonly ImageExportFeature[], hidden: boolean) => void
+  setExporting: (exporting: boolean) => void
   setProgressivePaths: (enabled: boolean) => void
   setDoublePaths: (enabled: boolean) => void
   animate: (time: number, forward?: number, force?: boolean) => void
@@ -136,6 +161,7 @@ export const createSpiroAnimator = (vars: {
     travelGroup: Group = new Group(),
     handsGroup: Group = new Group(),
     armsGroup: Group = new Group(),
+    editorOverlayGroup: Group = new Group(),
     motionGroup: Group = new Group(),
     modelGroup: Group = new Group(),
     modelProp: ModelGroup = props[PROPSR[prop]](multi, color, girth),
@@ -147,6 +173,12 @@ export const createSpiroAnimator = (vars: {
     scaledPos2 = new Vector3(), // Scaled endpoint used for linear animations
     PosX = new Vector3(), // Direction we're animating for spherical animations
     rotationDiff = new Quaternion(),
+    frameOrientations = createFrameOrientations(anim),
+    modelStartOrientation = new Quaternion(),
+    modelStartAdjustment = new Quaternion(),
+    modelSegmentRotation = new Quaternion(),
+    modelBlendedAdjustment = new Quaternion(),
+    modelAdjustmentAxis = new Vector3(),
     pointPositions = new Map(),
     posLines: Line2[] = [],
     rotLines: Line2[] = [],
@@ -240,8 +272,18 @@ export const createSpiroAnimator = (vars: {
       //else Adju.fromArray(anim[anim.length - 1].adju)
 
       // Adjust: Rotation Blending
-      if (smooth) rotationDiff.setFromUnitVectors(Rot, Adju)
-      else rotationDiff.identity() // No blending
+      if (smooth) {
+        rotationDiff.setFromUnitVectors(Rot, Adju)
+        modelStartAdjustment.setFromAxisAngle(
+          modelAdjustmentAxis.fromArray(p1.rotx),
+          MathUtils.degToRad(p1.adjust),
+        )
+      } else {
+        rotationDiff.identity() // No blending
+        modelStartAdjustment.identity()
+      }
+
+      modelStartOrientation.copy(frameOrientations[index] ?? identity)
 
       //for (let i = 0; i < posLines.length; i++)
       //  posLines[i].visible = rotLines[i].visible = i + 1 == index
@@ -332,8 +374,14 @@ export const createSpiroAnimator = (vars: {
           blendedRotation.copy(rotationDiff).slerp(identity, perc), // Gradual interpolation
         )
 
-      // Apply Rotation to the modelGroup
-      modelGroup.quaternion.setFromUnitVectors(axis2, crot)
+      // Preserve the model's complete orientation as it rotates. Reconstructing a quaternion from
+      // only the prop direction loses roll and becomes singular when the direction reaches -Y.
+      modelSegmentRotation.setFromAxisAngle(RotX, perc * angleApply + RotationPerform * perc)
+      modelGroup.quaternion.copy(modelSegmentRotation).multiply(modelStartOrientation)
+      if (smooth)
+        modelGroup.quaternion.premultiply(
+          modelBlendedAdjustment.copy(modelStartAdjustment).slerp(identity, perc),
+        )
 
       loop++
     },
@@ -717,7 +765,7 @@ export const createSpiroAnimator = (vars: {
           // Otherwise create individual lines for each frame
           const rotLine = createLine2(rotPoints, COLSET[color]![0], rsize * girth * multi, true)
           rotLines.push(rotLine)
-          scene.add(rotLine)
+          editorOverlayGroup.add(rotLine)
         }
 
         // Collect hands into one collection if enabled
@@ -733,7 +781,7 @@ export const createSpiroAnimator = (vars: {
             Math.PI,
           )
           posLines.push(posLine)
-          scene.add(posLine)
+          editorOverlayGroup.add(posLine)
         }
       }
     }
@@ -849,6 +897,7 @@ export const createSpiroAnimator = (vars: {
   scene.add(pathsGroup)
   scene.add(travelGroup)
   scene.add(handsGroup)
+  scene.add(editorOverlayGroup)
 
   const exportGroups: Record<ImageExportFeature, Group> = {
     paths: pathsGroup,
@@ -891,6 +940,9 @@ export const createSpiroAnimator = (vars: {
     },
     setExportHidden(features, hidden) {
       for (const feature of features) exportGroups[feature].visible = !hidden
+    },
+    setExporting(exporting) {
+      editorOverlayGroup.visible = !exporting
     },
     setProgressivePaths(enabled) {
       progressivePaths = enabled

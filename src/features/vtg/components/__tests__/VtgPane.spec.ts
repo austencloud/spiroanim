@@ -1598,6 +1598,9 @@ describe('VtgPane', () => {
     expect(wrapper.find('[data-role="vtg-bpm"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-beat"]').exists()).toBe(false)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-sliders"]').element.checked).toBe(false)
+    expect(wrapper.get('.pattern-playback-controls__beat-slider').classes()).toContain(
+      'pattern-playback-controls__beat-slider--stepper',
+    )
 
     await wrapper.get('[data-role="vtg-scale-stepper-increase"]').trigger('click')
     await wrapper.get('[data-role="vtg-thick-stepper-increase"]').trigger('click')
@@ -1616,6 +1619,9 @@ describe('VtgPane', () => {
     await wrapper.get<HTMLInputElement>('[data-role="vtg-sliders"]').setValue(true)
     expect(wrapper.find('[data-role="vtg-scale"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="vtg-beat"]').exists()).toBe(true)
+    expect(wrapper.get('.pattern-playback-controls__beat-slider').classes()).not.toContain(
+      'pattern-playback-controls__beat-slider--stepper',
+    )
   })
 
   it('reapplies the selected pattern when rendering checkboxes change', async () => {

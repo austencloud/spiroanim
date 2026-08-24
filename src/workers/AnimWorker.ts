@@ -489,6 +489,7 @@ register(
 
     videoExportActive = true
     cameraAnimator?.setExporting(true)
+    for (const animator of animators) animator.setExporting(true)
     cancelVideoExport = false
     deferredResize = undefined
     deferredProjection = undefined
@@ -592,6 +593,7 @@ register(
       animating = previous.animating
       videoExportActive = false
       cameraAnimator?.setExporting(false)
+      for (const animator of animators) animator.setExporting(false)
       cancelVideoExport = false
       deferredResize = undefined
       deferredProjection = undefined
