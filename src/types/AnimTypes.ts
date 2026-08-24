@@ -47,6 +47,8 @@ export type FrameSet = 'animation' | 'motion' | 'camera'
 // Animation Data root.props[ { anim: [ ... ] } ]
 export interface AnimData {
   turns?: number
+  /** Signed local-axis roll added during this frame interval and inherited by following frames. */
+  twist?: number
   beats?: number
   scale?: number
   depth?: number
@@ -163,6 +165,10 @@ export interface RootDataFinal extends Omit<RootData, 'props' | 'travel' | 'came
 
 export interface AnimDataCompiled {
   turns: number
+  /** Effective local-axis roll added during this frame interval. */
+  twist: number
+  /** Total local-axis roll accumulated through this frame. */
+  twistRoll: number
   beats: number
   scale: number
   depth: number
@@ -216,8 +222,8 @@ export interface RootDataCompiled extends Omit<RootDataFinal, 'props' | 'camera'
 import { type Group } from 'three'
 export type ModelGroup = Group & {
   size: number
-  /** Additional path endpoints expressed as multiples of size along the prop's local axis. */
-  additionalPathEndOffsets?: readonly number[]
+  /** Additional head positions expressed as size-normalized coordinates in the prop's local space. */
+  additionalPathHeadPositions?: readonly (readonly [number, number, number])[]
 }
 
 export type AnimKeys = keyof AnimData // | 'point' | 'direct' | 'path'

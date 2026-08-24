@@ -17,7 +17,7 @@ describe('usePlayerStore', () => {
     expect(store.PLAYING).toBe(true)
     expect(store.TRACER).toBe(false)
     expect(store.PROGRESSIVE_PATHS).toBe(true)
-    expect(store.DOUBLE_PATHS).toBe(true)
+    expect(store.ALL_HEAD_PATHS).toBe(false)
     expect(store.ASPECT).toEqual([16, 9])
     expect(store.CANVAS_DIM).toEqual({ width: 0, height: 0 })
     expect(store.raw().COMPILED.value).toMatchObject({
@@ -183,7 +183,7 @@ describe('usePlayerStore', () => {
         PLAYING: false,
         TRACER: true,
         PROGRESSIVE_PATHS: false,
-        DOUBLE_PATHS: false,
+        DOUBLE_PATHS: true,
         freeCamera: true,
         ORBIT: { position: [1, 2, 3], target: [4, 5, 6] },
       }),
@@ -194,7 +194,7 @@ describe('usePlayerStore', () => {
     expect(store.PLAYING).toBe(false)
     expect(store.TRACER).toBe(true)
     expect(store.PROGRESSIVE_PATHS).toBe(false)
-    expect(store.DOUBLE_PATHS).toBe(false)
+    expect(store.ALL_HEAD_PATHS).toBe(true)
     expect(store.freeCamera).toBe(true)
   })
 
@@ -205,7 +205,7 @@ describe('usePlayerStore', () => {
     store.PLAYING = false
     store.TRACER = true
     store.PROGRESSIVE_PATHS = true
-    store.DOUBLE_PATHS = false
+    store.ALL_HEAD_PATHS = true
     store.freeCamera = true
     await nextTick()
 
@@ -215,7 +215,7 @@ describe('usePlayerStore', () => {
       PLAYING: false,
       TRACER: true,
       PROGRESSIVE_PATHS: true,
-      DOUBLE_PATHS: false,
+      ALL_HEAD_PATHS: true,
       freeCamera: true,
     })
   })

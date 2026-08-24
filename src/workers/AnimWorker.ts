@@ -73,7 +73,7 @@ const propLightUp = new Vector3()
 let timeline = false
 let thumbnail = false
 let progressivePaths = false
-let doublePaths = true
+let allHeadPaths = false
 let cameraGuides = { visible: false, color: 0xffffff }
 
 let playing = false
@@ -194,8 +194,8 @@ on('progressivePaths', (val) => {
   progressivePaths = val
   applyPathModes()
 })
-on('doublePaths', (val) => {
-  doublePaths = val
+on('allHeadPaths', (val) => {
+  allHeadPaths = val
   applyPathModes()
 })
 
@@ -212,10 +212,10 @@ on('range', ({ min: mi, max: ma }) => {
 // Receive offscreen canvas (or create one)
 register(
   'initialize',
-  ({ offscreen, girth: g, timeline: tl, thumbnail: thumb, doublePaths: initialDoublePaths }) => {
+  ({ offscreen, girth: g, timeline: tl, thumbnail: thumb, allHeadPaths: initialAllHeadPaths }) => {
     timeline = tl ?? false
     thumbnail = thumb ?? false
-    if (initialDoublePaths !== undefined) doublePaths = initialDoublePaths
+    if (initialAllHeadPaths !== undefined) allHeadPaths = initialAllHeadPaths
 
     // Girth is used in Timeline (makes props thicker)
     if (g !== undefined) girth = g
@@ -313,7 +313,7 @@ on('data', (compiled) => {
       }),
     )
 
-  // Fresh animators default to showing all modeled prop-end paths, so every data rebuild must
+  // Fresh animators start with their additional head paths visible, so every data rebuild must
   // reapply the current controls and renderer-specific restrictions.
   applyPathModes()
 
@@ -337,7 +337,7 @@ on('data', (compiled) => {
 function applyPathModes() {
   applyAnimatorPathModes(animators, {
     progressivePaths,
-    doublePaths,
+    allHeadPaths,
     timeline,
     thumbnail,
     selection,

@@ -12,6 +12,7 @@ import type {
 const animationInheritedDefaults = {
   beats: 1,
   turns: 0,
+  twist: 0,
   scale: 10,
   depth: 0,
   type: TTYPE.SPHE,
@@ -21,7 +22,7 @@ const animationInheritedDefaults = {
 
 type AnimationInheritedKey = keyof typeof animationInheritedDefaults
 
-const compressAnimationFrames = (frames: AnimData[]): number => {
+export const compressAnimationFrames = (frames: AnimData[]): number => {
   let removed = 0
   const inherited: Record<AnimationInheritedKey, number> = { ...animationInheritedDefaults }
 

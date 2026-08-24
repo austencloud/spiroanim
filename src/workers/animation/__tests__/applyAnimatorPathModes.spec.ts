@@ -4,26 +4,26 @@ import { applyAnimatorPathModes } from '@/workers/animation/applyAnimatorPathMod
 
 const createAnimator = () => ({
   setProgressivePaths: vi.fn<(enabled: boolean) => void>(),
-  setDoublePaths: vi.fn<(enabled: boolean) => void>(),
+  setAllHeadPaths: vi.fn<(enabled: boolean) => void>(),
 })
 
 describe('applyAnimatorPathModes', () => {
-  it('reapplies disabled Double Paths to newly created animators', () => {
+  it('reapplies disabled All Head Paths to newly created animators', () => {
     const animator = createAnimator()
 
     applyAnimatorPathModes([animator], {
       progressivePaths: true,
-      doublePaths: false,
+      allHeadPaths: false,
       timeline: false,
       thumbnail: false,
       selection: false,
     })
 
     expect(animator.setProgressivePaths).toHaveBeenCalledWith(true)
-    expect(animator.setDoublePaths).toHaveBeenCalledWith(false)
+    expect(animator.setAllHeadPaths).toHaveBeenCalledWith(false)
   })
 
-  it('disables Double Paths for Timeline and thumbnail renderers', () => {
+  it('disables All Head Paths for Timeline and thumbnail renderers', () => {
     for (const state of [
       { timeline: true, thumbnail: false },
       { timeline: false, thumbnail: true },
@@ -32,12 +32,12 @@ describe('applyAnimatorPathModes', () => {
 
       applyAnimatorPathModes([animator], {
         progressivePaths: true,
-        doublePaths: true,
+        allHeadPaths: true,
         selection: false,
         ...state,
       })
 
-      expect(animator.setDoublePaths).toHaveBeenCalledWith(false)
+      expect(animator.setAllHeadPaths).toHaveBeenCalledWith(false)
     }
   })
 })

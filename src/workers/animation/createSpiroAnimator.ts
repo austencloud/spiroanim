@@ -115,7 +115,7 @@ export const createSpiroAnimator = (vars: {
   setExportHidden: (features: readonly ImageExportFeature[], hidden: boolean) => void
   setExporting: (exporting: boolean) => void
   setProgressivePaths: (enabled: boolean) => void
-  setDoublePaths: (enabled: boolean) => void
+  setAllHeadPaths: (enabled: boolean) => void
   animate: (time: number, forward?: number, force?: boolean) => void
   seek: (milliseconds: number) => void
   dimensions: (
@@ -178,7 +178,13 @@ export const createSpiroAnimator = (vars: {
     modelStartAdjustment = new Quaternion(),
     modelSegmentRotation = new Quaternion(),
     modelBlendedAdjustment = new Quaternion(),
+    modelTwistRotation = new Quaternion(),
     modelAdjustmentAxis = new Vector3(),
+    pathOrientation = new Quaternion(),
+    pathSegmentRotation = new Quaternion(),
+    pathBlendedAdjustment = new Quaternion(),
+    pathTwistRotation = new Quaternion(),
+    pathHeadPosition = new Vector3(),
     pointPositions = new Map(),
     posLines: Line2[] = [],
     rotLines: Line2[] = [],
@@ -200,6 +206,8 @@ export const createSpiroAnimator = (vars: {
     PathType = 0,
     angleApply = 0,
     RotationPerform = 0,
+    TwistStart = 0,
+    TwistPerform = 0,
     scale1 = 0,
     scale2 = 0,
     depth1 = 0,
@@ -256,6 +264,8 @@ export const createSpiroAnimator = (vars: {
       angleApply = PathType == TTYPE.LINE ? 0 : MathUtils.degToRad(p2.arc)
 
       RotationPerform = MathUtils.degToRad(p2.turns + p2.adjust)
+      TwistStart = MathUtils.degToRad(p1.twistRoll)
+      TwistPerform = MathUtils.degToRad(p2.twist)
 
       scale1 = p1.scale / 10
       scale2 = p2.scale / 10
@@ -382,6 +392,9 @@ export const createSpiroAnimator = (vars: {
         modelGroup.quaternion.premultiply(
           modelBlendedAdjustment.copy(modelStartAdjustment).slerp(identity, perc),
         )
+      modelGroup.quaternion.multiply(
+        modelTwistRotation.setFromAxisAngle(axis2, TwistStart + TwistPerform * perc),
+      )
 
       loop++
     },
@@ -637,7 +650,7 @@ export const createSpiroAnimator = (vars: {
   if (nodes || paths || hands || active) {
     const posTmp: Vector3[] = [],
       rotTmp: Vector3[] = [],
-      additionalRotTmp = (modelProp.additionalPathEndOffsets ?? []).map(() => [] as Vector3[]),
+      additionalRotTmp = (modelProp.additionalPathHeadPositions ?? []).map(() => [] as Vector3[]),
       geoType = 'geonode',
       ppos = new Vector3()
 
@@ -731,8 +744,6 @@ export const createSpiroAnimator = (vars: {
 
           // Copy of rot, after adjustment
           cRot.copy(rot)
-          const pathEndAxis = rot.clone()
-
           // Position Transformations
           trans(perc)
           if (PathType == TTYPE.SPHE) pos.multiplyScalar(scalePerc)
@@ -750,12 +761,32 @@ export const createSpiroAnimator = (vars: {
           rot.add(pathMotionOffset)
           pos.add(pathMotionOffset)
 
-          if (paths)
+          if (paths) {
+            pathSegmentRotation.setFromAxisAngle(RotX, perc * angleApply + RotationPerform * perc)
+            pathOrientation.copy(pathSegmentRotation).multiply(modelStartOrientation)
+            if (smooth)
+              pathOrientation.premultiply(
+                pathBlendedAdjustment.copy(modelStartAdjustment).slerp(identity, perc),
+              )
+            pathOrientation.multiply(
+              pathTwistRotation.setFromAxisAngle(axis2, TwistStart + TwistPerform * perc),
+            )
+
             for (let endIndex = 0; endIndex < additionalRotTmp.length; endIndex++) {
-              const offset = modelProp.additionalPathEndOffsets?.[endIndex]
-              if (offset !== undefined)
-                additionalRotTmp[endIndex]!.push(pos.clone().addScaledVector(pathEndAxis, offset))
+              const headPosition = modelProp.additionalPathHeadPositions?.[endIndex]
+              if (headPosition !== undefined)
+                additionalRotTmp[endIndex]!.push(
+                  pos
+                    .clone()
+                    .add(
+                      pathHeadPosition
+                        .fromArray(headPosition)
+                        .multiplyScalar(modelProp.size)
+                        .applyQuaternion(pathOrientation),
+                    ),
+                )
             }
+          }
         }
 
         // Collect paths into one collection if enabled
@@ -805,8 +836,27 @@ export const createSpiroAnimator = (vars: {
       const finalPath = finalPosition
         .clone()
         .add(finalRotation.clone().multiplyScalar(1 + lastAnimation.depth / 10))
-      const finalAdditionalPaths = (modelProp.additionalPathEndOffsets ?? []).map((offset) =>
-        finalHand.clone().addScaledVector(finalRotation, offset),
+      const finalOrientation = pathOrientation.copy(frameOrientations.at(-1) ?? identity)
+      if (smooth)
+        finalOrientation.premultiply(
+          pathBlendedAdjustment.setFromAxisAngle(
+            pathHeadPosition.fromArray(lastAnimation.rotx),
+            MathUtils.degToRad(lastAnimation.adjust),
+          ),
+        )
+      finalOrientation.multiply(
+        pathTwistRotation.setFromAxisAngle(axis2, MathUtils.degToRad(lastAnimation.twistRoll)),
+      )
+      const finalAdditionalPaths = (modelProp.additionalPathHeadPositions ?? []).map(
+        (headPosition) =>
+          finalHand
+            .clone()
+            .add(
+              pathHeadPosition
+                .fromArray(headPosition)
+                .multiplyScalar(modelProp.size)
+                .applyQuaternion(finalOrientation),
+            ),
       )
       const continuationTimes = [animationEnd]
       const samplesPerMotionFrame = 32
@@ -948,7 +998,7 @@ export const createSpiroAnimator = (vars: {
       progressivePaths = enabled
       updateProgressivePaths()
     },
-    setDoublePaths(enabled) {
+    setAllHeadPaths(enabled) {
       additionalPathsGroup.visible = enabled
     },
 

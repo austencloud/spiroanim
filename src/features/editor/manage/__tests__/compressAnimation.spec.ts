@@ -25,8 +25,27 @@ const createRoot = () =>
         prop: 0,
         color: 1,
         anim: [
-          { beats: 1, turns: 0, scale: 10, depth: 0, type: TTYPE.SPHE, arc: 0, plane: 0, axis: 0 },
-          { beats: 1, turns: 90, scale: 10, type: TTYPE.SPHE, arc: 0, plane: 45, axis: 45 },
+          {
+            beats: 1,
+            turns: 0,
+            twist: 0,
+            scale: 10,
+            depth: 0,
+            type: TTYPE.SPHE,
+            arc: 0,
+            plane: 0,
+            axis: 0,
+          },
+          {
+            beats: 1,
+            turns: 90,
+            twist: 90,
+            scale: 10,
+            type: TTYPE.SPHE,
+            arc: 0,
+            plane: 45,
+            axis: 45,
+          },
         ],
         motion: [
           { beats: 1, shape: MOTION_SHAPE.LINE, axis: 90, amount: 75, distance: 2 },
@@ -47,7 +66,7 @@ describe('compressAnimation', () => {
     expect(compressAnimation(root)).toBeGreaterThan(0)
 
     expect(root.props[0]).toMatchObject({
-      anim: [{}, { turns: 90, plane: 45 }],
+      anim: [{}, { turns: 90, twist: 90, plane: 45 }],
       motion: [{ distance: 2 }, { shape: MOTION_SHAPE.ARC, amount: 75, distance: 3 }, {}],
     })
     expect(root.props[0]).not.toHaveProperty('prop')

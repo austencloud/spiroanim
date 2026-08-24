@@ -119,7 +119,7 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
     model2.add(head2)
 
     model2.size = 2.4 * multi // Used for Y offset manipulations, multiplied by -1 to 1
-    model2.additionalPathEndOffsets = [-1]
+    model2.additionalPathHeadPositions = [[0, -1, 0]]
 
     return model2
   },
@@ -209,5 +209,9 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
     }
 
     model.size = spokeEnd + wickLength
+    model.additionalPathHeadPositions = [-60, -30, 30, 60].map((angle) => {
+      const radians = (angle * Math.PI) / 180
+      return [Math.sin(radians), Math.cos(radians), 0] as const
+    })
     return model
   }

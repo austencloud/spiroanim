@@ -1,4 +1,5 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { compressAnimationFrames } from '@/features/editor/manage/compressAnimation'
 import {
   consolidateAnimationPlayback,
   doubleAnimationPlayback,
@@ -10,6 +11,7 @@ import type { AllVars, AnimData, AnimDataCompiled, RootDataFinal } from '@/types
 const numericTolerance = 0.000_000_001
 const animationValueKeys = [
   'turns',
+  'twist',
   'beats',
   'scale',
   'depth',
@@ -78,12 +80,19 @@ const animationsHaveEqualFrameValues = (first: RootDataFinal, second: RootDataFi
 const hasIntervals = (animation: RootDataFinal, minimumFrameCount: number): boolean =>
   animation.props.some((prop) => prop.anim.length >= minimumFrameCount)
 
+const compressRepresentableResult = (
+  animation: RootDataFinal | undefined,
+): RootDataFinal | undefined => {
+  if (!animation) return undefined
+  for (const prop of animation.props) compressAnimationFrames(prop.anim)
+  return isRepresentableAnimation(animation) ? animation : undefined
+}
+
 /** Doubles authored animation intervals only when every generated value remains representable. */
 export const doubleAnimationFrames = (animation: RootDataFinal): RootDataFinal | undefined => {
   if (!hasIntervals(animation, doublePlaybackMultiplier)) return undefined
 
-  const doubled = doubleAnimationPlayback(animation)
-  return doubled && isRepresentableAnimation(doubled) ? doubled : undefined
+  return compressRepresentableResult(doubleAnimationPlayback(animation))
 }
 
 /**
@@ -93,8 +102,10 @@ export const doubleAnimationFrames = (animation: RootDataFinal): RootDataFinal |
 export const halveAnimationFrames = (animation: RootDataFinal): RootDataFinal | undefined => {
   if (!hasIntervals(animation, doublePlaybackMultiplier + 1)) return undefined
 
-  const halved = consolidateAnimationPlayback(animation, doublePlaybackMultiplier)
-  if (!halved || !isRepresentableAnimation(halved)) return undefined
+  const halved = compressRepresentableResult(
+    consolidateAnimationPlayback(animation, doublePlaybackMultiplier),
+  )
+  if (!halved) return undefined
 
   const restored = doubleAnimationPlayback(halved)
   return restored && animationsHaveEqualFrameValues(animation, restored) ? halved : undefined

@@ -4,6 +4,7 @@ import {
   doubleAnimationFrames,
   halveAnimationFrames,
 } from '@/features/editor/manage/resampleAnimationFrames'
+import { compressAnimationFrames } from '@/features/editor/manage/compressAnimation'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
@@ -25,8 +26,17 @@ const createAnimation = (): RootDataFinal =>
       {
         anim: [
           { beats: 1, turns: 0, scale: 10, depth: 0, adjust: 0, arc: 0 },
-          { turns: 90, scale: 20, depth: 10, adjust: 20, arc: 90, plane: 45, axis: -45 },
-          { turns: -180, scale: 10, depth: 0, adjust: 0, arc: 180, plane: -90 },
+          {
+            turns: 90,
+            twist: 90,
+            scale: 20,
+            depth: 10,
+            adjust: 20,
+            arc: 90,
+            plane: 45,
+            axis: -45,
+          },
+          { turns: -180, twist: -180, scale: 10, depth: 0, adjust: 0, arc: 180, plane: -90 },
         ],
       },
     ],
@@ -38,28 +48,36 @@ const createAnimation = (): RootDataFinal =>
 
 const compiledFrameValues = (animation: RootDataFinal) =>
   rootCompile(animation).props.map((prop) =>
-    prop.anim.map(({ turns, beats, scale, depth, type, adjust, arc, plane, axis }) => ({
-      turns,
-      beats,
-      scale,
-      depth,
-      type,
-      adjust,
-      arc,
-      plane,
-      axis,
-    })),
+    prop.anim.map(
+      ({ turns, twist, twistRoll, beats, scale, depth, type, adjust, arc, plane, axis }) => ({
+        turns,
+        twist,
+        twistRoll,
+        beats,
+        scale,
+        depth,
+        type,
+        adjust,
+        arc,
+        plane,
+        axis,
+      }),
+    ),
   )
 
 describe('resampleAnimationFrames', () => {
   it('inserts exact intermediate values, doubles BPM, and reverses the result', () => {
     const original = createAnimation()
+    const originalSnapshot = structuredClone(original)
     const doubled = doubleAnimationFrames(original)
 
+    expect(original).toEqual(originalSnapshot)
     expect(doubled?.bpm).toBe(240)
     expect(doubled?.props[0]?.anim).toHaveLength(5)
+    expect(compressAnimationFrames(doubled!.props[0]!.anim)).toBe(0)
     expect(rootCompile(doubled!).props[0]?.anim[1]).toMatchObject({
       turns: 45,
+      twist: 45,
       beats: 1,
       scale: 15,
       depth: 5,
@@ -68,10 +86,15 @@ describe('resampleAnimationFrames', () => {
       plane: 45,
       axis: -45,
     })
+    expect(doubled?.props[0]?.anim[1]?.twist).toBe(45)
+    expect(doubled?.props[0]?.anim[2]).not.toHaveProperty('twist')
 
     const halved = halveAnimationFrames(doubled!)
     expect(halved?.bpm).toBe(120)
     expect(halved?.props[0]?.anim).toHaveLength(3)
+    expect(compressAnimationFrames(halved!.props[0]!.anim)).toBe(0)
+    expect(halved?.props[0]?.anim[1]?.twist).toBe(90)
+    expect(halved?.props[0]?.anim[2]?.twist).toBe(-180)
     expect(compiledFrameValues(halved!)).toEqual(compiledFrameValues(original))
   })
 
@@ -91,6 +114,10 @@ describe('resampleAnimationFrames', () => {
     const fractionalArc = createAnimation()
     fractionalArc.props[0]!.anim[1]!.arc = 1
     expect(doubleAnimationFrames(fractionalArc)).toBeUndefined()
+
+    const fractionalTwist = createAnimation()
+    fractionalTwist.props[0]!.anim[1]!.twist = 45
+    expect(doubleAnimationFrames(fractionalTwist)).toBeUndefined()
 
     const excessiveBpm = createAnimation()
     excessiveBpm.bpm = 300

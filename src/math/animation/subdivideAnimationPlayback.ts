@@ -6,7 +6,7 @@ const transportedContinuationAngle = 0
 
 type InheritedFrameValues = Pick<
   AnimDataCompiled,
-  'turns' | 'beats' | 'scale' | 'depth' | 'type' | 'adjust' | 'arc'
+  'turns' | 'twist' | 'beats' | 'scale' | 'depth' | 'type' | 'adjust' | 'arc'
 >
 
 const interpolate = (start: number, end: number, progress: number) =>
@@ -22,6 +22,7 @@ const subdivideFrame = (
   const progress = step / subdivisionCount
   const desired = {
     turns: target.turns / subdivisionCount,
+    twist: target.twist / subdivisionCount,
     beats: step === subdivisionCount ? target.beats : start.beats,
     scale: interpolate(start.scale, target.scale, progress),
     depth: interpolate(start.depth, target.depth, progress),
@@ -34,6 +35,7 @@ const subdivideFrame = (
   const frame: AnimData = {}
 
   if (desired.turns !== inherited.turns) frame.turns = desired.turns
+  if (desired.twist !== inherited.twist) frame.twist = desired.twist
   if (desired.beats !== inherited.beats) frame.beats = desired.beats
   if (desired.scale !== inherited.scale) frame.scale = desired.scale
   if (desired.depth !== inherited.depth) frame.depth = desired.depth
@@ -44,6 +46,7 @@ const subdivideFrame = (
   if (desired.axis !== desired.plane) frame.axis = desired.axis
 
   inherited.turns = desired.turns
+  inherited.twist = desired.twist
   inherited.beats = desired.beats
   inherited.scale = desired.scale
   inherited.depth = desired.depth
@@ -72,6 +75,7 @@ const subdivideFrames = (
   const subdivided: AnimData[] = [{ ...firstFrame }]
   const inherited: InheritedFrameValues = {
     turns: firstCompiledFrame.turns,
+    twist: firstCompiledFrame.twist,
     beats: firstCompiledFrame.beats,
     scale: firstCompiledFrame.scale,
     depth: firstCompiledFrame.depth,
@@ -167,6 +171,10 @@ export const consolidateAnimationPlayback = (
           { length: consolidationCount },
           (_, offset) => compiledProp.anim[startIndex + offset]?.turns,
         ).reduce<number>((sum, turns) => sum + (turns ?? 0), 0),
+        twist: Array.from(
+          { length: consolidationCount },
+          (_, offset) => compiledProp.anim[startIndex + offset]?.twist,
+        ).reduce<number>((sum, twist) => sum + (twist ?? 0), 0),
         beats: last.beats,
         scale: last.scale,
         depth: last.depth,

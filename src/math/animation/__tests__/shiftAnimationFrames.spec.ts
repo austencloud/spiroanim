@@ -37,9 +37,9 @@ const expectVectorClose = (actual: readonly number[], expected: readonly number[
 }
 
 const closedFrames: AnimData[] = [
-  { arc: 0, beats: 2, scale: 8, depth: 1, move: [1, 0, 0] },
-  { arc: 90, beats: 3, scale: 9, depth: 2, move: [2, 0, 0] },
-  { arc: 90, plane: 180, beats: 4, scale: 10, depth: 3, move: [3, 0, 0] },
+  { arc: 0, twist: 0, beats: 2, scale: 8, depth: 1, move: [1, 0, 0] },
+  { arc: 90, twist: 90, beats: 3, scale: 9, depth: 2, move: [2, 0, 0] },
+  { arc: 90, twist: -90, plane: 180, beats: 4, scale: 10, depth: 3, move: [3, 0, 0] },
 ]
 
 describe('shared shiftAnimationFrames', () => {
@@ -52,6 +52,12 @@ describe('shared shiftAnimationFrames', () => {
 
     expect(animationEndpointsAlign(mismatchedRotation)).toBe(false)
     expect(shiftAnimationFrames(closedFrames, mismatchedRotation)).toBeUndefined()
+
+    const mismatchedTwist = structuredClone(compiled)
+    mismatchedTwist.at(-1)!.twistRoll += 90
+
+    expect(animationEndpointsAlign(mismatchedTwist)).toBe(false)
+    expect(shiftAnimationFrames(closedFrames, mismatchedTwist)).toBeUndefined()
   })
 
   it('rotates every visible segment and moves the first duration to the end', () => {
@@ -67,6 +73,7 @@ describe('shared shiftAnimationFrames', () => {
       expectVectorClose(frame.rot, expected.rot)
       expect(frame.scale).toBe(expected.scale)
       expect(frame.depth).toBe(expected.depth)
+      expect(frame.twistRoll).toBe(expected.twistRoll)
     }
 
     const incomingSegmentIndices = [2, 1]
@@ -85,6 +92,7 @@ describe('shared shiftAnimationFrames', () => {
     expect(result.map(({ beats }) => beats)).toEqual([3, 2, 2])
     expect(closedFrames[0]).toEqual({
       arc: 0,
+      twist: 0,
       beats: 2,
       scale: 8,
       depth: 1,

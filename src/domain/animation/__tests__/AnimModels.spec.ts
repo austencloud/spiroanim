@@ -55,11 +55,19 @@ describe('AnimModels prop lighting', () => {
     expect(clubBounds.max.y).toBeCloseTo(poiBounds.max.y)
   })
 
-  it('identifies the Staff second head as an additional path endpoint', () => {
-    expect(STAFF(1, 0, 1).additionalPathEndOffsets).toEqual([-1])
-    expect(POI(1, 0, 1).additionalPathEndOffsets).toBeUndefined()
-    expect(CLUBS(1, 0, 1).additionalPathEndOffsets).toBeUndefined()
-    expect(FANS(1, 0, 1).additionalPathEndOffsets).toBeUndefined()
+  it('identifies every additional prop head in normalized local coordinates', () => {
+    expect(STAFF(1, 0, 1).additionalPathHeadPositions).toEqual([[0, -1, 0]])
+    expect(POI(1, 0, 1).additionalPathHeadPositions).toBeUndefined()
+    expect(CLUBS(1, 0, 1).additionalPathHeadPositions).toBeUndefined()
+
+    const fanHeads = FANS(1, 0, 1).additionalPathHeadPositions
+    expect(fanHeads).toHaveLength(4)
+    expect(fanHeads?.map(([x, y, z]) => [Math.round(x * 1000), Math.round(y * 1000), z])).toEqual([
+      [-866, 500, 0],
+      [-500, 866, 0],
+      [500, 866, 0],
+      [866, 500, 0],
+    ])
   })
 
   it('builds Fans with one ring, five spokes, five wicks, and two braces', () => {

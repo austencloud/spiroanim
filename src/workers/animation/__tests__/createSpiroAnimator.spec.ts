@@ -2,6 +2,7 @@ import {
   Group,
   Mesh,
   MeshToonMaterial,
+  Quaternion,
   Scene,
   Vector3,
   type InterleavedBufferAttribute,
@@ -165,10 +166,51 @@ it('draws and toggles the additional Staff head path', () => {
     getLinePoints(primaryPath)[0]!.distanceTo(getLinePoints(additionalPath)[0]!),
   ).toBeGreaterThan(0)
 
-  animator.setDoublePaths(false)
+  animator.setAllHeadPaths(false)
   expect(additionalPath?.parent?.visible).toBe(false)
-  animator.setDoublePaths(true)
+  animator.setAllHeadPaths(true)
   expect(additionalPath?.parent?.visible).toBe(true)
+})
+
+it('draws a path for all five Fan heads and rotates them with Twist', () => {
+  const root = createRoot(false)
+  root.prop = 3
+  root.paths = true
+  root.props[0]!.anim = [{ beats: 1, twist: 90 }, { twist: 0 }]
+  const scene = new Scene()
+  const compiled = rootCompile(rootFinal(root))
+  const animator = createSpiroAnimator({
+    scene,
+    speed: 1,
+    girth: 2,
+    bpm: compiled.bpm,
+    smooth: compiled.smooth,
+    prop: compiled.props[0]!,
+    completed: () => undefined,
+    width: 800,
+    height: 600,
+    distance: 22,
+    fov: 45,
+    timeline: false,
+  })
+  const paths = scene
+    .getObjectsByProperty('isLine2', true)
+    .filter(
+      (object): object is Line2 =>
+        object instanceof Line2 &&
+        (object.material as LineMaterial2).color.getHex() === COLSET[2]![0],
+    )
+  const additionalPaths = paths.filter((path) => path.parent?.parent?.parent === scene)
+
+  expect(paths).toHaveLength(5)
+  expect(additionalPaths).toHaveLength(4)
+  const firstAdditionalPoint = getLinePoints(additionalPaths[0]!)[0]!
+  expect(Math.abs(firstAdditionalPoint.z)).toBeGreaterThan(0)
+
+  animator.setAllHeadPaths(false)
+  expect(additionalPaths.every((path) => path.parent?.visible === false)).toBe(true)
+  animator.setAllHeadPaths(true)
+  expect(additionalPaths.every((path) => path.parent?.visible === true)).toBe(true)
 })
 
 describe('createSpiroAnimator Arms rendering', () => {
@@ -276,6 +318,50 @@ describe('createSpiroAnimator export rendering', () => {
 })
 
 describe('createSpiroAnimator prop orientation', () => {
+  it('applies precompiled inherited Twist around the transported local prop axis', () => {
+    const root = createRoot(false)
+    root.prop = 3
+    root.props[0]!.motion = []
+    root.props[0]!.anim = [{}, { twist: 90 }, {}, { twist: 0 }]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+    const modelGroup = getAnimatedModelGroup(scene)
+    const sampleNormal = (milliseconds: number) => {
+      animator.seek(milliseconds)
+      return new Vector3(0, 0, 1).applyQuaternion(modelGroup.quaternion)
+    }
+    const baseOrientation = new Quaternion().setFromUnitVectors(
+      new Vector3(0, 1, 0),
+      new Vector3().fromArray(compiled.props[0]!.anim[0]!.rot),
+    )
+    const expectedNormal = (degrees: number) =>
+      new Vector3(0, 0, 1)
+        .applyAxisAngle(new Vector3(0, 1, 0), (degrees * Math.PI) / 180)
+        .applyQuaternion(baseOrientation)
+
+    expect(sampleNormal(500).distanceTo(expectedNormal(45))).toBeLessThan(1e-9)
+    expect(sampleNormal(1500).distanceTo(expectedNormal(135))).toBeLessThan(1e-9)
+    expect(sampleNormal(2500).distanceTo(expectedNormal(180))).toBeLessThan(1e-9)
+
+    // Seeking backward must use compiled frame state rather than playback history.
+    expect(sampleNormal(500).distanceTo(expectedNormal(45))).toBeLessThan(1e-9)
+  })
+
   it('keeps Fans roll continuous while crossing the local +Y antipode', () => {
     const root = createRoot(false)
     root.prop = 3

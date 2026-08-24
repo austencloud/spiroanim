@@ -34,6 +34,7 @@ describe('editor property panel organization', () => {
       'plane',
       'axis',
       'adjust',
+      'twist',
       'scale',
       'depth',
     ])

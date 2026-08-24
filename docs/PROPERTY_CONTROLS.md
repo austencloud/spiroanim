@@ -166,7 +166,7 @@ Before changing a slider, answer these questions in order:
    a feature-level input that derives several stored properties?
 2. **Which UI owns it?** Editor property controls and concept controls use different pipelines.
 3. **What are the stored units?** Scale and Depth are displayed as tenths but stored as integers;
-   angles are stored in degrees.
+   angles are stored in degrees. Twist is restricted to 45-degree increments.
 4. **Should the control round, floor, or preserve fractions?** Make this explicit before the query
    boundary.
 5. **Does the active query version encode the field and scope?** A root field and a same-named prop

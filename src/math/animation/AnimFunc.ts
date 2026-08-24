@@ -143,12 +143,14 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     rot = InitialPoint.clone(),
     plane = InitialOrtho.clone(),
     axis = InitialOrtho.clone()
+  let twistRoll = 0
 
   for (let ai = 1; ai < prop.anim.length; ai++) {
     const anim = prop.anim[ai]!,
       prev = prop.anim[ai - 1]!
     if (anim.type === undefined) anim.type = prev.type
     if (anim.turns === undefined) anim.turns = prev.turns
+    if (anim.twist === undefined) anim.twist = prev.twist
     if (anim.adjust === undefined) anim.adjust = prev.adjust
     if (anim.scale === undefined) anim.scale = prev.scale
     if (anim.depth === undefined) anim.depth = prev.depth
@@ -161,6 +163,7 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
 
     const vars = {
         turns: anim.turns ?? 0,
+        twist: anim.twist ?? 0,
         scale: anim.scale ?? 10,
         depth: anim.depth ?? 0,
         beats: anim.beats ?? 1,
@@ -177,6 +180,8 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
       radArc = MathUtils.degToRad(vars.arc),
       radRot = MathUtils.degToRad(vars.turns) + (vars.type == TTYPE.LINE ? 0 : radArc)
 
+    twistRoll += vars.twist
+
     // Updates pos/rot, plane/axis, and directions for this loop
     orthoNext(radPlane, radArc, pos, plane, posx)
     orthoNext(radAxis, radRot, rot, axis, rotx)
@@ -187,6 +192,7 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     // Compiled prop, ready to be sent to the Worker
     const push: AnimDataCompiled = {
       ...vars,
+      twistRoll,
 
       // Position, Rotation, and Rotation to blend from
       pos: pos.toArray(),

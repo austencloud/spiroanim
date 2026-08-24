@@ -39,6 +39,15 @@
       <br /><i>When undefined, this property inherits from the previous frame.</i>
     </template>
 
+    <template #twist>
+      <strong>Twist</strong><br />
+      Rolls the prop around its own transported local axis while leaving its path and Turns
+      unchanged.<br />
+      The signed value is added during each frame interval and inherited by following frames.
+      Setting Twist to zero stops adding roll without undoing the accumulated orientation.<br />
+      <br /><i>When undefined, this property inherits from the previous frame.</i>
+    </template>
+
     <template #scale>
       <strong>Scale</strong><br />
       Controls the size or center of the movement or shape.<br />
@@ -125,6 +134,16 @@ const vals = [
     mult: 5,
     min: -18,
     max: 18,
+    neg: true,
+  },
+  {
+    name: 'twist',
+    text: 'Twist',
+    component: 'Decimal',
+    undef: true,
+    mult: 90,
+    min: -4,
+    max: 4,
     neg: true,
   },
   { name: 'scale', text: 'Scale', component: 'Decimal', undef: true, mult: 1 },

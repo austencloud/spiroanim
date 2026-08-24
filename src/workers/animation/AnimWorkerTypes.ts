@@ -17,7 +17,7 @@ export interface AnimBridgeMap {
       girth?: number
       timeline?: boolean
       thumbnail?: boolean
-      doublePaths?: boolean
+      allHeadPaths?: boolean
     }
     ret: boolean
   }
@@ -141,8 +141,8 @@ export interface AnimBridgeMap {
     arg: boolean
   }
 
-  // Draw paths for every modeled prop end instead of only the primary end
-  doublePaths: {
+  // Draw paths for every modeled prop head instead of only the primary head
+  allHeadPaths: {
     arg: boolean
   }
 

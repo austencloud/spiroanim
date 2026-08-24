@@ -9,6 +9,7 @@ import {
   PPOS,
   TTYPE,
   MOTION_SHAPES,
+  TWIST_INCREMENT,
 } from '@/domain/animation/AnimStruct'
 
 import { VDEF } from '@/stores/useQSMainStore'
@@ -111,6 +112,7 @@ function stringGet(key: string, val?: VarTypes) {
         case 'plane':
         case 'axis':
         case 'adjust':
+        case 'twist':
           return val + '°'
       }
     }
@@ -200,6 +202,9 @@ export function useProperties(store: string = 'main') {
   const animSet: SetterFunc = (key, val) => {
     if (PLAYING.value) return
     val = constraints(key, val)
+    if (key === 'twist' && typeof val === 'number') {
+      val = Math.round(val / TWIST_INCREMENT) * TWIST_INCREMENT
+    }
 
     switch (key) {
       case 'path':

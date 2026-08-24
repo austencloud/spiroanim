@@ -23,6 +23,7 @@ export async function useSpiroAnimQS(
   const {
     createRootConfig,
     createPropConfig,
+    createExtendedAnimationConfig,
     createMotionConfig,
     createCameraConfig,
     encodeMotionFrame,
@@ -66,6 +67,7 @@ export async function useSpiroAnimQS(
   // Create config from imported functions
   const rootConfig = createRootConfig()
   const propConfig = createPropConfig()
+  const extendedAnimationConfig = createExtendedAnimationConfig?.()
   const motionConfig = createMotionConfig?.()
   const cameraConfig = createCameraConfig?.()
 
@@ -103,6 +105,12 @@ export async function useSpiroAnimQS(
       const prop = root.props[i]
       if (prop !== undefined) {
         query[`p${i}`] = encodeVar(propConfig, prop)
+        if (extendedAnimationConfig) {
+          const extendedAnimation = encodeVar(extendedAnimationConfig, { anim: prop.anim })
+            .replace(/^\./, '')
+            .replace(/\.+$/, '')
+          if (extendedAnimation !== '') query[`x${i}`] = extendedAnimation
+        }
         if (motionConfig && (prop.motion?.length ?? 0) > 0) {
           const encodedMotion = encodeVar(motionConfig, {
             anim: (prop.motion ?? []).map((frame) =>
@@ -198,6 +206,14 @@ export async function useSpiroAnimQS(
     let val: string | undefined
     while ((val = route[`p${i++}`] as string | undefined)) {
       const prop = Object.assign({ anim: [], motion: [] }, decodeVar(propConfig, val)) as PropData
+      const extendedAnimation = route[`x${i - 1}`] as string | undefined
+      if (extendedAnimationConfig && extendedAnimation) {
+        const decoded = decodeVar(extendedAnimationConfig, `.${extendedAnimation}`)
+        const frames: AnimFrame[] = Array.isArray(decoded.anim) ? (decoded.anim as AnimFrame[]) : []
+        for (const [frameIndex, frame] of frames.entries()) {
+          Object.assign((prop.anim[frameIndex] ??= {}), frame)
+        }
+      }
       const motion = route[`m${i - 1}`] as string | undefined
       if (motionConfig && motion) {
         const encodedMotion = omitStandaloneMotionPrefix ? `.${motion}` : motion

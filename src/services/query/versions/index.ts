@@ -7,6 +7,7 @@ export interface SpiroAnimQSVersion {
   VDEF: Record<AllVars, VDefEntry>
   createRootConfig(): ConfigData<AllVars>
   createPropConfig(): ConfigData<AllVars>
+  createExtendedAnimationConfig?(): ConfigData<AllVars>
   createMotionConfig?(): ConfigData<AllVars>
   createCameraConfig?(): ConfigData<AllVars>
   encodeMotionFrame?(frame: MotionData): MotionData
@@ -49,6 +50,8 @@ export async function loadSpiroAnimQSVersion(version: number): Promise<SpiroAnim
       return import('@/services/query/versions/SpiroAnimQSv8')
     case 9:
       return import('@/services/query/versions/SpiroAnimQSv9')
+    case 10:
+      return import('@/services/query/versions/SpiroAnimQSv10')
     default:
       throw new UnsupportedSpiroAnimQSVersionError(version)
   }

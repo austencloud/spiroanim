@@ -58,4 +58,28 @@ describe('AnimFunc', () => {
     expect(final.props[0]!.anim[1]).toEqual({})
     expect(final.travel).toBe(false)
   })
+
+  it('compiles inherited Twist into an absolute roll for every frame', () => {
+    const root: RootData = {
+      bpm: 60,
+      prop: 3,
+      color: 2,
+      smooth: true,
+      guides: false,
+      paths: false,
+      arms: false,
+      nodes: false,
+      anchors: false,
+      props: [{ anim: [{}, { twist: 90 }, {}, { twist: 0 }, {}] }],
+      aspectx: 16,
+      aspecty: 9,
+      distance: 22,
+      thick: 4,
+    }
+
+    const frames = rootCompile(rootFinal(root)).props[0]!.anim
+
+    expect(frames.map(({ twist }) => twist)).toEqual([0, 90, 90, 0, 0])
+    expect(frames.map(({ twistRoll }) => twistRoll)).toEqual([0, 90, 180, 180, 180])
+  })
 })

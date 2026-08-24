@@ -18,6 +18,11 @@ const vectorsAlign = (first: readonly number[], second: readonly number[]) =>
   first.length === second.length &&
   first.every((value, index) => Math.abs(value - second[index]!) <= endpointTolerance)
 
+const rollsAlign = (first: number, second: number) => {
+  const difference = MathUtils.euclideanModulo(second - first, 360)
+  return difference <= endpointTolerance || 360 - difference <= endpointTolerance
+}
+
 export const animationRangeEndpointsAlign = (
   frames: readonly AnimDataCompiled[],
   startIndex: number,
@@ -30,7 +35,8 @@ export const animationRangeEndpointsAlign = (
     first !== undefined &&
     last !== undefined &&
     vectorsAlign(first.pos, last.pos) &&
-    vectorsAlign(first.rot, last.rot)
+    vectorsAlign(first.rot, last.rot) &&
+    rollsAlign(first.twistRoll, last.twistRoll)
   )
 }
 
@@ -75,6 +81,7 @@ const compactFrames = (frames: readonly AnimData[], preceding?: AnimDataCompiled
     const previous = index === 0 ? preceding : frames[index - 1]
 
     if (compacted.turns === (previous?.turns ?? 0)) delete compacted.turns
+    if (compacted.twist === (previous?.twist ?? 0)) delete compacted.twist
     if (compacted.beats === (previous?.beats ?? 1)) delete compacted.beats
     if (compacted.scale === (previous?.scale ?? 10)) delete compacted.scale
     if (compacted.depth === (previous?.depth ?? 0)) delete compacted.depth
@@ -206,6 +213,7 @@ export const shiftAnimationFrameRange = (
         MathUtils.radToDeg(rotationRadians) -
           (target.type === TTYPE.SPHE ? MathUtils.radToDeg(arcRadians) : 0),
       ),
+      twist: preserveOutgoing ? originalEnd.twist : target.twist,
       beats: preserveOutgoing
         ? originalEnd.beats
         : compiled[outputIndex < lastOutputIndex - 1 ? startIndex + outputIndex + 1 : startIndex]!

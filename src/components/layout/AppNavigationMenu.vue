@@ -106,14 +106,14 @@
           <span>{{ progressivePathsLabel }}</span>
         </button>
         <button
-          class="menu-link menu-action double-paths-menu-item"
+          class="menu-link menu-action all-head-paths-menu-item"
           type="button"
           role="menuitem"
-          :aria-pressed="DOUBLE_PATHS"
-          @click="toggleDoublePaths"
+          :aria-pressed="ALL_HEAD_PATHS"
+          @click="toggleAllHeadPaths"
         >
           <BaseIcon :path="mdiVectorPolyline" :size="22" />
-          <span>{{ doublePathsLabel }}</span>
+          <span>{{ allHeadPathsLabel }}</span>
         </button>
         <button
           v-if="playerVisible"
@@ -274,7 +274,7 @@ const {
   PLAYBACK_ROOT,
   TRACER,
   PROGRESSIVE_PATHS,
-  DOUBLE_PATHS,
+  ALL_HEAD_PATHS,
   imageExportRequest,
   videoExportRequest,
   videoExportCancel,
@@ -290,8 +290,8 @@ const tracerLabel = computed(() => (TRACER.value ? 'Tracer: On' : 'Tracer: Off')
 const progressivePathsLabel = computed(() =>
   PROGRESSIVE_PATHS.value ? 'Path Tracing: On' : 'Path Tracing: Off',
 )
-const doublePathsLabel = computed(() =>
-  DOUBLE_PATHS.value ? 'Double Paths: On' : 'Double Paths: Off',
+const allHeadPathsLabel = computed(() =>
+  ALL_HEAD_PATHS.value ? 'All Head Paths: On' : 'All Head Paths: Off',
 )
 const { editorEnabled } = storeToRefs(useEditorAccessStore())
 const editorAccessIcon = computed(() => (editorEnabled.value ? mdiPencilOff : mdiPencil))
@@ -336,8 +336,8 @@ function toggleProgressivePaths() {
   closeMenu()
 }
 
-function toggleDoublePaths() {
-  DOUBLE_PATHS.value = !DOUBLE_PATHS.value
+function toggleAllHeadPaths() {
+  ALL_HEAD_PATHS.value = !ALL_HEAD_PATHS.value
   closeMenu()
 }
 

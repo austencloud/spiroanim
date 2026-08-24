@@ -45,6 +45,7 @@ per-frame default. These are different behaviors.
 | Property |     First-frame default | Later frame when undefined | Role                                                      |
 | -------- | ----------------------: | -------------------------- | --------------------------------------------------------- |
 | `turns`  |                     `0` | Inherit                    | Incoming rotation amount                                  |
+| `twist`  |                     `0` | Inherit                    | Incoming local-axis roll amount                           |
 | `beats`  |                     `1` | Inherit                    | Duration of the outgoing segment                          |
 | `scale`  |                    `10` | Inherit                    | State at this frame                                       |
 | `depth`  |                     `0` | Inherit                    | State at this frame                                       |
@@ -105,6 +106,11 @@ adju = rot rotated around rotx by adjust
 
 `adju` is the adjusted orientation used by smooth rotation blending.
 
+Twist is a signed local-axis roll added during each incoming frame interval. Compilation performs
+a prefix sum and stores both the inherited interval `twist` and absolute `twistRoll` at every
+frame. Setting Twist to zero stops adding roll without undoing the accumulated orientation. The
+worker can therefore seek directly to any frame without replaying earlier intervals.
+
 ## Worker ownership of values
 
 A displayed segment combines values from both endpoint frames.
@@ -120,11 +126,18 @@ A displayed segment combines values from both endpoint frames.
 | Linear position path           | Interpolate the scaled Cartesian endpoints          |
 | Rotation path                  | Rotate `p1.rot` around `p2.rotx`                    |
 | Rotation amount                | `p2.turns + p2.adjust`, plus `p2.arc` for Spherical |
+| Local prop roll                | `p1.twistRoll + p2.twist * segment progress`        |
 | Ending scale and depth         | `p2.scale`, `p2.depth`                              |
 
 The same setup routine is used for playback and for constructing visible path/hand lines. A
 management operation must therefore preserve the incoming axes on the new `p2`, not just its final
 coordinates.
+
+After composing the transported Turns/Arc orientation and smooth adjustment, the worker
+post-multiplies Twist around the model's local Y axis. Twist changes the visible model orientation
+without changing its path, active direction, Plane, Axis, Arc, or Turns. Because the local roll is
+applied after the transported orientation, its axis follows the prop through three-dimensional
+movement.
 
 For a Linear transition, the worker applies each frame's Scale to its endpoint before
 interpolating. Interpolating position and Scale separately and then multiplying them would produce
@@ -152,7 +165,7 @@ applies the declared default, inheritance, and applicability rules to props, Mot
 and Camera Center. Fields without a declared compression rule are preserved.
 
 Animation Manage also exposes Double Frames and Halve Frames across every prop. Double Frames
-inserts the exact intermediate frame in each authored interval and doubles BPM. Turns and Arc are
+inserts the exact intermediate frame in each authored interval and doubles BPM. Turns, Twist, and Arc are
 split between the two intervals; Scale, Depth, and Adjust are interpolated; and Plane and Axis are
 transported through the continuation frame. The action is disabled when BPM or any generated value
 cannot be represented by the current property range and precision. Halve Frames is enabled only

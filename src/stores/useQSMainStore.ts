@@ -6,7 +6,7 @@ import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 
 // This selects the current format used for newly encoded query strings. Historical versions remain
 // available through the version loader so existing shared URLs can use their matching decoder.
-const CURRENT_VERSION = 9
+const CURRENT_VERSION = 10
 
 export const { CHARSET, VDEF } = await loadSpiroAnimQSVersion(CURRENT_VERSION)
 

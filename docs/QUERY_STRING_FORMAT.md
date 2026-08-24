@@ -6,7 +6,7 @@ persisted-data contract.
 
 The authoritative implementations are:
 
-- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv6.ts` for versioned ranges,
+- `src/services/query/versions/SpiroAnimQSv1.ts` through `SpiroAnimQSv10.ts` for versioned ranges,
   bit widths, field order, and segment layouts.
 - `src/services/query/createBaseQueryCodec.ts` for integer normalization and bit packing.
 - `src/composables/useSpiroAnimQS.ts` for root, prop, and frame encoding and decoding.
@@ -24,34 +24,35 @@ Every definition is:
 Version 1 stores integer values. One all-ones bit pattern is reserved for `undefined`, so a field
 with `N` bits has at most `2^N - 1` defined codes.
 
-| Field       |       V1 range |   Bits | Stored scope and notes                                |
-| ----------- | -------------: | -----: | ----------------------------------------------------- |
-| `bpm`       |        20..520 |      9 | Root                                                  |
-| `beats`     |          1..63 |      6 | Frame                                                 |
-| `prop`      | 0..1 currently |      4 | Root and prop; range follows `PTEXT` length           |
-| `color`     | 0..6 currently |      4 | Root and prop; range follows `COLORS` length          |
-| `guides`    |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `paths`     |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `hands`     |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `precision` |           0..1 |      2 | Motion and Camera in V6; decoded with `Boolean`       |
-| `arms`      |           0..1 |      2 | Root and prop in V2; decoded with `Boolean`           |
-| `visible`   |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `nodes`     |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `anchors`   |           0..1 |      2 | Root and prop; decoded with `Boolean`                 |
-| `smooth`    |           0..1 |      2 | Defined, but not currently included in a V1 segment   |
-| `type`      | 0..1 currently |      2 | Frame; range follows `TTEXT` length                   |
-| `scale`     |        -20..40 |      6 | Frame, in internal tenths                             |
-| `depth`     |        -30..30 |      6 | Frame, in internal tenths                             |
-| `turns`     |    -1980..1980 |     12 | Frame degrees                                         |
-| `adjust`    |      -180..180 |      9 | Frame degrees                                         |
-| `arc`       |         0..360 |      9 | Frame degrees                                         |
-| `plane`     |      -180..180 |      9 | Frame degrees                                         |
-| `axis`      |      -180..180 |      9 | Frame degrees                                         |
-| `move`      |        -30..30 | 6 each | Animation frame in V1-V3; Motion frame in V4          |
-| `aspectx`   |          0..32 |      6 | Root                                                  |
-| `aspecty`   |          0..32 |      6 | Root                                                  |
-| `distance`  |          4..66 |      6 | Root in V1-V4; Motion and Camera path field           |
-| `thick`     |          1..15 |      4 | Root only in V1; prop-level `thick` is not serialized |
+| Field       |       V1 range |     Bits | Stored scope and notes                                |
+| ----------- | -------------: | -------: | ----------------------------------------------------- |
+| `bpm`       |        20..520 |        9 | Root                                                  |
+| `beats`     |          1..63 |        6 | Frame                                                 |
+| `prop`      | 0..1 currently |        4 | Root and prop; range follows `PTEXT` length           |
+| `color`     | 0..6 currently |        4 | Root and prop; range follows `COLORS` length          |
+| `guides`    |           0..1 |        2 | Root and prop; decoded with `Boolean`                 |
+| `paths`     |           0..1 |        2 | Root and prop; decoded with `Boolean`                 |
+| `hands`     |           0..1 |        2 | Root and prop; decoded with `Boolean`                 |
+| `precision` |           0..1 |        2 | Motion and Camera in V6; decoded with `Boolean`       |
+| `arms`      |           0..1 |        2 | Root and prop in V2; decoded with `Boolean`           |
+| `visible`   |           0..1 |        2 | Root and prop; decoded with `Boolean`                 |
+| `nodes`     |           0..1 |        2 | Root and prop; decoded with `Boolean`                 |
+| `anchors`   |           0..1 |        2 | Root and prop; decoded with `Boolean`                 |
+| `smooth`    |           0..1 |        2 | Defined, but not currently included in a V1 segment   |
+| `type`      | 0..1 currently |        2 | Frame; range follows `TTEXT` length                   |
+| `scale`     |        -20..40 |        6 | Frame, in internal tenths                             |
+| `depth`     |        -30..30 |        6 | Frame, in internal tenths                             |
+| `turns`     |    -1980..1980 |       12 | Frame degrees                                         |
+| `twist`     |      -360..360 | 5 in V10 | Extended Animation frame, in 45-degree increments     |
+| `adjust`    |      -180..180 |        9 | Frame degrees                                         |
+| `arc`       |         0..360 |        9 | Frame degrees                                         |
+| `plane`     |      -180..180 |        9 | Frame degrees                                         |
+| `axis`      |      -180..180 |        9 | Frame degrees                                         |
+| `move`      |        -30..30 |   6 each | Animation frame in V1-V3; Motion frame in V4          |
+| `aspectx`   |          0..32 |        6 | Root                                                  |
+| `aspecty`   |          0..32 |        6 | Root                                                  |
+| `distance`  |          4..66 |        6 | Root in V1-V4; Motion and Camera path field           |
+| `thick`     |          1..15 |        4 | Root only in V1; prop-level `thick` is not serialized |
 
 The declared range must fit while retaining the undefined code. Development builds call
 `validateQueryDefinitions()`, which logs an error for an oversized definition but does not throw.
@@ -216,6 +217,36 @@ the frame into four three-character groups:
 Every group uses exactly 18 bits, so Animation frames remain 12 characters. Versions 1-6 retain
 their historical field positions and whole-degree Turns representation.
 
+## Version 10 extended Animation layout
+
+Version 10 moves `beats`, `scale`, and `depth` out of each prop's `pN` Animation frames and adds
+`twist`. The moved values use an optional parallel `xN` track with the same prop number and frame
+indices:
+
+```text
+p0=<prop settings>.<base frame 0>.<base frame 1>...
+x0=<extended frame 0>.<extended frame 1>...
+```
+
+The V10 `pN` frame contains three three-character groups:
+
+1. `plane` (9 bits), `arc` (9 bits)
+2. `turns` (16 bits), `type` (2 bits)
+3. `axis` (9 bits), `adjust` (9 bits)
+
+The corresponding `xN` frame contains:
+
+1. `beats` (6 bits), `scale` (6 bits), `depth` (6 bits)
+2. `twist` (5 bits) followed by one spare packed bit
+
+Twist covers `-360..360` degrees in 45-degree increments. Its query transform divides by 45 before
+packing and multiplies by 45 after unpacking.
+
+An `xN` value has no leading dot because it has no prop-level prefix. Internal empty frames retain
+their dot positions so indices remain aligned with `pN`. Trailing empty extended frames are
+removed, and an entirely empty extended track produces no `xN` parameter. Decoding merges each
+extended frame into its matching base frame before defaults and inheritance are compiled.
+
 ## Low-level packing
 
 Versions 1 and 2 use this custom URL-safe radix-64 alphabet:
@@ -227,7 +258,7 @@ Versions 1 and 2 use this custom URL-safe radix-64 alphabet:
 This is not standard Base64. The final character, `-`, is also the maximum radix digit used for
 all-ones padding.
 
-Versions 3 through 7 use the same characters with the final pair reversed:
+Versions 3 through 10 use the same characters with the final pair reversed:
 
 ```text
 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_
@@ -250,8 +281,9 @@ Version 7 Turns, is then applied.
 
 ### Integer requirement and fractional values
 
-Versions 1-6 have no fractional encoding. Version 7 explicitly supports tenths for Animation
-Turns through its bidirectional numeric transform. The property setter's range clamp does not
+Versions 1-6 have no fractional encoding. Version 7 and later explicitly support tenths for
+Animation Turns through its bidirectional numeric transform. Version 10 Twist uses a second
+bidirectional transform for 45-degree increments. The property setter's range clamp does not
 otherwise enforce integer or decimal precision.
 
 Packed scalar fields pass through JavaScript bitwise operators, which coerce nonnegative

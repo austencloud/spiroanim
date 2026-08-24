@@ -20,6 +20,7 @@ first and last states with a small floating-point tolerance:
 ```text
 C0.pos == Cn.pos
 C0.rot == Cn.rot
+C0.twistRoll == Cn.twistRoll modulo 360°
 ```
 
 Raw object equality is not meaningful because frames can express the same result through
@@ -62,7 +63,7 @@ The incoming segment definitions on frames after the new first frame map as:
 old frame 2, old frame 3, ... old frame n, old frame 1
 ```
 
-Their original `posx`, `rotx`, `arc`, transition type, turns, and adjustment are preserved. Because
+Their original `posx`, `rotx`, `arc`, transition type, turns, Twist, and adjustment are preserved. Because
 `plane` and `axis` are relative to transported references, their raw degree values are recalculated
 from those compiled axes.
 
@@ -80,7 +81,7 @@ old beats 1, old beats 2, ... old beats n - 1, old beats 0
 ```
 
 The UI requests preservation of the original final frame's outgoing values. The shifted final frame
-therefore retains the old final `beats`, `scale`, `depth`, and `adjust` values needed by the next
+therefore retains the old final `beats`, `scale`, `depth`, `twist`, and `adjust` values needed by the next
 unselected interval. For a whole animation, the final `beats` value remains unused until another
 management operation moves that endpoint.
 
@@ -119,8 +120,9 @@ recalculated, the selection handles are restored to those same boundary times.
 
 ## Closure scope and unavoidable seam differences
 
-Endpoint alignment checks compiled position and base rotation. It does not require the first and
-last frame to match scale, depth, adjustment, or cumulative move offset.
+Endpoint alignment checks compiled position, base rotation, and accumulated Twist modulo 360°. It
+does not require the first and last frame to match scale, depth, adjustment, or cumulative move
+offset.
 
 If those additional states differ at the original seam, no cyclic reorder can preserve both
 adjacent segments perfectly: one output frame would need to be the old final state for the segment
@@ -129,8 +131,9 @@ compiled keyframe positions and rotations while preserving the selected range's 
 state. Authors who need a fully seamless loop should also make scale, depth, adjustment, and offset
 agree at the original first and last frames.
 
-For mismatched position or rotation endpoints, the same reconstruction can still be requested, but
-closed-loop path preservation is not guaranteed. That is why the UI requires confirmation.
+For mismatched position, rotation, or Twist endpoints, the same reconstruction can still be
+requested, but closed-loop path preservation is not guaranteed. That is why the UI requires
+confirmation.
 
 ## Regression coverage
 

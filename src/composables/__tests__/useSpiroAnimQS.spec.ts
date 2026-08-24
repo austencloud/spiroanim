@@ -11,6 +11,7 @@ import { CHARSET as CHARSET_V6, VDEF as VDEF_V6 } from '@/services/query/version
 import { CHARSET as CHARSET_V7, VDEF as VDEF_V7 } from '@/services/query/versions/SpiroAnimQSv7'
 import { CHARSET as CHARSET_V8, VDEF as VDEF_V8 } from '@/services/query/versions/SpiroAnimQSv8'
 import { CHARSET as CHARSET_V9, VDEF as VDEF_V9 } from '@/services/query/versions/SpiroAnimQSv9'
+import { CHARSET as CHARSET_V10, VDEF as VDEF_V10 } from '@/services/query/versions/SpiroAnimQSv10'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -333,6 +334,90 @@ describe('useSpiroAnimQS', () => {
     expect(encoded.v).toBe('9')
     expect(decoded.prop).toBe(3)
     expect(decoded.props[0]!.prop).toBe(3)
+  })
+
+  it('stores extended Animation values in compact optional x tracks in version 10', async () => {
+    const query = await useSpiroAnimQS(VDEF_V10, useBaseQS(VDEF_V10, { charset: CHARSET_V10 }), 10)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.prop = 3
+    root.props[0]!.prop = 3
+    root.props[0]!.anim = [
+      { arc: 90, beats: 1, scale: 10, depth: 0 },
+      { turns: 90, scale: 20, twist: 90 },
+      {},
+      { twist: 0 },
+      {},
+      {},
+    ]
+
+    const encoded = query.encodeQS(root, false)
+    const baseFrames = encoded.p0?.split('.').slice(1) ?? []
+    const extendedFrames = encoded.x0?.split('.') ?? []
+
+    expect(encoded.v).toBe('10')
+    expect(encoded.x0).toBeDefined()
+    expect(encoded.x0).not.toMatch(/^\./)
+    expect(encoded.x0).not.toMatch(/\.$/)
+    expect(baseFrames).toHaveLength(root.props[0]!.anim.length)
+    expect(baseFrames.every((frame) => frame.length <= 9)).toBe(true)
+    expect(extendedFrames).toHaveLength(4)
+    expect(query.decodeQS(encoded).props[0]!.anim).toEqual(root.props[0]!.anim)
+    expect(query.encodeQS(query.decodeQS(encoded), false)).toEqual(encoded)
+  })
+
+  it('omits empty x tracks and avoids base-frame filler for Scale-only frames', async () => {
+    const queryV9 = await useSpiroAnimQS(VDEF_V9, useBaseQS(VDEF_V9, { charset: CHARSET_V9 }), 9)
+    const queryV10 = await useSpiroAnimQS(
+      VDEF_V10,
+      useBaseQS(VDEF_V10, { charset: CHARSET_V10 }),
+      10,
+    )
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props[0]!.anim = [{ scale: 10 }]
+
+    const encodedV9 = queryV9.encodeQS(root, false)
+    const encodedV10 = queryV10.encodeQS(root, false)
+    const v9Frame = encodedV9.p0!.split('.')[1]!
+    const v10Frame = encodedV10.p0!.split('.')[1]!
+
+    expect(v10Frame).toBe('')
+    expect(encodedV10.x0).toHaveLength(3)
+    expect(encodedV10.x0!.length).toBeLessThan(v9Frame.length)
+
+    delete root.props[0]!.anim[0]!.scale
+    expect(queryV10.encodeQS(root, false)).not.toHaveProperty('x0')
+  })
+
+  it('round-trips the complete version 10 Twist range and undefined state', async () => {
+    const query = await useSpiroAnimQS(VDEF_V10, useBaseQS(VDEF_V10, { charset: CHARSET_V10 }), 10)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props[0]!.anim = [{ twist: -360 }, {}, { twist: 0 }, { twist: 360 }]
+
+    const encoded = query.encodeQS(root, false)
+
+    expect(encoded.x0).not.toMatch(/^\./)
+    expect(encoded.x0).not.toMatch(/\.$/)
+    expect(query.decodeQS(encoded).props[0]!.anim).toEqual(root.props[0]!.anim)
+  })
+
+  it('decodes version 9 URLs unchanged through the version 10 codec', async () => {
+    const queryV10 = await useSpiroAnimQS(
+      VDEF_V10,
+      useBaseQS(VDEF_V10, { charset: CHARSET_V10 }),
+      10,
+    )
+    const decoded = await queryV10.decodeVer({
+      r: 'GE28E39gY',
+      p0: 'O__.J00g0005E0Y-.___QTl.___VGM.',
+      c: '_m_bhq',
+      v: '7',
+    })
+
+    expect(decoded.props[0]!.anim[1]!.turns).toBe(12.5)
+    expect(decoded.props[0]!.anim.every((frame) => frame.twist === undefined)).toBe(true)
   })
 
   it('migrates the existing multi-prop MOVE query into optional m values', async () => {

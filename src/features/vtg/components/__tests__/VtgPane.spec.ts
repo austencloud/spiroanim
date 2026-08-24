@@ -2499,7 +2499,7 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-blank-index="0"]').attributes('data-height')).toBe('68.5')
   })
 
-  it('disables Double Paths in VTG thumbnail workers', async () => {
+  it('disables All Head Paths in VTG thumbnail workers', async () => {
     mount(VtgPane)
     await settlePreviewRendering()
 

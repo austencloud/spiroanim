@@ -102,7 +102,7 @@ const {
   PLAYBACK_TEMPORARY_ACTIVE,
   TRACER,
   PROGRESSIVE_PATHS,
-  DOUBLE_PATHS,
+  ALL_HEAD_PATHS,
   ETIMES,
   PLAYBACK_ASPECT,
   CANVAS_DIM,
@@ -201,7 +201,7 @@ onMounted(() => {
   // Send offscreen canvas to the worker
   ;(() => {
     const offscreen = eCanvas.value?.transferControlToOffscreen()
-    call('initialize', { offscreen, doublePaths: DOUBLE_PATHS.value }, [
+    call('initialize', { offscreen, allHeadPaths: ALL_HEAD_PATHS.value }, [
       offscreen as OffscreenCanvas,
     ])
       .then((success) => {
@@ -245,7 +245,7 @@ onMounted(() => {
     (val) => send('progressivePaths', val),
   )
 
-  watchImmediate(DOUBLE_PATHS, (val) => send('doublePaths', val))
+  watchImmediate(ALL_HEAD_PATHS, (val) => send('allHeadPaths', val))
 
   // Stop animating when page isn't visible
   watchImmediate(isVisible, (val) => send('animate', { val }))
