@@ -411,6 +411,24 @@ describe('useSpiroAnimQS', () => {
     expect(query.decodeQS(encoded).props[0]!.anim).toEqual(root.props[0]!.anim)
   })
 
+  it('rounds version 10 whole-degree Animation angles instead of truncating floating noise', async () => {
+    const query = await useSpiroAnimQS(VDEF_V10, useBaseQS(VDEF_V10, { charset: CHARSET_V10 }), 10)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props[0]!.anim = [
+      {
+        adjust: -44.999999146,
+        arc: 89.999999146,
+        plane: -0.000000854,
+        axis: 179.999999146,
+      },
+    ]
+
+    expect(query.decodeQS(query.encodeQS(root, false)).props[0]!.anim).toEqual([
+      { adjust: -45, arc: 90, plane: 0, axis: 180 },
+    ])
+  })
+
   it('decodes version 9 URLs unchanged through the version 10 codec', async () => {
     const queryV10 = await useSpiroAnimQS(
       VDEF_V10,

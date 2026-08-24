@@ -15,6 +15,7 @@ import {
   omitStandaloneMotionPrefix,
 } from '@/services/query/versions/SpiroAnimQSv9'
 import { TWIST_MAX, TWIST_MIN } from '@/domain/animation/AnimStruct'
+import type { QueryValueCodec } from '@/services/query/types/BaseQueryCodecTypes'
 import type { VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 import type { AllVars } from '@/types/AnimTypes'
@@ -30,8 +31,17 @@ export {
   omitStandaloneMotionPrefix,
 }
 
+const WHOLE_DEGREE_QUERY_CODEC: QueryValueCodec = {
+  encode: Math.round,
+  decode: (value) => value,
+}
+
 export const VDEF = {
   ...LEGACY_VDEF,
+  adjust: [-180, 180, 9, WHOLE_DEGREE_QUERY_CODEC],
+  arc: [0, 360, 9, WHOLE_DEGREE_QUERY_CODEC],
+  plane: [-180, 180, 9, WHOLE_DEGREE_QUERY_CODEC],
+  axis: [-180, 180, 9, WHOLE_DEGREE_QUERY_CODEC],
   twist: [TWIST_MIN, TWIST_MAX, 10],
 } satisfies Record<AllVars, VDefEntry>
 

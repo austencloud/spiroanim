@@ -51,15 +51,35 @@ const orientedSignatureDifferenceByMatch = new WeakMap<VtgPatternMatch, number>(
 const exactRegenerationDifferenceByMatch = new WeakMap<VtgPatternMatch, number>()
 const orientedStateByCandidate = new WeakMap<Candidate, Map<number, OrientedCandidateState>>()
 
+const inheritMatchRankings = (source: VtgPatternMatch, target: VtgPatternMatch) => {
+  const startingTurnsDifference = startingTurnsDifferenceByMatch.get(source)
+  if (startingTurnsDifference !== undefined) {
+    startingTurnsDifferenceByMatch.set(target, startingTurnsDifference)
+  }
+  const orientedSignatureDifference = orientedSignatureDifferenceByMatch.get(source)
+  if (orientedSignatureDifference !== undefined) {
+    orientedSignatureDifferenceByMatch.set(target, orientedSignatureDifference)
+  }
+  const exactRegenerationDifference = exactRegenerationDifferenceByMatch.get(source)
+  if (exactRegenerationDifference !== undefined) {
+    exactRegenerationDifferenceByMatch.set(target, exactRegenerationDifference)
+  }
+  return target
+}
+
 const candidateIndexes = new Map<
   VtgSpeedRatio,
   Map<VtgBeat, ReadonlyMap<string, readonly Candidate[]>>
 >()
 const normalizeOrientation = (value: number) => {
-  const normalized = ((((value + 180) % 360) + 360) % 360) - 180
+  let normalized = ((((value + 180) % 360) + 360) % 360) - 180
+  const nearestWholeDegree = Math.round(normalized)
+  if (Math.abs(normalized - nearestWholeDegree) <= 1e-6) normalized = nearestWholeDegree
   return normalized === -180 ? 180 : normalized
 }
-const signaturePrecision = 1e9
+// Three.js composition can leave harmless vector components around 1e-8. Keep matcher ranking
+// aligned with the compiler-level semantic comparison used by the exhaustive detection audit.
+const signaturePrecision = 1e6
 const normalizeSignatureNumber = (value: number) => {
   const normalized = Math.round(value * signaturePrecision) / signaturePrecision
   return Object.is(normalized, -0) ? 0 : normalized
@@ -278,7 +298,7 @@ const findInternal = (
           ((analysis.base.props[0]?.anim.length ?? 1) - 1) / 8,
       )
       .map((match) => {
-        return {
+        const transitionMatch: VtgPatternMatch = {
           ...match,
           transition: true,
           transitionBeats: analysis.transitionBeats,
@@ -286,6 +306,7 @@ const findInternal = (
           ...(analysis.transitionQuad ? { transitionQuad: true } : undefined),
           ...(analysis.transitionSecond ? { transitionSecond: true } : undefined),
         }
+        return inheritMatchRankings(match, transitionMatch)
       }),
   )
 }

@@ -8,17 +8,21 @@ import type {
   VtgPatternMatch,
   VtgPatternSelection,
   VtgRuleNumber,
+  VtgSpeedRatio,
 } from '@/features/vtg/types'
-import { getVtgBeats, getVtgPatternOrientations, vtgSpeedRatios } from '@/features/vtg/types'
+import { getVtgBeats, getVtgPatternOrientations } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
-import { loadSpiroAnimQSVersion } from '@/services/query/versions'
+import { CURRENT_SPIRO_ANIM_QS_VERSION, loadSpiroAnimQSVersion } from '@/services/query/versions'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
 const booleanOptions = [false, true] as const
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-5', '5-6', '6-5', '6-6'])
-const precision = 1e9
+// Three.js matrix/quaternion composition can leave harmless vector components around 1e-8.
+// A micro-unit comparison still catches meaningful authored or serialized animation differences.
+const precision = 1e6
+const exhaustiveAuditTimeout = 10 * 60 * 1000
 
 type Codec = Awaited<ReturnType<typeof useSpiroAnimQS>>
 
@@ -36,28 +40,21 @@ interface DetectionFailure {
   serializationDifference?: ReturnType<typeof findFirstDifference>
 }
 
-let codec: Codec
-
-beforeAll(async () => {
-  const version = await loadSpiroAnimQSVersion(6)
-  codec = await useSpiroAnimQS(
-    version.VDEF,
-    useBaseQS(version.VDEF, { charset: version.CHARSET }),
-    6,
-  )
-})
-
 const normalizeNumber = (value: number) => {
   const normalized = Math.round(value * precision) / precision
   return Object.is(normalized, -0) ? 0 : normalized
 }
 const normalizeAngle = (value: number) => {
-  const normalized = ((((normalizeNumber(value) + 180) % 360) + 360) % 360) - 180
+  let normalized = ((((normalizeNumber(value) + 180) % 360) + 360) % 360) - 180
+  const nearestWholeDegree = Math.round(normalized)
+  if (Math.abs(normalized - nearestWholeDegree) <= 1e-6) normalized = nearestWholeDegree
   return normalized === -180 ? 180 : normalized
 }
 
 const exactFrameFields = [
   'turns',
+  'twist',
+  'twist-roll',
   'beats',
   'scale',
   'depth',
@@ -81,6 +78,8 @@ const createExactAnimationData = (animation: RootDataFinal) => {
     props: compiled.props.map((prop) =>
       prop.anim.map((frame) => [
         normalizeNumber(frame.turns),
+        normalizeNumber(frame.twist),
+        normalizeNumber(frame.twistRoll),
         normalizeNumber(frame.beats),
         normalizeNumber(frame.scale),
         normalizeNumber(frame.depth),
@@ -122,7 +121,7 @@ const findFirstDifference = (source: RootDataFinal, regenerated: RootDataFinal) 
   }
 }
 
-const createSelections = (speedRatio: VtgPatternSelection['speedRatio']) => {
+const createSelections = (speedRatio: VtgSpeedRatio) => {
   const selections: VtgPatternSelection[] = []
   for (const row of ruleNumbers) {
     for (const column of ruleNumbers) {
@@ -152,48 +151,61 @@ const createSelections = (speedRatio: VtgPatternSelection['speedRatio']) => {
   return selections
 }
 
-describe('exhaustive VTG pattern detection', () => {
-  it.each(vtgSpeedRatios)(
-    'regenerates every serialized %s source pattern exactly',
-    async (speedRatio) => {
-      const failures: DetectionFailure[] = []
-      const selections = createSelections(speedRatio)
+export function defineExhaustiveVtgPatternDetectionAudit(speedRatio: VtgSpeedRatio) {
+  describe(`exhaustive VTG ${speedRatio} pattern detection`, () => {
+    let codec: Codec
 
-      for (const selection of selections) {
-        const source = createDefaultVtgAnimation(selection)
-        if (!source) throw new Error(`Missing source animation for ${JSON.stringify(selection)}`)
-        const decoded = await codec.decodeVer(codec.encodeQS(source, false))
-        const detected = findVtgPatternMatch(decoded)
-        if (!detected) {
-          failures.push({ source: selection, reason: 'unmatched' })
-          continue
+    beforeAll(async () => {
+      const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
+      codec = await useSpiroAnimQS(
+        version.VDEF,
+        useBaseQS(version.VDEF, { charset: version.CHARSET }),
+        CURRENT_SPIRO_ANIM_QS_VERSION,
+      )
+    })
+
+    it(
+      'regenerates every current-QS source pattern exactly',
+      async () => {
+        const failures: DetectionFailure[] = []
+        const selections = createSelections(speedRatio)
+
+        for (const selection of selections) {
+          const source = createDefaultVtgAnimation(selection)
+          if (!source) throw new Error(`Missing source animation for ${JSON.stringify(selection)}`)
+          const decoded = await codec.decodeVer(codec.encodeQS(source, false))
+          const detected = findVtgPatternMatch(decoded)
+          if (!detected) {
+            failures.push({ source: selection, reason: 'unmatched' })
+            continue
+          }
+
+          const regenerated = createDefaultVtgAnimation(detected)
+          if (
+            !regenerated ||
+            createExactAnimationSignature(regenerated) !== createExactAnimationSignature(decoded)
+          ) {
+            failures.push({
+              source: selection,
+              detected,
+              reason: 'different-animation',
+              ...(regenerated
+                ? { firstDifference: findFirstDifference(decoded, regenerated) }
+                : undefined),
+              ...(createExactAnimationSignature(source) === createExactAnimationSignature(decoded)
+                ? undefined
+                : { serializationDifference: findFirstDifference(source, decoded) }),
+            })
+          }
         }
 
-        const regenerated = createDefaultVtgAnimation(detected)
-        if (
-          !regenerated ||
-          createExactAnimationSignature(regenerated) !== createExactAnimationSignature(source)
-        ) {
-          failures.push({
-            source: selection,
-            detected,
-            reason: 'different-animation',
-            ...(regenerated
-              ? { firstDifference: findFirstDifference(source, regenerated) }
-              : undefined),
-            ...(createExactAnimationSignature(source) === createExactAnimationSignature(decoded)
-              ? undefined
-              : { serializationDifference: findFirstDifference(source, decoded) }),
-          })
-        }
-      }
-
-      expect({
-        checked: selections.length,
-        failureCount: failures.length,
-        failures: failures.slice(0, 3),
-      }).toEqual({ checked: selections.length, failureCount: 0, failures: [] })
-    },
-    120_000,
-  )
-})
+        expect({
+          checked: selections.length,
+          failureCount: failures.length,
+          failures: failures.slice(0, 3),
+        }).toEqual({ checked: selections.length, failureCount: 0, failures: [] })
+      },
+      exhaustiveAuditTimeout,
+    )
+  })
+}

@@ -162,6 +162,117 @@ describe('alternatePatternPlayback', () => {
     })
   })
 
+  it('recovers a two-rotation Trans 6 Quad cycle after each completed interval', () => {
+    const base = createDefaultVtgAnimation({
+      reference: '5-6',
+      speedRatio: '2:3',
+      isAnti: true,
+      swapProps: true,
+      reversePlane: false,
+      beat: 7.5,
+      orientation: -45,
+      propRotationOffsets: [-22.5, 157.5],
+    })
+    if (!base) throw new Error('Expected a two-rotation VTG animation')
+
+    const animation = alternatePatternPlayback(base, 6, 0, true, true)
+    if (!animation) throw new Error('Expected a Trans 6 Quad animation')
+
+    expect(analyzeAlternatingPatternPlayback(animation)).toEqual({
+      base,
+      transitionBeats: 6,
+      transitionQuad: true,
+      transitionSecond: false,
+      transitionAfterBeat: true,
+    })
+    const baseMatch = findVtgPatternMatch(base)
+    const transitionMatch = findVtgPatternMatch(animation)
+    expect(baseMatch).toBeDefined()
+    expect(transitionMatch).toMatchObject(baseMatch!)
+    expect(transitionMatch).toMatchObject({
+      speedRatio: '2:3',
+      transition: true,
+      transitionBeats: 6,
+      transitionQuad: true,
+      transitionAfterBeat: true,
+    })
+  })
+
+  it('matches the supplied serialized two-rotation Trans 6 Quad animation', async () => {
+    const version = await loadSpiroAnimQSVersion(10)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      10,
+    )
+    const animation = codec.decodeQS({
+      r: 'Ew68Yk11Y',
+      p0: 'Q__.mD_Qpg.5E0QzP............_ZEQUV........................_ZEQzP........................_ZEQUV........................_ZEQzP...........',
+      x0: '_p_',
+      m0: '_1_mxqv__',
+      p1: 'N__.bg0Rhw.5E0QzP........................_ZEQUV........................_ZEQzP........................_ZEQUV.......................',
+      x1: '_p_',
+      c: '_e_bhq',
+      v: '10',
+    })
+    const base = codec.decodeQS({
+      r: 'Ew08Yk11Y',
+      p0: 'Q__.mD_Qpg.5E0QzP...............',
+      x0: '_p_',
+      m0: '_1_mxqv__',
+      p1: 'N__.bg0Rhw.5E0QzP...............',
+      x1: '_p_',
+      c: '_e_bhq',
+      v: '10',
+    })
+
+    const baseMatch = findVtgPatternMatch(base)
+    const transitionMatch = findVtgPatternMatch(animation)
+    expect(baseMatch).toBeDefined()
+    expect(transitionMatch).toMatchObject(baseMatch!)
+    expect(transitionMatch).toMatchObject({
+      speedRatio: '2:3',
+      transition: true,
+      transitionBeats: 6,
+      transitionQuad: true,
+      transitionAfterBeat: true,
+    })
+  })
+
+  it('ranks the supplied transition and its base animation identically', async () => {
+    const version = await loadSpiroAnimQSVersion(10)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      10,
+    )
+    const transition = codec.decodeQS({
+      r: 'Ew08Yk11Y',
+      p0: 'Q__.mD_Qpg.5E0QzP........_ZEQUV................_ZEQzP................_ZEQUV................_ZEQzP.......',
+      x0: '_p_',
+      m0: '_1_mxqv__',
+      p1: 'N__.bg0Rhw.5E0QzP................_ZEQUV................_ZEQzP................_ZEQUV...............',
+      x1: '_p_',
+      c: '_e_bhq',
+      v: '10',
+    })
+    const base = codec.decodeQS({
+      r: 'Ew08Yk11Y',
+      p0: 'Q__.mD_Qpg.5E0QzP...............',
+      x0: '_p_',
+      m0: '_1_mxqv__',
+      p1: 'N__.bg0Rhw.5E0QzP...............',
+      x1: '_p_',
+      c: '_e_bhq',
+      v: '10',
+    })
+
+    const baseMatch = findVtgPatternMatch(base)
+    const transitionMatch = findVtgPatternMatch(transition)
+    expect(baseMatch).toBeDefined()
+    expect(transitionMatch).toMatchObject(baseMatch!)
+  })
+
   it('does not analyze an ordinary doubled cycle as alternating playback', () => {
     const base = createDoubledQtrAnimation({
       reference: '1-1',

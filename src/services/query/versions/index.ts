@@ -2,6 +2,8 @@ import type { AllVars, MotionData } from '@/types/AnimTypes'
 import type { VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 
+export const CURRENT_SPIRO_ANIM_QS_VERSION = 10
+
 export interface SpiroAnimQSVersion {
   CHARSET: string
   VDEF: Record<AllVars, VDefEntry>

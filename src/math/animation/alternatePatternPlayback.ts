@@ -194,7 +194,7 @@ export const analyzeAlternatingPatternPlayback = (
       const retainedFrames = prop.anim
         .slice(0, retainedBaseFrameCount)
         .map((frame) => ({ ...frame }))
-      if (transitionBeats <= 4 && firstChangeIndex < retainedFrames.length) {
+      if (transitionBeats <= timingCycleCount * 4 && firstChangeIndex < retainedFrames.length) {
         retainedFrames[firstChangeIndex] = {}
       }
 

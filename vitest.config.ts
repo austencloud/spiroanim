@@ -10,7 +10,7 @@ export default mergeConfig(
       exclude: [
         ...configDefaults.exclude,
         'e2e/**',
-        'src/features/vtg/__tests__/exhaustiveVtgPatternDetection.spec.ts',
+        'src/features/vtg/__tests__/exhaustiveVtgPatternDetection.*.spec.ts',
       ],
       root: fileURLToPath(new URL('./', import.meta.url)),
     },

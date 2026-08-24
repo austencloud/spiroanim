@@ -8,7 +8,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'jsdom',
-      include: ['src/features/vtg/__tests__/exhaustiveVtgPatternDetection.spec.ts'],
+      include: ['src/features/vtg/__tests__/exhaustiveVtgPatternDetection.*.spec.ts'],
       root: fileURLToPath(new URL('./', import.meta.url)),
     },
   }),
