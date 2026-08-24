@@ -151,6 +151,14 @@ after the current position or selected range without invoking player point selec
 applies the declared default, inheritance, and applicability rules to props, Motion, Camera Orbit,
 and Camera Center. Fields without a declared compression rule are preserved.
 
+Animation Manage also exposes Double Frames and Halve Frames across every prop. Double Frames
+inserts the exact intermediate frame in each authored interval and doubles BPM. Turns and Arc are
+split between the two intervals; Scale, Depth, and Adjust are interpolated; and Plane and Axis are
+transported through the continuation frame. The action is disabled when BPM or any generated value
+cannot be represented by the current property range and precision. Halve Frames is enabled only
+when consolidating alternating frames and doubling the result reproduces every effective Animation
+frame value exactly.
+
 Motion `beats` defaults to `1` on the first frame and inherits afterward. Precision initially
 defaults to `false`; Shape initially defaults to Linear and Amount initially defaults to 50%.
 Precision, Shape, and Amount inherit. Arc, Plane, and Axis default to zero without inheriting.

@@ -61,6 +61,8 @@ describe('ManagePanel', () => {
       'Delete Selection',
       'Add Prop',
       'Delete Props',
+      'Double Frames',
+      'Halve Frames',
       'Compress',
     ]
     const links = wrapper.findAll('a')

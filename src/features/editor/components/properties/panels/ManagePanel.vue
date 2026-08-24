@@ -6,6 +6,7 @@
       <DeleteSelection v-if="ANIMS.length" />
       <AddProp />
       <DeleteProps v-if="PROPS.length" />
+      <ResampleAnimationFrames v-if="PROPS.length" />
     </template>
     <template v-else-if="pFRAMES === 'motion'">
       <InsertFrame />
@@ -28,6 +29,7 @@ import InsertFrame from '../manage/InsertFrame.vue'
 import MatchFreeCamera from '../manage/MatchFreeCamera.vue'
 import DeleteSelection from '../manage/DeleteSelection.vue'
 import ShiftFrames from '../manage/ShiftFrames.vue'
+import ResampleAnimationFrames from '../manage/ResampleAnimationFrames.vue'
 import AddProp from '../manage/AddProp.vue'
 import DeleteProps from '../manage/DeleteProps.vue'
 import CompressAnimation from '../manage/CompressAnimation.vue'
