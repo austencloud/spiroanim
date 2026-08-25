@@ -93,10 +93,12 @@ export const useConceptsStore = defineStore(
     const prop = ref<PropInd>(2)
     const sliders = ref(!isTouchDevice())
     const vtgTwistMode = ref<VtgTwistMode>('simple')
+    const vtgTwistApply = ref(true)
     const vtgTwistValues = ref<VtgTwistValues>([{}, {}])
     const vtgFoldValues = ref<VtgFoldValues>([{}, {}])
     const vtgFoldValuesMaterialized = ref(false)
     const vtgFoldMode = ref<VtgFoldMode>('simple')
+    const vtgFoldApply = ref(true)
     const vtgFoldBeat = ref<VtgFoldSideSettings<number>>([2, 2])
     const vtgFoldRepeat = ref<VtgFoldSideSettings<boolean>>([true, true])
     const vtgFoldEvery = ref<VtgFoldSideSettings<number>>([2, 2])
@@ -299,12 +301,14 @@ export const useConceptsStore = defineStore(
       prop,
       sliders,
       vtgTwistMode,
+      vtgTwistApply,
       vtgTwistValues,
       setVtgTwistValue,
       vtgFoldValues,
       vtgFoldValuesMaterialized,
       setVtgFoldValue,
       vtgFoldMode,
+      vtgFoldApply,
       vtgFoldBeat,
       vtgFoldRepeat,
       vtgFoldEvery,
@@ -358,10 +362,12 @@ export const useConceptsStore = defineStore(
         'prop',
         'sliders',
         'vtgTwistMode',
+        'vtgTwistApply',
         'vtgTwistValues',
         'vtgFoldValues',
         'vtgFoldValuesMaterialized',
         'vtgFoldMode',
+        'vtgFoldApply',
         'vtgFoldBeat',
         'vtgFoldRepeat',
         'vtgFoldEvery',
@@ -510,6 +516,8 @@ export const useConceptsStore = defineStore(
         if (store.vtgFoldMode !== 'simple' && store.vtgFoldMode !== 'advanced') {
           store.vtgFoldMode = 'simple'
         }
+        if (typeof store.vtgTwistApply !== 'boolean') store.vtgTwistApply = true
+        if (typeof store.vtgFoldApply !== 'boolean') store.vtgFoldApply = true
         const hydratedFoldBeat: unknown = store.vtgFoldBeat
         const legacyFoldBeat =
           typeof hydratedFoldBeat === 'number' && Number.isFinite(hydratedFoldBeat)

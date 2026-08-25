@@ -236,14 +236,16 @@ const applyConceptPattern = (selection: ConceptPatternSelection) => {
       ? applyVtgTwistSettings(
           applyVtgFoldSettings(
             generated,
-            conceptsStore.vtgFoldMode === 'simple'
-              ? deriveVtgFoldSimpleSources(
-                  conceptsStore.vtgFoldValues,
-                  conceptsStore.vtgFoldBeat,
-                  conceptsStore.vtgFoldSpan,
-                  conceptsStore.vtgFoldValuesMaterialized,
-                )
-              : conceptsStore.vtgFoldValues,
+            !conceptsStore.vtgFoldApply
+              ? [{}, {}]
+              : conceptsStore.vtgFoldMode === 'simple'
+                ? deriveVtgFoldSimpleSources(
+                    conceptsStore.vtgFoldValues,
+                    conceptsStore.vtgFoldBeat,
+                    conceptsStore.vtgFoldSpan,
+                    conceptsStore.vtgFoldValuesMaterialized,
+                  )
+                : conceptsStore.vtgFoldValues,
             {
               mode: conceptsStore.vtgFoldMode,
               beat: conceptsStore.vtgFoldBeat,
@@ -254,7 +256,7 @@ const applyConceptPattern = (selection: ConceptPatternSelection) => {
             },
           ),
           conceptsStore.vtgTwistMode,
-          conceptsStore.vtgTwistValues,
+          conceptsStore.vtgTwistApply ? conceptsStore.vtgTwistValues : [{}, {}],
         )
       : generated
   if (animation) {

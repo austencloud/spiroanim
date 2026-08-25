@@ -235,6 +235,13 @@ describe('PatternPropertyControls', () => {
       wrapper.get<HTMLSelectElement>('select[aria-label="Right repeat folds every"]').element.value,
     ).toBe('2')
     expect(wrapper.get('input[type="checkbox"] + span').classes()).not.toContain('native')
+    expect(wrapper.findAll('input[aria-label^="Apply "]')).toHaveLength(2)
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Apply Folds"]').element.checked).toBe(
+      true,
+    )
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Apply Twist"]').element.checked).toBe(
+      true,
+    )
     expect(
       wrapper.findAll('[aria-label="Left Folds"] .pattern-property-controls__fold-frame'),
     ).toHaveLength(1)

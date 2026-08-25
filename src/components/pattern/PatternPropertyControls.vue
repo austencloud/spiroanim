@@ -41,6 +41,15 @@
                   />
                   <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
                 </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    :checked="foldApply"
+                    aria-label="Apply Folds"
+                    @change="emit('update:foldApply', ($event.target as HTMLInputElement).checked)"
+                  />
+                  <span>Apply</span>
+                </label>
               </fieldset>
               <fieldset
                 v-if="foldMode === 'simple'"
@@ -190,6 +199,15 @@
                 />
                 <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
               </label>
+              <label>
+                <input
+                  type="checkbox"
+                  :checked="twistApply"
+                  aria-label="Apply Twist"
+                  @change="emit('update:twistApply', ($event.target as HTMLInputElement).checked)"
+                />
+                <span>Apply</span>
+              </label>
             </fieldset>
             <div class="pattern-property-controls__twist-columns">
               <section
@@ -283,11 +301,13 @@ const props = withDefaults(
     showTurns?: boolean
     animation?: RootDataFinal
     twistMode?: VtgTwistMode
+    twistApply?: boolean
     twistValues?: VtgTwistValues
     foldValues?: VtgFoldValues
     foldValuesMaterialized?: boolean
     sliders?: boolean
     foldMode?: VtgFoldMode
+    foldApply?: boolean
     foldBeat?: VtgFoldSideSettings<number>
     foldRepeat?: VtgFoldSideSettings<boolean>
     foldEvery?: VtgFoldSideSettings<number>
@@ -299,11 +319,13 @@ const props = withDefaults(
   {
     showTurns: false,
     twistMode: 'simple',
+    twistApply: true,
     twistValues: () => [{}, {}],
     foldValues: () => [{}, {}],
     foldValuesMaterialized: false,
     sliders: true,
     foldMode: 'simple',
+    foldApply: true,
     foldBeat: () => [2, 2],
     foldRepeat: () => [true, true],
     foldEvery: () => [2, 2],
@@ -317,8 +339,10 @@ const props = withDefaults(
 const emit = defineEmits<{
   twistUpdate: [propIndex: 0 | 1, beat: number, value?: number]
   'update:twistMode': [mode: VtgTwistMode]
+  'update:twistApply': [apply: boolean]
   foldUpdate: [propIndex: 0 | 1, beat: number, fold: keyof VtgFoldValue, value?: number]
   'update:foldMode': [mode: VtgFoldMode]
+  'update:foldApply': [apply: boolean]
   'update:foldBeat': [propIndex: 0 | 1, beat: number]
   'update:foldRepeat': [propIndex: 0 | 1, repeat: boolean]
   'update:foldEvery': [propIndex: 0 | 1, every: number]

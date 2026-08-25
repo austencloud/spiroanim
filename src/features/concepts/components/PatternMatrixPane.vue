@@ -357,10 +357,12 @@
           context="vtg"
           :animation="animation"
           :twist-mode="vtgTwistMode"
+          :twist-apply="vtgTwistApply"
           :twist-values="vtgTwistValues"
           :fold-values="vtgFoldValues"
           :fold-values-materialized="vtgFoldValuesMaterialized"
           :fold-mode="vtgFoldMode"
+          :fold-apply="vtgFoldApply"
           :fold-beat="vtgFoldBeat"
           :fold-repeat="vtgFoldRepeat"
           :fold-every="vtgFoldEvery"
@@ -372,7 +374,9 @@
           @twist-update="updateTwistSetting"
           @fold-update="updateFoldSetting"
           @update:twist-mode="updateTwistMode"
+          @update:twist-apply="updateTwistApply"
           @update:fold-mode="updateFoldMode"
+          @update:fold-apply="updateFoldApply"
           @update:fold-beat="updateFoldBeat"
           @update:fold-repeat="updateFoldRepeat"
           @update:fold-every="updateFoldEvery"
@@ -559,10 +563,12 @@ const {
   rightPropColor,
   prop,
   vtgTwistMode,
+  vtgTwistApply,
   vtgTwistValues,
   vtgFoldValues,
   vtgFoldValuesMaterialized,
   vtgFoldMode,
+  vtgFoldApply,
   vtgFoldBeat,
   vtgFoldRepeat,
   vtgFoldEvery,
@@ -580,8 +586,12 @@ const emitTwistAnimation = () => {
   emit(
     'animationUpdate',
     applyVtgFoldSettings(
-      applyVtgTwistSettings(props.animation, vtgTwistMode.value, vtgTwistValues.value),
-      vtgFoldValues.value,
+      applyVtgTwistSettings(
+        props.animation,
+        vtgTwistMode.value,
+        vtgTwistApply.value ? vtgTwistValues.value : [{}, {}],
+      ),
+      vtgFoldApply.value ? vtgFoldValues.value : [{}, {}],
       {
         mode: vtgFoldMode.value,
         beat: vtgFoldBeat.value,
@@ -622,6 +632,10 @@ const updateTwistMode = (mode: VtgTwistMode) => {
   vtgTwistMode.value = mode
   emitTwistAnimation()
 }
+const updateTwistApply = (apply: boolean) => {
+  vtgTwistApply.value = apply
+  emitTwistAnimation()
+}
 const updateFoldSetting = (
   propIndex: 0 | 1,
   beat: number,
@@ -646,6 +660,10 @@ const updateFoldSetting = (
 const updateFoldMode = (mode: VtgFoldMode) => {
   if (vtgFoldMode.value === 'simple' && mode === 'advanced') materializeSimpleFoldValues()
   vtgFoldMode.value = mode
+  emitTwistAnimation()
+}
+const updateFoldApply = (apply: boolean) => {
+  vtgFoldApply.value = apply
   emitTwistAnimation()
 }
 const updateFoldBeat = (propIndex: 0 | 1, beat: number) => {
