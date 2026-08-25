@@ -28,6 +28,36 @@ export interface QuickSlotSet {
   selectedSlot: number | null
 }
 
+export type VtgTwistMode = 'simple' | 'advanced'
+export type VtgTwistValues = [Record<string, number>, Record<string, number>]
+export interface VtgFoldValue {
+  yaw?: number
+  rotate?: number
+}
+export type VtgFoldValues = [Record<string, VtgFoldValue>, Record<string, VtgFoldValue>]
+export type VtgFoldMode = 'simple' | 'advanced'
+export type VtgFoldSpan = 'eighth' | 'quarter'
+export type VtgFoldSideSettings<T> = [T, T]
+export type VtgPropertyKey = 'axis' | 'twist' | 'turns'
+
+const normalizeVtgTwistSide = (value: unknown): Record<string, number> => {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return {}
+  return Object.fromEntries(
+    Object.entries(value).filter(([beat, twist]) => {
+      const numericBeat = Number(beat)
+      return (
+        Number.isFinite(numericBeat) &&
+        numericBeat >= 0 &&
+        typeof twist === 'number' &&
+        Number.isFinite(twist) &&
+        twist >= -360 &&
+        twist <= 360 &&
+        twist % 45 === 0
+      )
+    }),
+  )
+}
+
 const quickSlotSetIdPrefix = 'quick-slot-set-'
 const defaultQuickSlotSetName = (number: number) => `Quick Slot Set #${number}`
 const copyQuickSlotPaths = (paths: Array<string | null>) => [...paths]
@@ -62,6 +92,38 @@ export const useConceptsStore = defineStore(
     const rightPropColor = ref<PatternPropColor>(defaultPatternPropColors[1])
     const prop = ref<PropInd>(2)
     const sliders = ref(!isTouchDevice())
+    const vtgTwistMode = ref<VtgTwistMode>('simple')
+    const vtgTwistValues = ref<VtgTwistValues>([{}, {}])
+    const vtgFoldValues = ref<VtgFoldValues>([{}, {}])
+    const vtgFoldValuesMaterialized = ref(false)
+    const vtgFoldMode = ref<VtgFoldMode>('simple')
+    const vtgFoldBeat = ref<VtgFoldSideSettings<number>>([2, 2])
+    const vtgFoldRepeat = ref<VtgFoldSideSettings<boolean>>([true, true])
+    const vtgFoldEvery = ref<VtgFoldSideSettings<number>>([2, 2])
+    const vtgFoldAlternate = ref<VtgFoldSideSettings<boolean>>([false, false])
+    const vtgFoldSpan = ref<VtgFoldSpan>('quarter')
+    const vtgPropertiesExpanded = ref(false)
+    const vtgActiveProperty = ref<VtgPropertyKey | null>(null)
+
+    const setVtgTwistValue = (propIndex: 0 | 1, beat: number, value?: number) => {
+      const beatKey = String(beat)
+      if (value === undefined) delete vtgTwistValues.value[propIndex][beatKey]
+      else vtgTwistValues.value[propIndex][beatKey] = value
+    }
+    const setVtgFoldValue = (
+      propIndex: 0 | 1,
+      beat: number,
+      fold: keyof VtgFoldValue,
+      value?: number,
+    ) => {
+      const beatKey = String(beat)
+      const beatValue = vtgFoldValues.value[propIndex][beatKey] ?? {}
+      if (value === undefined) delete beatValue[fold]
+      else beatValue[fold] = value
+      if (beatValue.yaw === undefined && beatValue.rotate === undefined) {
+        delete vtgFoldValues.value[propIndex][beatKey]
+      } else vtgFoldValues.value[propIndex][beatKey] = beatValue
+    }
 
     const resetPatternControls = () => {
       speedRatio.value = vtgDefaultSpeedRatio
@@ -236,6 +298,20 @@ export const useConceptsStore = defineStore(
       rightPropColor,
       prop,
       sliders,
+      vtgTwistMode,
+      vtgTwistValues,
+      setVtgTwistValue,
+      vtgFoldValues,
+      vtgFoldValuesMaterialized,
+      setVtgFoldValue,
+      vtgFoldMode,
+      vtgFoldBeat,
+      vtgFoldRepeat,
+      vtgFoldEvery,
+      vtgFoldAlternate,
+      vtgFoldSpan,
+      vtgPropertiesExpanded,
+      vtgActiveProperty,
       resetPatternControls,
       addQuickSlot,
       removeQuickSlot,
@@ -281,6 +357,18 @@ export const useConceptsStore = defineStore(
         'rightPropColor',
         'prop',
         'sliders',
+        'vtgTwistMode',
+        'vtgTwistValues',
+        'vtgFoldValues',
+        'vtgFoldValuesMaterialized',
+        'vtgFoldMode',
+        'vtgFoldBeat',
+        'vtgFoldRepeat',
+        'vtgFoldEvery',
+        'vtgFoldAlternate',
+        'vtgFoldSpan',
+        'vtgPropertiesExpanded',
+        'vtgActiveProperty',
         'customizeExpanded',
         'classicLayout',
       ],
@@ -403,6 +491,67 @@ export const useConceptsStore = defineStore(
           store.prop = 2
         }
         if (typeof store.sliders !== 'boolean') store.sliders = !isTouchDevice()
+        if (store.vtgTwistMode !== 'simple' && store.vtgTwistMode !== 'advanced') {
+          store.vtgTwistMode = 'simple'
+        }
+        const hydratedTwistValues: unknown = store.vtgTwistValues
+        store.vtgTwistValues = Array.isArray(hydratedTwistValues)
+          ? [
+              normalizeVtgTwistSide(hydratedTwistValues[0]),
+              normalizeVtgTwistSide(hydratedTwistValues[1]),
+            ]
+          : [{}, {}]
+        if (!Array.isArray(store.vtgFoldValues) || store.vtgFoldValues.length !== 2) {
+          store.vtgFoldValues = [{}, {}]
+        }
+        if (typeof store.vtgFoldValuesMaterialized !== 'boolean') {
+          store.vtgFoldValuesMaterialized = false
+        }
+        if (store.vtgFoldMode !== 'simple' && store.vtgFoldMode !== 'advanced') {
+          store.vtgFoldMode = 'simple'
+        }
+        const hydratedFoldBeat: unknown = store.vtgFoldBeat
+        const legacyFoldBeat =
+          typeof hydratedFoldBeat === 'number' && Number.isFinite(hydratedFoldBeat)
+            ? hydratedFoldBeat
+            : 2
+        store.vtgFoldBeat = Array.isArray(hydratedFoldBeat)
+          ? [
+              typeof hydratedFoldBeat[0] === 'number' && Number.isFinite(hydratedFoldBeat[0])
+                ? hydratedFoldBeat[0]
+                : 2,
+              typeof hydratedFoldBeat[1] === 'number' && Number.isFinite(hydratedFoldBeat[1])
+                ? hydratedFoldBeat[1]
+                : 2,
+            ]
+          : [legacyFoldBeat, legacyFoldBeat]
+        const hydratedFoldRepeat: unknown = store.vtgFoldRepeat
+        const legacyFoldRepeat = typeof hydratedFoldRepeat === 'boolean' ? hydratedFoldRepeat : true
+        store.vtgFoldRepeat = Array.isArray(hydratedFoldRepeat)
+          ? [hydratedFoldRepeat[0] === true, hydratedFoldRepeat[1] === true]
+          : [legacyFoldRepeat, legacyFoldRepeat]
+        const hydratedFoldEvery: unknown = store.vtgFoldEvery
+        const normalizeEvery = (value: unknown) =>
+          typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 2
+        const legacyFoldEvery = normalizeEvery(hydratedFoldEvery)
+        store.vtgFoldEvery = Array.isArray(hydratedFoldEvery)
+          ? [normalizeEvery(hydratedFoldEvery[0]), normalizeEvery(hydratedFoldEvery[1])]
+          : [legacyFoldEvery, legacyFoldEvery]
+        const hydratedFoldAlternate: unknown = store.vtgFoldAlternate
+        const legacyFoldAlternate =
+          typeof hydratedFoldAlternate === 'boolean' ? hydratedFoldAlternate : false
+        store.vtgFoldAlternate = Array.isArray(hydratedFoldAlternate)
+          ? [hydratedFoldAlternate[0] === true, hydratedFoldAlternate[1] === true]
+          : [legacyFoldAlternate, legacyFoldAlternate]
+        if (store.vtgFoldSpan !== 'eighth' && store.vtgFoldSpan !== 'quarter') {
+          store.vtgFoldSpan = 'quarter'
+        }
+        if (typeof store.vtgPropertiesExpanded !== 'boolean') {
+          store.vtgPropertiesExpanded = false
+        }
+        if (!['axis', 'twist', 'turns', null].includes(store.vtgActiveProperty)) {
+          store.vtgActiveProperty = null
+        }
         if (typeof store.customizeExpanded !== 'boolean') store.customizeExpanded = false
         if (typeof store.classicLayout !== 'boolean') store.classicLayout = true
       },

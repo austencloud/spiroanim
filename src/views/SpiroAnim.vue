@@ -69,6 +69,7 @@
         @quick-slot-apply="applyQuickSlotFromView($event, 'concepts')"
         @quick-slot-save="saveCurrentPatternToQuickSlot"
         @quick-slots-create="saveAnimationsToQuickSlots"
+        @animation-update="applyPropertyAnimation"
         @builder-open="toggleBuilder"
         @customize="applyBuilderCustomization"
         @update:builder-full-grid="builderFullGrid = $event"
@@ -111,6 +112,11 @@ import { applyConceptPattern as createConceptPattern } from '@/features/concepts
 import { isVtgPatternSelection, type ConceptPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
+import { applyVtgTwistSettings } from '@/features/vtg/applyVtgTwistSettings'
+import {
+  applyVtgFoldSettings,
+  deriveVtgFoldSimpleSources,
+} from '@/features/vtg/applyVtgFoldSettings'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useScrollSelectScale } from '@/composables/useScrollSelectScale'
@@ -129,6 +135,7 @@ import { UnsupportedSpiroAnimQSVersionError } from '@/services/query/versions'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { useEditorPaneAvailability } from '@/features/editor/composables/useEditorPaneAvailability'
 import { mdiFilterOff } from '@mdi/js'
+import type { RootDataFinal } from '@/types/AnimTypes'
 
 useScrollSelectScale()
 const { animationReady, saveCurrentPatternToQuickSlot, saveAnimationsToQuickSlots } = useMainRoute() // Handles updates to route path and query
@@ -223,7 +230,33 @@ registerComponentEl(cConcepts, eConcepts)
 registerComponentEl(cBuilder, eBuilder)
 
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
-  const animation = createConceptPattern(ROOT.value, selection)
+  const generated = createConceptPattern(ROOT.value, selection)
+  const animation =
+    generated && isVtgPatternSelection(selection)
+      ? applyVtgTwistSettings(
+          applyVtgFoldSettings(
+            generated,
+            conceptsStore.vtgFoldMode === 'simple'
+              ? deriveVtgFoldSimpleSources(
+                  conceptsStore.vtgFoldValues,
+                  conceptsStore.vtgFoldBeat,
+                  conceptsStore.vtgFoldSpan,
+                  conceptsStore.vtgFoldValuesMaterialized,
+                )
+              : conceptsStore.vtgFoldValues,
+            {
+              mode: conceptsStore.vtgFoldMode,
+              beat: conceptsStore.vtgFoldBeat,
+              repeat: conceptsStore.vtgFoldRepeat,
+              every: conceptsStore.vtgFoldEvery,
+              alternate: conceptsStore.vtgFoldAlternate,
+              span: conceptsStore.vtgFoldSpan,
+            },
+          ),
+          conceptsStore.vtgTwistMode,
+          conceptsStore.vtgTwistValues,
+        )
+      : generated
   if (animation) {
     ROOT.value = animation
     playerStore.cameraReset = Symbol()
@@ -245,6 +278,11 @@ const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
     ? applyVtgCustomization(ROOT.value, selection)
     : createConceptPattern(ROOT.value, selection)
   if (!animation) return
+  qsStore.qsSkip = true
+  ROOT.value = animation
+}
+
+const applyPropertyAnimation = (animation: RootDataFinal) => {
   qsStore.qsSkip = true
   ROOT.value = animation
 }

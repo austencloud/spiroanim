@@ -57,7 +57,53 @@ describe('useConceptsStore', () => {
     expect(store.sliders).toBe(true)
     expect(store.customizeExpanded).toBe(false)
     expect(store.classicLayout).toBe(true)
+    expect(store.vtgTwistMode).toBe('simple')
+    expect(store.vtgTwistValues).toEqual([{}, {}])
+    expect(store.vtgFoldValues).toEqual([{}, {}])
+    expect(store.vtgFoldValuesMaterialized).toBe(false)
+    expect(store.vtgFoldMode).toBe('simple')
+    expect(store.vtgFoldBeat).toEqual([2, 2])
+    expect(store.vtgFoldRepeat).toEqual([true, true])
+    expect(store.vtgFoldEvery).toEqual([2, 2])
+    expect(store.vtgFoldAlternate).toEqual([false, false])
+    expect(store.vtgFoldSpan).toBe('quarter')
+    expect(store.vtgPropertiesExpanded).toBe(false)
+    expect(store.vtgActiveProperty).toBeNull()
     app.unmount()
+  })
+
+  it('persists generator Twist mode and hidden beat values', () => {
+    const first = mountStore()
+    first.store.vtgTwistMode = 'advanced'
+    first.store.setVtgTwistValue(0, 0.5, 45)
+    first.store.setVtgTwistValue(0, 2.5, 90)
+    first.store.setVtgTwistValue(1, 3, -45)
+    first.store.setVtgFoldValue(0, 2.5, 'yaw', 45)
+    first.store.setVtgFoldValue(0, 2.5, 'rotate', 90)
+    first.store.vtgFoldMode = 'simple'
+    first.store.vtgFoldBeat = [2, 3]
+    first.store.vtgFoldRepeat = [true, false]
+    first.store.vtgFoldEvery = [2, 4]
+    first.store.vtgFoldAlternate = [true, false]
+    first.store.vtgFoldSpan = 'quarter'
+    first.store.vtgFoldValuesMaterialized = true
+    first.store.vtgPropertiesExpanded = true
+    first.store.vtgActiveProperty = 'axis'
+    first.app.unmount()
+
+    const second = mountStore()
+    expect(second.store.vtgTwistMode).toBe('advanced')
+    expect(second.store.vtgTwistValues).toEqual([{ 0.5: 45, 2.5: 90 }, { 3: -45 }])
+    expect(second.store.vtgFoldValues).toEqual([{ 2.5: { yaw: 45, rotate: 90 } }, {}])
+    expect(second.store.vtgFoldBeat).toEqual([2, 3])
+    expect(second.store.vtgFoldRepeat).toEqual([true, false])
+    expect(second.store.vtgFoldEvery).toEqual([2, 4])
+    expect(second.store.vtgFoldAlternate).toEqual([true, false])
+    expect(second.store.vtgFoldSpan).toBe('quarter')
+    expect(second.store.vtgFoldValuesMaterialized).toBe(true)
+    expect(second.store.vtgPropertiesExpanded).toBe(true)
+    expect(second.store.vtgActiveProperty).toBe('axis')
+    second.app.unmount()
   })
 
   it('persists the Classic table layout preference', () => {

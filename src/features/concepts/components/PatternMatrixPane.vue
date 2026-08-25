@@ -352,7 +352,35 @@
         </p>
       </template>
       <template #before-customize>
-        <PatternPropertyControls v-if="!builderActive && showVtgProperties" context="vtg" />
+        <PatternPropertyControls
+          v-if="!builderActive && showVtgProperties"
+          context="vtg"
+          :animation="animation"
+          :twist-mode="vtgTwistMode"
+          :twist-values="vtgTwistValues"
+          :fold-values="vtgFoldValues"
+          :fold-values-materialized="vtgFoldValuesMaterialized"
+          :fold-mode="vtgFoldMode"
+          :fold-beat="vtgFoldBeat"
+          :fold-repeat="vtgFoldRepeat"
+          :fold-every="vtgFoldEvery"
+          :fold-alternate="vtgFoldAlternate"
+          :fold-span="vtgFoldSpan"
+          :properties-expanded="vtgPropertiesExpanded"
+          :active-property="vtgActiveProperty"
+          :sliders="sliders"
+          @twist-update="updateTwistSetting"
+          @fold-update="updateFoldSetting"
+          @update:twist-mode="updateTwistMode"
+          @update:fold-mode="updateFoldMode"
+          @update:fold-beat="updateFoldBeat"
+          @update:fold-repeat="updateFoldRepeat"
+          @update:fold-every="updateFoldEvery"
+          @update:fold-alternate="updateFoldAlternate"
+          @update:fold-span="updateFoldSpan"
+          @update:properties-expanded="vtgPropertiesExpanded = $event"
+          @update:active-property="vtgActiveProperty = $event"
+        />
       </template>
     </ConceptAnimationControls>
   </section>
@@ -375,7 +403,19 @@ import type { PatternRelationshipLabel } from '@/features/concepts/math/describe
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import type {
+  VtgFoldMode,
+  VtgFoldSpan,
+  VtgFoldValue,
+  VtgTwistMode,
+} from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
+import { applyVtgTwistSettings } from '@/features/vtg/applyVtgTwistSettings'
+import {
+  applyVtgFoldSettings,
+  deriveVtgFoldSimpleSources,
+  extractVtgFoldValues,
+} from '@/features/vtg/applyVtgFoldSettings'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import {
   builderPatternPointerDropEvent,
@@ -489,6 +529,7 @@ const emit = defineEmits<{
   patternPreview: [selection: ConceptPatternSelection]
   customize: [selection: ConceptPatternSelection]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
+  animationUpdate: [animation: RootDataFinal]
   builderOpen: []
   'update:builderFullGrid': [enabled: boolean]
 }>()
@@ -517,10 +558,146 @@ const {
   leftPropColor,
   rightPropColor,
   prop,
+  vtgTwistMode,
+  vtgTwistValues,
+  vtgFoldValues,
+  vtgFoldValuesMaterialized,
+  vtgFoldMode,
+  vtgFoldBeat,
+  vtgFoldRepeat,
+  vtgFoldEvery,
+  vtgFoldAlternate,
+  vtgFoldSpan,
+  vtgPropertiesExpanded,
+  vtgActiveProperty,
+  sliders,
   classicLayout,
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
 const isAnti = ref(false)
+const emitTwistAnimation = () => {
+  if (!props.animation) return
+  emit(
+    'animationUpdate',
+    applyVtgFoldSettings(
+      applyVtgTwistSettings(props.animation, vtgTwistMode.value, vtgTwistValues.value),
+      vtgFoldValues.value,
+      {
+        mode: vtgFoldMode.value,
+        beat: vtgFoldBeat.value,
+        repeat: vtgFoldRepeat.value,
+        every: vtgFoldEvery.value,
+        alternate: vtgFoldAlternate.value,
+        span: vtgFoldSpan.value,
+      },
+    ),
+  )
+}
+const getSimpleFoldSources = () =>
+  deriveVtgFoldSimpleSources(
+    vtgFoldValues.value,
+    vtgFoldBeat.value,
+    vtgFoldSpan.value,
+    vtgFoldValuesMaterialized.value,
+  )
+const materializeSimpleFoldValues = (sources = getSimpleFoldSources()) => {
+  if (!props.animation) return
+  vtgFoldValues.value = extractVtgFoldValues(
+    applyVtgFoldSettings(props.animation, sources, {
+      mode: 'simple',
+      beat: vtgFoldBeat.value,
+      repeat: vtgFoldRepeat.value,
+      every: vtgFoldEvery.value,
+      alternate: vtgFoldAlternate.value,
+      span: vtgFoldSpan.value,
+    }),
+  )
+  vtgFoldValuesMaterialized.value = true
+}
+const updateTwistSetting = (propIndex: 0 | 1, beat: number, value?: number) => {
+  conceptsStore.setVtgTwistValue(propIndex, beat, value)
+  emitTwistAnimation()
+}
+const updateTwistMode = (mode: VtgTwistMode) => {
+  vtgTwistMode.value = mode
+  emitTwistAnimation()
+}
+const updateFoldSetting = (
+  propIndex: 0 | 1,
+  beat: number,
+  fold: keyof VtgFoldValue,
+  value?: number,
+) => {
+  if (vtgFoldMode.value === 'simple') {
+    const sources = getSimpleFoldSources()
+    const source = sources[propIndex][String(beat)] ?? {}
+    if (value === undefined) delete source[fold]
+    else source[fold] = value
+    if (source.yaw === undefined && source.rotate === undefined) {
+      delete sources[propIndex][String(beat)]
+    } else sources[propIndex][String(beat)] = source
+    materializeSimpleFoldValues(sources)
+  } else {
+    conceptsStore.setVtgFoldValue(propIndex, beat, fold, value)
+    vtgFoldValuesMaterialized.value = true
+  }
+  emitTwistAnimation()
+}
+const updateFoldMode = (mode: VtgFoldMode) => {
+  if (vtgFoldMode.value === 'simple' && mode === 'advanced') materializeSimpleFoldValues()
+  vtgFoldMode.value = mode
+  emitTwistAnimation()
+}
+const updateFoldBeat = (propIndex: 0 | 1, beat: number) => {
+  const sources = getSimpleFoldSources()
+  const previousBeat = vtgFoldBeat.value[propIndex]
+  const source = sources[propIndex][String(previousBeat)]
+  vtgFoldBeat.value[propIndex] = beat
+  delete sources[propIndex][String(previousBeat)]
+  if (source) sources[propIndex][String(beat)] = source
+  materializeSimpleFoldValues(sources)
+  emitTwistAnimation()
+}
+const updateFoldRepeat = (propIndex: 0 | 1, repeat: boolean) => {
+  const sources = getSimpleFoldSources()
+  vtgFoldRepeat.value[propIndex] = repeat
+  if (!repeat) vtgFoldAlternate.value[propIndex] = false
+  materializeSimpleFoldValues(sources)
+  emitTwistAnimation()
+}
+const updateFoldEvery = (propIndex: 0 | 1, every: number) => {
+  const sources = getSimpleFoldSources()
+  vtgFoldEvery.value[propIndex] = every
+  materializeSimpleFoldValues(sources)
+  emitTwistAnimation()
+}
+const updateFoldAlternate = (propIndex: 0 | 1, alternate: boolean) => {
+  const sources = getSimpleFoldSources()
+  vtgFoldAlternate.value[propIndex] = alternate
+  materializeSimpleFoldValues(sources)
+  emitTwistAnimation()
+}
+const updateFoldSpan = (span: VtgFoldSpan) => {
+  const sources = getSimpleFoldSources()
+  vtgFoldSpan.value = span
+  if (span === 'quarter') {
+    for (const propIndex of [0, 1] as const) {
+      if (!Number.isInteger(vtgFoldBeat.value[propIndex])) {
+        const previousBeat = vtgFoldBeat.value[propIndex]
+        const nextBeat = Math.ceil(previousBeat)
+        const source = sources[propIndex][String(previousBeat)]
+        vtgFoldBeat.value[propIndex] = nextBeat
+        delete sources[propIndex][String(previousBeat)]
+        if (source) sources[propIndex][String(nextBeat)] = source
+      }
+      if (!Number.isInteger(vtgFoldEvery.value[propIndex])) {
+        vtgFoldEvery.value[propIndex] = Math.ceil(vtgFoldEvery.value[propIndex])
+      }
+    }
+  }
+  materializeSimpleFoldValues(sources)
+  emitTwistAnimation()
+}
 const initialPropRatios = getVtgPropSpeedRatios(speedRatio.value)
 const moreRatios = ref(
   initialPropRatios[0] !== initialPropRatios[1] || !standardSpeedRatios.has(speedRatio.value),

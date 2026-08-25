@@ -55,6 +55,7 @@
       @pattern-preview="emit('patternPreview', $event)"
       @customize="emit('customize', $event)"
       @quick-slots-create="emit('quickSlotsCreate', $event)"
+      @animation-update="emit('animationUpdate', $event)"
       @builder-open="emit('builderOpen')"
       @update:builder-full-grid="emit('update:builderFullGrid', $event)"
     />
@@ -112,6 +113,7 @@ const emit = defineEmits<{
   quickSlotApply: [path: string]
   quickSlotSave: [slot: number]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
+  animationUpdate: [animation: RootDataFinal]
   builderOpen: []
   'update:builderFullGrid': [enabled: boolean]
 }>()
