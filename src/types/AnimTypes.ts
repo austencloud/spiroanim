@@ -175,6 +175,8 @@ export interface AnimDataCompiled {
   twistRoll: number
   yaw: number
   rotate: number
+  /** Begin this interval from the completed Rotate orientation as the new primary basis. */
+  rebasePrimaryOrientation: boolean
   beats: number
   scale: number
   depth: number

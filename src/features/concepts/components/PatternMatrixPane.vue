@@ -352,7 +352,7 @@
         </p>
       </template>
       <template #before-customize>
-        <PatternPropertyControls v-if="!builderActive" context="vtg" />
+        <PatternPropertyControls v-if="!builderActive && showVtgProperties" context="vtg" />
       </template>
     </ConceptAnimationControls>
   </section>
@@ -376,6 +376,7 @@ import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
+import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import {
   builderPatternPointerDropEvent,
   builderPatternPointerEndEvent,
@@ -491,6 +492,8 @@ const emit = defineEmits<{
   builderOpen: []
   'update:builderFullGrid': [enabled: boolean]
 }>()
+
+const showVtgProperties = ref(false)
 
 const speedRatioRows = vtgSpeedRatioRows
 const standardSpeedRatios = new Set<VtgSpeedRatio>(speedRatioRows.flat())
@@ -1776,6 +1779,7 @@ watch(displayedPreviews, () => void nextTick(observeDisplayedPreviews))
 
 onMounted(() => {
   componentMounted = true
+  showVtgProperties.value = globalThis.location.hostname !== PRODUCTION_PWA_HOSTNAME
   syncPatternControls()
 
   if (typeof ResizeObserver === 'undefined') return

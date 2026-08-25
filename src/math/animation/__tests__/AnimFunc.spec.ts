@@ -119,8 +119,8 @@ describe('AnimFunc', () => {
     expect(frames[4]!.orient).toEqual(frames[3]!.orient)
     expect(frames[1]!.primaryOrient).toEqual(frames[0]!.primaryOrient)
     expect(frames[1]!.secondaryOrient).not.toEqual(frames[0]!.secondaryOrient)
-    expect(frames[2]!.secondaryOrient).toEqual(frames[1]!.secondaryOrient)
-    expect(frames[2]!.primaryOrient).toEqual(frames[1]!.primaryOrient)
+    expect(frames[2]!.secondaryOrient).toEqual([0, 0, 0, 1])
+    expect(frames[2]!.primaryOrient).toEqual(frames[1]!.orient)
   })
 
   it('does not let Yaw/Rotate alter later primary Axis/Turns state', () => {
@@ -159,5 +159,37 @@ describe('AnimFunc', () => {
     }
     expect(compiled[1]!.orient).not.toEqual(primaryOnly[1]!.orient)
     expect(compiled.at(-1)!.orient).not.toEqual(primaryOnly.at(-1)!.orient)
+  })
+
+  it('rebases the completed Rotate orientation before subsequent primary rotation', () => {
+    const createRoot = (rotate: number): RootData => ({
+      bpm: 60,
+      prop: 0,
+      color: 2,
+      smooth: true,
+      guides: false,
+      paths: false,
+      arms: false,
+      nodes: false,
+      anchors: false,
+      props: [{ anim: [{ arc: 270 }, { arc: 90, turns: 180, rotate }, {}, {}] }],
+      aspectx: 16,
+      aspecty: 9,
+      distance: 22,
+      thick: 4,
+    })
+    const rotated = rootCompile(rootFinal(createRoot(180))).props[0]!.anim
+    const baseline = rootCompile(rootFinal(createRoot(0))).props[0]!.anim
+
+    expect(rotated.map(({ rebasePrimaryOrientation }) => rebasePrimaryOrientation)).toEqual([
+      false,
+      false,
+      true,
+      false,
+    ])
+    expect(rotated[1]!.primaryOrient).toEqual(baseline[1]!.primaryOrient)
+    expect(rotated[2]!.primaryOrient).not.toEqual(baseline[2]!.primaryOrient)
+    expect(rotated[2]!.secondaryOrient).toEqual([0, 0, 0, 1])
+    expect(rotated.map(({ rot }) => rot)).toEqual(baseline.map(({ rot }) => rot))
   })
 })

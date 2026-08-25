@@ -83,6 +83,7 @@ const compiledFramesEqual = (
     return (
       comparison !== undefined &&
       animationValueKeys.every((key) => nearlyEqual(frame[key], comparison[key])) &&
+      frame.rebasePrimaryOrientation === comparison.rebasePrimaryOrientation &&
       nearlyEqual(frame.twistRoll, comparison.twistRoll) &&
       vectorsNearlyEqual(frame.pos, comparison.pos) &&
       vectorsNearlyEqual(frame.rot, comparison.rot) &&

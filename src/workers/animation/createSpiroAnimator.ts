@@ -270,8 +270,13 @@ export const createSpiroAnimator = (vars: {
         modelStartAdjustment.identity()
       }
 
-      modelStartPrimaryOrientation.fromArray(p1.primaryOrient)
-      modelStartSecondaryOrientation.fromArray(p1.secondaryOrient)
+      if (p2.rebasePrimaryOrientation) {
+        modelStartPrimaryOrientation.fromArray(p1.orient)
+        modelStartSecondaryOrientation.identity()
+      } else {
+        modelStartPrimaryOrientation.fromArray(p1.primaryOrient)
+        modelStartSecondaryOrientation.fromArray(p1.secondaryOrient)
+      }
 
       //for (let i = 0; i < posLines.length; i++)
       //  posLines[i].visible = rotLines[i].visible = i + 1 == index

@@ -149,7 +149,8 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     orientation = new Quaternion(),
     primaryRotation = new Quaternion(),
     secondaryRotation = new Quaternion()
-  let twistRoll = 0
+  let twistRoll = 0,
+    hasPendingSecondaryRotation = false
 
   for (const vars of resolveAnimationFrames(prop.anim)) {
     const // Angle on Orthogonal Plane
@@ -161,6 +162,15 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
       radRotate = MathUtils.degToRad(vars.rotate)
 
     twistRoll += vars.twist
+
+    // Preserve the completed Rotate quaternion exactly, then consume the temporary secondary
+    // basis into primary orientation before the first subsequent Arc/Turns interval.
+    const rebasePrimaryOrientation = vars.rotate === 0 && hasPendingSecondaryRotation
+    if (rebasePrimaryOrientation) {
+      primaryOrientation.copy(orientation)
+      secondaryOrientation.identity()
+      hasPendingSecondaryRotation = false
+    }
 
     // Updates pos/rot, plane/axis, and directions for this loop
     orthoNext(radPlane, radArc, pos, plane, posx)
@@ -174,6 +184,7 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     secondaryOrientation
       .premultiply(secondaryRotation.setFromAxisAngle(yawx, radRotate))
       .normalize()
+    if (vars.rotate !== 0) hasPendingSecondaryRotation = true
     orientation.copy(secondaryOrientation).multiply(primaryOrientation).normalize()
     adjustx.copy(rotx)
 
@@ -187,6 +198,7 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     const push: AnimDataCompiled = {
       ...vars,
       twistRoll,
+      rebasePrimaryOrientation,
 
       // Position, Rotation, and Rotation to blend from
       pos: pos.toArray(),

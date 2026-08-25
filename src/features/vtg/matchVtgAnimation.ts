@@ -29,7 +29,10 @@ import {
   vtgDefaultBeat,
 } from '@/features/vtg/types'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
-import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
+import {
+  doubleAnimationPlayback,
+  doublePlaybackMultiplier,
+} from '@/math/animation/subdivideAnimationPlayback'
 import { analyzeAlternatingPatternPlaybacks } from '@/math/animation/alternatePatternPlayback'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
@@ -284,7 +287,7 @@ const findBaseMatches = (
   })
 }
 
-const findInternal = (
+const findAtPlaybackResolution = (
   animation: RootDataFinal,
   rotationFilter?: VtgPatternRotationFilter,
 ): readonly VtgPatternMatch[] => {
@@ -309,6 +312,50 @@ const findInternal = (
         return inheritMatchRankings(match, transitionMatch)
       }),
   )
+}
+
+const vtgIntervalsPerTimingCycle = 8
+
+const needsCanonicalPlaybackSubdivision = (animation: RootDataFinal): boolean => {
+  const firstProp = animation.props[0]
+  if (!firstProp || animation.props.some((prop) => prop.anim.length !== firstProp.anim.length)) {
+    return false
+  }
+
+  const intervalCount = firstProp.anim.length - 1
+  const timing = inferVtgTiming(animation)
+  if (!timing || intervalCount <= 0) return false
+
+  const canonicalIntervalCount =
+    getVtgTimingCycleCount(timing.speedRatio) * vtgIntervalsPerTimingCycle
+  const requiredMultiplier = canonicalIntervalCount / intervalCount
+  return (
+    Number.isInteger(requiredMultiplier) &&
+    requiredMultiplier >= doublePlaybackMultiplier &&
+    (requiredMultiplier & (requiredMultiplier - 1)) === 0
+  )
+}
+
+/**
+ * VTG patterns have a canonical frame grid, but equivalent authored playback may have been
+ * consolidated by Editor Halve. Retry through the shared playback subdivision so matching does
+ * not depend on which compatible frame resolution the user supplied.
+ */
+const findInternal = (
+  animation: RootDataFinal,
+  rotationFilter?: VtgPatternRotationFilter,
+): readonly VtgPatternMatch[] => {
+  let normalized = animation
+  while (true) {
+    const matches = findAtPlaybackResolution(normalized, rotationFilter)
+    if (matches.length > 0) return matches
+    if (!needsCanonicalPlaybackSubdivision(normalized)) break
+
+    const doubled = doubleAnimationPlayback(normalized)
+    if (!doubled) break
+    normalized = doubled
+  }
+  return []
 }
 
 export const findVtgPatternMatches = (

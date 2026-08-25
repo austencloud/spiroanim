@@ -379,6 +379,46 @@ describe('createSpiroAnimator prop orientation', () => {
     expect(Math.max(...pointDifferences)).toBeLessThan(1e-6)
   })
 
+  it('consumes the completed Rotate basis after its smooth interval', () => {
+    const root = createRoot(false)
+    root.prop = 3
+    root.props[0]!.motion = []
+    root.props[0]!.anim = [{ arc: 270 }, { arc: 90, turns: 180, rotate: 180 }, {}, {}]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop: compiled.props[0]!,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+    const model = getAnimatedModelGroup(scene)
+    const sample = (milliseconds: number) => {
+      animator.seek(milliseconds)
+      return {
+        hand: model.position.clone().normalize(),
+        prop: new Vector3(0, 1, 0).applyQuaternion(model.quaternion).normalize(),
+      }
+    }
+    const seam = sample(1000)
+    const after = sample(1001)
+    const handDirection = seam.hand.clone().cross(after.hand)
+    const propDirection = seam.prop.clone().cross(after.prop)
+
+    expect(compiled.props[0]!.anim[1]!.rebasePrimaryOrientation).toBe(false)
+    expect(compiled.props[0]!.anim[2]!.rebasePrimaryOrientation).toBe(true)
+    expect(handDirection.dot(propDirection)).toBeGreaterThan(0)
+  })
+
   it('applies precompiled inherited Twist around the transported local prop axis', () => {
     const root = createRoot(false)
     root.prop = 3

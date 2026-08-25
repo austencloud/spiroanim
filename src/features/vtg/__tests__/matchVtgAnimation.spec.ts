@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { halveAnimationFrames } from '@/features/editor/manage/resampleAnimationFrames'
 import { findVtgPatternMatch, findVtgPatternMatches } from '@/features/vtg/matchVtgAnimation'
 import type {
   VtgCellReference,
@@ -10,7 +11,6 @@ import type {
   VtgRuleNumber,
 } from '@/features/vtg/types'
 import { getVtgPatternOrientations, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
-import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { getUniqueVtgPatternOrientations } from '@/features/vtg/math/getUniqueVtgPatternOrientations'
 import { useBaseQS } from '@/services/query/createBaseQS'
@@ -784,15 +784,24 @@ describe('VTG animation matching', () => {
     )
     const supplied = codec.decodeQS(query)
     expect(codec.encodeQS(supplied, false)).toEqual(query)
-    const animation = doubleAnimationPlayback(supplied)
-    if (!animation) throw new Error('Expected the supplied pattern to double')
-
-    expect(findVtgPatternMatch(animation)).toMatchObject({
+    expect(findVtgPatternMatch(supplied)).toMatchObject({
       reference: '6-6',
       speedRatio: '1:3',
       shape: 'box',
       swapProps: true,
       reversePlane: true,
+    })
+  })
+
+  it('recognizes a VTG pattern after its compatible frame grid is halved', () => {
+    const original = createAnimation({ reference: '5-1', speedRatio: '1:3', beat: 3 })
+    const halved = halveAnimationFrames(original)
+    if (!halved) throw new Error('Expected the VTG pattern to halve')
+
+    expect(findVtgPatternMatch(halved)).toMatchObject({
+      reference: '5-1',
+      speedRatio: '1:3',
+      beat: 3,
     })
   })
 })
