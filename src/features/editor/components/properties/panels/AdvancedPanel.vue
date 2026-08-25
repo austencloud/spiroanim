@@ -29,6 +29,29 @@
       <u>See “Point” above for node abbreviations.</u>
     </template>
 
+    <template #yaw>
+      <strong>Yaw</strong><br />
+      Selects the axis used by <strong>Rotate</strong>. It defaults to 90° when Rotate is set and
+      has no effect by itself.<br />
+      <br /><i>Yaw applies only to this frame and is not inherited.</i>
+    </template>
+
+    <template #rotate>
+      <strong>Rotate</strong><br />
+      Rotates the prop around the frame's <strong>Yaw</strong> axis without replacing Turns or Axis.
+      Positive and negative values select the direction.<br />
+      <br /><i>Rotate applies only to this frame and is not inherited.</i>
+    </template>
+
+    <template #twist>
+      <strong>Twist</strong><br />
+      Rolls the prop around its own transported local axis while leaving its path and Turns
+      unchanged.<br />
+      The signed value is added during each frame interval and inherited by following frames.
+      Setting Twist to zero stops adding roll without undoing the accumulated orientation.<br />
+      <br /><i>When undefined, this property inherits from the previous frame.</i>
+    </template>
+
     <template #beats>
       <strong>Beats</strong><br />
       Specifies timing or rhythm divisions along the path.<br />
@@ -52,14 +75,50 @@ import { useProperties } from '@/features/editor/composables/useProperties'
 import { INDPNT, TTEXT } from '@/domain/animation/AnimStruct'
 
 const store = inject('store', ref('main'))
-const { animGet, animSet, ANIMS, panelWatcher } = useProperties(store.value)
+const { animGet, animSet, ANIMS, panelWatcher, ARCDENOM } = useProperties(store.value)
 
 const data = ref({})
+
+const yaw = reactive({
+  name: 'yaw',
+  text: 'Yaw',
+  component: 'Yaw',
+  undef: true,
+  mult: 45,
+  min: -4,
+  max: 4,
+  neg: true,
+})
+
+const rotate = reactive({
+  name: 'rotate',
+  text: 'Rotate',
+  component: 'Decimal',
+  undef: true,
+  mult: 45,
+  min: -8,
+  max: 8,
+  neg: true,
+})
+
+const twist = reactive({
+  name: 'twist',
+  text: 'Twist',
+  component: 'Decimal',
+  undef: true,
+  mult: 45,
+  min: -8,
+  max: 8,
+  neg: true,
+})
 
 const vals = [
   { name: 'point', text: 'Point', component: 'Point', items: INDPNT },
   { name: 'path', text: 'Path', component: 'Point', items: INDPNT },
   { name: 'direct', text: 'Direct', component: 'Point', items: INDPNT },
+  yaw,
+  rotate,
+  twist,
   { name: 'beats', text: 'Beats', component: 'Beats', undef: true },
   {
     name: 'type',
@@ -70,6 +129,18 @@ const vals = [
     label: 'Transition Type',
   },
 ]
+
+watchEffect(() => {
+  const arcd = ARCDENOM.value
+  const max = 360 / arcd
+  const maxhalf = Math.ceil(max / 2)
+
+  twist.mult = yaw.mult = rotate.mult = arcd
+  twist.max = rotate.max = max
+  twist.min = rotate.min = -max
+  yaw.max = maxhalf
+  yaw.min = -maxhalf
+})
 
 panelWatcher(ANIMS, data, vals, animGet)
 </script>

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { MathUtils, Quaternion, Vector3 } from 'three'
 
+import { TTYPE } from '@/domain/animation/AnimStruct'
 import {
   animationEndpointsAlign,
   animationRangeEndpointsAlign,
@@ -8,6 +10,9 @@ import {
 } from '@/math/animation/shiftAnimationFrames'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
+import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
+import { useBaseQS } from '@/services/query/createBaseQS'
+import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv11'
 import type { AnimData, RootData } from '@/types/AnimTypes'
 
 const compileFrames = (frames: AnimData[]) =>
@@ -34,6 +39,39 @@ const compileFrames = (frames: AnimData[]) =>
 
 const expectVectorClose = (actual: readonly number[], expected: readonly number[]) => {
   actual.forEach((coordinate, axis) => expect(coordinate).toBeCloseTo(expected[axis]!, 9))
+}
+
+const expectQuaternionClose = (actual: readonly number[], expected: readonly number[]) => {
+  const dot = actual.reduce((sum, value, index) => sum + value * expected[index]!, 0)
+  expect(Math.abs(dot)).toBeCloseTo(1, 9)
+}
+
+const sampleOrientation = (
+  frames: ReturnType<typeof compileFrames>,
+  targetIndex: number,
+  progress: number,
+) => {
+  const start = frames[targetIndex - 1]!
+  const target = frames[targetIndex]!
+  const primaryStart = new Quaternion().fromArray(
+    target.rebasePrimaryOrientation ? start.orient : start.primaryOrient,
+  )
+  const secondaryStart = target.rebasePrimaryOrientation
+    ? new Quaternion()
+    : new Quaternion().fromArray(start.secondaryOrient)
+  const primary = new Quaternion()
+    .setFromAxisAngle(
+      new Vector3().fromArray(target.rotx),
+      MathUtils.degToRad(target.turns + (target.type === TTYPE.LINE ? 0 : target.arc)) * progress,
+    )
+    .multiply(primaryStart)
+  const secondary = new Quaternion()
+    .setFromAxisAngle(
+      new Vector3().fromArray(target.yawx),
+      MathUtils.degToRad(target.rotate) * progress,
+    )
+    .multiply(secondaryStart)
+  return secondary.multiply(primary).toArray()
 }
 
 const closedFrames: AnimData[] = [
@@ -133,6 +171,221 @@ describe('shared shiftAnimationFrames', () => {
     expectVectorClose(result[0]!.rot, compiled[1]!.rot)
     expectVectorClose(result[1]!.rot, compiled[2]!.rot)
     expectVectorClose(result[2]!.rot, compiled[1]!.rot)
+  })
+
+  it('preserves a Rotate path and spin direction across repeated shifts', async () => {
+    const query = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 11)
+    const animation = query.decodeQS({
+      r: 'Ew68kk11Y',
+      p0: 'N__.xT_Rhw.bn_Qpg.___RJE..',
+      r0: '._-7f_',
+      c: '_j_bhq',
+      v: '11',
+    })
+    const frames = animation.props[0]!.anim
+    const compiled = compileFrames(frames)
+    const shifted = shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1, {
+      allowEndpointMismatch: true,
+      preserveFinalOutgoing: true,
+    })
+
+    expect(shifted).toBeDefined()
+    const result = compileFrames(shifted!)
+    expectVectorClose(result[0]!.pos, compiled[1]!.pos)
+    expectVectorClose(result[0]!.rot, compiled[1]!.rot)
+    expectVectorClose(result[0]!.adju, compiled[1]!.adju)
+    expectQuaternionClose(result[0]!.orient, compiled[1]!.orient)
+
+    const shiftedAgain = shiftAnimationFrameRange(shifted!, result, 0, shifted!.length - 1, {
+      allowEndpointMismatch: true,
+      preserveFinalOutgoing: true,
+    })
+    expect(shiftedAgain).toBeDefined()
+    const secondResult = compileFrames(shiftedAgain!)
+    const firstRotateIndex = result.findIndex((frame, index) => index > 0 && frame.rotate !== 0)
+    const secondRotateIndex = secondResult.findIndex(
+      (frame, index) => index > 0 && frame.rotate !== 0,
+    )
+    expect(firstRotateIndex).toBeGreaterThan(0)
+    expect(secondRotateIndex).toBeGreaterThan(0)
+    for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
+      expectQuaternionClose(
+        sampleOrientation(secondResult, secondRotateIndex, progress),
+        sampleOrientation(result, firstRotateIndex, progress),
+      )
+    }
+
+    const shiftedDirectly = shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1, {
+      allowEndpointMismatch: true,
+      preserveFinalOutgoing: true,
+      shiftCount: 2,
+    })
+    expect(shiftedDirectly).toBeDefined()
+    const directResult = compileFrames(shiftedDirectly!)
+    const directRotateIndex = directResult.findIndex(
+      (frame, index) => index > 0 && frame.rotate !== 0,
+    )
+    expect(directRotateIndex).toBeGreaterThan(0)
+    for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
+      expectQuaternionClose(
+        sampleOrientation(directResult, directRotateIndex, progress),
+        sampleOrientation(secondResult, secondRotateIndex, progress),
+      )
+    }
+
+    const shiftedAnimation = structuredClone(animation)
+    shiftedAnimation.props[0]!.anim = shiftedAgain!
+    const roundTrip = query.decodeQS(query.encodeQS(shiftedAnimation, false))
+    const roundTripResult = compileFrames(roundTrip.props[0]!.anim)
+    const roundTripRotateIndex = roundTripResult.findIndex(
+      (frame, index) => index > 0 && frame.rotate !== 0,
+    )
+    for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
+      expectQuaternionClose(
+        sampleOrientation(roundTripResult, roundTripRotateIndex, progress),
+        sampleOrientation(result, firstRotateIndex, progress),
+      )
+    }
+  })
+
+  it('continues shifting after a reconstructed Rotate boundary reaches frame zero', async () => {
+    const query = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 11)
+    const animation = query.decodeQS({
+      r: 'Ew68kk11Y',
+      p0: 'N__.mD_.bn_RJE.___Qpg.___RJE.',
+      r0: 'BG7f_.._-7f_',
+      c: '_j_bhq',
+      v: '11',
+    })
+    const frames = animation.props[0]!.anim
+    const compiled = compileFrames(frames)
+    const shifted = shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1, {
+      allowEndpointMismatch: true,
+      preserveFinalOutgoing: true,
+    })
+
+    expect(shifted).toBeDefined()
+    const result = compileFrames(shifted!)
+    expectQuaternionClose(result[0]!.orient, compiled[1]!.orient)
+    for (const [resultIndex, sourceIndex] of [2, 3, 4].entries()) {
+      for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
+        expectQuaternionClose(
+          sampleOrientation(result, resultIndex + 1, progress),
+          sampleOrientation(compiled, sourceIndex, progress),
+        )
+      }
+    }
+
+    let repeatedFrames = shifted!
+    let repeatedCompiled = result
+    for (let repetition = 0; repetition < 8; repetition += 1) {
+      const nextFrames = shiftAnimationFrameRange(
+        repeatedFrames,
+        repeatedCompiled,
+        0,
+        repeatedFrames.length - 1,
+        {
+          allowEndpointMismatch: true,
+          preserveFinalOutgoing: true,
+        },
+      )
+      expect(nextFrames).toBeDefined()
+      repeatedFrames = nextFrames!
+      repeatedCompiled = compileFrames(repeatedFrames)
+    }
+
+    const shiftedAnimation = structuredClone(animation)
+    shiftedAnimation.props[0]!.anim = shifted!
+    const roundTripResult = compileFrames(
+      query.decodeQS(query.encodeQS(shiftedAnimation, false)).props[0]!.anim,
+    )
+    for (const interval of [1, 2, 3]) {
+      for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
+        expectQuaternionClose(
+          sampleOrientation(roundTripResult, interval, progress),
+          sampleOrientation(result, interval, progress),
+        )
+      }
+    }
+  })
+
+  it('preserves a wrapped Rotate curve and spin direction across a local-roll seam', async () => {
+    const query = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 11)
+    const animation = query.decodeQS({
+      r: 'Ew68kk11Y',
+      p0: 'N__.bg0____WQ._U0Qpg.___RJE_U0..',
+      r0: '_-7f_._-7f_',
+      c: '_j_bhq',
+      v: '11',
+    })
+    const frames = animation.props[0]!.anim
+    const compiled = compileFrames(frames)
+    const shifted = shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1, {
+      allowEndpointMismatch: true,
+      preserveFinalOutgoing: true,
+    })
+
+    expect(shifted).toBeDefined()
+    const result = compileFrames(shifted!)
+    expectVectorClose(result.at(-1)!.pos, compiled[1]!.pos)
+    expect(Math.abs(result.at(-1)!.rotate)).toBeGreaterThan(0)
+    const localRollGauge = new Quaternion()
+      .fromArray(compiled[0]!.orient)
+      .invert()
+      .multiply(new Quaternion().fromArray(result.at(-2)!.orient))
+    for (const progress of [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]) {
+      const expected = new Quaternion()
+        .fromArray(sampleOrientation(compiled, 1, progress))
+        .multiply(localRollGauge)
+      expectQuaternionClose(
+        sampleOrientation(result, result.length - 1, progress),
+        expected.toArray(),
+      )
+    }
+
+    const fanHead = new Vector3(Math.sin(-Math.PI / 3), Math.cos(-Math.PI / 3), 0)
+    const sampleHead = (
+      animationFrames: ReturnType<typeof compileFrames>,
+      targetIndex: number,
+      progress: number,
+    ) => {
+      const start = animationFrames[targetIndex - 1]!
+      const target = animationFrames[targetIndex]!
+      const center = new Vector3()
+        .fromArray(start.pos)
+        .applyAxisAngle(
+          new Vector3().fromArray(target.posx),
+          MathUtils.degToRad(target.arc) * progress,
+        )
+      return fanHead
+        .clone()
+        .applyQuaternion(
+          new Quaternion().fromArray(sampleOrientation(animationFrames, targetIndex, progress)),
+        )
+        .add(center)
+    }
+    const headPathVolume = (animationFrames: ReturnType<typeof compileFrames>) => {
+      const points = [0, 1 / 3, 2 / 3, 1].map((progress) =>
+        sampleHead(animationFrames, animationFrames.length - 1, progress),
+      )
+      return points[1]!
+        .clone()
+        .sub(points[0]!)
+        .dot(points[2]!.clone().sub(points[0]!).cross(points[3]!.clone().sub(points[0]!)))
+    }
+    expect(Math.abs(headPathVolume(result))).toBeGreaterThan(1e-4)
+
+    const shiftedAnimation = structuredClone(animation)
+    shiftedAnimation.props[0]!.anim = shifted!
+    const roundTrip = query.decodeQS(query.encodeQS(shiftedAnimation, false))
+    const roundTripResult = compileFrames(roundTrip.props[0]!.anim)
+    for (const progress of [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]) {
+      expectQuaternionClose(
+        sampleOrientation(roundTripResult, roundTripResult.length - 1, progress),
+        sampleOrientation(result, result.length - 1, progress),
+      )
+    }
+    expect(Math.abs(headPathVolume(roundTripResult))).toBeGreaterThan(1e-4)
   })
 
   it('omits values that can use defaults or inherit from the preceding frame', () => {

@@ -33,9 +33,6 @@ describe('editor property panel organization', () => {
       'turns',
       'plane',
       'axis',
-      'twist',
-      'yaw',
-      'rotate',
       'adjust',
       'scale',
       'depth',
@@ -43,7 +40,7 @@ describe('editor property panel organization', () => {
   })
 
   it('uses a half-circle Yaw range and full-circle Rotate range', () => {
-    const wrapper = shallowMount(AnimationsPanel, {
+    const wrapper = shallowMount(AdvancedPanel, {
       global: { provide: { store: ref('animation-panel-yaw-rotate-range') } },
     })
     const vals = wrapper.getComponent(PropertyPanel).props('vals') as DynamicVal[]
@@ -56,15 +53,20 @@ describe('editor property panel organization', () => {
   })
 
   it('uses the same dynamic step and full-circle range for Twist as Arc', () => {
-    const wrapper = shallowMount(AnimationsPanel, {
+    const animationWrapper = shallowMount(AnimationsPanel, {
       global: { provide: { store: ref('animation-panel-twist-step') } },
     })
-    const vals = wrapper.getComponent(PropertyPanel).props('vals') as DynamicVal[]
-    const arc = vals.find(({ name }) => name === 'arc')
-    const twist = vals.find(({ name }) => name === 'twist')
+    const advancedWrapper = shallowMount(AdvancedPanel, {
+      global: { provide: { store: ref('animation-panel-twist-step') } },
+    })
+    const animationVals = animationWrapper.getComponent(PropertyPanel).props('vals') as DynamicVal[]
+    const advancedVals = advancedWrapper.getComponent(PropertyPanel).props('vals') as DynamicVal[]
+    const arc = animationVals.find(({ name }) => name === 'arc')
+    const twist = advancedVals.find(({ name }) => name === 'twist')
 
     expect(twist).toMatchObject({ mult: arc?.mult, min: arc?.min, max: arc?.max })
-    wrapper.unmount()
+    animationWrapper.unmount()
+    advancedWrapper.unmount()
   })
 
   it('moves the remaining animation controls into Advanced', () => {
@@ -72,6 +74,9 @@ describe('editor property panel organization', () => {
       'point',
       'path',
       'direct',
+      'yaw',
+      'rotate',
+      'twist',
       'beats',
       'type',
     ])
