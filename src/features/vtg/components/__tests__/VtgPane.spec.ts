@@ -1478,7 +1478,7 @@ describe('VtgPane', () => {
     }
   })
 
-  it('places VTG Properties above Customize and omits them from production and Builder', async () => {
+  it('places VTG Properties below Customize and omits them from production and Builder', async () => {
     vi.stubGlobal('location', new URL('http://localhost:8080'))
     const wrapper = mount(VtgPane)
     await nextTick()
@@ -1486,7 +1486,7 @@ describe('VtgPane', () => {
     const customize = wrapper.get('[data-role="vtg-customize"]').element
 
     expect(
-      properties.compareDocumentPosition(customize) & Node.DOCUMENT_POSITION_FOLLOWING,
+      customize.compareDocumentPosition(properties) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
     wrapper.unmount()

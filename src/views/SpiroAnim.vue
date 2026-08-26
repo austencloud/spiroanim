@@ -244,9 +244,11 @@ registerComponentEl(cConcepts, eConcepts)
 registerComponentEl(cBuilder, eBuilder)
 
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
-  const animation = createConceptPattern(ROOT.value, selection)
-  if (animation) {
-    if (isVtgPatternSelection(selection)) conceptsStore.hydrateVtgPropertyControls(animation)
+  const createdAnimation = createConceptPattern(ROOT.value, selection)
+  if (createdAnimation) {
+    const animation = isVtgPatternSelection(selection)
+      ? conceptsStore.applyVtgPropertyControls(createdAnimation)
+      : createdAnimation
     commitConceptAnimation(animation)
     playerStore.cameraReset = Symbol()
   }

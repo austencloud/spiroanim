@@ -35,6 +35,7 @@ describe('applyVtgFoldSettings', () => {
         every: [1, 1],
         alternate: [true, true],
         span: 'eighth',
+        mirror: false,
       },
     )
 
@@ -53,10 +54,29 @@ describe('applyVtgFoldSettings', () => {
       every: [1, 1],
       alternate: [false, false],
       span: 'quarter',
+      mirror: false,
     })
 
     expect(applied.props[0]?.anim[1]).toMatchObject({ yaw: 45, rotate: 90 })
     expect(applied.props[0]?.anim[2]).toMatchObject({ yaw: 45, rotate: 90 })
+  })
+
+  it('supports half-beat Start and Every values for Quarter folds', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const applied = applyVtgFoldSettings(animation, [{ 1.5: { rotate: 180 } }, {}], {
+      mode: 'simple',
+      beat: [1.5, 1.5],
+      repeat: [true, true],
+      every: [0.5, 0.5],
+      alternate: [false, false],
+      span: 'quarter',
+      mirror: false,
+    })
+
+    expect(applied.props[0]?.anim[2]?.rotate).toBe(90)
+    expect(applied.props[0]?.anim[3]?.rotate).toBe(90)
+    expect(applied.props[0]?.anim[4]?.rotate).toBe(90)
   })
 
   it('applies independent repetition schedules to the left and right props', () => {
@@ -69,6 +89,7 @@ describe('applyVtgFoldSettings', () => {
       every: [1, 2],
       alternate: [false, false],
       span: 'eighth',
+      mirror: false,
     })
 
     expect(applied.props[0]?.anim[2]?.yaw).toBe(45)
@@ -87,6 +108,7 @@ describe('applyVtgFoldSettings', () => {
       every: [2, 2] as [number, number],
       alternate: [false, false] as [boolean, boolean],
       span: 'quarter' as const,
+      mirror: false,
     }
     const first = applyVtgFoldSettings(animation, [{ 2: { rotate: 180 } }, {}], options)
     const materialized = extractVtgFoldValues(first)
@@ -110,6 +132,7 @@ describe('applyVtgFoldSettings', () => {
         every: [1, 1],
         alternate: [true, true],
         span: 'eighth',
+        mirror: false,
       },
     )
 
@@ -119,6 +142,7 @@ describe('applyVtgFoldSettings', () => {
       every: [1, 1],
       alternate: [true, true],
       span: 'eighth',
+      mirror: true,
     })
 
     const irregular = applyVtgFoldSettings(animation, [
@@ -126,5 +150,46 @@ describe('applyVtgFoldSettings', () => {
       {},
     ])
     expect(detectVtgFoldSimpleSettings(irregular)).toBeUndefined()
+  })
+
+  it('mirrors the left Fold values onto Right and uses them as the Alternate pair', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const applied = applyVtgFoldSettings(animation, [{ 0.5: { yaw: 90, rotate: 180 } }, {}], {
+      mode: 'simple',
+      beat: [0.5, 0.5],
+      repeat: [true, true],
+      every: [1, 1],
+      alternate: [true, true],
+      span: 'eighth',
+      mirror: true,
+    })
+
+    expect(applied.props[0]?.anim[1]).toMatchObject({ yaw: 90, rotate: 180 })
+    expect(applied.props[1]?.anim[1]).toMatchObject({ yaw: -90, rotate: -180 })
+    expect(applied.props[0]?.anim[3]).toMatchObject({ yaw: -90, rotate: -180 })
+    expect(applied.props[1]?.anim[3]).toMatchObject({ yaw: 90, rotate: 180 })
+    expect(detectVtgFoldSimpleSettings(applied)).toMatchObject({
+      mirror: true,
+      beat: [0.5, 0.5],
+      alternate: [true, true],
+    })
+  })
+
+  it('mirrors the inherited Direct default when Left has no authored Fold value', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const applied = applyVtgFoldSettings(animation, [{}, {}], {
+      mode: 'simple',
+      beat: [2, 2],
+      repeat: [false, false],
+      every: [2, 2],
+      alternate: [false, false],
+      span: 'eighth',
+      mirror: true,
+    })
+
+    expect(applied.props[0]?.anim[4]?.yaw).toBe(90)
+    expect(applied.props[1]?.anim[4]?.yaw).toBe(-90)
   })
 })

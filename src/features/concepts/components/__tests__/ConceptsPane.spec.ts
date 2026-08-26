@@ -232,7 +232,6 @@ describe('ConceptsPane', () => {
       {
         reference: '1-1',
         speedRatio: '1:3',
-        prop: 0,
         propColors: ['Blue', 'Magenta'],
       },
     ])

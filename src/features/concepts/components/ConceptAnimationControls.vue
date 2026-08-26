@@ -251,6 +251,8 @@
       </div>
     </div>
   </details>
+
+  <slot name="after-customize" />
 </template>
 
 <script setup lang="ts">

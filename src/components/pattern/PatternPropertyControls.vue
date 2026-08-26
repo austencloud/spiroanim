@@ -10,17 +10,26 @@
     <summary :data-role="`${context}-properties-toggle`">PROPERTIES...</summary>
     <div class="pattern-property-controls__content">
       <div v-for="property in visibleProperties" :key="property.key">
-        <button
-          :id="`${controlId}-${property.key}-toggle`"
-          class="pattern-property-controls__toggle"
-          type="button"
-          :aria-expanded="activeProperty === property.key"
-          :aria-controls="`${controlId}-${property.key}-controls`"
-          :data-role="`${context}-property-${property.key}-toggle`"
-          @click="toggleProperty(property.key)"
+        <BaseTooltip
+          class="pattern-property-controls__property-tooltip"
+          :text="propertyTooltip(property)"
+          :disabled="touchDevice || (property.key !== 'axis' && property.key !== 'twist')"
         >
-          {{ propertyLabel(property) }}
-        </button>
+          <template #activator="{ props: tooltipProps }">
+            <button
+              v-bind="tooltipProps"
+              :id="`${controlId}-${property.key}-toggle`"
+              class="pattern-property-controls__toggle"
+              type="button"
+              :aria-expanded="activeProperty === property.key"
+              :aria-controls="`${controlId}-${property.key}-controls`"
+              :data-role="`${context}-property-${property.key}-toggle`"
+              @click="toggleProperty(property.key)"
+            >
+              {{ propertyLabel(property) }}
+            </button>
+          </template>
+        </BaseTooltip>
         <div
           v-show="activeProperty === property.key"
           :id="`${controlId}-${property.key}-controls`"
@@ -31,33 +40,46 @@
         >
           <template v-if="property.key === 'axis'">
             <div class="pattern-property-controls__fold-options">
-              <fieldset class="pattern-property-controls__option-group">
-                <legend class="pattern-property-controls__visually-hidden">Folds detail</legend>
-                <label v-for="mode in foldModes" :key="mode">
-                  <input
-                    type="radio"
-                    :name="`${controlId}-fold-mode`"
-                    :checked="foldMode === mode"
-                    @change="emit('update:foldMode', mode)"
-                  />
-                  <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
-                </label>
-              </fieldset>
-              <fieldset
-                v-if="foldMode === 'simple'"
-                class="pattern-property-controls__option-group"
-              >
-                <legend class="pattern-property-controls__visually-hidden">Fold span</legend>
-                <label v-for="span in foldSpans" :key="span">
-                  <input
-                    type="radio"
-                    :name="`${controlId}-fold-span`"
-                    :checked="foldSpan === span"
-                    @change="emit('update:foldSpan', span)"
-                  />
-                  <span>{{ span === 'quarter' ? 'Quarter' : 'Eighth' }}</span>
-                </label>
-              </fieldset>
+              <div class="pattern-property-controls__fold-option-row">
+                <fieldset class="pattern-property-controls__option-group">
+                  <legend class="pattern-property-controls__visually-hidden">Folds detail</legend>
+                  <label v-for="mode in foldModes" :key="mode">
+                    <input
+                      type="radio"
+                      :name="`${controlId}-fold-mode`"
+                      :checked="foldMode === mode"
+                      @change="emit('update:foldMode', mode)"
+                    />
+                    <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
+                  </label>
+                </fieldset>
+              </div>
+              <div v-if="foldMode === 'simple'" class="pattern-property-controls__fold-option-row">
+                <fieldset class="pattern-property-controls__option-group">
+                  <legend class="pattern-property-controls__visually-hidden">Fold span</legend>
+                  <label v-for="span in foldSpans" :key="span">
+                    <input
+                      type="radio"
+                      :name="`${controlId}-fold-span`"
+                      :checked="foldSpan === span"
+                      @change="emit('update:foldSpan', span)"
+                    />
+                    <span>{{ span === 'quarter' ? 'Quarter' : 'Eighth' }}</span>
+                  </label>
+                </fieldset>
+                <fieldset class="pattern-property-controls__option-group">
+                  <legend class="pattern-property-controls__visually-hidden">Fold mirroring</legend>
+                  <label>
+                    <input
+                      type="checkbox"
+                      :checked="foldMirror"
+                      aria-label="Mirror folds"
+                      @change="emitFoldMirror"
+                    />
+                    <span>Mirror</span>
+                  </label>
+                </fieldset>
+              </div>
             </div>
             <div class="pattern-property-controls__twist-columns">
               <section
@@ -68,7 +90,7 @@
               >
                 <header class="pattern-property-controls__twist-header">
                   <span>Beat</span>
-                  <h3>{{ column.label }}</h3>
+                  <h3>{{ foldMirror && foldMode === 'simple' ? '' : column.label }}</h3>
                   <span>Value</span>
                 </header>
                 <div v-if="foldMode === 'simple'" class="pattern-property-controls__fold-schedule">
@@ -264,6 +286,7 @@ import { mdiTrashCanOutline } from '@mdi/js'
 import { useId } from 'vue'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import ConceptStepper from '@/features/concepts/components/ConceptStepper.vue'
 import type {
   VtgFoldValue,
@@ -276,6 +299,7 @@ import type {
   VtgTwistValues,
 } from '@/features/concepts/stores/useConceptsStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { isTouchDevice } from '@/utils/device'
 
 type PatternPropertyContext = 'vtg' | 'builder'
 type PatternPropertyKey = VtgPropertyKey
@@ -296,6 +320,7 @@ const props = withDefaults(
     foldEvery?: VtgFoldSideSettings<number>
     foldAlternate?: VtgFoldSideSettings<boolean>
     foldSpan?: VtgFoldSpan
+    foldMirror?: boolean
     propertiesExpanded?: boolean
     activeProperty?: PatternPropertyKey | null
   }>(),
@@ -311,7 +336,8 @@ const props = withDefaults(
     foldRepeat: () => [true, true],
     foldEvery: () => [2, 2],
     foldAlternate: () => [false, false],
-    foldSpan: 'quarter',
+    foldSpan: 'eighth',
+    foldMirror: true,
     propertiesExpanded: false,
     activeProperty: null,
   },
@@ -327,6 +353,7 @@ const emit = defineEmits<{
   'update:foldEvery': [propIndex: 0 | 1, every: number]
   'update:foldAlternate': [propIndex: 0 | 1, alternate: boolean]
   'update:foldSpan': [span: VtgFoldSpan]
+  'update:foldMirror': [mirror: boolean]
   'update:propertiesExpanded': [expanded: boolean]
   'update:activeProperty': [property: PatternPropertyKey | null]
 }>()
@@ -334,8 +361,8 @@ const twistModes = ['simple', 'advanced'] as const
 const foldModes = ['simple', 'advanced'] as const
 const foldSpans = ['quarter', 'eighth'] as const
 const folds = [
-  { key: 'yaw', label: 'Direct', min: -180, max: 180 },
   { key: 'rotate', label: 'Rotate', min: -360, max: 360 },
+  { key: 'yaw', label: 'Direct', min: -90, max: 90 },
 ] as const
 
 const properties = [
@@ -345,14 +372,21 @@ const properties = [
 ] as const satisfies readonly { key: PatternPropertyKey; name: string; label: string }[]
 
 const controlId = `pattern-properties-${useId()}`
+const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 const rootElement = ref<HTMLDetailsElement>()
 const visibleProperties = computed(() =>
   properties.filter((property) => property.key !== 'turns' || props.showTurns),
 )
 const propertyLabel = (property: (typeof properties)[number]) =>
-  props.context === 'vtg' && property.key === 'axis' ? 'Folds' : property.label
+  props.context === 'vtg' && property.key === 'axis' ? 'Rotate' : property.label
 const propertyName = (property: (typeof properties)[number]) =>
-  props.context === 'vtg' && property.key === 'axis' ? 'Folds' : property.name
+  props.context === 'vtg' && property.key === 'axis' ? 'Rotate' : property.name
+const propertyTooltip = (property: (typeof properties)[number]) =>
+  property.key === 'axis'
+    ? 'Set Direct and Rotate changes by beat for the left and right props.'
+    : property.key === 'twist'
+      ? 'Set twist changes by beat for roll-sensitive props.'
+      : ''
 
 const twistColumns = computed(() =>
   ['Left', 'Right'].map((label, propIndex) => {
@@ -404,12 +438,14 @@ const foldColumnsUnfiltered = computed(() =>
   }),
 )
 const foldColumns = computed(() =>
-  foldColumnsUnfiltered.value.map((column, propIndex) => ({
-    ...column,
-    frames: column.frames.filter(
-      (frame) => props.foldMode === 'advanced' || frame.beat === props.foldBeat[propIndex],
-    ),
-  })),
+  foldColumnsUnfiltered.value
+    .filter((_, propIndex) => props.foldMode !== 'simple' || !props.foldMirror || propIndex === 0)
+    .map((column, propIndex) => ({
+      ...column,
+      frames: column.frames.filter(
+        (frame) => props.foldMode === 'advanced' || frame.beat === props.foldBeat[propIndex],
+      ),
+    })),
 )
 const availableFoldBeats = computed(() => {
   const beats = new Set<number>()
@@ -418,9 +454,7 @@ const availableFoldBeats = computed(() => {
   }
   return [...beats].sort((first, second) => first - second)
 })
-const foldBeatOptions = computed(() =>
-  availableFoldBeats.value.filter((beat) => props.foldSpan === 'eighth' || Number.isInteger(beat)),
-)
+const foldBeatOptions = computed(() => availableFoldBeats.value)
 const foldEveryOptions = computed(() => foldBeatOptions.value.filter((beat) => beat > 0))
 
 const angleOptions = (min: number, max: number) => {
@@ -464,6 +498,9 @@ const emitFoldBeat = (propIndex: number, event: Event) => {
 const emitFoldEvery = (propIndex: number, event: Event) => {
   if (!isPropIndex(propIndex)) return
   emit('update:foldEvery', propIndex, Number((event.target as HTMLSelectElement).value))
+}
+const emitFoldMirror = (event: Event) => {
+  emit('update:foldMirror', (event.target as HTMLInputElement).checked)
 }
 
 const setTwist = (propIndex: number, frameIndex: number, event: Event) => {
@@ -624,6 +661,11 @@ const emitPropertiesExpanded = (event: Event) => {
   border-radius: var(--radius-sm);
 }
 
+.pattern-property-controls__property-tooltip {
+  display: flex;
+  width: 100%;
+}
+
 .pattern-property-controls__toggle[aria-expanded='true'] {
   color: var(--color-action-primary);
   background: color-mix(in srgb, var(--color-action-primary) 10%, var(--color-surface));
@@ -650,11 +692,17 @@ const emitPropertiesExpanded = (event: Event) => {
 }
 
 .pattern-property-controls__fold-options {
-  display: flex;
+  display: grid;
   margin: 0 0 var(--space-3);
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
+  gap: var(--space-2);
+}
+
+.pattern-property-controls__fold-option-row {
+  display: flex;
+  justify-content: center;
   gap: var(--space-2);
 }
 

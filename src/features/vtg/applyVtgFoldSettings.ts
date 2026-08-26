@@ -13,6 +13,7 @@ export interface VtgFoldSimpleSettings {
   every: VtgFoldSideSettings<number>
   alternate: VtgFoldSideSettings<boolean>
   span: VtgFoldSpan
+  mirror: boolean
 }
 
 /** Applies generator Fold settings without mutating the generated VTG animation. */
@@ -26,13 +27,15 @@ export const applyVtgFoldSettings = (
     every: VtgFoldSideSettings<number>
     alternate: VtgFoldSideSettings<boolean>
     span: VtgFoldSpan
+    mirror: boolean
   } = {
     mode: 'advanced',
     beat: [2, 2],
     repeat: [true, true],
     every: [2, 2],
     alternate: [false, false],
-    span: 'quarter',
+    span: 'eighth',
+    mirror: false,
   },
 ): RootDataFinal => ({
   ...animation,
@@ -118,18 +121,20 @@ const resolveFold = (
     every: VtgFoldSideSettings<number>
     alternate: VtgFoldSideSettings<boolean>
     span: VtgFoldSpan
+    mirror: boolean
   },
 ): VtgFoldValue | undefined => {
   if (options.mode === 'advanced') return values[propIndex]?.[String(frameBeat)]
 
   if (propIndex !== 0 && propIndex !== 1) return
-  const interval = options.every[propIndex]
-  const startBeat = options.beat[propIndex]
+  const scheduleIndex = options.mirror ? 0 : propIndex
+  const interval = options.every[scheduleIndex]
+  const startBeat = options.beat[scheduleIndex]
   const getOccurrence = (candidateBeat: number) => {
     const offset = candidateBeat - startBeat
     const occurrence = Math.round(offset / interval)
     if (occurrence < 0 || Math.abs(offset - occurrence * interval) >= 0.000001) return
-    if (!options.repeat[propIndex] && occurrence !== 0) return
+    if (!options.repeat[scheduleIndex] && occurrence !== 0) return
     return occurrence
   }
   const occurrence =
@@ -137,14 +142,22 @@ const resolveFold = (
     (options.span === 'quarter' ? getOccurrence(frameBeat + 0.5) : undefined)
   if (occurrence === undefined) return
 
-  const sourceIndex =
-    options.alternate[propIndex] && occurrence % 2 === 1 ? 1 - propIndex : propIndex
+  const sourceIndex = options.mirror
+    ? 0
+    : options.alternate[propIndex] && occurrence % 2 === 1
+      ? 1 - propIndex
+      : propIndex
   const sourceBeat = options.beat[sourceIndex]
-  const source = values[sourceIndex]?.[String(sourceBeat)]
-  if (!source || options.span === 'eighth') return source
+  const source =
+    values[sourceIndex]?.[String(sourceBeat)] ?? (options.mirror ? { yaw: 90 } : undefined)
+  if (!source) return
+  const mirrorSign =
+    options.mirror && (propIndex === 1) !== (options.alternate[0] && occurrence % 2 === 1) ? -1 : 1
   return {
-    ...(source.yaw === undefined ? {} : { yaw: source.yaw }),
-    ...(source.rotate === undefined ? {} : { rotate: source.rotate / 2 }),
+    ...(source.yaw === undefined ? {} : { yaw: source.yaw * mirrorSign }),
+    ...(source.rotate === undefined
+      ? {}
+      : { rotate: (options.span === 'quarter' ? source.rotate / 2 : source.rotate) * mirrorSign }),
   }
 }
 
@@ -168,8 +181,8 @@ interface SideCandidate {
   alternate: boolean
 }
 
-const sideCandidates = (beats: readonly number[], span: VtgFoldSpan): SideCandidate[] => {
-  const selectable = beats.filter((beat) => span === 'eighth' || Number.isInteger(beat))
+const sideCandidates = (beats: readonly number[]): SideCandidate[] => {
+  const selectable = beats
   const intervals = selectable.filter((beat) => beat > 0)
   return selectable.flatMap((beat) => [
     { beat, repeat: false, every: 2, alternate: false },
@@ -204,8 +217,28 @@ export const detectVtgFoldSimpleSettings = (
   values: VtgFoldValues = extractVtgFoldValues(animation),
 ): VtgFoldSimpleSettings | undefined => {
   const beats = [frameBeats(animation, 0), frameBeats(animation, 1)] as const
-  for (const span of ['quarter', 'eighth'] as const) {
-    const candidates = [sideCandidates(beats[0], span), sideCandidates(beats[1], span)] as const
+  for (const span of ['eighth', 'quarter'] as const) {
+    const candidates = [sideCandidates(beats[0]), sideCandidates(beats[1])] as const
+    for (const left of candidates[0]) {
+      const options: VtgFoldSimpleSettings = {
+        beat: [left.beat, left.beat],
+        repeat: [left.repeat, left.repeat],
+        every: [left.every, left.every],
+        alternate: [left.alternate, left.alternate],
+        span,
+        mirror: true,
+      }
+      const sources = simpleSources(values, [left, left], span)
+      const matches = beats.every((propBeats, propIndex) =>
+        propBeats.every((beat) =>
+          foldsEqual(
+            resolveFold(sources, propIndex, beat, { mode: 'simple', ...options }),
+            values[propIndex]?.[String(beat)],
+          ),
+        ),
+      )
+      if (matches) return options
+    }
     for (const left of candidates[0]) {
       for (const right of candidates[1]) {
         const pair = [left, right] as const
@@ -215,6 +248,7 @@ export const detectVtgFoldSimpleSettings = (
           every: [left.every, right.every],
           alternate: [left.alternate, right.alternate],
           span,
+          mirror: false,
         }
         const sources = simpleSources(values, pair, span)
         const matches = beats.every((propBeats, propIndex) =>

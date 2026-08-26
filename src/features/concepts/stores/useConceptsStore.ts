@@ -17,9 +17,15 @@ import {
   defaultPatternPropColors,
   type PatternPropColor,
 } from '@/features/concepts/patternPropColors'
-import { detectVtgTwistMode, extractVtgTwistValues } from '@/features/vtg/applyVtgTwistSettings'
 import {
+  applyVtgTwistSettings,
+  detectVtgTwistMode,
+  extractVtgTwistValues,
+} from '@/features/vtg/applyVtgTwistSettings'
+import {
+  applyVtgFoldSettings,
   detectVtgFoldSimpleSettings,
+  deriveVtgFoldSimpleSources,
   extractVtgFoldValues,
 } from '@/features/vtg/applyVtgFoldSettings'
 
@@ -89,7 +95,8 @@ export const useConceptsStore = defineStore(
     const vtgFoldRepeat = ref<VtgFoldSideSettings<boolean>>([true, true])
     const vtgFoldEvery = ref<VtgFoldSideSettings<number>>([2, 2])
     const vtgFoldAlternate = ref<VtgFoldSideSettings<boolean>>([false, false])
-    const vtgFoldSpan = ref<VtgFoldSpan>('quarter')
+    const vtgFoldSpan = ref<VtgFoldSpan>('eighth')
+    const vtgFoldMirror = ref(true)
     const vtgPropertiesExpanded = ref(false)
     const vtgActiveProperty = ref<VtgPropertyKey | null>(null)
 
@@ -113,6 +120,31 @@ export const useConceptsStore = defineStore(
       } else vtgFoldValues.value[propIndex][beatKey] = beatValue
     }
 
+    const applyVtgPropertyControls = (animation: RootDataFinal): RootDataFinal => {
+      const foldValues =
+        vtgFoldMode.value === 'simple'
+          ? deriveVtgFoldSimpleSources(
+              vtgFoldValues.value,
+              vtgFoldBeat.value,
+              vtgFoldSpan.value,
+              vtgFoldValuesMaterialized.value,
+            )
+          : vtgFoldValues.value
+      return applyVtgFoldSettings(
+        applyVtgTwistSettings(animation, vtgTwistMode.value, vtgTwistValues.value),
+        foldValues,
+        {
+          mode: vtgFoldMode.value,
+          beat: vtgFoldBeat.value,
+          repeat: vtgFoldRepeat.value,
+          every: vtgFoldEvery.value,
+          alternate: vtgFoldAlternate.value,
+          span: vtgFoldSpan.value,
+          mirror: vtgFoldMirror.value,
+        },
+      )
+    }
+
     const hydrateVtgPropertyControls = (animation: RootDataFinal) => {
       const twistValues = extractVtgTwistValues(animation)
       vtgTwistValues.value = twistValues
@@ -123,6 +155,7 @@ export const useConceptsStore = defineStore(
       vtgFoldValues.value = foldValues
       vtgFoldValuesMaterialized.value = true
       vtgFoldMode.value = simple ? 'simple' : 'advanced'
+      vtgFoldMirror.value = simple?.mirror ?? false
       if (!simple) return
       vtgFoldBeat.value = simple.beat
       vtgFoldRepeat.value = simple.repeat
@@ -310,6 +343,7 @@ export const useConceptsStore = defineStore(
       vtgFoldValues,
       vtgFoldValuesMaterialized,
       setVtgFoldValue,
+      applyVtgPropertyControls,
       hydrateVtgPropertyControls,
       vtgFoldMode,
       vtgFoldBeat,
@@ -317,6 +351,7 @@ export const useConceptsStore = defineStore(
       vtgFoldEvery,
       vtgFoldAlternate,
       vtgFoldSpan,
+      vtgFoldMirror,
       vtgPropertiesExpanded,
       vtgActiveProperty,
       resetPatternControls,

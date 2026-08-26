@@ -4,6 +4,7 @@ import { createApp, defineComponent, h } from 'vue'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 
 const mountStore = () => {
   const pinia = createPinia().use(piniaPluginPersistedstate)
@@ -66,9 +67,31 @@ describe('useConceptsStore', () => {
     expect(store.vtgFoldRepeat).toEqual([true, true])
     expect(store.vtgFoldEvery).toEqual([2, 2])
     expect(store.vtgFoldAlternate).toEqual([false, false])
-    expect(store.vtgFoldSpan).toBe('quarter')
+    expect(store.vtgFoldSpan).toBe('eighth')
+    expect(store.vtgFoldMirror).toBe(true)
     expect(store.vtgPropertiesExpanded).toBe(false)
     expect(store.vtgActiveProperty).toBeNull()
+    app.unmount()
+  })
+
+  it('applies the current Twist and Fold controls to a newly selected VTG pattern', () => {
+    const { app, store } = mountStore()
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    store.vtgTwistValues = [{ 0.5: 90, 3: 180 }, {}]
+    store.vtgTwistMode = 'advanced'
+    store.vtgFoldValues = [{ 2: { yaw: 90, rotate: 180 } }, {}]
+    store.vtgFoldMode = 'simple'
+    store.vtgFoldSpan = 'quarter'
+    store.vtgFoldValuesMaterialized = false
+
+    const applied = store.applyVtgPropertyControls(animation)
+
+    expect(applied.props[0]?.anim[1]?.twist).toBe(90)
+    expect(applied.props[0]?.anim[6]?.twist).toBe(180)
+    expect(applied.props[0]?.anim[3]).toMatchObject({ yaw: 90, rotate: 90 })
+    expect(applied.props[1]?.anim[3]).toMatchObject({ yaw: -90, rotate: -90 })
+    expect(store.vtgTwistValues[0]['3']).toBe(180)
     app.unmount()
   })
 
@@ -99,7 +122,7 @@ describe('useConceptsStore', () => {
     expect(second.store.vtgFoldRepeat).toEqual([true, true])
     expect(second.store.vtgFoldEvery).toEqual([2, 2])
     expect(second.store.vtgFoldAlternate).toEqual([false, false])
-    expect(second.store.vtgFoldSpan).toBe('quarter')
+    expect(second.store.vtgFoldSpan).toBe('eighth')
     expect(second.store.vtgFoldValuesMaterialized).toBe(false)
     expect(second.store.vtgPropertiesExpanded).toBe(true)
     expect(second.store.vtgActiveProperty).toBe('axis')

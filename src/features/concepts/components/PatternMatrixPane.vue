@@ -351,7 +351,7 @@
           selection.
         </p>
       </template>
-      <template #before-customize>
+      <template #after-customize>
         <PatternPropertyControls
           v-if="!builderActive && showVtgProperties"
           context="vtg"
@@ -366,6 +366,7 @@
           :fold-every="vtgFoldEvery"
           :fold-alternate="vtgFoldAlternate"
           :fold-span="vtgFoldSpan"
+          :fold-mirror="vtgFoldMirror"
           :properties-expanded="vtgPropertiesExpanded"
           :active-property="vtgActiveProperty"
           :sliders="sliders"
@@ -378,6 +379,7 @@
           @update:fold-every="updateFoldEvery"
           @update:fold-alternate="updateFoldAlternate"
           @update:fold-span="updateFoldSpan"
+          @update:fold-mirror="updateFoldMirror"
           @update:properties-expanded="vtgPropertiesExpanded = $event"
           @update:active-property="vtgActiveProperty = $event"
         />
@@ -410,7 +412,6 @@ import type {
   VtgTwistMode,
 } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
-import { applyVtgTwistSettings } from '@/features/vtg/applyVtgTwistSettings'
 import {
   applyVtgFoldSettings,
   deriveVtgFoldSimpleSources,
@@ -569,6 +570,7 @@ const {
   vtgFoldEvery,
   vtgFoldAlternate,
   vtgFoldSpan,
+  vtgFoldMirror,
   vtgPropertiesExpanded,
   vtgActiveProperty,
   sliders,
@@ -578,21 +580,7 @@ const {
 const isAnti = ref(false)
 const emitTwistAnimation = () => {
   if (!props.animation) return
-  emit(
-    'animationUpdate',
-    applyVtgFoldSettings(
-      applyVtgTwistSettings(props.animation, vtgTwistMode.value, vtgTwistValues.value),
-      vtgFoldValues.value,
-      {
-        mode: vtgFoldMode.value,
-        beat: vtgFoldBeat.value,
-        repeat: vtgFoldRepeat.value,
-        every: vtgFoldEvery.value,
-        alternate: vtgFoldAlternate.value,
-        span: vtgFoldSpan.value,
-      },
-    ),
-  )
+  emit('animationUpdate', conceptsStore.applyVtgPropertyControls(props.animation))
 }
 const getSimpleFoldSources = () =>
   deriveVtgFoldSimpleSources(
@@ -611,6 +599,7 @@ const materializeSimpleFoldValues = (sources = getSimpleFoldSources()) => {
       every: vtgFoldEvery.value,
       alternate: vtgFoldAlternate.value,
       span: vtgFoldSpan.value,
+      mirror: vtgFoldMirror.value,
     }),
   )
   vtgFoldValuesMaterialized.value = true
@@ -654,6 +643,7 @@ const updateFoldBeat = (propIndex: 0 | 1, beat: number) => {
   const previousBeat = vtgFoldBeat.value[propIndex]
   const source = sources[propIndex][String(previousBeat)]
   vtgFoldBeat.value[propIndex] = beat
+  if (vtgFoldMirror.value && propIndex === 0) vtgFoldBeat.value[1] = beat
   delete sources[propIndex][String(previousBeat)]
   if (source) sources[propIndex][String(beat)] = source
   materializeSimpleFoldValues(sources)
@@ -662,6 +652,7 @@ const updateFoldBeat = (propIndex: 0 | 1, beat: number) => {
 const updateFoldRepeat = (propIndex: 0 | 1, repeat: boolean) => {
   const sources = getSimpleFoldSources()
   vtgFoldRepeat.value[propIndex] = repeat
+  if (vtgFoldMirror.value && propIndex === 0) vtgFoldRepeat.value[1] = repeat
   if (!repeat) vtgFoldAlternate.value[propIndex] = false
   materializeSimpleFoldValues(sources)
   emitTwistAnimation()
@@ -669,32 +660,31 @@ const updateFoldRepeat = (propIndex: 0 | 1, repeat: boolean) => {
 const updateFoldEvery = (propIndex: 0 | 1, every: number) => {
   const sources = getSimpleFoldSources()
   vtgFoldEvery.value[propIndex] = every
+  if (vtgFoldMirror.value && propIndex === 0) vtgFoldEvery.value[1] = every
   materializeSimpleFoldValues(sources)
   emitTwistAnimation()
 }
 const updateFoldAlternate = (propIndex: 0 | 1, alternate: boolean) => {
   const sources = getSimpleFoldSources()
   vtgFoldAlternate.value[propIndex] = alternate
+  if (vtgFoldMirror.value && propIndex === 0) vtgFoldAlternate.value[1] = alternate
   materializeSimpleFoldValues(sources)
   emitTwistAnimation()
 }
 const updateFoldSpan = (span: VtgFoldSpan) => {
   const sources = getSimpleFoldSources()
   vtgFoldSpan.value = span
-  if (span === 'quarter') {
-    for (const propIndex of [0, 1] as const) {
-      if (!Number.isInteger(vtgFoldBeat.value[propIndex])) {
-        const previousBeat = vtgFoldBeat.value[propIndex]
-        const nextBeat = Math.ceil(previousBeat)
-        const source = sources[propIndex][String(previousBeat)]
-        vtgFoldBeat.value[propIndex] = nextBeat
-        delete sources[propIndex][String(previousBeat)]
-        if (source) sources[propIndex][String(nextBeat)] = source
-      }
-      if (!Number.isInteger(vtgFoldEvery.value[propIndex])) {
-        vtgFoldEvery.value[propIndex] = Math.ceil(vtgFoldEvery.value[propIndex])
-      }
-    }
+  materializeSimpleFoldValues(sources)
+  emitTwistAnimation()
+}
+const updateFoldMirror = (mirror: boolean) => {
+  const sources = getSimpleFoldSources()
+  vtgFoldMirror.value = mirror
+  if (mirror) {
+    vtgFoldBeat.value[1] = vtgFoldBeat.value[0]
+    vtgFoldRepeat.value[1] = vtgFoldRepeat.value[0]
+    vtgFoldEvery.value[1] = vtgFoldEvery.value[0]
+    vtgFoldAlternate.value[1] = vtgFoldAlternate.value[0]
   }
   materializeSimpleFoldValues(sources)
   emitTwistAnimation()

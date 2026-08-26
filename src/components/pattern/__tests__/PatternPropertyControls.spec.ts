@@ -22,7 +22,7 @@ describe('PatternPropertyControls', () => {
     const twist = wrapper.get('[data-role="vtg-property-twist-toggle"]')
     const turns = wrapper.find('[data-role="vtg-property-turns-toggle"]')
 
-    expect([axis.text(), twist.text()]).toEqual(['Folds', 'Twist - For Roll-Sensitive Props'])
+    expect([axis.text(), twist.text()]).toEqual(['Rotate', 'Twist - For Roll-Sensitive Props'])
     expect(turns.exists()).toBe(false)
     expect(axis.attributes('aria-expanded')).toBe('false')
 
@@ -31,8 +31,9 @@ describe('PatternPropertyControls', () => {
     await wrapper.setProps({ activeProperty: 'axis' })
     expect(axis.attributes('aria-expanded')).toBe('true')
     expect(wrapper.get('[data-role="vtg-property-axis-controls"]').isVisible()).toBe(true)
-    expect(wrapper.get('[data-role="vtg-property-axis-controls"]').text()).toContain(
-      'BeatLeftValue',
+    expect(wrapper.get('[data-role="vtg-property-axis-controls"]').text()).toContain('BeatValue')
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Mirror folds"]').element.checked).toBe(
+      true,
     )
 
     await twist.trigger('click')
@@ -52,6 +53,17 @@ describe('PatternPropertyControls', () => {
     expect(
       wrapper.get<HTMLElement>('[data-role="vtg-property-twist-controls"]').element.style.display,
     ).toBe('none')
+  })
+
+  it('adds descriptive tooltips to Folds and Twist', () => {
+    const wrapper = mount(PatternPropertyControls, { props: { context: 'vtg' } })
+
+    expect(
+      wrapper.get('[data-role="vtg-property-axis-toggle"]').attributes('aria-describedby'),
+    ).toBeTruthy()
+    expect(
+      wrapper.get('[data-role="vtg-property-twist-toggle"]').attributes('aria-describedby'),
+    ).toBeTruthy()
   })
 
   it('instantly reveals an opened Folds or Twist header above the scroll viewport', async () => {
@@ -146,7 +158,7 @@ describe('PatternPropertyControls', () => {
     expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0])
   })
 
-  it('offers only nonzero 90-degree slider values for Twist and Folds', async () => {
+  it('offers only supported nonzero 90-degree slider values for Twist and Rotate', async () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
     if (!animation) throw new Error('Expected a supported VTG animation')
     const wrapper = mount(PatternPropertyControls, {
@@ -162,11 +174,11 @@ describe('PatternPropertyControls', () => {
     expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0, 90])
 
     const direct = wrapper.get<HTMLInputElement>('input[aria-label="Left Direct at beat 0"]')
-    expect(direct.attributes()).toMatchObject({ min: '0', max: '3', step: '1' })
-    direct.element.value = '1'
+    expect(direct.attributes()).toMatchObject({ min: '0', max: '1', step: '1' })
+    direct.element.value = '0'
     await direct.trigger('input')
     expect(wrapper.emitted('foldUpdate')?.at(-1)).toEqual([0, 0, 'yaw', -90])
-    direct.element.value = '2'
+    direct.element.value = '1'
     await direct.trigger('input')
     expect(wrapper.emitted('foldUpdate')?.at(-1)).toEqual([0, 0, 'yaw', 90])
   })
@@ -261,6 +273,7 @@ describe('PatternPropertyControls', () => {
         foldBeat: [2, 2],
         foldValues: [{ 2: { rotate: 90 } }, {}],
         foldValuesMaterialized: true,
+        foldSpan: 'quarter',
       },
     })
 
@@ -292,8 +305,8 @@ describe('PatternPropertyControls', () => {
     wrapper.get('[data-role="vtg-rotate-0-0-stepper"]')
     wrapper.get('[data-role="vtg-twist-0-0-stepper"]')
 
-    await wrapper.get('[data-role="vtg-yaw-0-0-stepper-increase"]').trigger('click')
-    expect(wrapper.emitted('foldUpdate')?.at(-1)).toEqual([0, 0, 'yaw', 180])
+    await wrapper.get('[data-role="vtg-yaw-0-0-stepper-decrease"]').trigger('click')
+    expect(wrapper.emitted('foldUpdate')?.at(-1)).toEqual([0, 0, 'yaw', -90])
     await wrapper.get('[data-role="vtg-twist-0-0-stepper-decrease"]').trigger('click')
     expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0, -90])
   })
@@ -301,12 +314,18 @@ describe('PatternPropertyControls', () => {
   it('offers styled Simple fold repetition and span controls', async () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
     if (!animation) throw new Error('Expected a supported VTG animation')
-    const wrapper = mount(PatternPropertyControls, { props: { context: 'vtg', animation } })
+    const wrapper = mount(PatternPropertyControls, {
+      props: { context: 'vtg', animation, foldMirror: false },
+    })
 
     expect(
       wrapper.get<HTMLInputElement>('input[name$="-fold-mode"]:checked').element.nextElementSibling
         ?.textContent,
     ).toBe('Simple')
+    expect(
+      wrapper.get<HTMLInputElement>('input[name$="-fold-span"]:checked').element.nextElementSibling
+        ?.textContent,
+    ).toBe('Eighth')
     expect(
       wrapper.get<HTMLSelectElement>('select[aria-label="Left folds start"]').element.value,
     ).toBe('2')
@@ -324,5 +343,38 @@ describe('PatternPropertyControls', () => {
     expect(
       wrapper.findAll('[aria-label="Left Folds"] .pattern-property-controls__fold-frame'),
     ).toHaveLength(1)
+
+    await wrapper.setProps({ foldSpan: 'quarter' })
+    expect(
+      wrapper
+        .get<HTMLSelectElement>('select[aria-label="Left folds start"]')
+        .findAll('option')
+        .map((option) => option.text()),
+    ).toContain('0.5')
+    expect(
+      wrapper
+        .get<HTMLSelectElement>('select[aria-label="Left repeat folds every"]')
+        .findAll('option')
+        .map((option) => option.text()),
+    ).toContain('0.5')
+  })
+
+  it('offers Mirror only in Simple and hides both side labels and the Right controls', async () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const wrapper = mount(PatternPropertyControls, {
+      props: { context: 'vtg', animation, foldMirror: true },
+    })
+
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Mirror folds"]').element.checked).toBe(
+      true,
+    )
+    expect(wrapper.find('[aria-label="Right Folds"]').exists()).toBe(false)
+    expect(wrapper.get('[aria-label="Left Folds"] h3').text()).toBe('')
+
+    await wrapper.setProps({ foldMode: 'advanced' })
+    expect(wrapper.find('input[aria-label="Mirror folds"]').exists()).toBe(false)
+    expect(wrapper.get('[aria-label="Left Folds"] h3').text()).toBe('Left')
+    expect(wrapper.get('[aria-label="Right Folds"] h3').text()).toBe('Right')
   })
 })
