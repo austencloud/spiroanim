@@ -11,6 +11,7 @@ import type {
 export const ANIMATION_INHERITED_KEYS = [
   'turns',
   'twist',
+  'yaw',
   'beats',
   'scale',
   'depth',
@@ -23,7 +24,6 @@ export const ANIMATION_FRAME_KEYS = [
   ...ANIMATION_INHERITED_KEYS,
   'plane',
   'axis',
-  'yaw',
   'rotate',
 ] as const
 
@@ -80,7 +80,7 @@ const resolveAnimationFrame = <TType extends number | string>(
   return {
     turns: frame.turns ?? previous.turns,
     twist: frame.twist ?? previous.twist,
-    yaw: frame.yaw ?? 90,
+    yaw: frame.yaw ?? previous.yaw,
     rotate: frame.rotate ?? 0,
     beats: frame.beats ?? previous.beats,
     scale: frame.scale ?? previous.scale,

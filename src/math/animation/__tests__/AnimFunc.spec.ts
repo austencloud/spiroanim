@@ -108,7 +108,7 @@ describe('AnimFunc', () => {
       { yaw: 90, rotate: 180 },
       { yaw: 90, rotate: 0 },
       { yaw: -90, rotate: 90 },
-      { yaw: 90, rotate: 0 },
+      { yaw: -90, rotate: 0 },
     ])
     expect(
       frames.every(({ rot }) => rot.every((value, index) => value === frames[0]!.rot[index])),

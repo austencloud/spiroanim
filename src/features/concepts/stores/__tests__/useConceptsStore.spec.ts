@@ -58,12 +58,10 @@ describe('useConceptsStore', () => {
     expect(store.customizeExpanded).toBe(false)
     expect(store.classicLayout).toBe(true)
     expect(store.vtgTwistMode).toBe('simple')
-    expect(store.vtgTwistApply).toBe(true)
     expect(store.vtgTwistValues).toEqual([{}, {}])
     expect(store.vtgFoldValues).toEqual([{}, {}])
     expect(store.vtgFoldValuesMaterialized).toBe(false)
     expect(store.vtgFoldMode).toBe('simple')
-    expect(store.vtgFoldApply).toBe(true)
     expect(store.vtgFoldBeat).toEqual([2, 2])
     expect(store.vtgFoldRepeat).toEqual([true, true])
     expect(store.vtgFoldEvery).toEqual([2, 2])
@@ -74,17 +72,15 @@ describe('useConceptsStore', () => {
     app.unmount()
   })
 
-  it('persists generator Twist mode and hidden beat values', () => {
+  it('does not persist pattern-derived Twist and Fold controls', () => {
     const first = mountStore()
     first.store.vtgTwistMode = 'advanced'
-    first.store.vtgTwistApply = false
     first.store.setVtgTwistValue(0, 0.5, 45)
     first.store.setVtgTwistValue(0, 2.5, 90)
     first.store.setVtgTwistValue(1, 3, -45)
     first.store.setVtgFoldValue(0, 2.5, 'yaw', 45)
     first.store.setVtgFoldValue(0, 2.5, 'rotate', 90)
     first.store.vtgFoldMode = 'simple'
-    first.store.vtgFoldApply = false
     first.store.vtgFoldBeat = [2, 3]
     first.store.vtgFoldRepeat = [true, false]
     first.store.vtgFoldEvery = [2, 4]
@@ -96,17 +92,15 @@ describe('useConceptsStore', () => {
     first.app.unmount()
 
     const second = mountStore()
-    expect(second.store.vtgTwistMode).toBe('advanced')
-    expect(second.store.vtgTwistApply).toBe(false)
-    expect(second.store.vtgTwistValues).toEqual([{ 0.5: 45, 2.5: 90 }, { 3: -45 }])
-    expect(second.store.vtgFoldValues).toEqual([{ 2.5: { yaw: 45, rotate: 90 } }, {}])
-    expect(second.store.vtgFoldApply).toBe(false)
-    expect(second.store.vtgFoldBeat).toEqual([2, 3])
-    expect(second.store.vtgFoldRepeat).toEqual([true, false])
-    expect(second.store.vtgFoldEvery).toEqual([2, 4])
-    expect(second.store.vtgFoldAlternate).toEqual([true, false])
+    expect(second.store.vtgTwistMode).toBe('simple')
+    expect(second.store.vtgTwistValues).toEqual([{}, {}])
+    expect(second.store.vtgFoldValues).toEqual([{}, {}])
+    expect(second.store.vtgFoldBeat).toEqual([2, 2])
+    expect(second.store.vtgFoldRepeat).toEqual([true, true])
+    expect(second.store.vtgFoldEvery).toEqual([2, 2])
+    expect(second.store.vtgFoldAlternate).toEqual([false, false])
     expect(second.store.vtgFoldSpan).toBe('quarter')
-    expect(second.store.vtgFoldValuesMaterialized).toBe(true)
+    expect(second.store.vtgFoldValuesMaterialized).toBe(false)
     expect(second.store.vtgPropertiesExpanded).toBe(true)
     expect(second.store.vtgActiveProperty).toBe('axis')
     second.app.unmount()

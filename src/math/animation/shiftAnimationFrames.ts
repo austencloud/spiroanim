@@ -60,9 +60,9 @@ export const animationRangeEndpointsAlign = (
     first !== undefined &&
     last !== undefined &&
     vectorsAlign(first.pos, last.pos) &&
-    vectorsAlign(first.rot, last.rot) &&
-    quaternionsAlign(first.primaryOrient, last.primaryOrient) &&
-    quaternionsAlign(first.secondaryOrient, last.secondaryOrient) &&
+    // Rotation direction plus primary/secondary orientation are an internal decomposition and can
+    // use a different gauge for the same rendered pose after Shift reconstruction. Closure depends
+    // on the composed orientation, position, and visible twist instead.
     quaternionsAlign(first.orient, last.orient) &&
     rollsAlign(first.twistRoll, last.twistRoll)
   )

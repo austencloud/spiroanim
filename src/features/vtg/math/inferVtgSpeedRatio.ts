@@ -23,6 +23,21 @@ export interface VtgTiming {
 
 type DirectionVector = readonly [number, number, number]
 
+const vectorsAlign = (first: readonly number[], second: readonly number[]) =>
+  first.length === second.length &&
+  first.every((value, index) => Math.abs(value - second[index]!) <= floatingPointTolerance)
+
+const quaternionsAlign = (first: readonly number[], second: readonly number[]) => {
+  if (first.length !== second.length) return false
+  const dotProduct = first.reduce((sum, value, index) => sum + value * second[index]!, 0)
+  return Math.abs(1 - Math.abs(dotProduct)) <= floatingPointTolerance
+}
+
+const rollsAlign = (first: number, second: number) => {
+  const difference = (((second - first) % 360) + 360) % 360
+  return difference <= floatingPointTolerance || 360 - difference <= floatingPointTolerance
+}
+
 const dot = (first: DirectionVector, second: DirectionVector): number =>
   first[0] * second[0] + first[1] * second[1] + first[2] * second[2]
 
@@ -118,12 +133,42 @@ export const inferVtgTiming = (animation: RootDataFinal): VtgTiming | undefined 
   }
 
   const compiled = rootCompile(animation)
+  const hasShiftedSeamGauge = compiled.props.every((prop) => {
+    const start = prop.anim[0]
+    const end = prop.anim.at(-1)
+    return (
+      start !== undefined &&
+      end !== undefined &&
+      vectorsAlign(start.pos, end.pos) &&
+      !vectorsAlign(start.rot, end.rot) &&
+      quaternionsAlign(start.orient, end.orient) &&
+      rollsAlign(start.twistRoll, end.twistRoll)
+    )
+  })
   const timings = compiled.props.map((prop) => {
     const inferred = prop.anim.slice(1).map(inferContinuation)
     const first = inferred[0]
-    return first &&
+    if (
+      first &&
       inferred.every((timing) => timing?.ratio === first.ratio && timing.spin === first.spin)
-      ? first
+    ) {
+      return first
+    }
+
+    // Shift rebuilds the interval crossing the cycle seam. An equivalent compiled orientation can
+    // use the opposite internal rotation-axis gauge on that first interval while every remaining
+    // continuation still carries the same observable VTG timing.
+    const continuation = inferred[1]
+    return hasShiftedSeamGauge &&
+      first &&
+      continuation &&
+      first.ratio === continuation.ratio &&
+      inferred
+        .slice(1)
+        .every(
+          (timing) => timing?.ratio === continuation.ratio && timing.spin === continuation.spin,
+        )
+      ? continuation
       : undefined
   })
 

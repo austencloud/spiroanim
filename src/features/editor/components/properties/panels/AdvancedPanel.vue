@@ -31,9 +31,9 @@
 
     <template #yaw>
       <strong>Yaw</strong><br />
-      Selects the axis used by <strong>Rotate</strong>. It defaults to 90° when Rotate is set and
-      has no effect by itself.<br />
-      <br /><i>Yaw applies only to this frame and is not inherited.</i>
+      Selects the axis used by <strong>Rotate</strong>. It initially defaults to 90° and has no
+      effect by itself.<br />
+      <br /><i>When undefined, Yaw inherits from the previous frame.</i>
     </template>
 
     <template #rotate>

@@ -1,7 +1,7 @@
 import type { VtgTwistMode, VtgTwistValues } from '@/features/concepts/stores/useConceptsStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
-/** Applies persistent generator Twist settings without mutating the generated VTG animation. */
+/** Applies generator Twist settings without mutating the generated VTG animation. */
 export const applyVtgTwistSettings = (
   animation: RootDataFinal,
   mode: VtgTwistMode,
@@ -23,3 +23,25 @@ export const applyVtgTwistSettings = (
     }
   }),
 })
+
+/** Captures every explicitly authored Twist value from an animation. */
+export const extractVtgTwistValues = (animation: RootDataFinal): VtgTwistValues => [
+  extractPropTwistValues(animation, 0),
+  extractPropTwistValues(animation, 1),
+]
+
+const extractPropTwistValues = (animation: RootDataFinal, propIndex: 0 | 1) => {
+  const values: Record<string, number> = {}
+  let beat = 0
+  for (const frame of animation.props[propIndex]?.anim ?? []) {
+    if (frame.twist !== undefined) values[String(beat)] = frame.twist
+    beat += frame.beats ?? 0.5
+  }
+  return values
+}
+
+/** Simple Twist can faithfully represent only values authored at beat 0.5. */
+export const detectVtgTwistMode = (values: VtgTwistValues): VtgTwistMode =>
+  values.every((side) => Object.keys(side).every((beat) => Number(beat) === 0.5))
+    ? 'simple'
+    : 'advanced'

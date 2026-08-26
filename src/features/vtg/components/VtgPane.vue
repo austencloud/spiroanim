@@ -1,6 +1,7 @@
 <template>
   <PatternMatrixPane
     :animation="animation"
+    :animation-revision="animationRevision"
     :animation-ready="animationReady"
     :pattern-matcher="patternMatcher"
     :builder-active="builderActive"
@@ -26,6 +27,7 @@ import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMa
 withDefaults(
   defineProps<{
     animation?: RootDataFinal
+    animationRevision?: number
     animationReady?: boolean
     patternMatcher?: PatternMatchingClient
     builderActive?: boolean

@@ -145,6 +145,17 @@ describe('compressAnimation', () => {
     expect(rootCompile(root).props[0]!.motion.map(({ offset }) => offset)).toEqual(before)
   })
 
+  it('preserves a changed Yaw for a later Rotate while removing redundant inherited Yaw', () => {
+    const root = createRoot()
+    root.props[0]!.anim = [{ yaw: -90 }, { yaw: -90 }, { rotate: 180 }]
+    const before = rootCompile(root).props[0]!.anim
+
+    compressAnimation(root)
+
+    expect(root.props[0]!.anim).toEqual([{ yaw: -90 }, {}, { rotate: 180 }])
+    expect(rootCompile(root).props[0]!.anim).toEqual(before)
+  })
+
   it('retains an explicit zero-distance direction command when the compiler uses it', () => {
     const root = createRoot()
     root.props[0]!.motion = [{ plane: 90, arc: 90, distance: 0 }, { distance: 5 }]

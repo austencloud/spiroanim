@@ -45,6 +45,7 @@
     <VtgPane
       v-if="selectedConcept === 'vtg'"
       :animation="animation"
+      :animation-revision="animationRevision"
       :animation-ready="animationReady"
       :pattern-matcher="patternMatcher"
       :builder-active="builderActive"
@@ -99,6 +100,7 @@ import { isTouchDevice } from '@/utils/device'
 
 const props = defineProps<{
   animation?: RootDataFinal
+  animationRevision?: number
   animationReady?: boolean
   builderActive?: boolean
   builderFullCatalog?: boolean

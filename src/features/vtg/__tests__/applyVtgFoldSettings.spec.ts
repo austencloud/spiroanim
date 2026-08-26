@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   applyVtgFoldSettings,
+  detectVtgFoldSimpleSettings,
   deriveVtgFoldSimpleSources,
   extractVtgFoldValues,
 } from '@/features/vtg/applyVtgFoldSettings'
@@ -94,5 +95,36 @@ describe('applyVtgFoldSettings', () => {
 
     expect(extractVtgFoldValues(second)).toEqual(materialized)
     expect(sources[0]?.['2']?.rotate).toBe(180)
+  })
+
+  it('detects a Simple schedule only when it exactly represents the pattern values', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const simple = applyVtgFoldSettings(
+      animation,
+      [{ 0.5: { rotate: 90 } }, { 0.5: { rotate: -90 } }],
+      {
+        mode: 'simple',
+        beat: [0.5, 0.5],
+        repeat: [true, true],
+        every: [1, 1],
+        alternate: [true, true],
+        span: 'eighth',
+      },
+    )
+
+    expect(detectVtgFoldSimpleSettings(simple)).toMatchObject({
+      beat: [0.5, 0.5],
+      repeat: [true, true],
+      every: [1, 1],
+      alternate: [true, true],
+      span: 'eighth',
+    })
+
+    const irregular = applyVtgFoldSettings(animation, [
+      { 0.5: { rotate: 90 }, 1.5: { rotate: 180 }, 3: { yaw: -90 } },
+      {},
+    ])
+    expect(detectVtgFoldSimpleSettings(irregular)).toBeUndefined()
   })
 })

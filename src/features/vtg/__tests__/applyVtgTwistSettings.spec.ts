@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
-import { applyVtgTwistSettings } from '@/features/vtg/applyVtgTwistSettings'
+import {
+  applyVtgTwistSettings,
+  detectVtgTwistMode,
+  extractVtgTwistValues,
+} from '@/features/vtg/applyVtgTwistSettings'
 import type { VtgTwistValues } from '@/features/concepts/stores/useConceptsStore'
 
 describe('applyVtgTwistSettings', () => {
@@ -32,5 +36,21 @@ describe('applyVtgTwistSettings', () => {
     expect(applied.props[0]?.anim.slice(0, 4).map((frame) => frame.twist)).toEqual([
       45, 90, 135, 180,
     ])
+  })
+
+  it('derives values and selects Advanced when Twist exists outside beat 0.5', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+
+    const simpleValues = extractVtgTwistValues(
+      applyVtgTwistSettings(animation, 'advanced', [{ 0.5: 90 }, { 0.5: -90 }]),
+    )
+    expect(detectVtgTwistMode(simpleValues)).toBe('simple')
+
+    const advancedValues = extractVtgTwistValues(
+      applyVtgTwistSettings(animation, 'advanced', [{ 0.5: 90, 2: 180 }, {}]),
+    )
+    expect(advancedValues).toEqual([{ 0.5: 90, 2: 180 }, {}])
+    expect(detectVtgTwistMode(advancedValues)).toBe('advanced')
   })
 })

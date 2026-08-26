@@ -155,7 +155,7 @@ describe('resampleAnimationFrames', () => {
     expect(restored.camera).toEqual(before.camera)
   })
 
-  it('subdivides and restores frame-local Yaw/Rotate instructions', () => {
+  it('subdivides inherited Yaw and frame-local Rotate instructions', () => {
     const original = createAnimation()
     for (const frame of original.props[0]!.anim) {
       frame.turns = 0
@@ -174,7 +174,8 @@ describe('resampleAnimationFrames', () => {
     expect(doubled.props[0]!.anim[1]).toMatchObject({ rotate: 90 })
     expect(doubled.props[0]!.anim[2]).toMatchObject({ rotate: 90 })
     expect(doubled.props[0]!.anim[3]).toMatchObject({ yaw: -90, rotate: -90 })
-    expect(doubled.props[0]!.anim[4]).toMatchObject({ yaw: -90, rotate: -90 })
+    expect(doubled.props[0]!.anim[4]).toMatchObject({ rotate: -90 })
+    expect(doubled.props[0]!.anim[4]!.yaw).toBeUndefined()
     for (const [sourceIndex, doubledIndex] of [
       [0, 0],
       [1, 2],

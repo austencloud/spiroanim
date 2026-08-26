@@ -59,11 +59,11 @@ describe('compiler frame semantics', () => {
     ])
   })
 
-  it('defaults Yaw only for the current frame and never inherits Rotate', () => {
+  it('inherits Yaw while continuing to default Rotate per frame', () => {
     expect(resolveAnimationFrames([{ yaw: -90, rotate: 180 }, {}, { rotate: -90 }])).toMatchObject([
       { yaw: -90, rotate: 180 },
-      { yaw: 90, rotate: 0 },
-      { yaw: 90, rotate: -90 },
+      { yaw: -90, rotate: 0 },
+      { yaw: -90, rotate: -90 },
     ])
   })
 

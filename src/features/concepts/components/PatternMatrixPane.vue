@@ -357,12 +357,10 @@
           context="vtg"
           :animation="animation"
           :twist-mode="vtgTwistMode"
-          :twist-apply="vtgTwistApply"
           :twist-values="vtgTwistValues"
           :fold-values="vtgFoldValues"
           :fold-values-materialized="vtgFoldValuesMaterialized"
           :fold-mode="vtgFoldMode"
-          :fold-apply="vtgFoldApply"
           :fold-beat="vtgFoldBeat"
           :fold-repeat="vtgFoldRepeat"
           :fold-every="vtgFoldEvery"
@@ -374,9 +372,7 @@
           @twist-update="updateTwistSetting"
           @fold-update="updateFoldSetting"
           @update:twist-mode="updateTwistMode"
-          @update:twist-apply="updateTwistApply"
           @update:fold-mode="updateFoldMode"
-          @update:fold-apply="updateFoldApply"
           @update:fold-beat="updateFoldBeat"
           @update:fold-repeat="updateFoldRepeat"
           @update:fold-every="updateFoldEvery"
@@ -397,7 +393,7 @@ import BaseIcon from '@/components/icons/BaseIcon.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
-import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
+import { COLORS, COLSET, PROPSR } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
 import PatternTransitionControls from '@/features/concepts/components/PatternTransitionControls.vue'
@@ -512,6 +508,7 @@ type VtgMatrixAddress = Omit<VtgMatrixTile, 'label' | 'description'>
 const props = withDefaults(
   defineProps<{
     animation?: RootDataFinal
+    animationRevision?: number
     animationReady?: boolean
     patternMatcher?: PatternMatchingClient
     builderActive?: boolean
@@ -563,12 +560,10 @@ const {
   rightPropColor,
   prop,
   vtgTwistMode,
-  vtgTwistApply,
   vtgTwistValues,
   vtgFoldValues,
   vtgFoldValuesMaterialized,
   vtgFoldMode,
-  vtgFoldApply,
   vtgFoldBeat,
   vtgFoldRepeat,
   vtgFoldEvery,
@@ -586,12 +581,8 @@ const emitTwistAnimation = () => {
   emit(
     'animationUpdate',
     applyVtgFoldSettings(
-      applyVtgTwistSettings(
-        props.animation,
-        vtgTwistMode.value,
-        vtgTwistApply.value ? vtgTwistValues.value : [{}, {}],
-      ),
-      vtgFoldApply.value ? vtgFoldValues.value : [{}, {}],
+      applyVtgTwistSettings(props.animation, vtgTwistMode.value, vtgTwistValues.value),
+      vtgFoldValues.value,
       {
         mode: vtgFoldMode.value,
         beat: vtgFoldBeat.value,
@@ -632,10 +623,6 @@ const updateTwistMode = (mode: VtgTwistMode) => {
   vtgTwistMode.value = mode
   emitTwistAnimation()
 }
-const updateTwistApply = (apply: boolean) => {
-  vtgTwistApply.value = apply
-  emitTwistAnimation()
-}
 const updateFoldSetting = (
   propIndex: 0 | 1,
   beat: number,
@@ -660,10 +647,6 @@ const updateFoldSetting = (
 const updateFoldMode = (mode: VtgFoldMode) => {
   if (vtgFoldMode.value === 'simple' && mode === 'advanced') materializeSimpleFoldValues()
   vtgFoldMode.value = mode
-  emitTwistAnimation()
-}
-const updateFoldApply = (apply: boolean) => {
-  vtgFoldApply.value = apply
   emitTwistAnimation()
 }
 const updateFoldBeat = (propIndex: 0 | 1, beat: number) => {
@@ -1107,8 +1090,8 @@ const createPatternSelection = (
   const baseSelection: VtgPatternSelection = {
     reference,
     speedRatio: speedRatio.value,
-    prop: prop.value,
   }
+  if (PROPSR[prop.value] !== vtgPlayerSettings.prop) baseSelection.prop = prop.value
   if (isSpinToggleCell(reference)) baseSelection.isAnti = isAnti.value
   if (swapProps.value) baseSelection.swapProps = true
   if (reversePlane.value) baseSelection.reversePlane = true
@@ -1560,6 +1543,7 @@ const matchPattern = async (request: Parameters<PatternMatchingClient['matchVtg'
 
 const hydratePatternControls = async (animation: RootDataFinal) => {
   const version = ++hydrationVersion
+  conceptsStore.hydrateVtgPropertyControls(animation)
   const selection = lastEmittedSelection
   lastEmittedSelection = undefined
 
@@ -1690,7 +1674,15 @@ const syncPatternControls = () => {
   if (patternMatchingEnabled) void hydratePatternControls(props.animation)
 }
 
-watch([() => props.animationReady, () => props.animation], syncPatternControls)
+watch(
+  [
+    () => props.animationReady,
+    () => props.animationRevision,
+    // Standalone consumers that do not provide a revision retain the original prop-update API.
+    () => (props.animationRevision === undefined ? props.animation : undefined),
+  ],
+  syncPatternControls,
+)
 
 watch(
   () => props.builderActive,

@@ -1,5 +1,6 @@
 <template>
   <details
+    ref="rootElement"
     class="pattern-property-controls"
     :open="propertiesExpanded"
     :data-role="`${context}-properties`"
@@ -40,15 +41,6 @@
                     @change="emit('update:foldMode', mode)"
                   />
                   <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
-                    :checked="foldApply"
-                    aria-label="Apply Folds"
-                    @change="emit('update:foldApply', ($event.target as HTMLInputElement).checked)"
-                  />
-                  <span>Apply</span>
                 </label>
               </fieldset>
               <fieldset
@@ -150,25 +142,26 @@
                       <input
                         v-if="sliders"
                         type="range"
-                        :min="fold.min"
-                        :max="fold.max"
-                        step="45"
-                        :value="frame.values[fold.key] ?? fold.default"
+                        min="0"
+                        :max="angleOptions(fold.min, fold.max).length - 1"
+                        step="1"
+                        :value="angleSliderIndex(frame.displayValues[fold.key], fold.min, fold.max)"
+                        :aria-valuetext="`${frame.displayValues[fold.key]}°`"
                         :aria-label="`${column.label} ${fold.label} at beat ${formatBeat(frame.beat)}`"
                         @input="setFold(propIndex, frame.beat, fold.key, $event)"
                       />
                       <ConceptStepper
                         v-else
-                        :model-value="frame.values[fold.key] ?? fold.default"
+                        :model-value="frame.displayValues[fold.key]"
                         :label="`${column.label} ${fold.label} at beat ${formatBeat(frame.beat)}`"
                         :data-role="`${context}-${fold.key}-${propIndex}-${frame.index}-stepper`"
                         :min="fold.min"
                         :max="fold.max"
-                        :step="45"
-                        :display-value="`${frame.values[fold.key] ?? fold.default}°`"
+                        :step="90"
+                        :display-value="`${frame.displayValues[fold.key]}°`"
                         @update:model-value="emitFoldValue(propIndex, frame.beat, fold.key, $event)"
                       />
-                      <output v-if="sliders">{{ frame.values[fold.key] ?? fold.default }}°</output>
+                      <output v-if="sliders">{{ frame.displayValues[fold.key] }}°</output>
                       <button
                         type="button"
                         class="pattern-property-controls__delete"
@@ -199,15 +192,6 @@
                 />
                 <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
               </label>
-              <label>
-                <input
-                  type="checkbox"
-                  :checked="twistApply"
-                  aria-label="Apply Twist"
-                  @change="emit('update:twistApply', ($event.target as HTMLInputElement).checked)"
-                />
-                <span>Apply</span>
-              </label>
             </fieldset>
             <div class="pattern-property-controls__twist-columns">
               <section
@@ -234,10 +218,11 @@
                   <input
                     v-if="sliders"
                     type="range"
-                    min="-360"
-                    max="360"
-                    step="45"
-                    :value="frame.value"
+                    min="0"
+                    :max="angleOptions(-360, 360).length - 1"
+                    step="1"
+                    :value="angleSliderIndex(frame.value, -360, 360)"
+                    :aria-valuetext="`${frame.value}°`"
                     :aria-label="`${column.label} Twist at beat ${formatBeat(frame.beat)}`"
                     :data-role="`${context}-twist-${propIndex}-${frame.index}`"
                     @input="setTwist(propIndex, frame.index, $event)"
@@ -249,7 +234,7 @@
                     :data-role="`${context}-twist-${propIndex}-${frame.index}-stepper`"
                     :min="-360"
                     :max="360"
-                    :step="45"
+                    :step="90"
                     :display-value="`${frame.value}°`"
                     @update:model-value="emitTwistValue(propIndex, frame.beat, $event)"
                   />
@@ -301,13 +286,11 @@ const props = withDefaults(
     showTurns?: boolean
     animation?: RootDataFinal
     twistMode?: VtgTwistMode
-    twistApply?: boolean
     twistValues?: VtgTwistValues
     foldValues?: VtgFoldValues
     foldValuesMaterialized?: boolean
     sliders?: boolean
     foldMode?: VtgFoldMode
-    foldApply?: boolean
     foldBeat?: VtgFoldSideSettings<number>
     foldRepeat?: VtgFoldSideSettings<boolean>
     foldEvery?: VtgFoldSideSettings<number>
@@ -319,13 +302,11 @@ const props = withDefaults(
   {
     showTurns: false,
     twistMode: 'simple',
-    twistApply: true,
     twistValues: () => [{}, {}],
     foldValues: () => [{}, {}],
     foldValuesMaterialized: false,
     sliders: true,
     foldMode: 'simple',
-    foldApply: true,
     foldBeat: () => [2, 2],
     foldRepeat: () => [true, true],
     foldEvery: () => [2, 2],
@@ -339,10 +320,8 @@ const props = withDefaults(
 const emit = defineEmits<{
   twistUpdate: [propIndex: 0 | 1, beat: number, value?: number]
   'update:twistMode': [mode: VtgTwistMode]
-  'update:twistApply': [apply: boolean]
   foldUpdate: [propIndex: 0 | 1, beat: number, fold: keyof VtgFoldValue, value?: number]
   'update:foldMode': [mode: VtgFoldMode]
-  'update:foldApply': [apply: boolean]
   'update:foldBeat': [propIndex: 0 | 1, beat: number]
   'update:foldRepeat': [propIndex: 0 | 1, repeat: boolean]
   'update:foldEvery': [propIndex: 0 | 1, every: number]
@@ -355,8 +334,8 @@ const twistModes = ['simple', 'advanced'] as const
 const foldModes = ['simple', 'advanced'] as const
 const foldSpans = ['quarter', 'eighth'] as const
 const folds = [
-  { key: 'yaw', label: 'Direct', min: -180, max: 180, default: 90 },
-  { key: 'rotate', label: 'Rotate', min: -360, max: 360, default: 0 },
+  { key: 'yaw', label: 'Direct', min: -180, max: 180 },
+  { key: 'rotate', label: 'Rotate', min: -360, max: 360 },
 ] as const
 
 const properties = [
@@ -366,6 +345,7 @@ const properties = [
 ] as const satisfies readonly { key: PatternPropertyKey; name: string; label: string }[]
 
 const controlId = `pattern-properties-${useId()}`
+const rootElement = ref<HTMLDetailsElement>()
 const visibleProperties = computed(() =>
   properties.filter((property) => property.key !== 'turns' || props.showTurns),
 )
@@ -396,23 +376,27 @@ const foldColumnsUnfiltered = computed(() =>
   ['Left', 'Right'].map((label, propIndex) => {
     const frames = props.animation?.props[propIndex]?.anim ?? []
     let beat = 0
+    let inheritedYaw = 90
     return {
       label,
       frames: frames.map((frame, index) => {
         const storedValues = props.foldValues[propIndex]?.[String(beat)] ?? {}
+        const values = {
+          ...storedValues,
+          ...(props.foldMode === 'simple' &&
+          props.foldSpan === 'quarter' &&
+          props.foldValuesMaterialized &&
+          storedValues.rotate !== undefined
+            ? { rotate: storedValues.rotate * 2 }
+            : {}),
+        }
         const result = {
           index,
           beat,
-          values: {
-            ...storedValues,
-            ...(props.foldMode === 'simple' &&
-            props.foldSpan === 'quarter' &&
-            props.foldValuesMaterialized &&
-            storedValues.rotate !== undefined
-              ? { rotate: storedValues.rotate * 2 }
-              : {}),
-          },
+          values,
+          displayValues: { yaw: values.yaw ?? inheritedYaw, rotate: values.rotate ?? 0 },
         }
+        if (values.yaw !== undefined) inheritedYaw = values.yaw
         beat += frame.beats ?? 0.5
         return result
       }),
@@ -439,6 +423,30 @@ const foldBeatOptions = computed(() =>
 )
 const foldEveryOptions = computed(() => foldBeatOptions.value.filter((beat) => beat > 0))
 
+const angleOptions = (min: number, max: number) => {
+  const values: number[] = []
+  for (let value = Math.ceil(min / 90) * 90; value <= max; value += 90) {
+    if (value !== 0) values.push(value)
+  }
+  return values
+}
+const angleSliderIndex = (value: number, min: number, max: number) => {
+  const options = angleOptions(min, max)
+  const exact = options.indexOf(value)
+  if (exact >= 0) return exact
+  return options.reduce(
+    (closest, option, index) =>
+      Math.abs(option - value) < Math.abs(options[closest]! - value) ? index : closest,
+    0,
+  )
+}
+const angleFromSlider = (event: Event, min: number, max: number) => {
+  const options = angleOptions(min, max)
+  return options[Number((event.target as HTMLInputElement).value)] ?? options[0]!
+}
+const skipZero = (value: number, previous: number) =>
+  value === 0 ? (previous < 0 ? 90 : -90) : value
+
 const formatBeat = (beat: number) => (Number.isInteger(beat) ? String(beat) : String(beat))
 const isPropIndex = (propIndex: number): propIndex is 0 | 1 => propIndex === 0 || propIndex === 1
 const emitFoldRepeat = (propIndex: number, event: Event) => {
@@ -463,11 +471,13 @@ const setTwist = (propIndex: number, frameIndex: number, event: Event) => {
     (candidate) => candidate.index === frameIndex,
   )
   if (!frame || (propIndex !== 0 && propIndex !== 1)) return
-  emit('twistUpdate', propIndex, frame.beat, Number((event.target as HTMLInputElement).value))
+  emit('twistUpdate', propIndex, frame.beat, angleFromSlider(event, -360, 360))
 }
 const emitTwistValue = (propIndex: number, beat: number, value: number) => {
   if (propIndex !== 0 && propIndex !== 1) return
-  emit('twistUpdate', propIndex, beat, value)
+  const previous =
+    twistColumns.value[propIndex]?.frames.find((frame) => frame.beat === beat)?.value ?? 0
+  emit('twistUpdate', propIndex, beat, skipZero(value, previous))
 }
 
 const clearTwist = (propIndex: number, frameIndex: number) => {
@@ -480,7 +490,9 @@ const clearTwist = (propIndex: number, frameIndex: number) => {
 
 const setFold = (propIndex: number, beat: number, fold: keyof VtgFoldValue, event: Event) => {
   if (propIndex !== 0 && propIndex !== 1) return
-  emit('foldUpdate', propIndex, beat, fold, Number((event.target as HTMLInputElement).value))
+  const limits = folds.find(({ key }) => key === fold)
+  if (!limits) return
+  emit('foldUpdate', propIndex, beat, fold, angleFromSlider(event, limits.min, limits.max))
 }
 const emitFoldValue = (
   propIndex: number,
@@ -489,7 +501,11 @@ const emitFoldValue = (
   value: number,
 ) => {
   if (propIndex !== 0 && propIndex !== 1) return
-  emit('foldUpdate', propIndex, beat, fold, value)
+  const previous =
+    foldColumns.value[propIndex]?.frames.find((frame) => frame.beat === beat)?.displayValues[
+      fold
+    ] ?? 0
+  emit('foldUpdate', propIndex, beat, fold, skipZero(value, previous))
 }
 
 const clearFold = (propIndex: number, beat: number, fold: keyof VtgFoldValue) => {
@@ -500,6 +516,33 @@ const clearFold = (propIndex: number, beat: number, fold: keyof VtgFoldValue) =>
 const toggleProperty = (property: PatternPropertyKey) => {
   emit('update:activeProperty', props.activeProperty === property ? null : property)
 }
+
+const revealOpenedProperty = async (property: PatternPropertyKey | null) => {
+  if (property !== 'axis' && property !== 'twist') return
+  await nextTick()
+  const root = rootElement.value
+  const target = root?.querySelector<HTMLElement>(
+    `[data-role="${props.context}-property-${property}-toggle"]`,
+  )
+  if (!root || !target) return
+
+  let scrollParent: HTMLElement | null = root.parentElement
+  while (scrollParent) {
+    const style = getComputedStyle(scrollParent)
+    if (/(auto|scroll)/.test(style.overflowY)) break
+    scrollParent = scrollParent.parentElement
+  }
+  if (!scrollParent) return
+
+  const parentRect = scrollParent.getBoundingClientRect()
+  const targetRect = target.getBoundingClientRect()
+  if (targetRect.top >= parentRect.top && targetRect.top <= parentRect.bottom) return
+  scrollParent.scrollTo({
+    top: scrollParent.scrollTop + targetRect.top - parentRect.top,
+    behavior: 'auto',
+  })
+}
+watch(() => props.activeProperty, revealOpenedProperty)
 const emitPropertiesExpanded = (event: Event) => {
   emit('update:propertiesExpanded', (event.currentTarget as HTMLDetailsElement).open)
 }

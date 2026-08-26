@@ -57,6 +57,7 @@
         v-if="viewVisible.concepts"
         ref="cConcepts"
         :animation="ROOT"
+        :animation-revision="animationRevision"
         :animation-ready="animationReady"
         :builder-active="paneStore.isPaneHijacked"
         :builder-full-catalog="builderFullCatalog"
@@ -112,11 +113,6 @@ import { applyConceptPattern as createConceptPattern } from '@/features/concepts
 import { isVtgPatternSelection, type ConceptPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
-import { applyVtgTwistSettings } from '@/features/vtg/applyVtgTwistSettings'
-import {
-  applyVtgFoldSettings,
-  deriveVtgFoldSimpleSources,
-} from '@/features/vtg/applyVtgFoldSettings'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useScrollSelectScale } from '@/composables/useScrollSelectScale'
@@ -153,6 +149,24 @@ const conceptsStore = useConceptsStore()
 const qsStore = useQSMainStore()
 const queryVersionStore = useQueryVersionStore()
 const { ROOT } = playerStore.raw()
+const animationRevision = ref(0)
+let suppressNextConceptAnimationRevision = false
+watch(
+  ROOT,
+  () => {
+    if (suppressNextConceptAnimationRevision) {
+      suppressNextConceptAnimationRevision = false
+      return
+    }
+    animationRevision.value++
+  },
+  { flush: 'sync' },
+)
+const commitConceptAnimation = (animation: RootDataFinal) => {
+  suppressNextConceptAnimationRevision = true
+  if (ROOT.value === animation) triggerRef(ROOT)
+  else ROOT.value = animation
+}
 const selectedBuilderPreviewIndex = ref<number>()
 const builderFullGrid = ref(false)
 const builderFullCatalogForced = computed(
@@ -230,37 +244,10 @@ registerComponentEl(cConcepts, eConcepts)
 registerComponentEl(cBuilder, eBuilder)
 
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
-  const generated = createConceptPattern(ROOT.value, selection)
-  const animation =
-    generated && isVtgPatternSelection(selection)
-      ? applyVtgTwistSettings(
-          applyVtgFoldSettings(
-            generated,
-            !conceptsStore.vtgFoldApply
-              ? [{}, {}]
-              : conceptsStore.vtgFoldMode === 'simple'
-                ? deriveVtgFoldSimpleSources(
-                    conceptsStore.vtgFoldValues,
-                    conceptsStore.vtgFoldBeat,
-                    conceptsStore.vtgFoldSpan,
-                    conceptsStore.vtgFoldValuesMaterialized,
-                  )
-                : conceptsStore.vtgFoldValues,
-            {
-              mode: conceptsStore.vtgFoldMode,
-              beat: conceptsStore.vtgFoldBeat,
-              repeat: conceptsStore.vtgFoldRepeat,
-              every: conceptsStore.vtgFoldEvery,
-              alternate: conceptsStore.vtgFoldAlternate,
-              span: conceptsStore.vtgFoldSpan,
-            },
-          ),
-          conceptsStore.vtgTwistMode,
-          conceptsStore.vtgTwistApply ? conceptsStore.vtgTwistValues : [{}, {}],
-        )
-      : generated
+  const animation = createConceptPattern(ROOT.value, selection)
   if (animation) {
-    ROOT.value = animation
+    if (isVtgPatternSelection(selection)) conceptsStore.hydrateVtgPropertyControls(animation)
+    commitConceptAnimation(animation)
     playerStore.cameraReset = Symbol()
   }
 }
@@ -281,12 +268,12 @@ const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
     : createConceptPattern(ROOT.value, selection)
   if (!animation) return
   qsStore.qsSkip = true
-  ROOT.value = animation
+  commitConceptAnimation(animation)
 }
 
 const applyPropertyAnimation = (animation: RootDataFinal) => {
   qsStore.qsSkip = true
-  ROOT.value = animation
+  commitConceptAnimation(animation)
 }
 
 const toggleBuilder = () => {

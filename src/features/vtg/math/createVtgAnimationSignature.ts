@@ -32,6 +32,30 @@ const normalizePosition = (position: readonly number[], orientation: number) => 
   ]
 }
 
+const getCompiledSpinDirection = (
+  frame: ReturnType<typeof rootCompile>['props'][number]['anim'][number],
+) => {
+  const axisAlignment = frame.posx.reduce(
+    (sum, value, index) => sum + value * frame.rotx[index]!,
+    0,
+  )
+  return Math.sign(axisAlignment * frame.arc * (frame.arc + frame.turns))
+}
+
+const semanticTolerance = 1e-6
+const vectorsAlign = (first: readonly number[], second: readonly number[]) =>
+  first.length === second.length &&
+  first.every((value, index) => Math.abs(value - second[index]!) <= semanticTolerance)
+const quaternionsAlign = (first: readonly number[], second: readonly number[]) => {
+  if (first.length !== second.length) return false
+  const dot = first.reduce((sum, value, index) => sum + value * second[index]!, 0)
+  return Math.abs(1 - Math.abs(dot)) <= semanticTolerance
+}
+const rollsAlign = (first: number, second: number) => {
+  const difference = (((second - first) % 360) + 360) % 360
+  return difference <= semanticTolerance || 360 - difference <= semanticTolerance
+}
+
 const hasUnsupportedPatternFields = (animation: RootDataFinal) =>
   animation.type !== 0 ||
   animation.props.some((prop) =>
@@ -56,17 +80,39 @@ export const createVtgDirectionSignature = (
   const first = compiled.props[0]?.anim[0]
   if (!first) return undefined
   const orientation = getPositionOrientation(first.pos, normalizeAngle(first.arc))
-  const tracks = compiled.props.map((prop) =>
-    prop.anim.map((frame, frameIndex) =>
+  const hasShiftedSeamGauge = compiled.props.every((prop) => {
+    const start = prop.anim[0]
+    const end = prop.anim.at(-1)
+    return (
+      start &&
+      end &&
+      vectorsAlign(start.pos, end.pos) &&
+      !vectorsAlign(start.rot, end.rot) &&
+      quaternionsAlign(start.orient, end.orient) &&
+      rollsAlign(start.twistRoll, end.twistRoll)
+    )
+  })
+  const tracks = compiled.props.map((prop) => {
+    const directions = prop.anim.slice(1).map(getCompiledSpinDirection)
+    const continuationDirection = directions[1]
+    const normalizeShiftedSeam =
+      hasShiftedSeamGauge &&
+      continuationDirection !== undefined &&
+      directions.slice(1).every((direction) => direction === continuationDirection)
+    return prop.anim.map((frame, frameIndex) =>
       frameIndex === 0
         ? normalizePosition(frame.pos, orientation)
         : [
             ...normalizePosition(frame.pos, orientation),
-            Math.sign(frame.turns),
+            // Equivalent Shift reconstructions can flip both the authored turn sign and its
+            // compiled rotation-axis gauge. Key the resulting spatial direction, not one channel.
+            normalizeShiftedSeam && frameIndex === 1
+              ? continuationDirection
+              : getCompiledSpinDirection(frame),
             normalizeNumber(frame.beats),
           ],
-    ),
-  )
+    )
+  })
 
   return { key: JSON.stringify(tracks), orientation }
 }

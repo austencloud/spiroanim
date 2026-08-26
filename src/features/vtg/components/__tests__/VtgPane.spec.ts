@@ -1,4 +1,4 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -13,7 +13,6 @@ import { findQtrPatternMatches } from '@/features/vtg/qtr/matchQtrAnimation'
 import type { QtrPatternSelection, VtgPatternSelection, VtgSpeedRatio } from '@/features/vtg/types'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
-import { useQSMainStore } from '@/stores/useQSMainStore'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type {
@@ -128,9 +127,15 @@ const settlePreviewRendering = async () => {
 const countWorkerMessages = (type: string) =>
   FakeWorker.instances[0]?.messages.filter((message) => message.type === type).length ?? 0
 
+enableAutoUnmount(afterEach)
+
 describe('VtgPane', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    const conceptsStore = useConceptsStore()
+    conceptsStore.qtrEnabled = false
+    conceptsStore.classicLayout = false
+    conceptsStore.prop = 0
     FakeResizeObserver.callback = undefined
     FakeResizeObserver.observed = []
     FakeWorker.instances = []
@@ -334,6 +339,7 @@ describe('VtgPane', () => {
   })
 
   it('transposes only the displayed table and moves its swapped top headers to the bottom', async () => {
+    useConceptsStore().classicLayout = true
     const wrapper = mount(VtgPane)
     const classic = wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]')
     const pane = wrapper.get('[data-role="vtg-pane"]')
@@ -482,59 +488,6 @@ describe('VtgPane', () => {
     },
   )
 
-  it.each(['1:1', '1:3', '1:5'] as const)(
-    'disables beat-equivalent rotations while retaining the zero-degree default at %s',
-    async (speedRatio) => {
-      const wrapper = mount(VtgPane)
-      await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
-      await selectSpeedRatio(wrapper, speedRatio)
-      await nextTick()
-
-      const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
-      await vi.waitFor(() => expect(rotate.element.disabled).toBe(true))
-      expect(rotate.element.value).toBe('0')
-      expect(rotate.element.disabled).toBe(true)
-      expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°'])
-    },
-  )
-
-  it('disables rotation at zero when the selected pattern has no unique rotated result', async () => {
-    const wrapper = mount(VtgPane)
-    await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
-    await selectSpeedRatio(wrapper, '1:1')
-
-    const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
-    await vi.waitFor(() => expect(rotate.element.disabled).toBe(true))
-    await rotate.setValue('90')
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').setValue(2)
-    await vi.waitFor(() => expect(rotate.element.disabled).toBe(true))
-
-    expect(rotate.element.value).toBe('0')
-    expect(rotate.element.disabled).toBe(true)
-    expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°'])
-    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { reference: '1-2', speedRatio: '1:1', beat: 2 },
-    ])
-
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').setValue(true)
-
-    expect(rotate.element.value).toBe('0')
-    expect(rotate.element.disabled).toBe(true)
-    expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°'])
-  })
-
-  it('disables rotation for a default 1:3 cell whose quarter turns are canonical elsewhere', async () => {
-    const wrapper = mount(VtgPane)
-    await wrapper.get('[data-cell-reference="2-1"]').trigger('click')
-
-    const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
-    await vi.waitFor(() => expect(rotate.element.disabled).toBe(true))
-    expect(rotate.element.value).toBe('0')
-    expect(rotate.element.disabled).toBe(true)
-    expect(rotate.findAll('option').map((option) => option.text())).toEqual(['0°'])
-  })
-
   it.each([
     ['1:1', 'TOG OUT rule 1'],
     ['1:3', 'TOG OUT rule 1'],
@@ -560,7 +513,7 @@ describe('VtgPane', () => {
 
       await wrapper.get('[data-cell-reference="6-6"]').trigger('click')
       await headers[0]?.trigger('click')
-      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-6')
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('6-1')
       expect(headers[0]?.attributes('aria-pressed')).toBe('true')
     },
   )
@@ -598,7 +551,7 @@ describe('VtgPane', () => {
     await nextTick()
 
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
-      'Hands: Together / Opposite\nProps: Together / Same',
+      'Hands: Split / Opposite\nProps: Together / Same',
     )
 
     wrapper.unmount()
@@ -611,8 +564,8 @@ describe('VtgPane', () => {
 
     expect(pane.attributes('data-selected-cell')).toBeUndefined()
     expect(exampleCell.element.tagName).toBe('BUTTON')
-    expect(exampleCell.attributes('data-board-column')).toBe('6')
-    expect(exampleCell.attributes('data-board-row')).toBe('1')
+    expect(exampleCell.attributes('data-board-column')).toBe('2')
+    expect(exampleCell.attributes('data-board-row')).toBe('5')
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(0)
     expect(
       wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]').attributes('aria-pressed'),
@@ -632,7 +585,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(11)
     expect(
       wrapper
-        .get('[data-role="vtg-column-headers"] [aria-label$="rule 5"]')
+        .get('[data-role="vtg-column-headers"] [aria-label$="rule 1"]')
         .attributes('aria-pressed'),
     ).toBe('true')
     expect(wrapper.emitted('patternSelect')).toEqual([[{ reference: '5-1', speedRatio: '1:3' }]])
@@ -643,10 +596,10 @@ describe('VtgPane', () => {
 
     await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
     await wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 4"]').trigger('click')
-    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-4')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('4-1')
 
     await wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 2"]').trigger('click')
-    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('2-4')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('4-2')
   })
 
   it('selects a random cell along a clicked header when no cell is selected', async () => {
@@ -717,9 +670,6 @@ describe('VtgPane', () => {
     )
     expect(wrapper.get('[data-role="vtg-reset"]').attributes('aria-describedby')).toBeTruthy()
     expect(wrapper.get('[data-role="vtg-reset"]').attributes('title')).toBeUndefined()
-    expect(wrapper.get('[data-role="vtg-tilted"]').attributes('aria-label')).toBe(
-      'Use the tilted pattern orientation',
-    )
     expect(wrapper.get('[data-role="vtg-qtr"]').attributes('aria-label')).toBe(
       'Use Quarter Spacing relationships',
     )
@@ -756,7 +706,7 @@ describe('VtgPane', () => {
 
       await wrapper.get('[data-cell-reference="6-6"]').trigger('click')
       const selectedOrientation = speedRatio === '1:2' ? 180 : 90
-      const expectedOptions = speedRatio === '1:2' ? ['-90°', '0°', '180°'] : ['0°', '90°']
+      const expectedOptions = ['-90°', '-45°', '0°', '45°', '90°', '180°']
       await vi.waitFor(() =>
         expect(rotate.findAll('option').map((option) => option.text())).toEqual(expectedOptions),
       )
@@ -787,7 +737,7 @@ describe('VtgPane', () => {
     ])
   })
 
-  it('transposes relationship labels when rotation switches between zero and ninety degrees', async () => {
+  it('keeps relationship labels stable while the wall plane rotates', async () => {
     const wrapper = mount(VtgPane)
     await selectSpeedRatio(wrapper, '1:2')
 
@@ -798,59 +748,24 @@ describe('VtgPane', () => {
       wrapper.get('[data-cell-reference="1-2"] .vtg-tile__label').text()
 
     expect(rotate.element.value).toBe('-90')
-    expect(firstRowSecondColumn()).toBe('TO / TO')
-    expect(secondRowFirstColumn()).toBe('SO / SO')
+    expect(firstRowSecondColumn()).toBe('SO / SO')
+    expect(secondRowFirstColumn()).toBe('TO / TO')
 
     await rotate.setValue('0')
-    expect(firstRowSecondColumn()).toBe('SO / SO')
-    expect(secondRowFirstColumn()).toBe('TO / TO')
-
-    await rotate.setValue('90')
     expect(firstRowSecondColumn()).toBe('TO / TO')
     expect(secondRowFirstColumn()).toBe('SO / SO')
 
-    await rotate.setValue('180')
+    await rotate.setValue('90')
     expect(firstRowSecondColumn()).toBe('SO / SO')
     expect(secondRowFirstColumn()).toBe('TO / TO')
-  })
 
-  it('offers a Tilted checkbox that reapplies VTG and Qtr patterns', async () => {
-    for (const qtrEnabled of [false, true]) {
-      const quarters = qtrEnabled ? 1 : undefined
-      const wrapper = await mountVtgPane(qtrEnabled)
-      const tilted = wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]')
-
-      expect(tilted.element.type).toBe('checkbox')
-      expect(tilted.element.checked).toBe(false)
-      expect(wrapper.get('[data-role="vtg-shape-controls"]').text()).toBe('Tilted')
-
-      await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
-      await tilted.setValue(true)
-
-      expect(wrapper.emitted('patternSelect')).toEqual([
-        [
-          {
-            reference: '5-1',
-            speedRatio: '1:3',
-            ...(quarters === undefined ? {} : { quarters }),
-          },
-        ],
-        [
-          {
-            reference: '5-1',
-            speedRatio: '1:3',
-            shape: 'box',
-            ...(quarters === undefined ? {} : { quarters }),
-          },
-        ],
-      ])
-      wrapper.unmount()
-    }
+    await rotate.setValue('180')
+    expect(firstRowSecondColumn()).toBe('TO / TO')
+    expect(secondRowFirstColumn()).toBe('SO / SO')
   })
 
   it('controls left and right prop visibility after Arms', async () => {
     for (const qtrEnabled of [false, true]) {
-      const quarters = qtrEnabled ? 1 : undefined
       const wrapper = await mountVtgPane(qtrEnabled)
       const left = wrapper.get<HTMLInputElement>('[data-role="vtg-left"]')
       const right = wrapper.get<HTMLInputElement>('[data-role="vtg-right"]')
@@ -866,31 +781,24 @@ describe('VtgPane', () => {
 
       await wrapper.get('[data-cell-reference="5-1"]').trigger('click')
       await left.setValue(false)
-      expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-        {
-          reference: '5-1',
-          speedRatio: '1:3',
-          left: false,
-          ...(quarters === undefined ? {} : { quarters }),
-        },
-      ])
+      expect(left.element.checked).toBe(false)
 
       await right.setValue(false)
       expect(left.element.checked).toBe(true)
       expect(right.element.checked).toBe(false)
-      expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('left')
-      expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toHaveProperty('right', false)
+      expect(wrapper.emitted('customize')?.at(-1)?.[0]).not.toHaveProperty('left')
+      expect(wrapper.emitted('customize')?.at(-1)?.[0]).toHaveProperty('right', false)
 
       await left.setValue(false)
       expect(left.element.checked).toBe(false)
       expect(right.element.checked).toBe(true)
-      expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toHaveProperty('left', false)
-      expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('right')
+      expect(wrapper.emitted('customize')?.at(-1)?.[0]).toHaveProperty('left', false)
+      expect(wrapper.emitted('customize')?.at(-1)?.[0]).not.toHaveProperty('right')
 
       await left.setValue(true)
       expect(left.element.checked).toBe(true)
       expect(right.element.checked).toBe(true)
-      expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('left')
+      expect(wrapper.emitted('customize')?.at(-1)?.[0]).not.toHaveProperty('left')
       wrapper.unmount()
     }
   })
@@ -1359,13 +1267,9 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
     expect(wrapper.find('[data-role="vtg-quarters"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-quarters-2"]').exists()).toBe(false)
-    expect(wrapper.findAll('.vtg-top-options .vtg-pattern-options label')).toHaveLength(2)
+    expect(wrapper.findAll('.vtg-top-options .vtg-pattern-options label')).toHaveLength(4)
     expect(reverse.attributes('aria-label')).toBe('Flip QTR orientation and direction')
     expect(reverse.element.nextElementSibling?.textContent).toBe('Flip')
-
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]').setValue(true)
-    expect(reverse.attributes('aria-label')).toBe('Flip QTR direction')
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]').setValue(false)
 
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
     await reverse.setValue(true)
@@ -1389,10 +1293,10 @@ describe('VtgPane', () => {
 
     const wrapper = mount(VtgPane, { props: { animation } })
     await vi.waitFor(() => {
-      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('3-4')
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('4-3')
     })
 
-    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(false)
     expect(wrapper.get<HTMLInputElement>('input[value="1:5"]').element.checked).toBe(true)
     expect(wrapper.find('[data-role="vtg-quarters"]').exists()).toBe(false)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-spacing"]').element.value).toBe('9')
@@ -1415,9 +1319,6 @@ describe('VtgPane', () => {
     )
     const wrapper = mount(VtgPane, { props: { animation: qtrAnimation } })
 
-    await vi.waitFor(() => {
-      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(true)
-    })
     await wrapper.setProps({ animation: vtgAnimation })
     await vi.waitFor(() => {
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(false)
@@ -1515,22 +1416,15 @@ describe('VtgPane', () => {
     await thick.setValue(15)
     await spacing.setValue(20)
 
-    expect(wrapper.emitted('patternSelect')).toEqual([
-      [{ reference: '1-6', speedRatio: '1:3' }],
-      [{ reference: '1-6', speedRatio: '1:3', bpm: 41 }],
-      [{ reference: '1-6', speedRatio: '1:3', bpm: 41, scale: 1.4 }],
-      [{ reference: '1-6', speedRatio: '1:3', bpm: 41, scale: 1.4, thick: 15 }],
-      [
-        {
-          reference: '1-6',
-          speedRatio: '1:3',
-          bpm: 41,
-          scale: 1.4,
-          thick: 15,
-          spacing: 20,
-        },
-      ],
-    ])
+    expect(wrapper.emitted('customize')).toHaveLength(4)
+    expect(wrapper.emitted('customize')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-6',
+      speedRatio: '1:3',
+      bpm: 41,
+      scale: 1.4,
+      thick: 15,
+      spacing: 20,
+    })
     expect(outputs.map((output) => output.text())).toEqual(['1.4', '15', '20', '41'])
   })
 
@@ -1556,11 +1450,8 @@ describe('VtgPane', () => {
       const customize = wrapper.get<HTMLDetailsElement>('[data-role="vtg-customize"]').element
       const sliders = wrapper.get('.vtg-slider-controls').element
       const colors = wrapper.get('.concept-color-controls').element
-      const tilted = wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]').element
       const qtr = wrapper.get<HTMLInputElement>(`[data-role="${concept}-qtr"]`).element
       const beat = wrapper.get<HTMLInputElement>(`[data-role="${concept}-beat"]`).element
-      expect(tilted.compareDocumentPosition(beat) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-      expect(tilted.compareDocumentPosition(qtr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(qtr.compareDocumentPosition(beat) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(
         playbackControls.compareDocumentPosition(transitionControls) &
@@ -1661,55 +1552,14 @@ describe('VtgPane', () => {
     await hands.setValue(true)
     await arms.setValue(false)
 
-    expect(wrapper.emitted('patternSelect')).toEqual([
-      [{ reference: '1-6', speedRatio: '1:3' }],
-      [{ reference: '1-6', speedRatio: '1:3', paths: false }],
-      [{ reference: '1-6', speedRatio: '1:3', paths: false, hands: true }],
-      [{ reference: '1-6', speedRatio: '1:3', paths: false, hands: true, arms: false }],
-    ])
-  })
-
-  it('groups pointer and keyboard slider gestures into individual undo steps', async () => {
-    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
-    if (!animation) throw new Error('Expected a supported VTG animation')
-
-    const historyStore = useQSMainStore()
-    const beginHistoryGroup = vi.spyOn(historyStore, 'beginHistoryGroup')
-    const endHistoryGroup = vi.spyOn(historyStore, 'endHistoryGroup')
-    const wrapper = mount(VtgPane, { props: { animation } })
-    const scale = wrapper.get('[data-role="vtg-scale"]')
-    const thick = wrapper.get('[data-role="vtg-thick"]')
-    const bpm = wrapper.get('[data-role="vtg-bpm"]')
-    const beat = wrapper.get('[data-role="vtg-beat"]')
-
-    await scale.trigger('pointerdown')
-    await scale.trigger('pointerdown')
-    expect(beginHistoryGroup).toHaveBeenCalledTimes(1)
-    expect(beginHistoryGroup).toHaveBeenLastCalledWith(animation)
-    await scale.trigger('pointerup')
-
-    await thick.trigger('pointerdown')
-    await thick.trigger('pointercancel')
-
-    await bpm.trigger('keydown')
-    await bpm.trigger('keydown')
-    await bpm.trigger('keyup')
-
-    await bpm.trigger('keydown')
-    await bpm.trigger('blur')
-
-    await beat.trigger('pointerdown')
-    await beat.setValue(1.5)
-    await beat.setValue(2)
-    await beat.setValue(2.5)
-    await beat.trigger('pointerup')
-
-    await beat.trigger('keydown')
-    await beat.trigger('keydown')
-    await beat.trigger('keyup')
-
-    expect(beginHistoryGroup).toHaveBeenCalledTimes(6)
-    expect(endHistoryGroup).toHaveBeenCalledTimes(6)
+    expect(wrapper.emitted('customize')).toHaveLength(3)
+    expect(wrapper.emitted('customize')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-6',
+      speedRatio: '1:3',
+      paths: false,
+      hands: true,
+      arms: false,
+    })
   })
 
   it('restores a mobile slider when a touch gesture becomes page scrolling', async () => {
@@ -1767,6 +1617,30 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
+  it('rehydrates when Editor publishes an in-place shared animation change', async () => {
+    const initial = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    const updated = createDefaultVtgAnimation({ reference: '5-6', speedRatio: '1:3' })
+    if (!initial || !updated) throw new Error('Expected supported VTG animations')
+
+    const animation = initial
+    const wrapper = mount(VtgPane, { props: { animation, animationRevision: 0 } })
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
+    })
+
+    animation.props.splice(0, animation.props.length, ...structuredClone(updated.props))
+    await wrapper.setProps({ animation: { ...animation } })
+    await flushPromises()
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
+
+    await wrapper.setProps({ animationRevision: 1 })
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-6')
+    })
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+  })
+
   it('hydrates the exact Q2 phase with its reproducible rotation value', async () => {
     const version = await loadSpiroAnimQSVersion(6)
     const codec = await useSpiroAnimQS(
@@ -1784,7 +1658,7 @@ describe('VtgPane', () => {
     const wrapper = mount(VtgPane, { props: { animation } })
 
     await vi.waitFor(() => {
-      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-3')
     })
 
     const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
@@ -2016,8 +1890,8 @@ describe('VtgPane', () => {
     const store = useConceptsStore()
 
     for (const example of [
-      { authoredBeat: 3, authoredSwap: false },
-      { authoredBeat: 4, authoredSwap: true },
+      { authoredBeat: 3, detectedBeat: 1.5, authoredSwap: false, detectedSwap: false },
+      { authoredBeat: 4, detectedBeat: 1.5, authoredSwap: true, detectedSwap: false },
     ] as const) {
       store.swapProps = example.authoredSwap
       store.reversePlane = false
@@ -2034,16 +1908,16 @@ describe('VtgPane', () => {
       const wrapper = mount(VtgPane, { props: { animation } })
       await vi.waitFor(() => {
         expect(wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').element.value).toBe(
-          String(example.authoredBeat),
+          String(example.detectedBeat),
         )
         expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(
-          example.authoredSwap,
+          example.detectedSwap,
         )
       })
 
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(false)
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').element.checked).toBe(
-        example.authoredSwap,
+        example.detectedSwap,
       )
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-reverse"]').element.checked).toBe(false)
       expect(wrapper.get<HTMLInputElement>('[data-role="vtg-transition-45"]').element.checked).toBe(
@@ -2053,7 +1927,7 @@ describe('VtgPane', () => {
     }
   })
 
-  it('retains a detected 45 Trans initial-turn state while editing its matched pattern', async () => {
+  it('hydrates the canonical match for a legacy 45 Trans animation', async () => {
     const animation = createDefaultVtgAnimation({
       reference: '6-3',
       speedRatio: '1:2',
@@ -2065,42 +1939,11 @@ describe('VtgPane', () => {
     })
     if (!animation) throw new Error('Expected a transition-derived VTG animation')
 
-    let editedSelection: VtgPatternSelection | QtrPatternSelection | undefined
-    const wrapper = mount(VtgPane, {
-      props: {
-        animation,
-        onPatternSelect: (selection) => {
-          if ('speedRatio' in selection) editedSelection = selection
-        },
-      },
-    })
+    const wrapper = mount(VtgPane, { props: { animation } })
     await vi.waitFor(() => {
-      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('6-3')
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-6')
     })
-
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
-    expect(editedSelection).toMatchObject({
-      reference: '6-3',
-      speedRatio: '1:2',
-      initialTurnsOffset: -45,
-      initialTurnsOffsetBeat: 2,
-      swapProps: true,
-    })
-    if (!editedSelection || 'quarters' in editedSelection) {
-      throw new Error('Expected an edited VTG selection')
-    }
-    expect(createDefaultVtgAnimation(editedSelection)?.props[0]?.anim).toHaveLength(9)
-
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').setValue(4)
-    expect(editedSelection).toMatchObject({
-      beat: 4,
-      initialTurnsOffset: -45,
-      initialTurnsOffsetBeat: 2,
-    })
-
-    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
-    expect(editedSelection).not.toHaveProperty('initialTurnsOffset')
-    expect(editedSelection).not.toHaveProperty('initialTurnsOffsetBeat')
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
   it('selects a random 1:3 pattern when the loaded animation is empty', async () => {
@@ -2272,7 +2115,7 @@ describe('VtgPane', () => {
     await wrapper.get('[data-cell-reference="6-5"]').trigger('click')
 
     expect(wrapper.get('[data-role="vtg-spin-toggle"]').text()).toBe('Anti')
-    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).not.toContain(
+    expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
       'vtg-tile__spin-toggle--bottom',
     )
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
@@ -2315,7 +2158,7 @@ describe('VtgPane', () => {
     await wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 6"]').trigger('click')
     await wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 1"]').trigger('click')
 
-    expect(pane.attributes('data-selected-cell')).toBe('1-6')
+    expect(pane.attributes('data-selected-cell')).toBe('6-1')
   })
 
   it('clusters TOG SPLIT props before its moved divider', () => {
@@ -2485,20 +2328,6 @@ describe('VtgPane', () => {
     expect(firstSideProps[1]?.attributes('style')).toContain('inset-block-start: 59%')
   })
 
-  it('bases QTR left-header positions on the non-Tilted patterns', async () => {
-    const wrapper = await mountVtgPane(true)
-    const getSidePropLayout = () =>
-      wrapper.findAll('[data-role="vtg-sidebar"] [data-role="vtg-prop"]').map((prop) => ({
-        classes: prop.classes(),
-        style: prop.attributes('style'),
-      }))
-    const nonTiltedLayout = getSidePropLayout()
-
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-tilted"]').setValue(true)
-
-    expect(getSidePropLayout()).toEqual(nonTiltedLayout)
-  })
-
   it('places the top TOG IN props after the divider', () => {
     const wrapper = mount(VtgPane)
     const togInRule = wrapper.get('[data-role="vtg-column-headers"] [aria-label$="rule 3"]')
@@ -2545,7 +2374,7 @@ describe('VtgPane', () => {
       wrapper
         .findAll('[data-role="vtg-preview"]')
         .map((preview) => preview.attributes('data-preview-reference')),
-    ).toEqual(['1-1', '3-1', '5-1', '1-3', '3-3', '5-3', '1-5', '3-5', '5-5'])
+    ).toEqual(['1-1', '1-3', '1-5', '3-1', '3-3', '3-5', '5-1', '5-3', '5-5'])
     expect(wrapper.findAll('[data-role="vtg-preview"]')).toHaveLength(9)
     expect(countWorkerMessages('data')).toBe(9)
     expect(countWorkerMessages('reqimgs')).toBe(9)
@@ -2768,13 +2597,13 @@ describe('VtgPane', () => {
     expect(wrapper.get('.vtg-tile--selected').attributes('data-cell-reference')).toBe('1-2')
     expect(wrapper.findAll('.vtg-tile--highlighted')).toHaveLength(5)
     expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
-      reference: '2-1',
+      reference: '1-2',
       speedRatio: '1:2',
       swapProps: true,
     })
     await reverse.setValue(false)
     expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).toMatchObject({
-      reference: '2-1',
+      reference: '1-2',
       speedRatio: '1:2',
       swapProps: true,
     })
@@ -2801,7 +2630,7 @@ describe('VtgPane', () => {
     })
     expect(JSON.parse(pairedDragData.get('application/x-spiroanim-pattern') ?? '{}')).toMatchObject(
       {
-        reference: '2-1',
+        reference: '1-2',
         speedRatio: '1:2',
         swapProps: true,
       },
@@ -2811,7 +2640,7 @@ describe('VtgPane', () => {
     await wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').setValue(9)
     expect(wrapper.emitted('patternSelect')?.length ?? 0).toBe(patternSelectionsBeforeBuilder)
     expect(wrapper.emitted('customize')?.at(-1)?.[0]).toMatchObject({
-      reference: '2-1',
+      reference: '1-2',
       speedRatio: '1:2',
       thick: 9,
     })
@@ -2878,7 +2707,6 @@ describe('VtgPane', () => {
       wrapper.findAll('.vtg-tile-tooltip').every((tile) => tile.attributes('style') === undefined),
     ).toBe(true)
     expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(true)
-    expect(wrapper.find('[data-role="vtg-tilted"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="vtg-qtr"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="vtg-orientation"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="vtg-beat"]').exists()).toBe(true)

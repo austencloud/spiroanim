@@ -49,7 +49,7 @@ export interface AnimData {
   turns?: number
   /** Signed local-axis roll added during this frame interval and inherited by following frames. */
   twist?: number
-  /** Secondary rotation-axis angle for this frame. Defaults to 90 when Rotate is authored. */
+  /** Secondary rotation-axis angle inherited by following frames. Defaults initially to 90. */
   yaw?: number
   /** Signed secondary rotation performed during this frame. */
   rotate?: number

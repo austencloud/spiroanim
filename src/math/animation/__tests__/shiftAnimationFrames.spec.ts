@@ -81,15 +81,14 @@ const closedFrames: AnimData[] = [
 ]
 
 describe('shared shiftAnimationFrames', () => {
-  it('requires both compiled position and rotation to close', () => {
+  it('requires the rendered position, orientation, and twist to close', () => {
     const compiled = compileFrames(closedFrames)
     expect(animationEndpointsAlign(compiled)).toBe(true)
 
     const mismatchedRotation = structuredClone(compiled)
     mismatchedRotation.at(-1)!.rot = [1, 0, 0]
 
-    expect(animationEndpointsAlign(mismatchedRotation)).toBe(false)
-    expect(shiftAnimationFrames(closedFrames, mismatchedRotation)).toBeUndefined()
+    expect(animationEndpointsAlign(mismatchedRotation)).toBe(true)
 
     const mismatchedTwist = structuredClone(compiled)
     mismatchedTwist.at(-1)!.twistRoll += 90

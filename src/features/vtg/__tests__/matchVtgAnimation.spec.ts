@@ -88,6 +88,30 @@ const preferredPatternOptionMatches = (
 }
 
 describe('VTG animation matching', () => {
+  it('matches a VTG pattern throughout serialized Shift rotations', async () => {
+    const version = await loadSpiroAnimQSVersion(11)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      11,
+    )
+    const shiftedQueries = [
+      'r=Ew68Yk11Y&p0=QN__v.___Rhw.5L_Qpg.......&x0=_s_&r0=BG7f_...._-7f_...MX___.BG7f_&m0=_1_mxqv__&p1=NN__v.mD_Qpg.5E0.......&x1=_s_&r1=_YJf_....BG7f_...MX___._YJf_&c=_i_bhq&v=11',
+      'r=Ew68Yk11Y&p0=QN__v.5L_____U0.___Qpg_U0.......&x0=_s_&r0=_-7f_.BH___.._-7f_...MX___.BG7f_&m0=_1_mxqv__&p1=NN__v.g______U0.5E0Qpg_WQ.......&x1=_s_&r1=BG7f_.MX___..BG7f_...MX___._YJf_&c=_i_bhq&v=11',
+      'r=Ew68Yk11Y&p0=QN__v.bn_.5L_Qpg.......&x0=_s_&r0=BG7f_.._-7f_...MX___.BG7f_&m0=_1_mxqv__&p1=NN__v.bn_.5E0Qpg.......&x1=_s_&r1=BG7f_.MX___.BG7f_...MX___._YJf_&c=_i_bhq&v=11',
+      'r=Ew68Yk11Y&p0=QN__v.g______U0.5L_Qpg._______U0......&x0=_s_&r0=_-7f_.BG7f_...MX___.BG7f_&m0=_1_mxqv__&p1=NN__v.5L_____U0._U0Qpg._______U0......&x1=_s_&r1=_-7f_.BG7f_...MX___._YJf_&c=_i_bhq&v=11',
+      'r=Ew68Yk11Y&p0=QN__v.mD_Qpg.5L_.......&x0=_s_&r0=.BH___..MX___.BG7f_...._-7f_&m0=_1_mxqv__&p1=NN__v.___Rhw_U0.5E0Qpg_WQ.......&x1=_s_&r1=.BH___..MX___._YJf_....BG7f_&c=_i_bhq&v=11',
+      'r=Ew68Yk11Y&p0=QN__v.mD_Qpg.5L_.......___R3s_U0&x0=_s_&r0=.BH___..MX___.BG7f_...._-7f_&m0=_1_mxqv__&p1=NN__v.___Rhw_U0.5E0Qpg_WQ.......___R3s_U0&x1=_s_&r1=.BH___..MX___._YJf_....BG7f_&c=_i_bhq&v=11',
+      'r=Ew68Yk11Y&p0=QN__v.gU0.5E0Qpg......___R3s_U0.___Qpg_U0&x0=_s_&r0=BH___..MX___.BG7f_...._-7f_&m0=_1_mxqv__&p1=NN__v.5E0.___Qpg......___R3s_U0.___Qpg_U0&x1=_s_&r1=BH___..MX___._YJf_....BG7f_&c=_i_bhq&v=11',
+      'r=Ew68Yk11Y&p0=QN__v.bg0____WQ.5E0Qpg_WQ.....___R3s_U0.___Qpg_U0.&x0=_s_&r0=BH___.MX___.BG7f_...._-7f_&m0=_1_mxqv__&p1=NN__v.bg0____WQ.5L_Qpg_U0.....___R3s_U0.___Qpg_U0.&x1=_s_&r1=BH___.MX___._YJf_....BG7f_&c=_i_bhq&v=11',
+    ]
+
+    for (const [index, query] of shiftedQueries.entries()) {
+      const animation = codec.decodeQS(Object.fromEntries(new URLSearchParams(query)))
+      expect(findVtgPatternMatch(animation), `shift ${index}`).toBeDefined()
+    }
+  })
+
   it('uses hidden prop offsets only after offset-free two-cycle interpretations', async () => {
     const version = await loadSpiroAnimQSVersion(9)
     const codec = await useSpiroAnimQS(

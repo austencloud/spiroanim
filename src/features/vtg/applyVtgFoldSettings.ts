@@ -7,7 +7,15 @@ import type {
 } from '@/features/concepts/stores/useConceptsStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
-/** Applies persistent generator Fold settings without mutating the generated VTG animation. */
+export interface VtgFoldSimpleSettings {
+  beat: VtgFoldSideSettings<number>
+  repeat: VtgFoldSideSettings<boolean>
+  every: VtgFoldSideSettings<number>
+  alternate: VtgFoldSideSettings<boolean>
+  span: VtgFoldSpan
+}
+
+/** Applies generator Fold settings without mutating the generated VTG animation. */
 export const applyVtgFoldSettings = (
   animation: RootDataFinal,
   values: VtgFoldValues,
@@ -137,5 +145,88 @@ const resolveFold = (
   return {
     ...(source.yaw === undefined ? {} : { yaw: source.yaw }),
     ...(source.rotate === undefined ? {} : { rotate: source.rotate / 2 }),
+  }
+}
+
+const foldsEqual = (left: VtgFoldValue | undefined, right: VtgFoldValue | undefined) =>
+  left?.yaw === right?.yaw && left?.rotate === right?.rotate
+
+const frameBeats = (animation: RootDataFinal, propIndex: 0 | 1) => {
+  const beats: number[] = []
+  let beat = 0
+  for (const frame of animation.props[propIndex]?.anim ?? []) {
+    beats.push(beat)
+    beat += frame.beats ?? 0.5
+  }
+  return beats
+}
+
+interface SideCandidate {
+  beat: number
+  repeat: boolean
+  every: number
+  alternate: boolean
+}
+
+const sideCandidates = (beats: readonly number[], span: VtgFoldSpan): SideCandidate[] => {
+  const selectable = beats.filter((beat) => span === 'eighth' || Number.isInteger(beat))
+  const intervals = selectable.filter((beat) => beat > 0)
+  return selectable.flatMap((beat) => [
+    { beat, repeat: false, every: 2, alternate: false },
+    ...intervals.flatMap((every) => [
+      { beat, repeat: true, every, alternate: false },
+      { beat, repeat: true, every, alternate: true },
+    ]),
+  ])
+}
+
+const simpleSources = (
+  values: VtgFoldValues,
+  candidates: readonly [SideCandidate, SideCandidate],
+  span: VtgFoldSpan,
+): VtgFoldValues =>
+  candidates.map(({ beat }, propIndex) => {
+    const fold = values[propIndex]?.[String(beat)]
+    if (!fold) return {}
+    return {
+      [String(beat)]: {
+        ...(fold.yaw === undefined ? {} : { yaw: fold.yaw }),
+        ...(fold.rotate === undefined
+          ? {}
+          : { rotate: span === 'quarter' ? fold.rotate * 2 : fold.rotate }),
+      },
+    }
+  }) as VtgFoldValues
+
+/** Detects a Simple schedule only when it reproduces every explicit Fold value exactly. */
+export const detectVtgFoldSimpleSettings = (
+  animation: RootDataFinal,
+  values: VtgFoldValues = extractVtgFoldValues(animation),
+): VtgFoldSimpleSettings | undefined => {
+  const beats = [frameBeats(animation, 0), frameBeats(animation, 1)] as const
+  for (const span of ['quarter', 'eighth'] as const) {
+    const candidates = [sideCandidates(beats[0], span), sideCandidates(beats[1], span)] as const
+    for (const left of candidates[0]) {
+      for (const right of candidates[1]) {
+        const pair = [left, right] as const
+        const options: VtgFoldSimpleSettings = {
+          beat: [left.beat, right.beat],
+          repeat: [left.repeat, right.repeat],
+          every: [left.every, right.every],
+          alternate: [left.alternate, right.alternate],
+          span,
+        }
+        const sources = simpleSources(values, pair, span)
+        const matches = beats.every((propBeats, propIndex) =>
+          propBeats.every((beat) =>
+            foldsEqual(
+              resolveFold(sources, propIndex, beat, { mode: 'simple', ...options }),
+              values[propIndex]?.[String(beat)],
+            ),
+          ),
+        )
+        if (matches) return options
+      }
+    }
   }
 }
