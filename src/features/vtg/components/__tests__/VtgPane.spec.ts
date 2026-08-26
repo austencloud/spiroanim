@@ -343,7 +343,6 @@ describe('VtgPane', () => {
     const wrapper = mount(VtgPane)
     const classic = wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]')
     const pane = wrapper.get('[data-role="vtg-pane"]')
-    const tile = wrapper.get('[data-cell-reference="2-3"]')
 
     expect(classic.element.checked).toBe(true)
     expect(pane.classes()).toContain('vtg-pane--classic')
@@ -557,6 +556,35 @@ describe('VtgPane', () => {
     wrapper.unmount()
   })
 
+  it('shows two Four Elements icons and elemental tooltip wording when enabled', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(VtgPane)
+    const elemental = wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]')
+    expect(elemental.element.checked).toBe(false)
+
+    await elemental.setValue(true)
+    const exampleCell = wrapper.get('[data-cell-reference="1-6"]')
+    expect(exampleCell.findAll('.vtg-tile__elements .base-icon')).toHaveLength(2)
+    expect(exampleCell.get('.elemental-relationship-icons').classes()).toContain(
+      'elemental-relationship-icons--responsive',
+    )
+    expect(
+      exampleCell
+        .findAll('.elemental-relationship-icons__icon')
+        .map((icon) => icon.attributes('data-element')),
+    ).toEqual(['Fire', 'Earth'])
+    expect(exampleCell.attributes('aria-label')).toContain('Fire / Earth')
+
+    await exampleCell.trigger('mouseenter')
+    vi.advanceTimersByTime(0)
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
+      'Hands: Split / Opposite\nProps: Together / Same',
+    )
+
+    wrapper.unmount()
+  })
+
   it('uses top-then-left references and highlights a selected matrix cross', async () => {
     const wrapper = mount(VtgPane)
     const pane = wrapper.get('[data-role="vtg-pane"]')
@@ -646,7 +674,7 @@ describe('VtgPane', () => {
       wrapper
         .findAll('.vtg-top-options .concept-pattern-options label span')
         .map((option) => option.text()),
-    ).toEqual(['More', 'Classic', 'Swap', '180°'])
+    ).toEqual(['More', 'Classic', 'Elemental', 'Swap', '180°'])
 
     await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
     await swap.setValue(true)
@@ -1267,7 +1295,7 @@ describe('VtgPane', () => {
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
     expect(wrapper.find('[data-role="vtg-quarters"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-quarters-2"]').exists()).toBe(false)
-    expect(wrapper.findAll('.vtg-top-options .vtg-pattern-options label')).toHaveLength(4)
+    expect(wrapper.findAll('.vtg-top-options .vtg-pattern-options label')).toHaveLength(5)
     expect(reverse.attributes('aria-label')).toBe('Flip QTR orientation and direction')
     expect(reverse.element.nextElementSibling?.textContent).toBe('Flip')
 
@@ -2389,6 +2417,33 @@ describe('VtgPane', () => {
     expect(renderMessages).toEqual(Array.from({ length: 9 }, () => ['data', 'reqimgs']).flat())
   })
 
+  it.each(['1:1', '1:3', '1:5'] as const)(
+    'positions %s labels consistently around the nine shared thumbnails',
+    async (speedRatio) => {
+      const wrapper = mount(VtgPane)
+      await selectSpeedRatio(wrapper, speedRatio)
+      await wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]').setValue(true)
+
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+      expect(wrapper.get('[data-cell-reference="1-1"]').classes()).toContain(
+        'vtg-tile--shared-preview-bottom',
+      )
+      expect(wrapper.get('[data-cell-reference="1-2"]').classes()).toContain(
+        'vtg-tile--shared-preview-top',
+      )
+
+      await wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]').setValue(false)
+
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+      expect(wrapper.get('[data-cell-reference="1-1"]').classes()).toContain(
+        'vtg-tile--shared-preview-top',
+      )
+      expect(wrapper.get('[data-cell-reference="2-1"]').classes()).toContain(
+        'vtg-tile--shared-preview-bottom',
+      )
+    },
+  )
+
   it.each(['2:1', '2:3', '2:5'] as const)(
     'uses the paired VTG layout at %s',
     async (speedRatio) => {
@@ -2674,12 +2729,12 @@ describe('VtgPane', () => {
       left: 0,
       toJSON: () => ({}),
     })
-    const setDragImage = vi.fn()
+    const setDragImage = vi.fn<(image: Element, x: number, y: number) => void>()
 
     await tile.trigger('dragstart', {
       dataTransfer: {
         effectAllowed: 'none',
-        setData: vi.fn(),
+        setData: vi.fn<(format: string, data: string) => void>(),
         setDragImage,
       },
     })
@@ -2762,12 +2817,13 @@ describe('VtgPane', () => {
     }
   })
 
-  it('uses the non-Classic compact Builder table and hides its Classic control', () => {
+  it('uses the non-Classic compact Builder table and supports Elemental relationship icons', async () => {
     const wrapper = mount(VtgPane, { props: { builderActive: true } })
     const first = wrapper.get('[data-cell-reference="1-1"]')
     const last = wrapper.get('[data-cell-reference="2-4"]')
 
     expect(wrapper.find('[data-role="vtg-classic"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-elemental"]').exists()).toBe(true)
     expect(wrapper.get('[data-role="vtg-pane"]').classes()).not.toContain('vtg-pane--classic')
     expect(first.element.parentElement?.getAttribute('style')).toContain('grid-column: 1')
     expect(first.element.parentElement?.getAttribute('style')).toContain('grid-row: 1')
@@ -2776,9 +2832,36 @@ describe('VtgPane', () => {
     expect(
       wrapper.get('[data-role="vtg-sidebar"]').findAll('[data-role="vtg-rule-card"]'),
     ).toHaveLength(2)
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]').setValue(true)
+    expect(first.get('.vtg-tile__label-text').text()).toContain('AA /')
+    expect(first.findAll('.vtg-tile__elements .base-icon')).toHaveLength(2)
     expect(
       wrapper.get('[data-role="vtg-column-headers"]').findAll('[data-role="vtg-rule-card"]'),
     ).toHaveLength(4)
+  })
+
+  it('keeps Elemental available in Builder while QTR is enabled', async () => {
+    useConceptsStore().qtrEnabled = true
+    const wrapper = mount(VtgPane, { props: { builderActive: true } })
+
+    expect(wrapper.find('[data-role="vtg-elemental"]').exists()).toBe(true)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]').setValue(true)
+    expect(
+      wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text().length,
+    ).toBeGreaterThan(0)
+  })
+
+  it('keeps Elemental available in the QTR generator', async () => {
+    useConceptsStore().qtrEnabled = true
+    const wrapper = mount(VtgPane)
+
+    const elemental = wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]')
+    expect(elemental.element.checked).toBe(false)
+    await elemental.setValue(true)
+    expect(
+      wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text().length,
+    ).toBeGreaterThan(0)
   })
 
   it('preserves each compact Builder header rule and its ratio-specific behavior', async () => {

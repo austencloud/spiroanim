@@ -157,6 +157,8 @@
                       :class="{
                         'pattern-property-controls__twist-frame--inherited':
                           frame.values[fold.key] === undefined,
+                        'pattern-property-controls__value-set':
+                          frame.values[fold.key] !== undefined,
                         'pattern-property-controls__fold-control--stepper': !sliders,
                       }"
                     >
@@ -233,6 +235,7 @@
                   class="pattern-property-controls__twist-frame"
                   :class="{
                     'pattern-property-controls__twist-frame--inherited': !frame.isSet,
+                    'pattern-property-controls__value-set': frame.isSet,
                     'pattern-property-controls__twist-frame--stepper': !sliders,
                   }"
                 >
@@ -900,6 +903,14 @@ const emitPropertiesExpanded = (event: Event) => {
 
 .pattern-property-controls__twist-frame--inherited input {
   opacity: 0.55;
+}
+
+.pattern-property-controls__value-set {
+  --concept-stepper-value-color: var(--color-property-value-defined);
+}
+
+.pattern-property-controls__value-set > output {
+  color: var(--color-property-value-defined);
 }
 
 .pattern-property-controls__beat {

@@ -11,6 +11,7 @@
   --palette-neutral-900: #20242a;
   --palette-blue-600: #087ea4;
   --palette-blue-800: #045a75;
+  --palette-brown-700: #795548;
   --palette-cyan-700: #357b83;
   --palette-cyan-900: #24545a;
   --palette-green-700: #596b35;
@@ -60,6 +61,15 @@
     var(--color-border)
   );
   --color-status-warning: var(--palette-orange-700);
+  --color-element-earth: var(--palette-brown-700);
+  --color-element-water: color-mix(in srgb, var(--palette-blue-600) 68%, var(--palette-cyan-700));
+  --color-element-air: color-mix(in srgb, var(--palette-cyan-700) 20%, var(--color-text) 80%);
+  --color-element-fire: color-mix(
+    in srgb,
+    var(--color-status-warning) 55%,
+    var(--color-status-error)
+  );
+  --color-element-outline: color-mix(in srgb, var(--color-canvas) 72%, var(--color-text));
   --color-property-value-defined: var(--palette-blue-800);
   --color-property-value-inherited: var(--palette-green-900);
   --color-property-value-mismatch: var(--palette-orange-900);
@@ -83,6 +93,7 @@
   --palette-neutral-900: #f1f3f5;
   --palette-blue-600: #58c4dc;
   --palette-blue-800: #58c4dc;
+  --palette-brown-700: #c58b62;
   --palette-cyan-700: #72b9c0;
   --palette-cyan-900: #72b9c0;
   --palette-green-700: #a3b76d;
@@ -108,6 +119,7 @@
     --palette-neutral-900: #f1f3f5;
     --palette-blue-600: #58c4dc;
     --palette-blue-800: #58c4dc;
+    --palette-brown-700: #c58b62;
     --palette-cyan-700: #72b9c0;
     --palette-cyan-900: #72b9c0;
     --palette-green-700: #a3b76d;

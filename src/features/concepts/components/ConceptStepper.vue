@@ -74,7 +74,6 @@ const update = (delta: number) => {
   display: grid;
   min-width: var(--size-concept-control-block);
   block-size: var(--size-concept-control-block);
-  color: var(--color-text);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -82,6 +81,7 @@ const update = (delta: number) => {
 }
 
 .concept-stepper button {
+  color: var(--color-text);
   padding: 0;
   cursor: pointer;
 }
@@ -98,6 +98,7 @@ const update = (delta: number) => {
 }
 
 .concept-stepper output {
+  color: var(--concept-stepper-value-color, var(--color-text));
   padding-inline: var(--space-2);
   font-weight: 700;
 }

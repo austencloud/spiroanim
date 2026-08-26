@@ -142,7 +142,7 @@ describe('applyVtgFoldSettings', () => {
       every: [1, 1],
       alternate: [true, true],
       span: 'eighth',
-      mirror: true,
+      mirror: false,
     })
 
     const irregular = applyVtgFoldSettings(animation, [
@@ -152,7 +152,7 @@ describe('applyVtgFoldSettings', () => {
     expect(detectVtgFoldSimpleSettings(irregular)).toBeUndefined()
   })
 
-  it('mirrors the left Fold values onto Right and uses them as the Alternate pair', () => {
+  it('mirrors only Direct and uses that mirrored Direct as the Alternate pair', () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
     if (!animation) throw new Error('Expected a supported VTG animation')
     const applied = applyVtgFoldSettings(animation, [{ 0.5: { yaw: 90, rotate: 180 } }, {}], {
@@ -166,14 +166,50 @@ describe('applyVtgFoldSettings', () => {
     })
 
     expect(applied.props[0]?.anim[1]).toMatchObject({ yaw: 90, rotate: 180 })
-    expect(applied.props[1]?.anim[1]).toMatchObject({ yaw: -90, rotate: -180 })
-    expect(applied.props[0]?.anim[3]).toMatchObject({ yaw: -90, rotate: -180 })
+    expect(applied.props[1]?.anim[1]).toMatchObject({ yaw: -90, rotate: 180 })
+    expect(applied.props[0]?.anim[3]).toMatchObject({ yaw: -90, rotate: 180 })
     expect(applied.props[1]?.anim[3]).toMatchObject({ yaw: 90, rotate: 180 })
     expect(detectVtgFoldSimpleSettings(applied)).toMatchObject({
       mirror: true,
       beat: [0.5, 0.5],
       alternate: [true, true],
     })
+  })
+
+  it('mirrors both Direct and Rotate while repeating without Alternate', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const applied = applyVtgFoldSettings(animation, [{ 0.5: { yaw: 90, rotate: 180 } }, {}], {
+      mode: 'simple',
+      beat: [0.5, 0.5],
+      repeat: [true, true],
+      every: [1, 1],
+      alternate: [false, false],
+      span: 'eighth',
+      mirror: true,
+    })
+
+    expect(applied.props[0]?.anim[1]).toMatchObject({ yaw: 90, rotate: 180 })
+    expect(applied.props[1]?.anim[1]).toMatchObject({ yaw: -90, rotate: -180 })
+    expect(applied.props[0]?.anim[3]).toMatchObject({ yaw: 90, rotate: 180 })
+    expect(applied.props[1]?.anim[3]).toMatchObject({ yaw: -90, rotate: -180 })
+  })
+
+  it('ignores Alternate unless mirrored repetition is enabled', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const applied = applyVtgFoldSettings(animation, [{ 0.5: { yaw: 90, rotate: 180 } }, {}], {
+      mode: 'simple',
+      beat: [0.5, 0.5],
+      repeat: [false, false],
+      every: [1, 1],
+      alternate: [true, true],
+      span: 'eighth',
+      mirror: true,
+    })
+
+    expect(applied.props[0]?.anim[1]).toMatchObject({ yaw: 90, rotate: 180 })
+    expect(applied.props[1]?.anim[1]).toMatchObject({ yaw: -90, rotate: -180 })
   })
 
   it('mirrors the inherited Direct default when Left has no authored Fold value', () => {

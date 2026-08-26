@@ -151,13 +151,17 @@ const resolveFold = (
   const source =
     values[sourceIndex]?.[String(sourceBeat)] ?? (options.mirror ? { yaw: 90 } : undefined)
   if (!source) return
+  const alternatesMirror = options.mirror && options.repeat[0] && options.alternate[0]
   const mirrorSign =
-    options.mirror && (propIndex === 1) !== (options.alternate[0] && occurrence % 2 === 1) ? -1 : 1
+    options.mirror && (propIndex === 1) !== (alternatesMirror && occurrence % 2 === 1) ? -1 : 1
+  const rotateSign = options.mirror && !alternatesMirror && propIndex === 1 ? -1 : 1
   return {
     ...(source.yaw === undefined ? {} : { yaw: source.yaw * mirrorSign }),
     ...(source.rotate === undefined
       ? {}
-      : { rotate: (options.span === 'quarter' ? source.rotate / 2 : source.rotate) * mirrorSign }),
+      : {
+          rotate: (options.span === 'quarter' ? source.rotate / 2 : source.rotate) * rotateSign,
+        }),
   }
 }
 

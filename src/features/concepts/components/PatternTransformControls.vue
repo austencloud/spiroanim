@@ -27,6 +27,19 @@
         </label>
       </template>
     </AppTooltip>
+    <AppTooltip v-if="showElemental" text="Show pattern relationships as the Four Elements">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps">
+          <input
+            v-model="elemental"
+            type="checkbox"
+            aria-label="Show pattern relationships as the Four Elements"
+            :data-role="`${rolePrefix}-elemental`"
+          />
+          <span>Elemental</span>
+        </label>
+      </template>
+    </AppTooltip>
     <AppTooltip v-if="showSwap" text="Exchange the completed left and right animation tracks">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps">
@@ -101,6 +114,7 @@ const props = withDefaults(
     showSwap?: boolean
     showMore?: boolean
     showClassic?: boolean
+    showElemental?: boolean
   }>(),
   {
     rolePrefix: 'vtg',
@@ -110,6 +124,7 @@ const props = withDefaults(
     showSwap: true,
     showMore: false,
     showClassic: false,
+    showElemental: false,
   },
 )
 
@@ -119,6 +134,7 @@ const emit = defineEmits<{
 
 const more = defineModel<boolean>('more', { default: false })
 const classic = defineModel<boolean>('classic', { default: false })
+const elemental = defineModel<boolean>('elemental', { default: false })
 
 const { swapProps, reversePlane } = storeToRefs(useConceptsStore())
 const confirmationOpen = ref(false)

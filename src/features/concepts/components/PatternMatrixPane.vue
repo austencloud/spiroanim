@@ -81,9 +81,11 @@
       <PatternTransformControls
         v-model:more="moreRatios"
         v-model:classic="classicLayout"
+        v-model:elemental="elementalLayout"
         confirm-reset
         show-more
         :show-classic="!compactBuilder"
+        show-elemental
         :show-swap="!compactBuilder"
         :reverse-label="isQtr ? 'Flip' : '180°'"
         :reverse-description="
@@ -217,7 +219,7 @@
                 type="button"
                 class="vtg-tile"
                 :class="getTileClasses(tile)"
-                :aria-label="`${tile.label}, cell ${displayCellReference(tile)}`"
+                :aria-label="`${getTileAccessibleLabel(tile)}, cell ${displayCellReference(tile)}`"
                 :aria-pressed="tile.reference === selectedCellReference"
                 :data-board-column="getTileBoardColumn(tile)"
                 :data-board-row="getTileBoardRow(tile)"
@@ -233,7 +235,15 @@
                 @lostpointercapture="cancelBuilderPointerDrag"
               >
                 <span class="vtg-tile__label">
-                  <span class="vtg-tile__label-text">{{ tile.label }}</span>
+                  <span v-if="elementalLayout" class="vtg-tile__label-text vtg-tile__elements">
+                    <span v-if="compactBuilder">{{ getBuilderSpinLabel(tile) }} /</span>
+                    <ElementalRelationshipIcons
+                      responsive
+                      :hands="tile.hands"
+                      :props="tile.props"
+                    />
+                  </span>
+                  <span v-else class="vtg-tile__label-text">{{ tile.label }}</span>
                 </span>
               </button>
               <AppTooltip
@@ -392,6 +402,7 @@
 import { mdiShuffleVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import ElementalRelationshipIcons from '@/features/concepts/components/ElementalRelationshipIcons.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
@@ -411,6 +422,10 @@ import type {
   VtgFoldValue,
   VtgTwistMode,
 } from '@/features/concepts/stores/useConceptsStore'
+import {
+  relationshipElement,
+  type ElementalRelationship,
+} from '@/features/concepts/elementalRelationships'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import {
   applyVtgFoldSettings,
@@ -502,6 +517,8 @@ interface VtgMatrixTile {
   boardColumn: number
   boardRow: number
   reference: VtgCellReference
+  hands?: ElementalRelationship
+  props?: ElementalRelationship
 }
 
 type VtgMatrixAddress = Omit<VtgMatrixTile, 'label' | 'description'>
@@ -575,6 +592,7 @@ const {
   vtgActiveProperty,
   sliders,
   classicLayout,
+  elementalLayout,
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
 const isAnti = ref(false)
@@ -904,6 +922,13 @@ const displayCellReference = (tile: VtgMatrixTile): string =>
   compactBuilder.value ? `${tile.row === 6 ? 2 : tile.row}-${tile.column}` : tile.reference
 
 const getTileDescription = (tile: VtgMatrixTile) => tile.description
+const getBuilderSpinLabel = (tile: VtgMatrixTile) => tile.label.split(' / ')[0] ?? tile.label
+const getTileAccessibleLabel = (tile: VtgMatrixTile) => {
+  if (!elementalLayout.value) return tile.label
+  const handsElement = relationshipElement(tile.hands)
+  const propsElement = relationshipElement(tile.props)
+  return handsElement && propsElement ? `${handsElement} / ${propsElement}` : tile.label
+}
 
 const getTileGridPosition = (tile: VtgMatrixTile) => {
   if (!usesClassicLayout.value) {
@@ -934,12 +959,18 @@ const getTileBoardRow = (tile: VtgMatrixTile) =>
 const getTileClasses = (tile: VtgMatrixTile): Record<string, boolean> => {
   const pairedEdge = tile.column % 2 === 0 ? 'top' : 'bottom'
   const standardPairedEdge = tile.column % 2 === 0 ? 'right' : 'left'
+  const sharedPreviewEdge = usesClassicLayout.value
+    ? pairedEdge
+    : tile.row % 2 === 0
+      ? 'bottom'
+      : 'top'
 
   return {
     'vtg-tile--highlighted': isTileHighlighted(tile),
     'vtg-tile--selected': tile.reference === selectedCellReference.value,
     [`vtg-tile--paired-${usesClassicLayout.value ? pairedEdge : standardPairedEdge}`]:
       usesPairedPreviewLayout.value,
+    [`vtg-tile--shared-preview-${sharedPreviewEdge}`]: !usesPairedPreviewLayout.value,
   }
 }
 
@@ -2464,7 +2495,9 @@ defineExpose({
 .vtg-tile--paired-left .vtg-tile__label,
 .vtg-tile--paired-right .vtg-tile__label,
 .vtg-tile--paired-top .vtg-tile__label,
-.vtg-tile--paired-bottom .vtg-tile__label {
+.vtg-tile--paired-bottom .vtg-tile__label,
+.vtg-tile--shared-preview-top .vtg-tile__label,
+.vtg-tile--shared-preview-bottom .vtg-tile__label {
   position: absolute;
   display: grid;
   place-items: center;
@@ -2472,19 +2505,15 @@ defineExpose({
 
 .vtg-tile--paired-left .vtg-tile__label,
 .vtg-tile--paired-right .vtg-tile__label {
-  inset-block: 0;
-  inline-size: calc(100% - var(--vtg-paired-preview-width));
-  transform: translateX(-0.08em);
+  inline-size: auto;
 }
 
 .vtg-tile--paired-left .vtg-tile__label {
-  inset-inline-start: 0;
-  inset-inline-end: auto;
+  inset: 0 var(--vtg-paired-preview-width) 0 0;
 }
 
 .vtg-tile--paired-right .vtg-tile__label {
-  inset-inline-start: auto;
-  inset-inline-end: 0;
+  inset: 0 0 0 var(--vtg-paired-preview-width);
 }
 
 .vtg-tile--paired-left .vtg-tile__label-text {
@@ -2497,24 +2526,35 @@ defineExpose({
 
 .vtg-tile--paired-left .vtg-tile__label-text,
 .vtg-tile--paired-right .vtg-tile__label-text {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  translate: -50% -50%;
   white-space: nowrap;
 }
 
+.vtg-tile__elements {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .vtg-tile--paired-top .vtg-tile__label,
-.vtg-tile--paired-bottom .vtg-tile__label {
-  inset-inline: 0;
+.vtg-tile--paired-bottom .vtg-tile__label,
+.vtg-tile--shared-preview-top .vtg-tile__label,
+.vtg-tile--shared-preview-bottom .vtg-tile__label {
+  block-size: auto;
   inline-size: 100%;
-  block-size: calc(100% - var(--vtg-paired-preview-width));
 }
 
-.vtg-tile--paired-top .vtg-tile__label {
-  inset-block-start: 0;
-  inset-block-end: auto;
+.vtg-tile--paired-top .vtg-tile__label,
+.vtg-tile--shared-preview-top .vtg-tile__label {
+  inset: 0 0 var(--vtg-paired-preview-width);
 }
 
-.vtg-tile--paired-bottom .vtg-tile__label {
-  inset-block-start: auto;
-  inset-block-end: 0;
+.vtg-tile--paired-bottom .vtg-tile__label,
+.vtg-tile--shared-preview-bottom .vtg-tile__label {
+  inset: var(--vtg-paired-preview-width) 0 0;
 }
 
 .vtg-tile--paired-top .vtg-tile__label-text,

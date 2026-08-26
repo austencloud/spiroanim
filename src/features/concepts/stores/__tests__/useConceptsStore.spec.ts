@@ -58,6 +58,7 @@ describe('useConceptsStore', () => {
     expect(store.sliders).toBe(true)
     expect(store.customizeExpanded).toBe(false)
     expect(store.classicLayout).toBe(true)
+    expect(store.elementalLayout).toBe(false)
     expect(store.vtgTwistMode).toBe('simple')
     expect(store.vtgTwistValues).toEqual([{}, {}])
     expect(store.vtgFoldValues).toEqual([{}, {}])
@@ -129,13 +130,15 @@ describe('useConceptsStore', () => {
     second.app.unmount()
   })
 
-  it('persists the Classic table layout preference', () => {
+  it('persists the Classic and Elemental table layout preferences', () => {
     const first = mountStore()
     first.store.classicLayout = false
+    first.store.elementalLayout = true
     first.app.unmount()
 
     const second = mountStore()
     expect(second.store.classicLayout).toBe(false)
+    expect(second.store.elementalLayout).toBe(true)
     second.app.unmount()
   })
 

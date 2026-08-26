@@ -53,7 +53,14 @@
             <span v-if="previewRatios[index]" class="vtg-transition-previews__ratio">
               {{ previewRatios[index] }}
             </span>
-            <span class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>
+            <ElementalRelationshipIcons
+              v-if="elementalLayout"
+              class="vtg-transition-previews__label"
+              :hands="previewRelationships[index]?.hands"
+              :props="previewRelationships[index]?.props"
+              :size="16"
+            />
+            <span v-else class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>
           </button>
         </template>
       </AppTooltip>
@@ -211,6 +218,7 @@ import {
 } from '@/features/builder/patternPointerDrag'
 import type { BuilderPatternPointerDetail } from '@/features/builder/patternPointerDrag'
 import ConceptStepper from '@/features/concepts/components/ConceptStepper.vue'
+import ElementalRelationshipIcons from '@/features/concepts/components/ElementalRelationshipIcons.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 
 const props = withDefaults(
@@ -228,7 +236,7 @@ const props = withDefaults(
   }>(),
   { columns: 4, allowFirstDrop: false },
 )
-const { sliders } = storeToRefs(useConceptsStore())
+const { elementalLayout, sliders } = storeToRefs(useConceptsStore())
 const previewReferences = props.animations.map((_, index) => String(index + 1))
 const previewGrid = ref<HTMLElement>()
 const emit = defineEmits<{

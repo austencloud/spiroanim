@@ -137,6 +137,12 @@ describe('PatternPropertyControls', () => {
     expect(leftFirst.attributes()).toMatchObject({ min: '0', max: '7', step: '1' })
     expect(leftFirst.attributes('aria-valuetext')).toBe('45°')
     expect(rightFirst.attributes('aria-valuetext')).toBe('0°')
+    expect(leftFirst.element.closest('label')?.classList).toContain(
+      'pattern-property-controls__value-set',
+    )
+    expect(rightFirst.element.closest('label')?.classList).not.toContain(
+      'pattern-property-controls__value-set',
+    )
     expect(rightFirst.element.closest('label')?.textContent).toContain('0°')
     expect(rightFirst.element.closest('label')?.textContent).not.toContain('Inherited')
     expect(wrapper.get('[aria-label="Left Twist"] header').text()).toBe('BeatLeftValue')
@@ -219,6 +225,7 @@ describe('PatternPropertyControls', () => {
     )
     expect(firstFrame.findAll('.pattern-property-controls__beat')).toHaveLength(1)
     expect(firstFrame.findAll('input[type="range"]')).toHaveLength(2)
+    expect(firstFrame.findAll('.pattern-property-controls__value-set')).toHaveLength(2)
     expect(firstFrame.text()).toContain('Direct45°')
     expect(firstFrame.text()).toContain('Rotate90°')
   })

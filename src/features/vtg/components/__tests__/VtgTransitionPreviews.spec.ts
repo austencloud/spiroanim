@@ -73,6 +73,46 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.emitted('patternPreview')).toHaveLength(1)
   })
 
+  it('uses elemental icons with the original description in the Builder mini grid', () => {
+    useConceptsStore().elementalLayout = true
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [relationship],
+        refreshKey: 'elemental',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        scale: 1,
+      },
+    })
+
+    expect(wrapper.findAll('.vtg-transition-previews__label .base-icon')).toHaveLength(2)
+    expect(wrapper.getComponent(AppTooltip).props('text')).toBe(relationship.description)
+  })
+
+  it('keeps Quarter relationship codes visible in Elemental Builder thumbnails', () => {
+    useConceptsStore().elementalLayout = true
+    const quarterRelationship = {
+      ...relationship,
+      label: 'QS / QO' as const,
+      hands: { timing: 'Q' as const, direction: 'S' as const },
+      props: { timing: 'Q' as const, direction: 'O' as const },
+    }
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [quarterRelationship],
+        refreshKey: 'elemental-quarter',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        scale: 1,
+      },
+    })
+
+    expect(wrapper.get('.vtg-transition-previews__label').text()).toBe('QSQO')
+    expect(wrapper.findAll('.elemental-relationship-icons__icon--quarter')).toHaveLength(2)
+  })
+
   it('hides Swap for portions whose two props are both Anti or both In', () => {
     const inSpinAnimation = createDefaultVtgAnimation({ reference: '3-1', speedRatio: '1:3' })
     if (!inSpinAnimation) throw new Error('Expected a supported In/In VTG pattern')
