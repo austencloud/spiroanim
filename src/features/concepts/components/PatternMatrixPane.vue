@@ -411,7 +411,11 @@ import ConceptAnimationControls from '@/features/concepts/components/ConceptAnim
 import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
 import PatternTransitionControls from '@/features/concepts/components/PatternTransitionControls.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
-import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
+import {
+  describePatternSelectionRelationships,
+  inferPatternRelationshipOrientation,
+  inferPatternRelationshipPropRotationOffsets,
+} from '@/features/concepts/math/describePatternSelectionRelationships'
 import type { PatternRelationshipLabel } from '@/features/concepts/math/describePatternRelationships'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
@@ -448,7 +452,11 @@ import {
 } from '@/features/builder/describeVtgBuilderMotion'
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/vtg/qtr/data/qtrLabels'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
+import { exactlyMatchesQtrSelection } from '@/features/vtg/qtr/matchQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { exactlyMatchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
+import { stripVtgPropertySettings } from '@/features/vtg/stripVtgPropertySettings'
+import { shiftVtgStartingFrames } from '@/features/vtg/math/shiftVtgStartingBeat'
 import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import {
@@ -1457,10 +1465,29 @@ const resetPatternControls = async () => {
 }
 
 watch(
+  beat,
+  (nextBeat, previousBeat) => {
+    if (suppressPatternEmit || ratioOrientationChangeActive || props.builderActive) return
+    if (!props.animation) {
+      const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
+      if (tile !== undefined) emitPatternSelection(tile)
+      return
+    }
+
+    const patternAnimation = stripVtgPropertySettings(props.animation)
+    const shifted = shiftVtgStartingFrames(patternAnimation, (nextBeat - previousBeat) * 2)
+    if (!shifted) return
+
+    lastEmittedSelection = createCustomizationSelection()
+    emit('animationUpdate', conceptsStore.applyVtgPropertyControls(shifted))
+  },
+  { flush: 'sync' },
+)
+
+watch(
   [
     swapProps,
     reversePlane,
-    beat,
     transition,
     transitionBeats,
     transitionQuad,
@@ -1565,6 +1592,7 @@ const matchPattern = async (request: Parameters<PatternMatchingClient['matchVtg'
 const hydratePatternControls = async (animation: RootDataFinal) => {
   const version = ++hydrationVersion
   conceptsStore.hydrateVtgPropertyControls(animation)
+  const patternAnimation = stripVtgPropertySettings(animation)
   const selection = lastEmittedSelection
   lastEmittedSelection = undefined
 
@@ -1578,7 +1606,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   let result
   try {
     result = await matchPattern({
-      animation,
+      animation: patternAnimation,
       preferences: matchPreferences,
       ...(selection ? { lastSelection: selection } : undefined),
     })
@@ -1611,8 +1639,20 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     initialTurnsOffset.value = match.initialTurnsOffset
     initialTurnsOffsetBeat.value =
       match.initialTurnsOffset === undefined ? undefined : (match.beat ?? 1)
+    const exactQtrMatch =
+      result.status === 'matched' &&
+      result.source === 'qtr' &&
+      exactlyMatchesQtrSelection(patternAnimation, result.match)
+    const exactVtgMatch =
+      result.status === 'matched' &&
+      result.source === 'vtg' &&
+      exactlyMatchesVtgSelection(patternAnimation, result.match)
+    const exactPatternMatch = exactQtrMatch || exactVtgMatch
+    const inferredOrientation = exactPatternMatch
+      ? undefined
+      : inferPatternRelationshipOrientation(patternAnimation, match)
     if (supportsVtgPatternOrientation(match.speedRatio)) {
-      orientation.value = match.orientation ?? 0
+      orientation.value = match.orientation ?? inferredOrientation ?? 0
       if (!availablePatternOrientations.value.includes(orientation.value)) {
         availablePatternOrientations.value = [
           ...availablePatternOrientations.value,
@@ -1620,7 +1660,13 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
         ].sort((left, right) => left - right)
       }
     }
-    propRotationOffsets.value = match.propRotationOffsets
+    const relationshipSelection =
+      inferredOrientation === undefined ? match : { ...match, orientation: inferredOrientation }
+    propRotationOffsets.value =
+      match.propRotationOffsets ??
+      (exactPatternMatch
+        ? undefined
+        : inferPatternRelationshipPropRotationOffsets(patternAnimation, relationshipSelection))
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick

@@ -90,7 +90,7 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.getComponent(AppTooltip).props('text')).toBe(relationship.description)
   })
 
-  it('keeps Quarter relationship codes visible in Elemental Builder thumbnails', () => {
+  it('shows Sun and Moon icons for Quarter relationships in Elemental Builder thumbnails', () => {
     useConceptsStore().elementalLayout = true
     const quarterRelationship = {
       ...relationship,
@@ -109,8 +109,10 @@ describe('VtgTransitionPreviews', () => {
       },
     })
 
-    expect(wrapper.get('.vtg-transition-previews__label').text()).toBe('QSQO')
-    expect(wrapper.findAll('.elemental-relationship-icons__icon--quarter')).toHaveLength(2)
+    expect(wrapper.get('.elemental-relationship-icons').attributes('aria-label')).toBe('Sun / Moon')
+    expect(wrapper.findAll('.vtg-transition-previews__label .base-icon')).toHaveLength(2)
+    expect(wrapper.find('.elemental-relationship-icons__icon--sun').exists()).toBe(true)
+    expect(wrapper.find('.elemental-relationship-icons__icon--moon').exists()).toBe(true)
   })
 
   it('hides Swap for portions whose two props are both Anti or both In', () => {

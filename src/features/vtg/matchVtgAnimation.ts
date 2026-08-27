@@ -5,6 +5,7 @@ import {
 import { getVtgScaleControlValue } from '@/features/vtg/data/vtgPlayerSettings'
 import {
   createVtgAnimationSignature,
+  createCompiledVtgPatternSignature,
   createVtgDirectionSignature,
   getVtgAnimationScale,
   getVtgPropRotationOffsets,
@@ -82,30 +83,6 @@ const normalizeOrientation = (value: number) => {
 }
 // Three.js composition can leave harmless vector components around 1e-8. Keep matcher ranking
 // aligned with the compiler-level semantic comparison used by the exhaustive detection audit.
-const signaturePrecision = 1e6
-const normalizeSignatureNumber = (value: number) => {
-  const normalized = Math.round(value * signaturePrecision) / signaturePrecision
-  return Object.is(normalized, -0) ? 0 : normalized
-}
-const createCompiledPatternSignature = (animation: RootDataFinal) => {
-  const compiled = rootCompile(animation)
-  return JSON.stringify({
-    props: compiled.props.map((prop) =>
-      prop.anim.map((frame) => [
-        normalizeSignatureNumber(frame.turns),
-        normalizeSignatureNumber(frame.beats),
-        normalizeSignatureNumber(frame.depth),
-        normalizeSignatureNumber(frame.type),
-        normalizeSignatureNumber(frame.adjust),
-        normalizeOrientation(frame.arc),
-        normalizeOrientation(frame.plane),
-        normalizeOrientation(frame.axis),
-        ...frame.pos.map(normalizeSignatureNumber),
-        ...frame.rot.map(normalizeSignatureNumber),
-      ]),
-    ),
-  })
-}
 const applyCandidatePropRotationOffsets = (
   animation: RootDataFinal,
   offsets: readonly [number, number],
@@ -229,7 +206,7 @@ const findBaseMatches = (
   const startingTurns = getVtgStartingTurns(animation)
   const adjustedScale = getVtgAnimationScale(animation)
   if (!timing || !signature || !startingTurns || adjustedScale === undefined) return []
-  const exactAnimationSignature = createCompiledPatternSignature(animation)
+  const exactAnimationSignature = createCompiledVtgPatternSignature(animation)
 
   const candidates = findCandidates(timing.speedRatio, signature.key)
   const scale = getVtgScaleControlValue(adjustedScale, timing.speedRatio)
@@ -281,7 +258,7 @@ const findBaseMatches = (
     )
     exactRegenerationDifferenceByMatch.set(
       result,
-      Number(createCompiledPatternSignature(alignedCandidate) !== exactAnimationSignature),
+      Number(createCompiledVtgPatternSignature(alignedCandidate) !== exactAnimationSignature),
     )
     return [result]
   })
@@ -381,6 +358,12 @@ export const findVtgPatternMatch = (
       (exactRegenerationDifferenceByMatch.get(second) ?? 0)
     if (exactRegenerationDifference) return exactRegenerationDifference
 
+    // When multiple candidates reproduce the complete animation exactly, exhaust the unrotated
+    // interpretations before allowing orientation to select an equivalent cell at another beat.
+    const rotationDifference =
+      Number((first.orientation ?? 0) !== 0) - Number((second.orientation ?? 0) !== 0)
+    if (rotationDifference) return rotationDifference
+
     const propRotationOffsetDifference =
       Number(first.propRotationOffsets !== undefined) -
       Number(second.propRotationOffsets !== undefined)
@@ -422,5 +405,16 @@ export const matchesVtgSelection = (
   return (
     candidate !== undefined &&
     createVtgAnimationSignature(animation) === createVtgAnimationSignature(candidate)
+  )
+}
+
+export const exactlyMatchesVtgSelection = (
+  animation: RootDataFinal,
+  selection: VtgPatternSelection,
+): boolean => {
+  const candidate = createDefaultVtgAnimation(selection)
+  return (
+    candidate !== undefined &&
+    createCompiledVtgPatternSignature(animation) === createCompiledVtgPatternSignature(candidate)
   )
 }

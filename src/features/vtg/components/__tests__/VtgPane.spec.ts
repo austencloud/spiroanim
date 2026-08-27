@@ -190,7 +190,7 @@ describe('VtgPane', () => {
     const headerLabels = wrapper.findAll('.vtg-rule-card__title')
 
     expect(matrixCells).toHaveLength(36)
-    expect(matrixCells.every((cell) => /^Q[SO] \/ Q[SO]$/.test(cell.text()))).toBe(true)
+    expect(matrixCells.every((cell) => /^Q[SO] \/ [TSQ][SO]$/.test(cell.text()))).toBe(true)
     expect(headerLabels).toHaveLength(12)
     expect(headerLabels.every((label) => label.text() === '')).toBe(true)
     expect(wrapper.find('[data-role="qtr-development-note"]').exists()).toBe(false)
@@ -237,7 +237,7 @@ describe('VtgPane', () => {
       '--vtg-rule-prop-tether-color: rgb(0,85,0)',
     )
 
-    expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-label')).toContain('QO / QS')
+    expect(wrapper.get('[data-cell-reference="1-6"]').attributes('aria-label')).toContain('QO / SS')
     expect(
       wrapper.get('[data-role="vtg-sidebar"] [aria-label$="rule 5"]').attributes('aria-label'),
     ).toBe('TOG SPLIT rule 5')
@@ -266,7 +266,7 @@ describe('VtgPane', () => {
     await nextTick()
 
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
-      'Hands: Quarter / Opposite\nProps: Quarter / Same',
+      'Hands: Quarter / Opposite\nProps: Split / Same',
     )
 
     wrapper.unmount()
@@ -917,6 +917,89 @@ describe('VtgPane', () => {
       expect(transition45.element.checked).toBe(false)
       wrapper.unmount()
     }
+  })
+
+  it('semantically shifts the active animation when Start changes', async () => {
+    const animation = createDefaultVtgAnimation({
+      reference: '1-2',
+      speedRatio: '1:3',
+      orientation: 45,
+      propRotationOffsets: [90, 0],
+    })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const wrapper = mount(VtgPane, { props: { animation } })
+
+    await vi.waitFor(() => {
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').element.value).toBe('1')
+    })
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').setValue(3.5)
+
+    expect(wrapper.emitted('animationUpdate')).toHaveLength(1)
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+  })
+
+  it('retains the distinct QTR 1-2 pattern and its rotation after refresh', async () => {
+    const version = await loadSpiroAnimQSVersion(11)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      11,
+    )
+    const animation = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew08Yk11Y&p0=Q__.gU0QDk_WQ.5E0Qpg_WQ.......&x0=_s_&m0=_1_mxqv__&p1=N__.gU0QDk_WQ.5L_Qpg_U0.......&x1=_s_&c=_i_bhq&v=11',
+        ),
+      ),
+    )
+    useConceptsStore().qtrEnabled = true
+    const wrapper = mount(VtgPane, { props: { animation } })
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-2')
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(true)
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').element.value).toBe('1.5')
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-orientation"]').element.value).toBe('0')
+    })
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+    expect(wrapper.emitted('animationUpdate')).toBeUndefined()
+  })
+
+  it('does not infer prop rotation for an exact regular beat match during hydration', async () => {
+    const version = await loadSpiroAnimQSVersion(11)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      11,
+    )
+    const animation = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew08Yk11Y&p0=Q__.5E0R3s_WQ._U0Qpg_WQ.......&x0=_s_&m0=_1_mxqv__&p1=N__.gU0QDk_WQ.5L_Qpg_U0.......&x1=_s_&c=_i_bhq&v=11',
+        ),
+      ),
+    )
+    useConceptsStore().qtrEnabled = false
+    const wrapper = mount(VtgPane, { props: { animation } })
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-2')
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(false)
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').element.value).toBe('1.5')
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-orientation"]').element.value).toBe('0')
+    })
+    expect(wrapper.emitted('patternSelect')).toBeUndefined()
+
+    await wrapper.get('[data-cell-reference="2-1"]').trigger('click')
+    await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-2',
+      speedRatio: '1:3',
+      beat: 1.5,
+    })
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty(
+      'propRotationOffsets',
+    )
   })
 
   it('extends the starting-beat range for two-cycle timings', async () => {
@@ -1685,9 +1768,12 @@ describe('VtgPane', () => {
     )
     const wrapper = mount(VtgPane, { props: { animation } })
 
-    await vi.waitFor(() => {
-      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-3')
-    })
+    await vi.waitFor(
+      () => {
+        expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-3')
+      },
+      { timeout: 3_000 },
+    )
 
     const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
     expect(rotate.element.value).toBe('-90')
@@ -1852,6 +1938,44 @@ describe('VtgPane', () => {
         propRotationOffsets: [180, 0],
       },
     ])
+  })
+
+  it('keeps every cell relationship stable when selecting at a half beat', async () => {
+    const initialSelection = {
+      reference: '1-1',
+      speedRatio: '1:3',
+      beat: 1.5,
+      propRotationOffsets: [-90, 0],
+    } as const
+    const animation = createDefaultVtgAnimation(initialSelection)
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const patternMatcher: PatternMatchingClient = {
+      getUniqueVtgPatternOrientations: async () => [0],
+      matchVtg: async () => ({
+        status: 'matched',
+        source: 'vtg',
+        match: {
+          ...initialSelection,
+          isAnti: false,
+          swapProps: false,
+          reversePlane: false,
+          bpm: 40,
+          scale: 0.8,
+        },
+      }),
+      matchEightStep: async () => ({ status: 'unmatched' }),
+      matchQst: async () => ({ status: 'unmatched' }),
+    }
+    const wrapper = mount(VtgPane, { props: { animation, patternMatcher } })
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
+    })
+    const target = () => wrapper.get('[data-cell-reference="1-2"]')
+    const labelBeforeSelection = target().text()
+    expect(labelBeforeSelection).toContain('SO / QO')
+
+    await target().trigger('click')
+    expect(target().text()).toBe(labelBeforeSelection)
   })
 
   it('ignores a stale match after a newer animation has been hydrated', async () => {
@@ -2848,8 +2972,8 @@ describe('VtgPane', () => {
     expect(wrapper.find('[data-role="vtg-elemental"]').exists()).toBe(true)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]').setValue(true)
     expect(
-      wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text().length,
-    ).toBeGreaterThan(0)
+      wrapper.findAll('[data-cell-reference="1-1"] .vtg-tile__label-text .base-icon'),
+    ).toHaveLength(2)
   })
 
   it('keeps Elemental available in the QTR generator', async () => {
@@ -2860,8 +2984,8 @@ describe('VtgPane', () => {
     expect(elemental.element.checked).toBe(false)
     await elemental.setValue(true)
     expect(
-      wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text().length,
-    ).toBeGreaterThan(0)
+      wrapper.findAll('[data-cell-reference="1-1"] .vtg-tile__label-text .base-icon'),
+    ).toHaveLength(2)
   })
 
   it('preserves each compact Builder header rule and its ratio-specific behavior', async () => {

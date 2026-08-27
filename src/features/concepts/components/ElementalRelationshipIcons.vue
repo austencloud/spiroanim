@@ -8,21 +8,23 @@
       v-for="(token, index) in tokens"
       :key="`${token.label}-${index}`"
       class="elemental-relationship-icons__icon"
-      :class="
-        token.element
-          ? `elemental-relationship-icons__icon--${token.element.toLowerCase()}`
-          : 'elemental-relationship-icons__icon--quarter'
-      "
-      :data-element="token.element"
+      :class="`elemental-relationship-icons__icon--${token.symbol.toLowerCase()}`"
+      :data-element="token.symbol"
     >
-      <BaseIcon v-if="token.element" :path="elementIcons[token.element]" :size="size" />
-      <span v-else>{{ token.label }}</span>
+      <BaseIcon :path="relationshipIcons[token.symbol]" :size="size" />
     </span>
   </span>
 </template>
 
 <script setup lang="ts">
-import { mdiEarth, mdiFire, mdiWater, mdiWeatherWindy } from '@mdi/js'
+import {
+  mdiEarth,
+  mdiFire,
+  mdiMoonWaningCrescent,
+  mdiWeatherSunny,
+  mdiWater,
+  mdiWeatherWindy,
+} from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import {
@@ -41,17 +43,30 @@ const props = withDefaults(
   { size: 18, responsive: false },
 )
 
-const elementIcons: Readonly<Record<ElementName, string>> = {
+type RelationshipSymbol = ElementName | 'Sun' | 'Moon'
+interface RelationshipToken {
+  symbol: RelationshipSymbol
+  label: string
+}
+
+const relationshipIcons: Readonly<Record<RelationshipSymbol, string>> = {
   Earth: mdiEarth,
   Water: mdiWater,
   Air: mdiWeatherWindy,
   Fire: mdiFire,
+  Sun: mdiWeatherSunny,
+  Moon: mdiMoonWaningCrescent,
 }
-const tokens = computed(() =>
+const tokens = computed<readonly RelationshipToken[]>(() =>
   [props.hands, props.props].flatMap((relationship) => {
     if (!relationship) return []
-    const element = relationshipElement(relationship)
-    return [{ element, label: element ?? `${relationship.timing}${relationship.direction}` }]
+    const symbol: RelationshipSymbol | undefined =
+      relationship.timing === 'Q'
+        ? relationship.direction === 'S'
+          ? 'Sun'
+          : 'Moon'
+        : relationshipElement(relationship)
+    return symbol ? [{ symbol, label: symbol }] : []
   }),
 )
 </script>
@@ -99,9 +114,11 @@ const tokens = computed(() =>
   color: var(--color-element-fire);
 }
 
-.elemental-relationship-icons__icon--quarter {
-  color: var(--color-text-muted);
-  font-weight: 800;
-  line-height: 1;
+.elemental-relationship-icons__icon--sun {
+  color: var(--color-element-sun);
+}
+
+.elemental-relationship-icons__icon--moon {
+  color: var(--color-element-moon);
 }
 </style>

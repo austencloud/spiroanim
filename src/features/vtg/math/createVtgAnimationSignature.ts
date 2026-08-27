@@ -11,6 +11,27 @@ const normalizeAngle = (value: number) => {
   const normalized = ((((normalizeNumber(value) + 180) % 360) + 360) % 360) - 180
   return normalized === -180 ? 180 : normalized
 }
+
+/** Describes the complete compiled frame paths for exact catalog regeneration comparisons. */
+export const createCompiledVtgPatternSignature = (animation: RootDataFinal) => {
+  const compiled = rootCompile(animation)
+  return JSON.stringify({
+    props: compiled.props.map((prop) =>
+      prop.anim.map((frame) => [
+        normalizeNumber(frame.turns),
+        normalizeNumber(frame.beats),
+        normalizeNumber(frame.depth),
+        normalizeNumber(frame.type),
+        normalizeNumber(frame.adjust),
+        normalizeAngle(frame.arc),
+        normalizeAngle(frame.plane),
+        normalizeAngle(frame.axis),
+        ...frame.pos.map(normalizeNumber),
+        ...frame.rot.map(normalizeNumber),
+      ]),
+    ),
+  })
+}
 const getPositionOrientation = (position: readonly number[], fallback: number) => {
   const x = position[0] ?? 0
   const y = position[1] ?? 0

@@ -12,6 +12,7 @@ import type {
   VtgPatternRotationFilter,
 } from '@/features/vtg/types'
 import {
+  createCompiledVtgPatternSignature,
   createFinalTransformedVtgAnimationSignature,
   createVtgAnimationSignature,
   getVtgAnimationScale,
@@ -297,13 +298,26 @@ export const findQtrPatternMatch = (
   animation: RootDataFinal,
   preferences?: QtrPatternMatchPreferences,
   rotationFilter?: VtgPatternRotationFilter,
-): QtrPatternMatch | undefined =>
-  [
-    ...preferUnrotatedMatches(
-      findQtrPatternMatchesInternal(animation, rotationFilter, true, preferences?.orientation),
-      preferences,
-    ),
-  ].sort((first, second) => {
+): QtrPatternMatch | undefined => {
+  const exactAnimationSignature = createCompiledVtgPatternSignature(animation)
+  const matches = preferUnrotatedMatches(
+    findQtrPatternMatchesInternal(animation, rotationFilter, true, preferences?.orientation),
+    preferences,
+  )
+  const exactRegenerationDifferenceByMatch = new Map(
+    matches.map((match) => {
+      const candidate = createDefaultQtrAnimation(match)
+      return [
+        match,
+        Number(
+          candidate === undefined ||
+            createCompiledVtgPatternSignature(candidate) !== exactAnimationSignature,
+        ),
+      ] as const
+    }),
+  )
+
+  return [...matches].sort((first, second) => {
     if (preferences) {
       const preferenceDifference =
         preferenceDifferenceCount(first, preferences) -
@@ -311,11 +325,17 @@ export const findQtrPatternMatch = (
       if (preferenceDifference !== 0) return preferenceDifference
     }
 
+    const exactRegenerationDifference =
+      (exactRegenerationDifferenceByMatch.get(first) ?? 1) -
+      (exactRegenerationDifferenceByMatch.get(second) ?? 1)
+    if (exactRegenerationDifference !== 0) return exactRegenerationDifference
+
     const beatDifference = startingBeat(first) - startingBeat(second)
     if (beatDifference !== 0) return beatDifference
 
     return playbackTransformationCount(first) - playbackTransformationCount(second)
   })[0]
+}
 
 export const matchesQtrSelection = (
   animation: RootDataFinal,
@@ -325,4 +345,15 @@ export const matchesQtrSelection = (
   if (!candidate) return false
 
   return createVtgAnimationSignature(animation) === createVtgAnimationSignature(candidate)
+}
+
+export const exactlyMatchesQtrSelection = (
+  animation: RootDataFinal,
+  selection: QtrPatternSelection,
+): boolean => {
+  const candidate = createDefaultQtrAnimation(selection)
+  return (
+    candidate !== undefined &&
+    createCompiledVtgPatternSignature(animation) === createCompiledVtgPatternSignature(candidate)
+  )
 }

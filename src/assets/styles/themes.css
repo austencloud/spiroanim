@@ -69,6 +69,8 @@
     var(--color-status-warning) 55%,
     var(--color-status-error)
   );
+  --color-element-sun: var(--palette-yellow-900);
+  --color-element-moon: var(--palette-violet-500);
   --color-element-outline: color-mix(in srgb, var(--color-canvas) 72%, var(--color-text));
   --color-property-value-defined: var(--palette-blue-800);
   --color-property-value-inherited: var(--palette-green-900);

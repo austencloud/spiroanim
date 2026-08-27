@@ -107,6 +107,34 @@ const classifyRelativePhase = (
 
 const directionCode = (sign: number): VtgDirectionCode => (sign > 0 ? 'S' : 'O')
 
+const relativePropPhase = (propPhase: RelativePhase, handPhase: RelativePhase): RelativePhase => {
+  if (handPhase.timing !== 'Q') return propPhase
+  if (propPhase.timing !== 'Q') return { timing: 'Q', orientation: propPhase.orientation }
+  return propPhase.orientation === handPhase.orientation
+    ? { timing: 'T', orientation: 1 }
+    : { timing: 'S', orientation: -1 }
+}
+
+const scaledVector = (vector: RelationshipVector, scale: number): RelationshipVector => [
+  vector[0] * scale,
+  vector[1] * scale,
+  vector[2] * scale,
+]
+
+const normalizedTravelVector = (
+  start: RelationshipVector,
+  end: RelationshipVector,
+): RelationshipVector | undefined => {
+  const travel: RelationshipVector = [end[0] - start[0], end[1] - start[1], end[2] - start[2]]
+  const length = Math.hypot(...travel)
+  return length <= relationshipTolerance ? undefined : scaledVector(travel, 1 / length)
+}
+
+const isDiagonalPlanarVector = (vector: RelationshipVector): boolean =>
+  Math.abs(Math.abs(vector[0]) - Math.abs(vector[1])) <= relationshipTolerance &&
+  Math.abs(vector[0]) > relationshipTolerance &&
+  Math.abs(vector[1]) > relationshipTolerance
+
 const timingDescriptions = {
   T: 'Together',
   S: 'Split',
@@ -136,7 +164,15 @@ const describePatternRelationshipsUnsafe = (
 
   const handStartPhase = classifyRelativePhase(firstStart.pos, secondStart.pos, firstStart.posx)
   const propStartPhase = classifyRelativePhase(firstStart.rot, secondStart.rot, firstStart.rotx)
-  const handDestinationPhase = classifyRelativePhase(firstEnd.pos, secondEnd.pos, firstEnd.posx)
+  const firstHandTravel = normalizedTravelVector(firstStart.pos, firstEnd.pos)
+  const secondHandTravel = normalizedTravelVector(secondStart.pos, secondEnd.pos)
+  const handDestinationPhase =
+    firstHandTravel &&
+    secondHandTravel &&
+    isDiagonalPlanarVector(firstEnd.pos) &&
+    isDiagonalPlanarVector(secondEnd.pos)
+      ? classifyRelativePhase(firstHandTravel, secondHandTravel, firstEnd.posx)
+      : classifyRelativePhase(firstEnd.pos, secondEnd.pos, firstEnd.posx)
   // VTG relationship labels describe the props at their three-quarter phase checkpoint. Unequal
   // ratios change how many degrees each prop travels per beat, so their Cartesian endpoints can
   // coincide even when the paths represent a Split relationship. Advance each real starting
@@ -153,18 +189,18 @@ const describePatternRelationshipsUnsafe = (
     secondEnd.turns + secondEnd.arc,
   )
   const propDestinationPhase = classifyRelativePhase(firstPropPhase, secondPropPhase, firstEnd.rotx)
-  const handPhase = checkpoint === 'source' ? handStartPhase : handDestinationPhase
-  const propPhase = checkpoint === 'source' ? propStartPhase : propDestinationPhase
   const handDirection = directionCode(relationshipSign(firstEnd.posx, secondEnd.posx))
+  const handPhase = checkpoint === 'source' ? handStartPhase : handDestinationPhase
+  const worldPropPhase = checkpoint === 'source' ? propStartPhase : propDestinationPhase
+  const propPhase = relativePropPhase(worldPropPhase, handPhase)
 
-  // Rotation axes live in local hand/prop phase frames. The four orientation
-  // terms correct their relative handedness when either phase changes parity.
+  const firstRotationDirection = Math.sign(firstEnd.turns + firstEnd.arc)
+  const secondRotationDirection = Math.sign(secondEnd.turns + secondEnd.arc)
   const propDirection = directionCode(
-    relationshipSign(firstEnd.rotx, secondEnd.rotx) *
-      handStartPhase.orientation *
-      propStartPhase.orientation *
-      handDestinationPhase.orientation *
-      propDestinationPhase.orientation,
+    relationshipSign(
+      scaledVector(firstEnd.rotx, firstRotationDirection || 1),
+      scaledVector(secondEnd.rotx, secondRotationDirection || 1),
+    ),
   )
 
   const hands: VtgRelationshipCode = `${handPhase.timing}${handDirection}`
