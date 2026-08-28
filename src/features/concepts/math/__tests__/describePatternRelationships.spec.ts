@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
+import {
+  classifyDirectedPropTiming,
+  describePatternRelationships,
+} from '@/features/concepts/math/describePatternRelationships'
 import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { qtrModes } from '@/features/vtg/types'
@@ -33,6 +36,46 @@ const expectedDescription = (label: VtgPatternLabel): string => {
 }
 
 describe('describePatternRelationships', () => {
+  it('uses directed phase rather than Cartesian prop spacing', () => {
+    const bottom = [0, -1, 0] as const
+    const right = [1, 0, 0] as const
+    const left = [-1, 0, 0] as const
+    const positiveAxis = [0, 0, 1] as const
+    const negativeAxis = [0, 0, -1] as const
+
+    expect(classifyDirectedPropTiming(bottom, positiveAxis, bottom, positiveAxis)).toBe('T')
+    expect(classifyDirectedPropTiming(bottom, positiveAxis, right, positiveAxis)).toBe('Q')
+    expect(classifyDirectedPropTiming(right, positiveAxis, left, negativeAxis)).toBe('T')
+    expect(classifyDirectedPropTiming(right, positiveAxis, right, negativeAxis)).toBe('S')
+  })
+
+  it('keeps Quarter Spacing independent from prop Quarter Time', () => {
+    expect(
+      describePatternSelectionRelationships({
+        reference: '1-1',
+        speedRatio: '1:3',
+        propRotationOffsets: [-90, 0],
+      }).label,
+    ).toBe('TS / QS')
+
+    expect(
+      describePatternSelectionRelationships({
+        reference: '1-1',
+        speedRatio: '1:3',
+        quarters: 1,
+        propRotationOffsets: [90, 0],
+      }).label,
+    ).toBe('QS / SS')
+
+    expect(
+      describePatternSelectionRelationships({
+        reference: '6-3',
+        speedRatio: '1:3',
+        quarters: 1,
+      }).label,
+    ).toBe('QO / QS')
+  })
+
   it('warns and returns an obvious label when classification fails', () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     if (!animation) throw new Error('Missing VTG animation')

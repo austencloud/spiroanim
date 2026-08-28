@@ -67,10 +67,10 @@ describe('resolveVtgBuilderPreviewRelationships', () => {
     )
 
     expect(relationships?.map(({ label }) => label)).toEqual([
-      'SS / SS',
+      'SS / TS',
       'SO / TS',
       'TS / SS',
-      'TO / TS',
+      'TO / SS',
       'SS / TS',
     ])
   })

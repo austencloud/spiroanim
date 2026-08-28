@@ -8,6 +8,27 @@ These controls are separate from the editor property-panel pipeline documented i
 Eight Step uses the same shared Concepts controls but has a separate pattern model documented in
 [`EIGHT_STEP.md`](./EIGHT_STEP.md).
 
+## Quarter Spacing versus Quarter Timing
+
+These terms describe different properties and must not be used interchangeably:
+
+| Term                                  | Definition                                                                                                                                                 | Effect on `Hands / Props` labels                                                                                    |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Quarter Spacing**                   | The QTR geometry transform. It changes the pattern's spatial arrangement through a 90-degree first-frame arc adjustment.                                   | None by itself. Enabling QTR does not force either timing letter to `Q`.                                            |
+| **Quarter Timing** (**Quarter Time**) | A directed phase relationship. The two hands or two props reach the shared bottom reference 90 or 270 degrees apart, meaning one leads by a quarter-cycle. | Produces `Q` independently on the applicable side of the slash. Direction is still separately `S`ame or `O`pposite. |
+
+The slash order is always `Hands / Props`. Each side is classified independently, so Quarter
+Timing in one system says nothing about the other system's timing. Quarter Spacing often creates a
+Quarter Timing relationship, but that is a result of the generated motion rather than a naming
+rule. Valid combinations therefore include:
+
+- `TS / QS`: Together/Same hands with Quarter/Same props. This has prop Quarter Timing without the
+  Quarter Spacing transform.
+- `QS / SS`: Quarter/Same hands with Split/Same props. This uses Quarter Spacing while the props are
+  not in Quarter Timing.
+- `QO / QS`: Quarter/Opposite hands with Quarter/Same props. Both systems have Quarter Timing, but
+  their direction relationships differ.
+
 The authoritative implementations are:
 
 - `src/features/vtg/data/vtgPlayerSettings.ts` for numeric controls and rendering settings.
@@ -243,17 +264,29 @@ authored tracks until final-stage plane reversal and Swap are applied.
 QTR previews and matching apply the Qtr transform around the shared VTG pattern builder and matcher
 so selected cells and shared options can be recovered when toggling QTR or loading animation data.
 
+Quarter Spacing and Quarter Time are related but independent concepts. Quarter Spacing names the
+90-degree QTR geometry transform. Quarter Time (`Q`) is a timing classification: the two members of
+the classified system reach the common bottom reference one quarter-cycle apart. Applying Quarter
+Spacing does not force either half of the `Hands / Props` label to `Q`, and prop Quarter Time can
+exist without Quarter Spacing. For example, a retained prop rotation can produce `TS / QS` in VTG,
+while a QTR pattern whose prop phase is counter-rotated can produce `QS / SS`.
+
 ## Relationship classification
 
 Matrix labels and cell tooltips are derived from each compiled pattern rather than a cell-label
-table. Hand timing compares the two compiled destination position vectors. Prop timing advances the
-two real starting rotation vectors through the VTG three-quarter phase checkpoint using each
-track's actual incoming axis and travel direction. This local-phase calculation is necessary at
-even speed ratios, where opposite half-turn paths can have coincident Cartesian endpoints even
-though their semantic relationship is Split. At 1:3, the phase checkpoint is the ordinary compiled
-destination, so every established 1:3 label remains unchanged. Direction compares the travel axes.
-Parallel timing is Together (`T`), antiparallel timing is Split (`S`), and orthogonal timing is
-Quarter (`Q`); direction remains Same (`S`) or Opposite (`O`). The generated tooltip expands those letters as
+table. Hand timing retains the established compiled path-phase comparison. Prop timing is classified
+independently from the hands. For each prop, the classifier measures the directed angular phase from
+its orientation to the common bottom reference along its physical spin direction. Equal directed
+phases are Together (`T`), phases separated by 180 degrees are Split (`S`), and phases separated by
+90 or 270 degrees are Quarter (`Q`). Measuring directed phase is necessary for Opposite-direction
+patterns: two props can occupy the same Cartesian orientation while having Split timing, or occupy
+mirrored orientations while reaching bottom Together.
+
+The prop orientations are evaluated at the VTG three-quarter semantic checkpoint. Unequal ratios
+change the Cartesian endpoint reached in one beat, so both starting orientations are advanced by the
+same canonical phase along their real incoming axes instead of treating the compiled endpoints as
+the timing definition. At 1:3, this checkpoint is the ordinary compiled destination, preserving the
+established 1:3 labels. The generated tooltip expands the independent results as
 `Hands: Timing / Direction` and `Props: Timing / Direction`.
 
 An unrotated matrix classifies the destination rule relationship. A 90-degree pattern orientation
@@ -284,20 +317,28 @@ remains validated in the reactive UI. Shape, Speed Ratio, Anti, Swap, 180°, and
 the relationship input because they define the pattern itself rather than only its playback origin
 or subdivision.
 
-Prop direction must be compared in the props' local hand/phase frames, not by directly comparing
-their world-space rotation axes. A quarter-phase transform can mirror one local frame, making two
-props that spin in the same direction expose antiparallel world-space axes. The classifier first
-compares the ending rotation axes and then corrects that sign with the orientation parity of the
-starting hand phase, starting prop phase, ending hand phase, and ending prop phase.
+### Catalog labels versus instantaneous labels
 
-Cell `6-3` is the worked reference for this distinction. Its VTG relationship is `SO/TS`; Quarter
-Spacing changes the timing to produce `QO/QS`. In the default 1:3 base QTR pattern, the ending prop
-rotation axes are approximately `+Z` and `-Z`, which yields a raw Opposite sign (`-1`). The four
-local phase orientations are `-1`, `-1`, `-1`, and `+1`, whose product is another `-1`. Applying
-that local-frame correction gives `(-1) * (-1) = +1`, or Same. This matches the rendered motion:
-the props are quarter-spaced and spin in the same direction, so the prop portion is `QS`, not `QO`.
-The established `6-3` classification remains the same across the supported speed ratios, Qtr modes,
-Swap states, and 180° states.
+The two relationship entry points intentionally answer different questions:
+
+- `describePatternRelationships(animation)` classifies the compiled animation at the supplied
+  playback origin and checkpoint. Its result can therefore describe an instantaneous Beat-shifted
+  state.
+- `describePatternSelectionRelationships(selection)` removes Beat and transition controls, rebuilds
+  the selection at its canonical playback origin, and returns the semantic label used by VTG cells.
+
+This normalization is applied uniformly. It does not contain a cell-label table, forced labels, or
+cell-specific exceptions. Consequently, an imported animation can have an instantaneous label that
+differs from the matched catalog cell label. One retained quarter-turn fixture is `QO / TO` at its
+encoded playback origin and `QO / SO` after catalog normalization. That difference records playback
+state versus catalog semantics; it is not an override for that cell.
+
+Prop direction is classified separately from prop timing. Each compiled rotation axis is multiplied
+by the sign of that track's rotation amount (`turns + arc`) to obtain its physical angular-velocity
+axis. Parallel signed axes are Same (`S`), and antiparallel signed axes are Opposite (`O`). This
+avoids confusing an axis representation with the rendered spin direction and requires no hand-phase
+or spacing correction. Cell `6-3`, for example, remains `SO / TS` in VTG and `QO / QS` in its base
+Quarter Spacing form across the supported transforms.
 
 ## QTR headers
 

@@ -5,9 +5,10 @@ import type {
   VtgTimingCode,
 } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { InitialPoint } from '@/math/animation/OrthogonalFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
-type RelationshipVector = [number, number, number]
+export type RelationshipVector = readonly [number, number, number]
 
 interface RelativePhase {
   timing: VtgTimingCode
@@ -34,6 +35,9 @@ export type PatternRelationshipCheckpoint = 'source' | 'destination'
 
 const relationshipTolerance = 0.000_001
 const relationshipPhaseRadians = (Math.PI * 3) / 2
+const fullRotationRadians = Math.PI * 2
+const quarterRotationRadians = Math.PI / 2
+const propTimingReference: RelationshipVector = [InitialPoint.x, InitialPoint.y, InitialPoint.z]
 
 const dotProduct = (first: RelationshipVector, second: RelationshipVector): number =>
   first[0] * second[0] + first[1] * second[1] + first[2] * second[2]
@@ -46,6 +50,87 @@ const orientedCrossProduct = (
   (first[1] * second[2] - first[2] * second[1]) * axis[0] +
   (first[2] * second[0] - first[0] * second[2]) * axis[1] +
   (first[0] * second[1] - first[1] * second[0]) * axis[2]
+
+const vectorLength = (vector: RelationshipVector): number => Math.hypot(...vector)
+
+const normalizedVector = (vector: RelationshipVector): RelationshipVector => {
+  const length = vectorLength(vector)
+  if (length <= relationshipTolerance) {
+    throw new Error('Expected a nonzero relationship vector')
+  }
+
+  return [vector[0] / length, vector[1] / length, vector[2] / length]
+}
+
+const projectedUnitVector = (
+  vector: RelationshipVector,
+  axis: RelationshipVector,
+): RelationshipVector => {
+  const projection = dotProduct(vector, axis)
+  return normalizedVector([
+    vector[0] - axis[0] * projection,
+    vector[1] - axis[1] * projection,
+    vector[2] - axis[2] * projection,
+  ])
+}
+
+const normalizedRadians = (radians: number): number =>
+  ((radians % fullRotationRadians) + fullRotationRadians) % fullRotationRadians
+
+const circularDistance = (first: number, second: number): number => {
+  const distance = Math.abs(first - second) % fullRotationRadians
+  return Math.min(distance, fullRotationRadians - distance)
+}
+
+const directedPhaseToReference = (
+  orientation: RelationshipVector,
+  velocityAxis: RelationshipVector,
+): number => {
+  const axis = normalizedVector(velocityAxis)
+  const planarOrientation = projectedUnitVector(orientation, axis)
+  const planarReference = projectedUnitVector(propTimingReference, axis)
+  return normalizedRadians(
+    Math.atan2(
+      orientedCrossProduct(planarOrientation, planarReference, axis),
+      dotProduct(planarOrientation, planarReference),
+    ),
+  )
+}
+
+/**
+ * Classifies prop timing by comparing each prop's directed phase to the common bottom reference.
+ * The velocity axes include spin direction, so equal Cartesian orientations are not assumed to
+ * have equal timing when the props rotate in opposite directions.
+ */
+export const classifyDirectedPropTiming = (
+  firstOrientation: RelationshipVector,
+  firstVelocityAxis: RelationshipVector,
+  secondOrientation: RelationshipVector,
+  secondVelocityAxis: RelationshipVector,
+): VtgTimingCode => {
+  const relativePhase = normalizedRadians(
+    directedPhaseToReference(secondOrientation, secondVelocityAxis) -
+      directedPhaseToReference(firstOrientation, firstVelocityAxis),
+  )
+
+  if (circularDistance(relativePhase, 0) <= relationshipTolerance) {
+    return 'T'
+  }
+  if (circularDistance(relativePhase, Math.PI) <= relationshipTolerance) {
+    return 'S'
+  }
+  if (circularDistance(relativePhase, quarterRotationRadians) <= relationshipTolerance) {
+    return 'Q'
+  }
+  if (
+    circularDistance(relativePhase, fullRotationRadians - quarterRotationRadians) <=
+    relationshipTolerance
+  ) {
+    return 'Q'
+  }
+
+  throw new Error(`Expected together, split, or quarter directed phase, received ${relativePhase}`)
+}
 
 const rotateAroundAxis = (
   vector: RelationshipVector,
@@ -107,14 +192,6 @@ const classifyRelativePhase = (
 
 const directionCode = (sign: number): VtgDirectionCode => (sign > 0 ? 'S' : 'O')
 
-const relativePropPhase = (propPhase: RelativePhase, handPhase: RelativePhase): RelativePhase => {
-  if (handPhase.timing !== 'Q') return propPhase
-  if (propPhase.timing !== 'Q') return { timing: 'Q', orientation: propPhase.orientation }
-  return propPhase.orientation === handPhase.orientation
-    ? { timing: 'T', orientation: 1 }
-    : { timing: 'S', orientation: -1 }
-}
-
 const scaledVector = (vector: RelationshipVector, scale: number): RelationshipVector => [
   vector[0] * scale,
   vector[1] * scale,
@@ -163,7 +240,6 @@ const describePatternRelationshipsUnsafe = (
   }
 
   const handStartPhase = classifyRelativePhase(firstStart.pos, secondStart.pos, firstStart.posx)
-  const propStartPhase = classifyRelativePhase(firstStart.rot, secondStart.rot, firstStart.rotx)
   const firstHandTravel = normalizedTravelVector(firstStart.pos, firstEnd.pos)
   const secondHandTravel = normalizedTravelVector(secondStart.pos, secondEnd.pos)
   const handDestinationPhase =
@@ -188,35 +264,38 @@ const describePatternRelationshipsUnsafe = (
     secondEnd.rotx,
     secondEnd.turns + secondEnd.arc,
   )
-  const propDestinationPhase = classifyRelativePhase(firstPropPhase, secondPropPhase, firstEnd.rotx)
   const handDirection = directionCode(relationshipSign(firstEnd.posx, secondEnd.posx))
   const handPhase = checkpoint === 'source' ? handStartPhase : handDestinationPhase
-  const worldPropPhase = checkpoint === 'source' ? propStartPhase : propDestinationPhase
-  // When quarter-starting hands finish in a Together/Split phase, describe the props against
-  // that starting quarter frame. Otherwise their actual world orientation is already the label.
-  const propPhase =
-    handStartPhase.timing === 'Q' && handPhase.timing !== 'Q'
-      ? relativePropPhase(worldPropPhase, handStartPhase)
-      : worldPropPhase
 
   const firstRotationDirection = Math.sign(firstEnd.turns + firstEnd.arc)
   const secondRotationDirection = Math.sign(secondEnd.turns + secondEnd.arc)
-  const propDirection = directionCode(
-    relationshipSign(
-      scaledVector(firstEnd.rotx, firstRotationDirection || 1),
-      scaledVector(secondEnd.rotx, secondRotationDirection || 1),
-    ),
-  )
+  const firstVelocityAxis = scaledVector(firstEnd.rotx, firstRotationDirection || 1)
+  const secondVelocityAxis = scaledVector(secondEnd.rotx, secondRotationDirection || 1)
+  const propTiming =
+    checkpoint === 'source'
+      ? classifyDirectedPropTiming(
+          firstStart.rot,
+          firstVelocityAxis,
+          secondStart.rot,
+          secondVelocityAxis,
+        )
+      : classifyDirectedPropTiming(
+          firstPropPhase,
+          firstVelocityAxis,
+          secondPropPhase,
+          secondVelocityAxis,
+        )
+  const propDirection = directionCode(relationshipSign(firstVelocityAxis, secondVelocityAxis))
 
   const hands: VtgRelationshipCode = `${handPhase.timing}${handDirection}`
-  const props: VtgRelationshipCode = `${propPhase.timing}${propDirection}`
+  const props: VtgRelationshipCode = `${propTiming}${propDirection}`
   const label: VtgPatternLabel = `${hands} / ${props}`
 
   return {
     label,
-    description: `Hands: ${describeRelationship(handPhase.timing, handDirection)}\nProps: ${describeRelationship(propPhase.timing, propDirection)}`,
+    description: `Hands: ${describeRelationship(handPhase.timing, handDirection)}\nProps: ${describeRelationship(propTiming, propDirection)}`,
     hands: { timing: handPhase.timing, direction: handDirection },
-    props: { timing: propPhase.timing, direction: propDirection },
+    props: { timing: propTiming, direction: propDirection },
   }
 }
 

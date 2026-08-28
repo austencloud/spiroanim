@@ -475,7 +475,7 @@ describe('encoded pattern relationships', () => {
     expect(pathPoints(shifted)).toEqual(pathPoints(patternAnimation))
   })
 
-  it('classifies prop timing relative to the carrying hands', async () => {
+  it('classifies prop timing independently from the carrying hands', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -493,10 +493,10 @@ describe('encoded pattern relationships', () => {
       return describePatternRelationships(animation).label
     })
 
-    expect(labels).toEqual(['TO / TO', 'QO / QO', 'QO / SO', 'SO / SO'])
+    expect(labels).toEqual(['TO / SO', 'QO / QO', 'QO / QO', 'SO / SO'])
   })
 
-  it('classifies relationships from actual hand and prop orientation', async () => {
+  it('classifies relationships from actual hand and directed prop phase', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -519,7 +519,7 @@ describe('encoded pattern relationships', () => {
         : describePatternRelationships(animation).label
     })
 
-    expect(labels).toEqual(['TS / TS', 'SO / SO', 'QO / SO', 'SO / QO', 'TS / QS', 'TO / QO'])
+    expect(labels).toEqual(['TS / TS', 'SO / SO', 'QO / QO', 'SO / QO', 'TS / QS', 'TO / QO'])
   })
 
   it('keeps a shifted half-beat pattern on its canonical relationship', async () => {
@@ -579,8 +579,8 @@ describe('encoded pattern relationships', () => {
       ),
     )
     const match = findVtgPatternMatch(animation)
-    expect(describePatternRelationships(animation).label).toBe('QO / SO')
-    expect(match && describePatternSelectionRelationships(match).label).toBe('QO / SO')
+    expect(describePatternRelationships(animation).label).toBe('QO / QO')
+    expect(match && describePatternSelectionRelationships(match).label).toBe('QO / QO')
   })
 
   it('keeps cardinal opposite hand travel Split in a QTR cell', async () => {
@@ -600,9 +600,9 @@ describe('encoded pattern relationships', () => {
     const match = findQtrPatternMatch(animation) ?? findVtgPatternMatch(animation)
     if (!match) throw new Error('Expected the QTR pattern to match')
     const orientation = inferPatternRelationshipOrientation(animation, match)
-    expect(describePatternRelationships(animation).label).toBe('SO / TO')
+    expect(describePatternRelationships(animation).label).toBe('SO / SO')
     expect(orientation).toBeDefined()
-    expect(describePatternSelectionRelationships({ ...match, orientation }).label).toBe('SO / TO')
+    expect(describePatternSelectionRelationships({ ...match, orientation }).label).toBe('SO / SO')
   })
 
   it('retains a rotated QTR 1-2 match after refresh', async () => {
@@ -631,7 +631,7 @@ describe('encoded pattern relationships', () => {
     })
   })
 
-  it('moves prop timing through a retained quarter-turn', async () => {
+  it('distinguishes instantaneous prop timing from the semantic playback origin', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -649,7 +649,7 @@ describe('encoded pattern relationships', () => {
     if (!match) throw new Error('Expected the rotated Quarter pattern to match')
     const propRotationOffsets = inferPatternRelationshipPropRotationOffsets(animation, match)
 
-    expect(describePatternRelationships(animation).label).toBe('QO / SO')
+    expect(describePatternRelationships(animation).label).toBe('QO / TO')
     expect(propRotationOffsets).toBeDefined()
     expect(describePatternSelectionRelationships({ ...match, propRotationOffsets }).label).toBe(
       'QO / SO',
