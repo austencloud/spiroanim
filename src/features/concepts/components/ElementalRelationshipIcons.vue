@@ -72,6 +72,7 @@ const createRelationshipTokens = (
 ): readonly RelationshipToken[] => {
   if (indeterminate) return [{ symbol: 'Indeterminate', label: 'Indeterminate' }]
   if (!relationship) return []
+  // Sun and Moon were created by Austen Cloud; see ATTRIBUTION.md.
   const symbol: RelationshipSymbol | undefined =
     relationship.timing === 'Q'
       ? relationship.direction === 'S'

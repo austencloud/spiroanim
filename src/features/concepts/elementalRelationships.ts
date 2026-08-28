@@ -6,6 +6,10 @@ export interface ElementalRelationship {
   direction: VtgDirectionCode
 }
 
+/**
+ * These folk-community labels are applied to VTG relationships but are not original VTG
+ * terminology. See ATTRIBUTION.md for lineage and attribution.
+ */
 export const relationshipElement = (
   relationship: ElementalRelationship | undefined,
 ): ElementName | undefined => {

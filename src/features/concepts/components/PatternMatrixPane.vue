@@ -943,6 +943,7 @@ const getElementalAccessibleLabel = (
   indeterminate: boolean | undefined,
 ): string | undefined => {
   if (indeterminate) return 'Indeterminate'
+  // Sun and Moon were created by Austen Cloud; see ATTRIBUTION.md.
   if (relationship?.timing === 'Q') return relationship.direction === 'S' ? 'Sun' : 'Moon'
   return relationshipElement(relationship)
 }
