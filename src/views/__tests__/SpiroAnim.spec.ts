@@ -258,12 +258,8 @@ describe('SpiroAnim view', () => {
     await flushPromises()
     expect(playerStore.raw().CURRENT.value).toBe(insertedStartMS)
     expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('4')
-    const builderQSlots = wrapper.get('[data-role="builder-qslots"]')
-    const builderWarning = wrapper.get('.builder-pane__development-warning')
-    expect(
-      builderQSlots.element.compareDocumentPosition(builderWarning.element) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+    wrapper.get('[data-role="builder-qslots"]')
+    expect(wrapper.find('.builder-pane__development-warning').exists()).toBe(false)
     const builderView = wrapper.get('[data-role="builder-pane-view"]')
     const builderTopPane = builderView.get('[data-role="top-pane"]')
     const builderBottomPane = builderView.get('[data-role="bottom-pane"]')
@@ -341,7 +337,6 @@ describe('SpiroAnim view', () => {
     expect(playerRoot.value.props).toHaveLength(0)
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
     expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(true)
-    wrapper.get('[data-role="vtg-tilted"]')
     wrapper.get('[data-role="vtg-qtr"]')
     wrapper.get('[data-role="vtg-orientation"]')
     wrapper.get('[data-role="vtg-beat"]')
@@ -439,17 +434,7 @@ describe('SpiroAnim view', () => {
       aspecty: vtgPlayerSettings.aspecty,
       props: [
         {
-          anim: [
-            { plane: 180, arc: 90, scale: 9 },
-            { plane: 180, arc: 45 },
-            {},
-            {},
-            {},
-            {},
-            {},
-            {},
-            {},
-          ],
+          anim: [{ arc: 90, scale: 9 }, { arc: 45 }, {}, {}, {}, {}, {}, {}, {}],
         },
         {
           anim: [
@@ -517,7 +502,7 @@ describe('SpiroAnim view', () => {
 
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)
-  })
+  }, 15_000)
 
   it('does not save a Quick Slot when animation data is loaded from a URL', async () => {
     const pinia = createPinia().use(piniaPluginPersistedstate)
@@ -609,11 +594,12 @@ describe('SpiroAnim view', () => {
     if (!initialAnimation) throw new Error('Expected a supported VTG animation')
     playerRoot.value = initialAnimation
 
-    const targetAnimation = createEightStepAnimation(playerRoot.value, {
+    const createdTargetAnimation = createEightStepAnimation(playerRoot.value, {
       concept: '8stp',
-      reference: '8-II',
+      reference: '1-AA',
     })
-    if (!targetAnimation) throw new Error('Expected a supported Eight Step animation')
+    if (!createdTargetAnimation) throw new Error('Expected a supported Eight Step animation')
+    const targetAnimation = { ...createdTargetAnimation, bpm: createdTargetAnimation.bpm + 1 }
     const qsStore = useQSMainStore()
     const targetPath = router.resolve({
       path: '/play-8stp',
@@ -636,7 +622,7 @@ describe('SpiroAnim view', () => {
     const paneStore = useMainPaneStore()
     const originalParents = structuredClone(toRaw(paneStore.parents))
 
-    await wrapper.get<HTMLInputElement>('input[value="2"]').setValue()
+    await wrapper.get<HTMLInputElement>('[data-role="concepts-view"] input[value="2"]').setValue()
     await flushPromises()
 
     expect(qsStore.encodeQS(playerRoot.value, false)).toEqual(

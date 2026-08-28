@@ -144,6 +144,7 @@ describe('useMainRoute', () => {
       editor: 'left',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
     expect(splitterStore.leftPerc).toBe(100)
   })
@@ -157,6 +158,7 @@ describe('useMainRoute', () => {
       editor: 'hidden',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
     expect(splitterStore.leftPerc).toBe(50)
     expect(playerStore.raw().ROOT.value).toMatchObject({ bpm: 120, props: [] })
@@ -351,6 +353,7 @@ describe('useMainRoute', () => {
       editor: 'left',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
     expect(splitterStore.leftPerc).toBe(100)
     expect(router.currentRoute.value.path).toBe('/editor')
@@ -369,6 +372,7 @@ describe('useMainRoute', () => {
       editor: 'left',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
     expect(splitterStore.leftPerc).toBe(100)
     expect(router.currentRoute.value.fullPath).toBe('/editor?r=future-format&p0=untouched&v=999')
@@ -390,6 +394,7 @@ describe('useMainRoute', () => {
       editor: 'left',
       timeline: 'right',
       concepts: 'hidden',
+      builder: 'hidden',
     })
     expect(splitterStore.leftPerc).toBe(50)
   })
@@ -412,6 +417,7 @@ describe('useMainRoute', () => {
       editor: 'hidden',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
     expect(conceptsStore.selectedConcept).toBe('vtg')
     expect(splitterStore.leftPerc).toBe(0)
@@ -430,6 +436,7 @@ describe('useMainRoute', () => {
       editor: 'hidden',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
     expect(conceptsStore.selectedConcept).toBe('vtg')
     expect(conceptsStore.qtrEnabled).toBe(true)
@@ -448,6 +455,7 @@ describe('useMainRoute', () => {
       editor: 'hidden',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
     expect(conceptsStore.selectedConcept).toBe('8stp')
     expect(splitterStore.leftPerc).toBe(0)
@@ -473,6 +481,7 @@ describe('useMainRoute', () => {
       editor: 'hidden',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
     expect(conceptsStore.selectedConcept).toBe('tka')
     expect(splitterStore.leftPerc).toBe(0)
@@ -508,6 +517,7 @@ describe('useMainRoute', () => {
       editor: 'hidden',
       timeline: 'hidden',
       concepts: 'right',
+      builder: 'hidden',
     })
     expect(conceptsStore.selectedConcept).toBe('qst')
     expect(splitterStore.leftPerc).toBe(0)

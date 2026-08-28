@@ -213,6 +213,27 @@ describe('describePatternRelationships', () => {
     })
   })
 
+  it('keeps the supplied URL phase alignment stable across every Beat', () => {
+    const selection = {
+      reference: '4-3',
+      speedRatio: '1:3',
+      orientation: 135,
+      swapProps: true,
+      propRotationOffsets: [90, 0],
+    } as const
+
+    expect(
+      getVtgBeats(selection.speedRatio).map(
+        (beat) => describePatternSelectionRelationships({ ...selection, beat }).label,
+      ),
+    ).toEqual(Array.from({ length: 8 }, () => 'QO / TO'))
+    expect(
+      getVtgBeats(selection.speedRatio).map(
+        (beat) => describePatternSelectionRelationshipsAcrossBeats({ ...selection, beat }).label,
+      ),
+    ).toEqual(Array.from({ length: 8 }, () => 'QO / TO'))
+  })
+
   it.each([
     [45, 0],
     [0, -45],
@@ -290,7 +311,10 @@ describe('describePatternRelationships', () => {
               propRotationOffsets,
             })
             expect(rotated.hands).toEqual(base.hands)
-            expect(rotated.props).toEqual({ ...base.props, timing: 'Q' })
+            expect(rotated.props, `${reference}/${beat}/${propRotationOffsets.join('/')}`).toEqual({
+              ...base.props,
+              timing: 'Q',
+            })
           }
         }
       }

@@ -746,6 +746,17 @@ watch(moreRatios, (enabled) => {
 })
 const beat = ref<VtgBeat>(1)
 const propRotationOffsets = ref<readonly [number, number]>()
+let matchedPropRotation:
+  | {
+      reference: VtgCellReference
+      speedRatio: VtgSpeedRatio
+      offsets: readonly [number, number]
+    }
+  | undefined
+const clearMatchedPropRotation = () => {
+  matchedPropRotation = undefined
+  propRotationOffsets.value = undefined
+}
 const initialTurnsOffset = ref<VtgTransitionInitialTurnsOffset>()
 const initialTurnsOffsetBeat = ref<VtgBeat>()
 const transition = ref(false)
@@ -1320,15 +1331,23 @@ const selectTile = (tile: VtgMatrixTile) => {
     emitBuilderPreview(tile)
     return
   }
-  if (tile.reference !== selectedCellReference.value) {
+  const changesPattern = tile.reference !== selectedCellReference.value
+  const preservesMatchedPropRotation =
+    matchedPropRotation?.reference === tile.reference &&
+    matchedPropRotation.speedRatio === speedRatio.value
+  const clearsMatchedPropRotation = changesPattern || !preservesMatchedPropRotation
+  const suppressionOwner = clearsMatchedPropRotation ? beginPatternEmitSuppression() : undefined
+  if (changesPattern) {
     initialTurnsOffset.value = undefined
     initialTurnsOffsetBeat.value = undefined
   }
+  if (clearsMatchedPropRotation) clearMatchedPropRotation()
   selectedCell.value = {
     column: tile.column,
     row: tile.row,
   }
   if (isReselectedSpinToggleCell) isAnti.value = !isAnti.value
+  if (suppressionOwner !== undefined) releasePatternEmitSuppression(suppressionOwner)
   emitPatternSelection(tile)
 }
 
@@ -1393,7 +1412,7 @@ const resetPatternControls = async () => {
   initialTurnsOffset.value = undefined
   initialTurnsOffsetBeat.value = undefined
   orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
-  propRotationOffsets.value = undefined
+  clearMatchedPropRotation()
   await nextTick()
   releasePatternEmitSuppression(suppressionOwner)
   if (props.builderActive) {
@@ -1486,7 +1505,11 @@ watch(
     syncMoreRatioControls(nextSpeedRatio)
     ratioOrientationChangeActive = true
     try {
-      propRotationOffsets.value = undefined
+      propRotationOffsets.value =
+        matchedPropRotation?.speedRatio === nextSpeedRatio &&
+        matchedPropRotation.reference === matchedCellReference.value
+          ? matchedPropRotation.offsets
+          : undefined
       const nextBeats = getVtgBeats(nextSpeedRatio)
       if (!nextBeats.includes(beat.value)) beat.value = nextBeats.at(-1) ?? 1
       if (orientation.value === getDefaultVtgPatternOrientation(previousSpeedRatio)) {
@@ -1588,11 +1611,19 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     orientation.value = match.orientation ?? inferredOrientation ?? 0
     const relationshipSelection =
       inferredOrientation === undefined ? match : { ...match, orientation: inferredOrientation }
-    propRotationOffsets.value =
+    const detectedPropRotationOffsets =
       match.propRotationOffsets ??
       (exactPatternMatch
         ? undefined
         : inferPatternRelationshipPropRotationOffsets(patternAnimation, relationshipSelection))
+    propRotationOffsets.value = detectedPropRotationOffsets
+    matchedPropRotation = detectedPropRotationOffsets
+      ? {
+          reference: match.reference,
+          speedRatio: match.speedRatio,
+          offsets: detectedPropRotationOffsets,
+        }
+      : undefined
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
@@ -1624,7 +1655,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     initialTurnsOffset.value = undefined
     initialTurnsOffsetBeat.value = undefined
     orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
-    propRotationOffsets.value = undefined
+    clearMatchedPropRotation()
   }
 
   releasePatternEmitSuppression(suppressionOwner)
@@ -1647,7 +1678,7 @@ const selectInitialRandomPattern = () => {
   initialTurnsOffset.value = undefined
   initialTurnsOffsetBeat.value = undefined
   orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
-  propRotationOffsets.value = undefined
+  clearMatchedPropRotation()
   selectRandomTile()
 
   releasePatternEmitSuppression(suppressionOwner)
@@ -1698,7 +1729,7 @@ watch(
       selectedCell.value = undefined
       isQtr.value = false
       orientation.value = 0
-      propRotationOffsets.value = undefined
+      clearMatchedPropRotation()
       nextTick(() => releasePatternEmitSuppression(suppressionOwner))
       return
     }

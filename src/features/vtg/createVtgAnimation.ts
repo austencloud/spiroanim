@@ -8,6 +8,7 @@ import {
   vtgDefaultTransitionBeats,
 } from '@/features/vtg/types'
 import { rootFinal } from '@/math/animation/PlayerFunc'
+import { rootCompile } from '@/math/animation/AnimFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
@@ -25,30 +26,53 @@ import {
 } from '@/features/concepts/applyPatternFinalTransforms'
 import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 
+const axesPointInSameDirection = (first: readonly number[], second: readonly number[]) =>
+  (first[0] ?? 0) * (second[0] ?? 0) +
+    (first[1] ?? 0) * (second[1] ?? 0) +
+    (first[2] ?? 0) * (second[2] ?? 0) >=
+  0
+
 const vtgIntervalsPerHandRotation = 8
 
 export const applyVtgPropRotationOffsets = (
   animation: RootDataFinal,
   offsets: VtgPatternSelection['propRotationOffsets'],
-): RootDataFinal =>
-  offsets === undefined || offsets.every((offset) => offset === 0)
-    ? animation
-    : {
-        ...animation,
-        props: animation.props.map((prop, index) => {
-          const firstFrame = prop.anim[0]
-          const offset = offsets[index]
-          return !firstFrame || offset === undefined || offset === 0
-            ? prop
-            : {
-                ...prop,
-                anim: [
-                  { ...firstFrame, turns: (firstFrame.turns ?? 0) + offset },
-                  ...prop.anim.slice(1),
-                ],
-              }
-        }),
+  reference: RootDataFinal = animation,
+): RootDataFinal => {
+  if (offsets === undefined || offsets.every((offset) => offset === 0)) return animation
+
+  const compiled = rootCompile(animation)
+  const compiledReference = reference === animation ? compiled : rootCompile(reference)
+  return {
+    ...animation,
+    props: animation.props.map((prop, index) => {
+      const firstFrame = prop.anim[0]
+      const offset = offsets[index]
+      if (!firstFrame || offset === undefined || offset === 0) return prop
+
+      const initialAxis = compiled.props[index]?.anim[0]?.rotx
+      const referenceAxis = compiledReference.props[index]?.anim[0]?.rotx
+      const nextFrame = prop.anim[1]
+      const nextTurns = compiled.props[index]?.anim[1]?.turns
+      const localOffset =
+        initialAxis && referenceAxis && !axesPointInSameDirection(initialAxis, referenceAxis)
+          ? -offset
+          : offset
+      return {
+        ...prop,
+        anim: [
+          { ...firstFrame, turns: (firstFrame.turns ?? 0) + localOffset },
+          // Shift compacts repeated channels. Reset Turns on the following frame so changing the
+          // initial prop alignment cannot leak through an omitted, inherited value and alter the
+          // motion of every later interval.
+          ...(nextFrame && nextTurns !== undefined
+            ? [{ ...nextFrame, turns: nextTurns }, ...prop.anim.slice(2)]
+            : prop.anim.slice(1)),
+        ],
       }
+    }),
+  }
+}
 
 const addDefaultFrames = (
   pattern: VtgReadableAnimation,
@@ -167,7 +191,12 @@ export const createVtgAnimation = (
   }
 
   const transformed = applyPatternFinalTransforms(completed, selection)
-  const aligned = applyVtgPropRotationOffsets(transformed, selection.propRotationOffsets)
+  const offsetReference = applyPatternFinalTransforms(oriented, selection)
+  const aligned = applyVtgPropRotationOffsets(
+    transformed,
+    selection.propRotationOffsets,
+    offsetReference,
+  )
   const playback = applyVtgInitialTurnsPlayback(aligned, selection)
   return playback ? applyPatternPropColors(playback, selection) : undefined
 }

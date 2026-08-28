@@ -1,15 +1,18 @@
-import { Vector3 } from 'three'
+import { MathUtils, Quaternion, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { createQtrAnimation as createQtrAnimationForSelection } from '@/features/vtg/qtr/createQtrAnimation'
-import type { QtrPatternSelection } from '@/features/vtg/types'
+import type { QtrPatternSelection, VtgCellReference } from '@/features/vtg/types'
+import { getVtgBeats } from '@/features/vtg/types'
 import { createVtgAnimation as createVtgAnimationForSelection } from '@/features/vtg/createVtgAnimation'
 import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
 import type { VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import type { RootData, RootDataFinal } from '@/types/AnimTypes'
+import { TTYPE } from '@/domain/animation/AnimStruct'
+import { InitialPoint } from '@/math/animation/OrthogonalFunc'
 
 const createVtgAnimation = (current: RootDataFinal, selection: VtgPatternSelection) =>
   createVtgAnimationForSelection(current, selection)
@@ -38,6 +41,75 @@ const createCurrentAnimation = () =>
   } satisfies RootData)
 
 describe('createQtrAnimation', () => {
+  it('preserves every offset QTR prop path while changing the starting Beat', () => {
+    const pathKey = (animation: RootDataFinal) =>
+      rootCompile(animation).props.map((prop) =>
+        prop.anim
+          .slice(1)
+          .flatMap((target, targetOffset) => {
+            const start = prop.anim[targetOffset]!
+            return [0.25, 0.5, 0.75, 1].map((progress) => {
+              const primaryStart = new Quaternion().fromArray(
+                target.rebasePrimaryOrientation ? start.orient : start.primaryOrient,
+              )
+              const secondaryStart = target.rebasePrimaryOrientation
+                ? new Quaternion()
+                : new Quaternion().fromArray(start.secondaryOrient)
+              const primary = new Quaternion()
+                .setFromAxisAngle(
+                  new Vector3().fromArray(target.rotx),
+                  MathUtils.degToRad(target.turns + (target.type === TTYPE.LINE ? 0 : target.arc)) *
+                    progress,
+                )
+                .multiply(primaryStart)
+              const secondary = new Quaternion()
+                .setFromAxisAngle(
+                  new Vector3().fromArray(target.yawx),
+                  MathUtils.degToRad(target.rotate) * progress,
+                )
+                .multiply(secondaryStart)
+              const orientation = InitialPoint.clone().applyQuaternion(secondary.multiply(primary))
+              const center = new Vector3()
+                .fromArray(start.pos)
+                .applyAxisAngle(
+                  new Vector3().fromArray(target.posx),
+                  MathUtils.degToRad(target.arc) * progress,
+                )
+              return [
+                ...center.toArray(),
+                ...orientation.toArray(),
+                ...center.add(orientation).toArray(),
+              ]
+                .map((coordinate) => Math.round(coordinate * 1e9) / 1e9)
+                .join(',')
+            })
+          })
+          .sort(),
+      )
+
+    for (const row of [1, 2, 3, 4, 5, 6] as const) {
+      for (const column of [1, 2, 3, 4, 5, 6] as const) {
+        const reference = `${row}-${column}` as VtgCellReference
+        const selection = {
+          reference,
+          speedRatio: '1:3',
+          quarters: 1,
+          reversePlane: true,
+          propRotationOffsets: [90, 0],
+        } as const satisfies QtrPatternSelection
+        const original = createQtrAnimation(createCurrentAnimation(), selection)
+        if (!original) throw new Error(`Expected QTR animation for ${reference}`)
+        const expected = pathKey(original)
+
+        for (const beat of getVtgBeats(selection.speedRatio)) {
+          const shifted = createQtrAnimation(createCurrentAnimation(), { ...selection, beat })
+          if (!shifted) throw new Error(`Expected QTR animation for ${reference}/${beat}`)
+          expect(pathKey(shifted), `${reference}/${beat}`).toEqual(expected)
+        }
+      }
+    }
+  })
+
   it('adds 90 degrees to only the first prop first-frame arc for Qtr #1', () => {
     const selection = { reference: '1-6', speedRatio: '1:1' } as const
     const standard = createVtgAnimation(createCurrentAnimation(), selection)

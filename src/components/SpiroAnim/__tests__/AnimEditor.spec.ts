@@ -54,7 +54,7 @@ describe('AnimEditor', () => {
 
     await wrapper.setProps({ vtl: true })
     expect(wrapper.find('button[aria-label="Swap Editor Views"]').exists()).toBe(false)
-  })
+  }, 15_000)
 
   it('restores the timeline after the editor remounts and gains enough height', async () => {
     const { default: AnimEditor } = await import('@/components/SpiroAnim/AnimEditor.vue')

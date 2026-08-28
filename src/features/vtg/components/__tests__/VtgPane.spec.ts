@@ -951,6 +951,126 @@ describe('VtgPane', () => {
     ])
   })
 
+  it('keeps a matched prop offset on its cell while every cell follows Start', async () => {
+    const version = await loadSpiroAnimQSVersion(11)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      11,
+    )
+    const animation = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew08Yk11Y&p0=Q__.myQR3s.5JEQpg.......&x0=_r_&m0=_1_mxqv__&p1=N__.biQ.5L_Qpg.......&x1=_r_&c=_g_bhq&v=11',
+        ),
+      ),
+    )
+    const wrapper = mount(VtgPane, { props: { animation } })
+    const label = (reference: string) =>
+      wrapper.get(`[data-cell-reference="${reference}"] .vtg-tile__label`).text()
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-2')
+      expect(wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').element.value).toBe('1')
+    })
+    expect(label('1-2')).toBe('QO / TO')
+    expect(label('1-1')).toBe('QS / SS')
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').setValue(2)
+
+    expect(label('1-2')).toBe('QO / TO')
+    expect(label('1-1')).toBe('QS / SS')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-2',
+      speedRatio: '1:3',
+      beat: 2,
+      quarters: 1,
+      propRotationOffsets: [90, 0],
+    })
+
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toEqual({
+      reference: '1-1',
+      speedRatio: '1:3',
+      beat: 2,
+      quarters: 1,
+      reversePlane: true,
+      scale: 0.7,
+    })
+  })
+
+  it('clears a supplied match prop rotation offset when changing ratios and resetting', async () => {
+    const version = await loadSpiroAnimQSVersion(11)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      11,
+    )
+    const animation = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Ew08Yk11Y&p0=Q__.myQR3s.5JEQpg.......&x0=_r_&m0=_1_mxqv__&p1=N__.biQ.5L_Qpg.......&x1=_r_&c=_g_bhq&v=11',
+        ),
+      ),
+    )
+    const wrapper = mount(VtgPane, { props: { animation } })
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-2')
+    })
+
+    await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-2',
+      speedRatio: '1:3',
+      quarters: 1,
+      propRotationOffsets: [90, 0],
+    })
+
+    await selectSpeedRatio(wrapper, '1:1')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-2',
+      speedRatio: '1:1',
+      quarters: 1,
+    })
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
+
+    await selectSpeedRatio(wrapper, '1:3')
+    await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-2',
+      speedRatio: '1:3',
+      quarters: 1,
+      propRotationOffsets: [90, 0],
+    })
+
+    await selectSpeedRatio(wrapper, '1:1')
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
+    await selectSpeedRatio(wrapper, '1:3')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
+
+    wrapper.unmount()
+    const resetWrapper = mount(VtgPane, { props: { animation: structuredClone(animation) } })
+    await vi.waitFor(() => {
+      expect(resetWrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe(
+        '1-2',
+      )
+    })
+
+    await resetWrapper.get('[data-role="vtg-reset"]').trigger('click')
+    await nextTick()
+    const confirmReset = resetWrapper.find('.pattern-reset-dialog__confirm')
+    if (confirmReset.exists()) await confirmReset.trigger('click')
+    await vi.waitFor(() => expect(resetWrapper.emitted('patternSelect')).toBeDefined())
+    expect(resetWrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      reference: '1-2',
+      speedRatio: '1:3',
+    })
+    expect(resetWrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty(
+      'propRotationOffsets',
+    )
+  })
+
   it('does not accumulate a 180-degree prop phase when Start wraps from 4.5 to 1', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
@@ -2051,7 +2171,7 @@ describe('VtgPane', () => {
     },
   )
 
-  it('carries detected prop phase alignment into subsequently selected cells', async () => {
+  it('keeps detected prop phase alignment on the matched cell and clears it on another cell', async () => {
     const animation = createDefaultVtgAnimation({ reference: '3-5', speedRatio: '1:3', beat: 4 })
     if (!animation) throw new Error('Expected a supported VTG animation')
     const patternMatcher: PatternMatchingClient = {
@@ -2078,18 +2198,21 @@ describe('VtgPane', () => {
       expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-3')
     })
 
-    await wrapper.get('[data-cell-reference="5-4"]').trigger('click')
+    await wrapper.get('[data-cell-reference="5-3"]').trigger('click')
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
       {
-        reference: '5-4',
+        reference: '5-3',
         speedRatio: '1:3',
         beat: 2,
         propRotationOffsets: [180, 0],
       },
     ])
+
+    await wrapper.get('[data-cell-reference="5-4"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
   })
 
-  it('rehydrates and carries arbitrary detected QTR prop rotations between cells', async () => {
+  it('rehydrates arbitrary QTR prop rotations only for the matched cell', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -2110,7 +2233,6 @@ describe('VtgPane', () => {
       expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('2-2')
     })
 
-    await wrapper.get('[data-cell-reference="2-3"]').trigger('click')
     await wrapper.get('[data-cell-reference="2-2"]').trigger('click')
 
     expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
@@ -2119,10 +2241,11 @@ describe('VtgPane', () => {
       quarters: 1,
       propRotationOffsets: [45, 0],
     })
+    await wrapper.get('[data-cell-reference="2-3"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
 
     await wrapper.setProps({ animation: negativeAnimation, animationRevision: 1 })
     await flushPromises()
-    await wrapper.get('[data-cell-reference="2-3"]').trigger('click')
     await wrapper.get('[data-cell-reference="2-2"]').trigger('click')
 
     expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
@@ -2131,6 +2254,8 @@ describe('VtgPane', () => {
       quarters: 1,
       propRotationOffsets: [-45, 0],
     })
+    await wrapper.get('[data-cell-reference="2-3"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
   })
 
   it('marks beat-varying hybrid timing indeterminate in text and Elemental layouts', async () => {

@@ -309,14 +309,22 @@ information to distinguish how it was authored.
 
 The selected Beat is part of relationship classification. Every Beats slider input rebuilds and
 reclassifies every matrix cell at that playback origin, so the labels always describe the currently
-selected beat. Equal-rate standard VTG and QTR patterns are reclassified but retain the same Hands
-and Props timing relationships across Beats. For a compound ratio, the matrix also determines
+selected beat. Thumbnail stills are rendered at that new time-zero pose, so the displayed prop can
+move around an unchanged closed path as Beat changes; the path geometry itself remains invariant.
+Equal-rate standard VTG and QTR patterns are reclassified but retain the same Hands and Props timing
+relationships across Beats. For a compound ratio, the matrix also determines
 whether each side can retain one truthful label for the complete repeating Beat cycle. Each
 half-Beat shift advances a prop by 45 degrees times its `denominator / numerator` rate. Together and
 Split remain stable only when the relative advance closes modulo 360 degrees. Quarter remains
 stable when it closes modulo 180 degrees because both 90 and 270 degrees are Quarter Timing. This
 calculation is exact ratio arithmetic, not a per-cell label table or an exhaustive list of special
-cases.
+cases. Retained per-prop phase alignment is a table-wide geometric offset defined against the
+pattern's Beat 1 rotation axes. After Shift reconstructs a new starting frame, the offset is
+translated through that frame's local rotation-axis gauge. This keeps one offset geometrically
+identical even when adjacent shifted frames use opposite internal axis representations. Because
+animation channels inherit omitted values, applying the offset also materializes the following
+frame's original `turns` value; otherwise a compacted Shift result could accidentally inherit the
+alignment offset as the motion for every later interval.
 
 When a side is uncalculable or would use different timing codes at different Beats, text layout
 shows `XX` for only that side and Elemental layout shows a red prohibited icon. A stable side remains

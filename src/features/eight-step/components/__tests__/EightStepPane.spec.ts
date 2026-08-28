@@ -363,6 +363,7 @@ describe('EightStepPane', () => {
       {
         concept: '8stp',
         reference: '1-AI',
+        prop: 2,
         shape: 'box',
       },
     ])
@@ -372,7 +373,7 @@ describe('EightStepPane', () => {
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(true)
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { concept: '8stp', reference: '1-AI' },
+      { concept: '8stp', reference: '1-AI', prop: 2 },
     ])
   })
 
@@ -389,23 +390,25 @@ describe('EightStepPane', () => {
     ).toEqual(['Tilted', 'Paths', 'Hands', 'Arms', 'Left', 'Right'])
 
     await wrapper.get('[data-cell-reference="1-AA"]').trigger('click')
+    const patternSelectionCount = wrapper.emitted('patternSelect')?.length
     await right.setValue(false)
-    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { concept: '8stp', reference: '1-AA', right: false },
+    expect(wrapper.emitted('patternSelect')).toHaveLength(patternSelectionCount ?? 0)
+    expect(wrapper.emitted('customize')?.at(-1)).toEqual([
+      { concept: '8stp', reference: '1-AA', prop: 2, right: false },
     ])
 
     await left.setValue(false)
     expect(left.element.checked).toBe(false)
     expect(right.element.checked).toBe(true)
-    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { concept: '8stp', reference: '1-AA', left: false },
+    expect(wrapper.emitted('customize')?.at(-1)).toEqual([
+      { concept: '8stp', reference: '1-AA', prop: 2, left: false },
     ])
 
     await right.setValue(false)
     expect(left.element.checked).toBe(true)
     expect(right.element.checked).toBe(false)
-    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
-      { concept: '8stp', reference: '1-AA', right: false },
+    expect(wrapper.emitted('customize')?.at(-1)).toEqual([
+      { concept: '8stp', reference: '1-AA', prop: 2, right: false },
     ])
   })
 
@@ -575,6 +578,7 @@ describe('EightStepPane', () => {
         {
           concept: '8stp',
           reference: '7-IE',
+          prop: 2,
           swapProps: true,
           reversePlane: true,
           bpm: 84,

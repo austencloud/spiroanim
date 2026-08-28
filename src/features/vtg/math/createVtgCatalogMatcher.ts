@@ -9,10 +9,7 @@ import {
   type CompiledVtgAnimation,
 } from '@/features/vtg/math/createVtgAnimationSignature'
 import { getVtgScaleControlValue } from '@/features/vtg/data/vtgPlayerSettings'
-import {
-  inferVtgTiming,
-  inferVtgTimingFromCompiled,
-} from '@/features/vtg/math/inferVtgSpeedRatio'
+import { inferVtgTiming, inferVtgTimingFromCompiled } from '@/features/vtg/math/inferVtgSpeedRatio'
 import type {
   VtgBeat,
   VtgCellReference,
@@ -36,8 +33,14 @@ import {
   doublePlaybackMultiplier,
 } from '@/math/animation/subdivideAnimationPlayback'
 import { analyzeAlternatingPatternPlaybacks } from '@/math/animation/alternatePatternPlayback'
-import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
-import { applyVtgPlaybackControls } from '@/features/vtg/createVtgAnimation'
+import {
+  applyPatternFinalTransforms,
+  applyPatternInitialArcRotation,
+} from '@/features/concepts/applyPatternFinalTransforms'
+import {
+  applyVtgPlaybackControls,
+  applyVtgPropRotationOffsets,
+} from '@/features/vtg/createVtgAnimation'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
@@ -61,6 +64,7 @@ interface RankedMatch<Match extends VtgPatternMatch> {
   match: Match
   exactDifference: number
   orientedSignatureDifference: number
+  resolveStableMatch?: () => Match
 }
 
 interface OrientedCandidate {
@@ -128,26 +132,6 @@ const needsCanonicalPlaybackSubdivision = (animation: RootDataFinal): boolean =>
   )
 }
 
-const applyPropRotationOffsets = (
-  animation: RootDataFinal,
-  offsets: readonly [number, number],
-): RootDataFinal => ({
-  ...animation,
-  props: animation.props.map((prop, index) => {
-    const firstFrame = prop.anim[0]
-    const offset = offsets[index] ?? 0
-    return !firstFrame || offset === 0
-      ? prop
-      : {
-          ...prop,
-          anim: [
-            { ...firstFrame, turns: (firstFrame.turns ?? 0) + offset },
-            ...prop.anim.slice(1),
-          ],
-        }
-  }),
-})
-
 export const createVtgCatalogMatcher = <
   Selection extends VtgPatternSelection,
   Match extends VtgPatternMatch,
@@ -164,6 +148,7 @@ export const createVtgCatalogMatcher = <
   const catalogBases = new Map<string, RootDataFinal | undefined>()
   const catalogPlaybacks = new Map<string, RootDataFinal | undefined>()
   const orientedAnimations = new WeakMap<CatalogCandidate, Map<number, OrientedCandidate>>()
+  const offsetReferenceStates = new Map<string, OrientedCandidate | undefined>()
 
   const createSelection = (
     candidate: CatalogCandidate,
@@ -201,6 +186,52 @@ export const createVtgCatalogMatcher = <
       directionSignature: createVtgDirectionSignatureFromCompiled(animation, compiled)?.key,
     }
     cachedByOrientation.set(orientation, state)
+    return state
+  }
+
+  const getOffsetReferenceState = (
+    candidate: CatalogCandidate,
+    orientation: number,
+    initialTurnsOffset?: VtgPatternSelection['initialTurnsOffset'],
+  ): OrientedCandidate | undefined => {
+    if (candidate.beat === undefined) {
+      return initialTurnsOffset === undefined
+        ? getOrientedAnimation(candidate, orientation)
+        : undefined
+    }
+
+    const key = `${candidate.reference}:${candidate.speedRatio}:${Number(candidate.isAnti)}:${Number(candidate.swapProps)}:${Number(candidate.reversePlane)}:${orientation}:${initialTurnsOffset ?? ''}`
+    if (offsetReferenceStates.has(key)) return offsetReferenceStates.get(key)
+
+    const playback =
+      initialTurnsOffset === undefined
+        ? getCatalogPlayback(
+            candidate.reference,
+            candidate.speedRatio,
+            candidate.isAnti,
+            vtgDefaultBeat,
+          )
+        : undefined
+    const animation = playback
+      ? applyPatternFinalTransforms(applyPatternInitialArcRotation(playback, orientation), {
+          swapProps: candidate.swapProps,
+          reversePlane: candidate.reversePlane,
+        })
+      : createDefaultAnimation({
+          ...createSelection(candidate, orientation, initialTurnsOffset),
+          beat: undefined,
+        })
+    if (!animation) {
+      offsetReferenceStates.set(key, undefined)
+      return undefined
+    }
+    const compiled = rootCompile(animation)
+    const state: OrientedCandidate = {
+      animation,
+      compiled,
+      directionSignature: createVtgDirectionSignatureFromCompiled(animation, compiled)?.key,
+    }
+    offsetReferenceStates.set(key, state)
     return state
   }
 
@@ -324,21 +355,24 @@ export const createVtgCatalogMatcher = <
           })()
     if (!orientedState) return undefined
 
-    const propRotationOffsets = getVtgPropRotationOffsetsFromCompiled(
+    const localPropRotationOffsets = getVtgPropRotationOffsetsFromCompiled(
       animation,
       orientedState.animation,
       compiledAnimation,
       orientedState.compiled,
     )
-    if (!propRotationOffsets) return undefined
-    const hasPropRotationOffsets = propRotationOffsets.some((offset) => offset !== 0)
+    if (!localPropRotationOffsets) return undefined
+    const hasLocalPropRotationOffsets = localPropRotationOffsets.some((offset) => offset !== 0)
+    const propRotationOffsets = localPropRotationOffsets
+    const hasPropRotationOffsets = hasLocalPropRotationOffsets
     const regeneratedSignature = calculateExact
       ? hasPropRotationOffsets
         ? createCompiledVtgPatternSignature(
-            applyPropRotationOffsets(orientedState.animation, propRotationOffsets),
+            applyVtgPropRotationOffsets(orientedState.animation, propRotationOffsets),
           )
-        : (orientedState.exactSignature ??=
-            createCompiledVtgPatternSignatureFromCompiled(orientedState.compiled))
+        : (orientedState.exactSignature ??= createCompiledVtgPatternSignatureFromCompiled(
+            orientedState.compiled,
+          ))
       : undefined
     const match = toMatch({
       reference: candidate.reference,
@@ -356,12 +390,26 @@ export const createVtgCatalogMatcher = <
 
     return {
       match,
-      exactDifference: Number(
-        calculateExact && regeneratedSignature !== exactAnimationSignature,
-      ),
-      orientedSignatureDifference: Number(
-        orientedState.directionSignature !== inputSignature.key,
-      ),
+      exactDifference: Number(calculateExact && regeneratedSignature !== exactAnimationSignature),
+      orientedSignatureDifference: Number(orientedState.directionSignature !== inputSignature.key),
+      ...(hasPropRotationOffsets && regeneratedSignature === exactAnimationSignature
+        ? {
+            resolveStableMatch: () => {
+              const offsetReferenceState =
+                getOffsetReferenceState(candidate, orientation, initialTurnsOffset) ?? orientedState
+              const stableOffsets = getVtgPropRotationOffsetsFromCompiled(
+                animation,
+                orientedState.animation,
+                compiledAnimation,
+                orientedState.compiled,
+                offsetReferenceState.compiled,
+              )
+              return stableOffsets
+                ? toMatch({ ...match, propRotationOffsets: stableOffsets })
+                : match
+            },
+          }
+        : undefined),
     }
   }
 
@@ -443,17 +491,24 @@ export const createVtgCatalogMatcher = <
             getVtgTimingCycleCount(match.speedRatio) ===
             ((analysis.base.props[0]?.anim.length ?? 1) - 1) / vtgIntervalsPerTimingCycle,
         )
-        .map(({ match, ...ranking }) => ({
-          ...ranking,
-          match: toMatch({
-            ...match,
+        .map(({ match, resolveStableMatch, ...ranking }) => {
+          const transition = {
             transition: true,
             transitionBeats: analysis.transitionBeats,
             ...(analysis.transitionAfterBeat ? { transitionAfterBeat: true } : undefined),
             ...(analysis.transitionQuad ? { transitionQuad: true } : undefined),
             ...(analysis.transitionSecond ? { transitionSecond: true } : undefined),
-          }),
-        })),
+          } as const
+          return {
+            ...ranking,
+            match: toMatch({ ...match, ...transition }),
+            ...(resolveStableMatch
+              ? {
+                  resolveStableMatch: () => toMatch({ ...resolveStableMatch(), ...transition }),
+                }
+              : undefined),
+          }
+        }),
     )
   }
 
@@ -505,10 +560,11 @@ export const createVtgCatalogMatcher = <
       if (preferenceDifference) return preferenceDifference
 
       const preferredOrientation = preferences?.orientation
-      const orientationDifference = preferredOrientation === undefined
-        ? Number((first.match.orientation ?? 0) !== 0) -
+      const orientationDifference =
+        preferredOrientation === undefined
+          ? Number((first.match.orientation ?? 0) !== 0) -
             Number((second.match.orientation ?? 0) !== 0)
-        : Number((first.match.orientation ?? 0) !== preferredOrientation) -
+          : Number((first.match.orientation ?? 0) !== preferredOrientation) -
             Number((second.match.orientation ?? 0) !== preferredOrientation)
       if (orientationDifference) return orientationDifference
 
@@ -526,7 +582,12 @@ export const createVtgCatalogMatcher = <
     rotationFilter?: VtgPatternRotationFilter,
   ): VtgCatalogMatchResolution<Match> | undefined => {
     const ranked = sortMatches(findInternal(animation, rotationFilter), preferences)[0]
-    return ranked ? { match: ranked.match, exact: ranked.exactDifference === 0 } : undefined
+    return ranked
+      ? {
+          match: ranked.resolveStableMatch?.() ?? ranked.match,
+          exact: ranked.exactDifference === 0,
+        }
+      : undefined
   }
 
   const matchesSelection = (animation: RootDataFinal, selection: Selection) => {

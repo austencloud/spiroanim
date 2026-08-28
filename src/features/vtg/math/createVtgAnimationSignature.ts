@@ -170,12 +170,14 @@ const axesAreEquivalent = (first: number, second: number) =>
 export const getVtgPropRotationOffsets = (
   animation: RootDataFinal,
   candidate: RootDataFinal,
+  candidateOffsetReference: RootDataFinal = candidate,
 ): readonly [number, number] | undefined =>
   getVtgPropRotationOffsetsFromCompiled(
     animation,
     candidate,
     rootCompile(animation),
     rootCompile(candidate),
+    candidateOffsetReference === candidate ? undefined : rootCompile(candidateOffsetReference),
   )
 
 export const getVtgPropRotationOffsetsFromCompiled = (
@@ -183,22 +185,30 @@ export const getVtgPropRotationOffsetsFromCompiled = (
   candidate: RootDataFinal,
   compiled: CompiledVtgAnimation,
   compiledCandidate: CompiledVtgAnimation,
+  compiledCandidateOffsetReference: CompiledVtgAnimation = compiledCandidate,
 ): readonly [number, number] | undefined => {
   if (animation.props.length !== 2 || candidate.props.length !== 2) return undefined
   const offsets = compiled.props.map((prop, index) => {
     const frame = prop.anim[0]
     const candidateFrame = compiledCandidate.props[index]?.anim[0]
-    if (!frame || !candidateFrame) return undefined
+    const referenceFrame = compiledCandidateOffsetReference.props[index]?.anim[0]
+    if (!frame || !candidateFrame || !referenceFrame) return undefined
     const authoredAxis = animation.props[index]?.anim[0]?.axis ?? 0
     const candidateAxis = candidate.props[index]?.anim[0]?.axis ?? 0
     if (!axesAreEquivalent(authoredAxis, candidateAxis)) return undefined
     const difference = getSignedRotationDifference(
-      candidateFrame.rotx,
+      referenceFrame.rotx,
       candidateFrame.rot,
       frame.rot,
     )
     if (Math.abs(difference) !== 180) return difference
-    return frame.turns - candidateFrame.turns < 0 ? -180 : 180
+    const localDifference = frame.turns - candidateFrame.turns < 0 ? -180 : 180
+    const axesAlign =
+      candidateFrame.rotx.reduce(
+        (dot, component, axisIndex) => dot + component * (referenceFrame.rotx[axisIndex] ?? 0),
+        0,
+      ) >= 0
+    return axesAlign ? localDifference : -localDifference
   })
   const left = offsets[0]
   const right = offsets[1]

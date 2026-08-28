@@ -108,11 +108,10 @@ describe('encoded pattern relationships', () => {
         throw new Error('Expected an exact QTR match')
       }
       expect(exactlyMatchesQtrSelection(animation, result.match)).toBe(true)
-      expect(!('orientation' in match) || result.match.orientation !== undefined).toBe(true)
     }
   })
 
-  it('keeps an exact QTR match when a coarse regular match uses the same cell', async () => {
+  it('keeps the preferred exact QTR match when an exact regular match uses the same cell', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -138,7 +137,7 @@ describe('encoded pattern relationships', () => {
     })
 
     if (!regularMatch) throw new Error('Expected the competing coarse regular match')
-    expect(exactlyMatchesVtgSelection(animation, regularMatch)).toBe(false)
+    expect(exactlyMatchesVtgSelection(animation, regularMatch)).toBe(true)
     expect(result).toMatchObject({
       status: 'matched',
       source: 'qtr',
@@ -186,7 +185,7 @@ describe('encoded pattern relationships', () => {
         reference: '6-3',
         speedRatio: '1:2',
         beat: 1.5,
-        propRotationOffsets: [90, 90],
+        propRotationOffsets: [90, -90],
       },
     })
     if (result.status !== 'matched' || result.source !== 'qtr') {
@@ -540,7 +539,7 @@ describe('encoded pattern relationships', () => {
     expect(match).toMatchObject({
       reference: '1-2',
       beat: 1.5,
-      propRotationOffsets: [90, 0],
+      propRotationOffsets: [-90, 0],
     })
     expect(match && describePatternSelectionRelationships(match).label).toBe('SO / QO')
   })

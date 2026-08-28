@@ -42,7 +42,7 @@ describe('describeVtgBuilderMotion', () => {
   it('uses signed hand and prop rotation amounts to distinguish Anti from In-Spin', () => {
     expect(describeCell('1-1')).toBe('AA / SS')
     expect(describeCell('3-1')).toBe('II / SS')
-    expect(describeCell('5-1')).toBe('IA / SO')
+    expect(describeCell('5-1')).toBe('AI / SO')
   })
 
   it('exposes the compiled motion independently from its display label', () => {
@@ -50,7 +50,7 @@ describe('describeVtgBuilderMotion', () => {
     if (!animation) throw new Error('Missing VTG animation for 5-1')
     const motion = getVtgBuilderMotion(animation)
 
-    expect(motion).toEqual({ spins: ['I', 'A'], directions: ['S', 'O'] })
+    expect(motion).toEqual({ spins: ['A', 'I'], directions: ['S', 'O'] })
     expect(areVtgBuilderMotionsEqual(motion, getVtgBuilderMotion(animation))).toBe(true)
     expect(getCompiledVtgBuilderMotion(rootCompile(animation), 1)).toEqual(motion)
     expect(
@@ -61,7 +61,7 @@ describe('describeVtgBuilderMotion', () => {
     ).toBe(false)
     expect(
       areVtgBuilderSpinsEqual(motion, {
-        spins: ['I', 'A'],
+        spins: ['A', 'I'],
         directions: ['O', 'S'],
       }),
     ).toBe(true)

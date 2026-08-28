@@ -108,16 +108,18 @@ export const createQtrAnimation = (
   })
   if (!animation) return undefined
 
-  const completed = applyVtgPlaybackControls(
-    transformQtrAnimation(animation, getSelectedQtrMode(selection), 1),
-    withVtgInitialTurnsOffsetBeat(selection),
-  )
+  const qtrAnimation = transformQtrAnimation(animation, getSelectedQtrMode(selection), 1)
+  const completed = applyVtgPlaybackControls(qtrAnimation, withVtgInitialTurnsOffsetBeat(selection))
   if (!completed || (selection.transition && selection.initialTurnsOffset !== undefined)) {
     return undefined
   }
 
   const transformed = applyQtrFinalTransforms(completed, selection)
-  const aligned = applyVtgPropRotationOffsets(transformed, selection.propRotationOffsets)
+  const aligned = applyVtgPropRotationOffsets(
+    transformed,
+    selection.propRotationOffsets,
+    applyQtrFinalTransforms(qtrAnimation, selection),
+  )
   return applyVtgInitialTurnsPlayback(aligned, selection)
 }
 
@@ -133,7 +135,11 @@ export const createDefaultQtrAnimation = (
   }
 
   const transformed = applyQtrFinalTransforms(completed, selection)
-  const aligned = applyVtgPropRotationOffsets(transformed, selection.propRotationOffsets)
+  const aligned = applyVtgPropRotationOffsets(
+    transformed,
+    selection.propRotationOffsets,
+    applyQtrFinalTransforms(base, selection),
+  )
   return applyVtgInitialTurnsPlayback(aligned, selection)
 }
 
