@@ -105,6 +105,60 @@ test('serves the PWA reset page outside the application shell', async ({ request
   expect(html).not.toContain('<div id="app"></div>')
 })
 
+test('serves VTG3 as a standalone document without precaching it', async ({ request }) => {
+  const response = await request.get('/vtg3/')
+  const html = await response.text()
+  const serviceWorker = await (await request.get('/sw.js')).text()
+
+  expect(response.ok()).toBe(true)
+  expect(html).toContain('<h1>Vulcan Tech Gospel 3</h1>')
+  expect(html).toContain('VTG3 and the VTG3 grid were created by Noel Yee.')
+  expect(html).toContain('The VTG 3 was born out of the VTG 1 and the VTG 2.')
+  expect(html).toContain('Timing and direction refer to the relative timing')
+  for (const abbreviation of ['Tog/Same', 'Tog/Opp', 'Split/Same', 'Split/Opp']) {
+    expect(html).toContain(abbreviation)
+  }
+  expect(html).toContain('A snapshot is the image of a given pattern across the x or y axis.')
+  expect(html).toContain('Pattern refers to the image that the props of a given pattern create')
+  expect(html).toContain('/vtg3/assets/patterns/1-1/1-1.png')
+  expect(html).toContain('/vtg3/assets/patterns/1-3/5-5-spin.png')
+  expect(html).toContain('/vtg3/assets/patterns/1-5/5-5-anti.png')
+  const patternSection = html.slice(
+    html.indexOf('id="patterns"'),
+    html.indexOf('</section>', html.indexOf('id="patterns"')),
+  )
+  const patternSources = [
+    ...patternSection.matchAll(/src="(\/vtg3\/assets\/patterns\/[^\"]+\.png)"/g),
+  ]
+    .map((match) => match[1])
+    .filter((source) => source !== undefined)
+  expect(patternSources).toHaveLength(30)
+  expect(new Set(patternSources).size).toBe(30)
+  expect(patternSection.match(/loading="eager"/g)).toHaveLength(30)
+  expect(patternSection.match(/width="512"/g)).toHaveLength(30)
+  expect(patternSection.match(/height="512"/g)).toHaveLength(30)
+  expect(patternSection).not.toContain('loading="lazy"')
+  for (const source of patternSources) {
+    expect((await request.get(source)).ok()).toBe(true)
+  }
+  expect(html).not.toContain('pattern-pure.webp')
+  expect(html).not.toContain('pattern-hybrid-spin-antispin.webp')
+  expect(html).not.toContain('pattern-hybrid-spin-spin.webp')
+  expect(html).toContain('class="vtg-grid-board"')
+  expect(html).toContain('/vtg3/assets/art/vtg3-credit.png')
+  expect(html).toContain('id="study-grid"')
+  expect(html).toContain('const studyPatternOrder = [')
+  expect(html).toContain("['5-1', '5-3', '5-5-spin', '5-1', '5-3', '5-5-anti', '5-1', '5-3']")
+  expect(html).toContain("['5-1', '5-3', '5-5-anti', '5-1', '5-3', '5-5-spin', '5-1', '5-3']")
+  expect(html).not.toContain('pattern-study.webp')
+  for (const ratio of ['1-1', '1-3', '1-5']) {
+    expect(html).not.toContain(`/vtg3/assets/art/grid-${ratio}.webp`)
+  }
+  expect((await request.get('/vtg3/assets/art/vtg3-credit.png')).ok()).toBe(true)
+  expect(html).not.toContain('<div id="app"></div>')
+  expect(serviceWorker).not.toContain('vtg3/')
+})
+
 test('caches the VTG reference and returns to the exact app history entry', async ({
   context,
   page,

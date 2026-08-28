@@ -1,0 +1,1734 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="theme-color" content="#090b0f" />
+    <title>Vulcan Tech Gospel 3 - Noel Yee</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #cbd1d8;
+        --heading: #e2e6ea;
+        --muted: #949da8;
+        --paper: #090b0f;
+        --raised: #151920;
+        --rule: #3c4653;
+        --accent: #ff754f;
+        --gold: #ffb25b;
+        --blue: #59d7ee;
+        --violet: #a97cff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+        background: var(--paper);
+      }
+      body {
+        min-width: 20rem;
+        margin: 0;
+        color: var(--ink);
+        font-family: 'Segoe UI', Arial, sans-serif;
+        letter-spacing: 0.012em;
+        line-height: 1.65;
+        text-rendering: optimizeLegibility;
+        background:
+          radial-gradient(circle at 12% 6%, rgb(255 117 79 / 14%), transparent 30rem),
+          radial-gradient(circle at 88% 35%, rgb(89 215 238 / 10%), transparent 32rem),
+          linear-gradient(90deg, rgb(255 255 255 / 2.5%) 1px, transparent 1px), var(--paper);
+        background-size:
+          auto,
+          auto,
+          5rem 100%;
+      }
+      a {
+        color: inherit;
+      }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 3px solid var(--blue);
+        outline-offset: 3px;
+      }
+
+      .topbar {
+        position: sticky;
+        z-index: 20;
+        inset-block-start: 0;
+        display: flex;
+        width: min(100% - 2rem, 78rem);
+        min-height: 4.25rem;
+        align-items: center;
+        justify-content: space-between;
+        padding-inline: 1rem;
+        margin-inline: auto;
+        background: rgb(9 11 15 / 86%);
+        border-block-end: 1px solid rgb(255 255 255 / 12%);
+        backdrop-filter: blur(1rem);
+      }
+      .brand,
+      h1,
+      h2,
+      h3,
+      .code,
+      .pattern-ratio,
+      .pattern-cell figcaption {
+        font-family: 'Arial Black', 'Segoe UI', Arial, sans-serif;
+        font-weight: 900;
+      }
+      .brand {
+        color: var(--heading);
+        letter-spacing: 0.055em;
+        text-transform: uppercase;
+      }
+      .links,
+      .section-nav,
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+      .links a,
+      .section-nav a,
+      .tab {
+        padding: 0.62rem 0.8rem;
+        color: var(--muted);
+        font:
+          800 0.74rem/1 Arial,
+          sans-serif;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+        text-transform: uppercase;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 999px;
+      }
+      .links a:hover,
+      .section-nav a:hover,
+      .tab:hover {
+        color: var(--heading);
+        background: rgb(255 255 255 / 7%);
+        border-color: rgb(255 255 255 / 12%);
+      }
+      .links .primary,
+      .tab[aria-selected='true'] {
+        color: var(--paper);
+        background: var(--blue);
+        border-color: var(--blue);
+      }
+
+      main {
+        width: min(100% - 2rem, 78rem);
+        margin-inline: auto;
+        padding-block: clamp(2rem, 5vw, 5rem);
+      }
+      .hero {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+        gap: clamp(2rem, 6vw, 6rem);
+        align-items: center;
+        min-height: min(46rem, 78vh);
+        padding-block-end: clamp(2.5rem, 5vw, 4rem);
+        border-block-end: 0.22rem solid var(--accent);
+      }
+      .hero::before {
+        position: absolute;
+        z-index: -1;
+        inset-block-start: 8%;
+        inset-inline-end: 4%;
+        width: clamp(13rem, 34vw, 27rem);
+        aspect-ratio: 1;
+        border: 1px solid rgb(89 215 238 / 22%);
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 2.8rem rgb(89 215 238 / 4%),
+          0 0 0 5.6rem rgb(169 124 255 / 3%);
+        content: '';
+      }
+      .eyebrow,
+      .number {
+        color: var(--accent);
+        font:
+          800 0.76rem/1 Arial,
+          sans-serif;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      h1,
+      h2,
+      h3 {
+        color: var(--heading);
+        letter-spacing: 0.012em;
+        text-transform: uppercase;
+      }
+      h1 {
+        max-width: 12ch;
+        margin: 0;
+        font-size: clamp(3.2rem, 8vw, 7rem);
+        line-height: 0.92;
+      }
+      .draft {
+        display: inline-block;
+        margin-block-start: 1.1rem;
+        padding: 0.42rem 0.65rem;
+        color: var(--paper);
+        font-size: 0.78rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        background: var(--gold);
+      }
+      .intro,
+      .lead {
+        max-width: 52rem;
+        color: var(--muted);
+        font-size: clamp(1rem, 1.8vw, 1.18rem);
+      }
+      .intro {
+        max-width: 43rem;
+        margin: 1.5rem 0 0;
+      }
+      .cover-art {
+        width: 100%;
+        max-height: 34rem;
+        object-fit: contain;
+        filter: drop-shadow(0 1.7rem 2.4rem rgb(0 0 0 / 45%));
+      }
+      .credit {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.9rem 1.1rem;
+        align-items: center;
+        margin-block-start: 1.5rem;
+        padding: 0.9rem 1.1rem;
+        background: linear-gradient(100deg, rgb(169 124 255 / 16%), transparent 42%), var(--raised);
+        border: 1px solid rgb(169 124 255 / 34%);
+        border-inline-start: 0.25rem solid var(--violet);
+      }
+      .credit span {
+        padding: 0.42rem 0.58rem;
+        color: var(--paper);
+        font-size: 0.68rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        background: var(--gold);
+      }
+      .credit p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+      .credit strong {
+        color: var(--heading);
+      }
+      .section-nav {
+        padding-block: 1.25rem;
+        border-block-end: 1px solid rgb(255 255 255 / 12%);
+      }
+
+      .section {
+        display: grid;
+        grid-template-columns: 3rem minmax(0, 1fr);
+        gap: clamp(1rem, 3vw, 2.5rem);
+        padding-block: clamp(3rem, 7vw, 6rem);
+        border-block-end: 1px solid rgb(255 255 255 / 14%);
+        scroll-margin-block-start: 4.5rem;
+      }
+      .number {
+        padding-block-start: 0.45rem;
+      }
+      .section h2 {
+        margin: 0;
+        font-size: clamp(2.25rem, 5vw, 4.75rem);
+        line-height: 1;
+      }
+      .lead {
+        margin: 1rem 0 2rem;
+      }
+      .prose {
+        max-width: 52rem;
+      }
+      .prose p {
+        margin: 0 0 1.15rem;
+      }
+      .two,
+      .timing-grid,
+      .snapshot-grid,
+      .pattern-grid {
+        display: grid;
+        gap: 1rem;
+      }
+      .two,
+      .timing-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .pattern-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .snapshot-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .card {
+        min-width: 0;
+        padding: clamp(1rem, 2.5vw, 1.45rem);
+        background: linear-gradient(145deg, rgb(255 255 255 / 5%), transparent 60%), var(--raised);
+        border: 1px solid rgb(255 255 255 / 14%);
+        border-radius: 0.35rem;
+        box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 18%);
+      }
+      .card h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        line-height: 1.15;
+      }
+      .card p,
+      .card li {
+        color: var(--muted);
+      }
+      .card p:last-child,
+      .card ul:last-child {
+        margin-block-end: 0;
+      }
+      .scope {
+        margin: 0;
+        padding-inline-start: 1.2rem;
+      }
+      .scope li + li {
+        margin-block-start: 0.55rem;
+      }
+
+      .timing-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 1rem;
+        align-items: center;
+      }
+      .code {
+        color: var(--accent);
+        font-size: clamp(2.9rem, 6vw, 4.7rem);
+        line-height: 0.82;
+      }
+      .timing-copy h3 {
+        display: grid;
+        gap: 0.25rem;
+        color: var(--muted);
+        font:
+          800 0.78rem/1.25 Arial,
+          sans-serif;
+        letter-spacing: 0.09em;
+      }
+      .timing-pair {
+        display: block;
+        margin-block: 0.45rem 0.55rem;
+        color: var(--heading);
+        font:
+          900 0.86rem/1 Arial,
+          sans-serif;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .timing-diagram {
+        position: relative;
+        width: min(100%, 14rem);
+        aspect-ratio: 1.45;
+        margin-inline: auto;
+        border: 2px dotted rgb(89 215 238 / 72%);
+        border-radius: 1rem;
+        box-shadow: inset 0 0 2.5rem rgb(89 215 238 / 5%);
+      }
+      .timing-position {
+        position: absolute;
+        display: flex;
+        gap: 0.38rem;
+      }
+      .timing-position.top,
+      .timing-position.bottom {
+        inset-inline-start: 50%;
+        transform: translateX(-50%);
+      }
+      .timing-position.top {
+        inset-block-start: 0.7rem;
+      }
+      .timing-position.bottom {
+        inset-block-end: 0.7rem;
+      }
+      .timing-position.left,
+      .timing-position.right {
+        inset-block-start: 50%;
+        flex-direction: column;
+        transform: translateY(-50%);
+      }
+      .timing-position.left {
+        inset-inline-start: 0.7rem;
+      }
+      .timing-position.right {
+        inset-inline-end: 0.7rem;
+      }
+      .timing-dot {
+        width: 0.9rem;
+        aspect-ratio: 1;
+        background: var(--gold);
+        border-radius: 50%;
+        box-shadow: 0 0 0.75rem rgb(255 178 91 / 40%);
+      }
+      .notation {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: clamp(1rem, 4vw, 2.5rem);
+        align-items: center;
+        margin-block-start: 1rem;
+        padding: clamp(1.25rem, 4vw, 2.25rem);
+        background:
+          linear-gradient(120deg, rgb(89 215 238 / 11%), transparent 42%),
+          linear-gradient(300deg, rgb(169 124 255 / 10%), transparent 38%), var(--raised);
+        border: 1px solid rgb(89 215 238 / 28%);
+      }
+      .notation h3 {
+        margin: 0 0 0.45rem;
+        font-size: 1.35rem;
+      }
+      .notation p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .slash {
+        color: var(--gold);
+        font:
+          900 clamp(4rem, 8vw, 7rem)/1 'Arial Black',
+          sans-serif;
+      }
+
+      .snapshot-card {
+        display: grid;
+        gap: 0.8rem;
+      }
+      .snapshot-card p {
+        margin: 0;
+        font-size: 0.9rem;
+      }
+      .snapshot-number {
+        color: var(--accent);
+      }
+      .axis-pair {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.55rem;
+      }
+      .axis {
+        display: grid;
+        gap: 0.35rem;
+        justify-items: center;
+      }
+      .axis-label {
+        color: var(--muted);
+        font-size: 0.68rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .snapshot-box {
+        position: relative;
+        width: 100%;
+        min-width: 5rem;
+        aspect-ratio: 1.45;
+        overflow: hidden;
+        color: var(--heading);
+        border: 1px solid var(--rule);
+        border-radius: 0.7rem;
+      }
+      .snapshot-art {
+        position: absolute;
+        inset: 10%;
+      }
+      .axis-y .snapshot-art {
+        inset-inline: 24%;
+        transform: rotate(90deg);
+      }
+      .snapshot-art::before {
+        position: absolute;
+        inset-block: 0;
+        inset-inline-start: var(--divider, 50%);
+        border-inline-start: 1px dashed rgb(203 209 216 / 45%);
+        content: '';
+      }
+      .prop {
+        position: absolute;
+        inset-block-start: var(--lane);
+        inset-inline-start: var(--start);
+        width: calc(var(--end) - var(--start));
+        height: 2px;
+        background: currentcolor;
+        transform: translateY(-50%);
+      }
+      .prop::before,
+      .prop::after {
+        position: absolute;
+        inset-block-start: 50%;
+        width: 0.28rem;
+        aspect-ratio: 1;
+        background: currentcolor;
+        border-radius: 50%;
+        content: '';
+        transform: translate(-50%, -50%);
+      }
+      .prop::before {
+        inset-inline-start: 0;
+      }
+      .prop::after {
+        inset-inline-start: 100%;
+      }
+      .large-start::before,
+      .large-end::after {
+        width: 0.7rem;
+        background: var(--gold);
+        box-shadow: 0 0 0.6rem rgb(255 178 91 / 35%);
+      }
+      .rule-1 .a,
+      .rule-3 .a {
+        --lane: 42%;
+      }
+      .rule-1 .b,
+      .rule-3 .b {
+        --lane: 58%;
+      }
+      .rule-1 .prop {
+        --start: 4%;
+        --end: 41%;
+      }
+      .rule-3 .prop {
+        --start: 59%;
+        --end: 96%;
+      }
+      .rule-2 .a,
+      .rule-4 .a,
+      .rule-5 .a,
+      .rule-6 .a {
+        --lane: 50%;
+        --start: 4%;
+        --end: 41%;
+      }
+      .rule-2 .b,
+      .rule-4 .b,
+      .rule-6 .b {
+        --lane: 50%;
+        --start: 59%;
+        --end: 96%;
+      }
+      .rule-5 {
+        --divider: 97%;
+      }
+      .rule-5 .b {
+        --lane: 50%;
+        --start: 48%;
+        --end: 85%;
+      }
+
+      .pattern-intro {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.9rem 2rem;
+        align-items: end;
+        margin: 1rem 0 2rem;
+      }
+      .pattern-intro p {
+        max-width: 58rem;
+        margin: 0;
+      }
+      .pattern-intro p:last-child {
+        grid-column: 1 / -1;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+      .pattern-ratio-group p {
+        margin-block-end: 0.55rem;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .pattern-ratios {
+        display: flex;
+        gap: 0.45rem;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+      .pattern-ratios li {
+        min-width: 3.1rem;
+        padding: 0.42rem 0.55rem;
+        color: var(--paper);
+        font-weight: 900;
+        line-height: 1;
+        text-align: center;
+        background: var(--blue);
+        border-radius: 999px;
+      }
+      .pattern-card {
+        overflow: hidden;
+      }
+      .pattern-card.wide {
+        grid-column: 1 / -1;
+      }
+      .pattern-card h3 {
+        margin-block-end: 0.75rem;
+      }
+      .pattern-rows {
+        display: grid;
+      }
+      .pattern-row {
+        display: grid;
+        grid-template-columns: clamp(2.7rem, 5vw, 4.25rem) minmax(0, 1fr);
+        gap: clamp(0.55rem, 1.5vw, 1.15rem);
+        align-items: center;
+        min-width: 0;
+        padding-block: clamp(0.75rem, 1.8vw, 1.15rem);
+        border-block-start: 1px solid rgb(255 255 255 / 10%);
+      }
+      .pattern-ratio {
+        color: var(--blue);
+        font-size: clamp(1rem, 2.2vw, 1.45rem);
+        line-height: 1;
+      }
+      .pattern-examples {
+        display: grid;
+        grid-template-columns: repeat(var(--pattern-count), minmax(0, 1fr));
+        gap: clamp(0.35rem, 1vw, 0.8rem);
+        min-width: 0;
+      }
+      .pattern-cell {
+        position: relative;
+        min-width: 0;
+        margin: 0;
+        padding: clamp(0.2rem, 0.6vw, 0.45rem);
+        background: radial-gradient(circle, rgb(255 255 255 / 4%), transparent 68%);
+        border-radius: 0.3rem;
+      }
+      .pattern-cell img {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+        object-fit: contain;
+        filter: drop-shadow(0 0 0.35rem rgb(89 215 238 / 13%));
+      }
+      .pattern-cell figcaption {
+        position: absolute;
+        inset-block-end: 0.25rem;
+        inset-inline-end: 0.25rem;
+        padding: 0.18rem 0.32rem;
+        color: var(--muted);
+        font-size: clamp(0.48rem, 0.8vw, 0.62rem);
+        line-height: 1;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: rgb(9 11 15 / 82%);
+        border: 1px solid rgb(255 255 255 / 10%);
+        border-radius: 0.2rem;
+      }
+      .pattern-final-layout {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: clamp(1rem, 2.5vw, 1.75rem);
+        align-items: stretch;
+      }
+      .pattern-note {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        margin: 0;
+        padding: clamp(1rem, 3vw, 2rem);
+        color: var(--ink);
+        font-size: clamp(1rem, 1.8vw, 1.3rem);
+        line-height: 1.55;
+        text-align: center;
+        background: linear-gradient(145deg, rgb(89 215 238 / 5%), transparent 70%);
+        border-inline-start: 1px solid rgb(255 255 255 / 10%);
+      }
+
+      .grid-intro {
+        display: flex;
+        gap: 1rem 2rem;
+        align-items: end;
+        justify-content: space-between;
+        margin-block-end: 1.2rem;
+      }
+      .grid-intro p {
+        max-width: 40rem;
+        margin: 0;
+        color: var(--muted);
+      }
+      .tab {
+        cursor: pointer;
+      }
+      .grid-panel[hidden] {
+        display: none;
+      }
+      .vtg-grid-frame,
+      .study-shell {
+        margin: 0;
+        background: linear-gradient(145deg, rgb(255 255 255 / 4%), transparent 55%), var(--raised);
+        border: 1px solid rgb(255 255 255 / 14%);
+        border-radius: 0.4rem;
+      }
+      .vtg-grid-frame {
+        margin-inline: clamp(0.6rem, 1.8vw, 1.5rem) clamp(0.35rem, 1vw, 0.8rem);
+        margin-block-end: clamp(2rem, 4vw, 3.5rem);
+        padding: clamp(0.75rem, 1.6vw, 1.25rem);
+        overflow-x: auto;
+      }
+      .vtg-grid-layout {
+        --grid-axis-size: clamp(5.5rem, 10vw, 8.5rem);
+        display: grid;
+        grid-template-columns: var(--grid-axis-size) minmax(36rem, 1fr);
+        grid-template-rows: auto var(--grid-axis-size);
+        gap: clamp(0.45rem, 1vw, 0.8rem);
+        min-width: 42rem;
+      }
+      .vtg-grid-board {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-rows: repeat(6, minmax(0, 1fr));
+        aspect-ratio: 1.28;
+        overflow: visible;
+        border-block-start: 1px solid var(--rule);
+        border-inline-start: 1px solid var(--rule);
+      }
+      .vtg-grid-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        color: var(--muted);
+        font:
+          800 clamp(0.52rem, 0.9vw, 0.76rem) / 1 'Segoe UI',
+          Arial,
+          sans-serif;
+        letter-spacing: 0.035em;
+        border-inline-end: 1px solid var(--rule);
+        border-block-end: 1px solid var(--rule);
+      }
+      .vtg-grid-pattern {
+        position: absolute;
+        z-index: 2;
+        inset-block-start: var(--pattern-top);
+        inset-inline-start: var(--pattern-left);
+        width: clamp(3rem, 11%, 7rem);
+        aspect-ratio: 1;
+        padding: 0.16rem;
+        background: radial-gradient(circle, var(--raised) 58%, transparent 73%);
+        transform: translate(-50%, -50%);
+      }
+      .vtg-grid-pattern.pair {
+        display: grid;
+        width: clamp(5.5rem, 17%, 10rem);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: center;
+        gap: 0.15rem;
+        aspect-ratio: 2;
+        background: radial-gradient(ellipse, var(--raised) 64%, transparent 78%);
+      }
+      .vtg-grid-pattern img {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+        object-fit: contain;
+        filter: drop-shadow(0 0 0.25rem rgb(89 215 238 / 12%));
+      }
+      .vtg-grid-y-axis {
+        display: grid;
+        grid-template-rows: repeat(6, minmax(0, 1fr));
+      }
+      .vtg-grid-x-axis {
+        display: grid;
+        grid-column: 2;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+      .vtg-grid-axis-item {
+        display: grid;
+        align-items: center;
+        justify-items: center;
+        min-width: 0;
+      }
+      .vtg-grid-y-axis .vtg-grid-axis-item {
+        grid-template-columns: minmax(0, 1fr) clamp(2.8rem, 4.8vw, 4.25rem);
+        gap: 0.35rem;
+      }
+      .vtg-grid-x-axis .vtg-grid-axis-item {
+        align-content: start;
+        gap: 0.35rem;
+      }
+      .vtg-grid-axis-name {
+        color: var(--ink);
+        font-size: clamp(0.48rem, 0.9vw, 0.7rem);
+        font-weight: 800;
+        line-height: 1.15;
+        letter-spacing: 0.08em;
+        text-align: center;
+        text-transform: uppercase;
+      }
+      .vtg-grid-y-axis .vtg-grid-axis-name {
+        justify-self: end;
+        text-align: end;
+      }
+      .vtg-grid-snapshot {
+        position: relative;
+        width: clamp(2.8rem, 4.8vw, 4.25rem);
+        aspect-ratio: 1;
+        overflow: hidden;
+        color: var(--heading);
+        background: rgb(9 11 15 / 26%);
+        border: 1px solid var(--rule);
+        border-radius: clamp(0.45rem, 1vw, 0.75rem);
+      }
+      .vtg-grid-snapshot .snapshot-art {
+        inset: 14%;
+      }
+      .vtg-grid-snapshot.axis-y .snapshot-art {
+        inset-inline: 24%;
+      }
+      .vtg-grid-snapshot .large-start::before,
+      .vtg-grid-snapshot .large-end::after {
+        width: 0.45rem;
+      }
+      .vtg-grid-snapshot-number {
+        position: absolute;
+        z-index: 2;
+        inset-block-start: 0.22rem;
+        inset-inline-start: 0.32rem;
+        color: var(--accent);
+        font:
+          900 clamp(0.58rem, 1vw, 0.82rem) / 1 'Arial Black',
+          sans-serif;
+      }
+      .vtg-grid-credit {
+        display: block;
+        width: min(58%, 22rem);
+        height: auto;
+        margin-block-start: clamp(1.25rem, 2vw, 2rem);
+        margin-block-end: clamp(0.8rem, 1.5vw, 1.35rem);
+        margin-inline-start: clamp(0.75rem, 2vw, 1.75rem);
+      }
+      .study-shell {
+        padding: clamp(0.8rem, 3vw, 2rem);
+        overflow-x: auto;
+      }
+      .study-grid {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(4.5rem, 1fr));
+        gap: clamp(0.65rem, 1.8vw, 1.5rem);
+        min-width: 43rem;
+      }
+      .study-pattern {
+        display: grid;
+        place-items: center;
+        min-width: 0;
+        aspect-ratio: 1;
+        background: radial-gradient(circle, rgb(89 215 238 / 5%), transparent 69%);
+      }
+      .study-pattern img {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+        object-fit: contain;
+        filter: drop-shadow(0 0 0.3rem rgb(89 215 238 / 13%));
+      }
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem 2rem;
+        padding-block: 2.5rem 1rem;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+      footer p {
+        margin: 0;
+      }
+
+      @media (max-width: 54rem) {
+        .hero,
+        .two {
+          grid-template-columns: 1fr;
+        }
+        .hero {
+          min-height: auto;
+        }
+        .cover-art {
+          max-height: 25rem;
+        }
+        .snapshot-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .pattern-card.wide {
+          grid-column: auto;
+        }
+      }
+      @media (max-width: 42rem) {
+        .section,
+        .timing-grid,
+        .snapshot-grid,
+        .notation {
+          grid-template-columns: 1fr;
+        }
+        .number {
+          padding: 0;
+        }
+        .grid-intro {
+          display: block;
+        }
+        .pattern-intro {
+          grid-template-columns: 1fr;
+        }
+        .pattern-intro p:last-child {
+          grid-column: auto;
+        }
+        .pattern-final-layout {
+          grid-template-columns: 1fr;
+        }
+        .pattern-note {
+          min-height: 9rem;
+          border-block-start: 1px solid rgb(255 255 255 / 10%);
+          border-inline-start: 0;
+        }
+        .tabs {
+          margin-block-start: 1rem;
+        }
+      }
+      @media (max-width: 34rem) {
+        .topbar,
+        main {
+          width: min(100% - 1.25rem, 78rem);
+        }
+        .topbar {
+          min-height: 3.8rem;
+          padding-inline: 0.35rem;
+        }
+        .brand,
+        .section-nav {
+          display: none;
+        }
+        .links {
+          width: 100%;
+          justify-content: space-between;
+        }
+        .links a {
+          padding-inline: 0.62rem;
+        }
+        h1 {
+          font-size: clamp(2.8rem, 16vw, 4.5rem);
+        }
+        .credit {
+          grid-template-columns: 1fr;
+        }
+        .timing-card {
+          grid-template-columns: 4.25rem 1fr;
+        }
+        .pattern-row {
+          grid-template-columns: 2.35rem minmax(0, 1fr);
+        }
+        footer {
+          display: block;
+          padding-inline: 0.4rem;
+        }
+        footer p + p {
+          display: inline-block;
+          margin-block-start: 0.3rem;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="topbar" aria-label="VTG3 navigation">
+      <span class="brand">SpiroAnim / VTG3</span>
+      <div class="links">
+        <a class="primary" href="/vtg-reference/">VTG Reference</a
+        ><a href="/docs/vtg/VTG3Draft1.pdf">Original PDF</a>
+      </div>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <div>
+          <p class="eyebrow">The original system - web edition</p>
+          <h1>Vulcan Tech Gospel 3</h1>
+          <span class="draft">Draft #1</span>
+          <p class="intro">
+            VTG 3 synthesizes the knowledge of VTG 1 and VTG 2 into an elegant and coherent system.
+          </p>
+          <aside class="credit" aria-label="VTG3 creator credit">
+            <span>Creator spotlight</span>
+            <p>
+              <strong>VTG3 and its grid were created by Noel Yee.</strong> Inspired by David Cantor
+              and Cassie McKenney.
+            </p>
+          </aside>
+        </div>
+        <img
+          class="cover-art"
+          src="/vtg3/assets/art/cover-mark.webp?v=3"
+          width="1430"
+          height="1230"
+          alt="Original Vulcan Tech Gospel spiral and flower artwork"
+          fetchpriority="high"
+        />
+      </header>
+
+      <nav class="section-nav" aria-label="On this page">
+        <a href="#about">About</a><a href="#timing-direction">Timing + Direction</a
+        ><a href="#snapshots">Snapshots</a><a href="#patterns">Patterns</a
+        ><a href="#grids">VTG3 Grids</a><a href="#study">Pattern Study</a>
+      </nav>
+
+      <section class="section" id="about" aria-labelledby="about-title">
+        <span class="number">01</span>
+        <div>
+          <p class="eyebrow">Where it came from</p>
+          <h2 id="about-title">About the VTG 3</h2>
+          <div class="prose lead">
+            <p>
+              The VTG 3 was born out of the VTG 1 and the VTG 2. These were technical documents for
+              spinning two props and were produced in PDF form. Both documents attempted to clarify
+              understandings of compound circles, the types of patterns created within a given
+              timing and direction, and how to transition between them. VTG 3 synthesizes all this
+              knowledge into an elegant and coherent system.
+            </p>
+          </div>
+          <div class="two">
+            <article class="card">
+              <h3>The Vulcan Tech Gospel</h3>
+              <p>
+                The Vulcan Tech Gospel is a system designed to teach both the beginner and advanced
+                spinner. The first goal of VTG 3 is to help the user understand the variety of
+                flower patterns available in a given arm and prop timing and direction.
+              </p>
+              <p>
+                The second goal is to teach the user how to transition between patterns within a
+                given timing and direction.
+              </p>
+            </article>
+            <article class="card">
+              <h3>VTG 3 is constrained to</h3>
+              <ul class="scope">
+                <li>One pair of parallel planes.</li>
+                <li>Situations where props do not change speed individually.</li>
+                <li>
+                  Prop facings and hands start in two of the six snapshots, one from each axis.
+                </li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="timing-direction" aria-labelledby="timing-title">
+        <span class="number">02</span>
+        <div>
+          <p class="eyebrow">Read the motion</p>
+          <h2 id="timing-title">Timing and Direction</h2>
+          <div class="prose lead">
+            <p>
+              Timing and direction refer to the relative timing - Tog and Split - and the relative
+              direction - Same and Opp - of two props or hands in a pattern.
+            </p>
+            <p>
+              Timing is always listed first and direction second. There are four timing and
+              direction relationships, with the abbreviation listed first below.
+            </p>
+          </div>
+          <div class="timing-grid" id="timing-grid"></div>
+          <div class="notation">
+            <div>
+              <h3>Arms first</h3>
+              <p>The larger circle completed by the arm is listed first.</p>
+            </div>
+            <span class="slash" aria-hidden="true">/</span>
+            <div>
+              <h3>Props second</h3>
+              <p>The smaller prop-circle timing and direction is listed second.</p>
+            </div>
+          </div>
+          <p class="lead">
+            One of the largest challenges in VTG is recognizing that, because the props and arms
+            complete the same number of rotations, they can have distinct timing and direction
+            relationships. It may be challenging at first to recognize Tog timing when the arms are
+            split apart from one another, or vice versa. For example, in <strong>SO/SS</strong>, the
+            arms complete Split Time Opposite Direction while the props are in Split Time Same
+            Direction.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" id="snapshots" aria-labelledby="snapshots-title">
+        <span class="number">03</span>
+        <div>
+          <p class="eyebrow">Freeze the pattern</p>
+          <h2 id="snapshots-title">Snapshots</h2>
+          <p class="lead">
+            A snapshot is the image of a given pattern across the x or y axis. This includes both
+            the arms on the larger circle and the props from the circle formed at the hand. There
+            are six snapshots on each axis, making a total of 12 snapshots.
+          </p>
+          <div class="snapshot-grid" id="snapshot-grid"></div>
+        </div>
+      </section>
+
+      <section class="section" id="patterns" aria-labelledby="patterns-title">
+        <span class="number">04</span>
+        <div>
+          <p class="eyebrow">Trace the full motion</p>
+          <h2 id="patterns-title">Pattern</h2>
+          <div class="pattern-intro">
+            <p>
+              Pattern refers to the image that the props of a given pattern create, stretched out
+              over 360 degrees. The pattern indicates how many prop rotations per arm rotation you
+              are attempting.
+            </p>
+            <div class="pattern-ratio-group">
+              <p>The patterns for the VTG are:</p>
+              <ul class="pattern-ratios" aria-label="VTG pattern ratios">
+                <li>1:1</li>
+                <li>1:3</li>
+                <li>1:5</li>
+              </ul>
+            </div>
+            <p>
+              Notice that, on this page, the patterns are arranged vertically in each box to show
+              the possible transitions between timings.
+            </p>
+          </div>
+          <div class="pattern-grid">
+            <article class="card pattern-card wide">
+              <h3>Pure</h3>
+              <div class="pattern-rows">
+                <div class="pattern-row">
+                  <span class="pattern-ratio">1:1</span>
+                  <div class="pattern-examples" style="--pattern-count: 4">
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-1/1-1.png"
+                        alt="Pure 1:1 pattern from VTG cell 1-1"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>1-1</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-1/1-3.png"
+                        alt="Pure 1:1 pattern from VTG cell 1-3"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>1-3</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-1/3-3.png"
+                        alt="Pure 1:1 pattern from VTG cell 3-3"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>3-3</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-1/3-1.png"
+                        alt="Pure 1:1 pattern from VTG cell 3-1"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>3-1</figcaption>
+                    </figure>
+                  </div>
+                </div>
+                <div class="pattern-row">
+                  <span class="pattern-ratio">1:3</span>
+                  <div class="pattern-examples" style="--pattern-count: 4">
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-3/1-1.png"
+                        alt="Pure 1:3 pattern from VTG cell 1-1"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>1-1</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-3/1-3.png"
+                        alt="Pure 1:3 pattern from VTG cell 1-3"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>1-3</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-3/3-3.png"
+                        alt="Pure 1:3 pattern from VTG cell 3-3"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>3-3</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-3/3-1.png"
+                        alt="Pure 1:3 pattern from VTG cell 3-1"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>3-1</figcaption>
+                    </figure>
+                  </div>
+                </div>
+                <div class="pattern-row">
+                  <span class="pattern-ratio">1:5</span>
+                  <div class="pattern-examples" style="--pattern-count: 4">
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-5/1-1.png"
+                        alt="Pure 1:5 pattern from VTG cell 1-1"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>1-1</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-5/1-3.png"
+                        alt="Pure 1:5 pattern from VTG cell 1-3"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>1-3</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-5/3-3.png"
+                        alt="Pure 1:5 pattern from VTG cell 3-3"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>3-3</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-5/3-1.png"
+                        alt="Pure 1:5 pattern from VTG cell 3-1"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>3-1</figcaption>
+                    </figure>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="card pattern-card">
+              <h3>Hybrid Spin-Antispin</h3>
+              <div class="pattern-rows">
+                <div class="pattern-row">
+                  <span class="pattern-ratio">1:1</span>
+                  <div class="pattern-examples" style="--pattern-count: 4">
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-1/1-5.png"
+                        alt="Hybrid spin-antispin 1:1 pattern from VTG cell 1-5"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>1-5</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-1/3-5.png"
+                        alt="Hybrid spin-antispin 1:1 pattern from VTG cell 3-5"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>3-5</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-1/5-3.png"
+                        alt="Hybrid spin-antispin 1:1 pattern from VTG cell 5-3"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>5-3</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-1/5-1.png"
+                        alt="Hybrid spin-antispin 1:1 pattern from VTG cell 5-1"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>5-1</figcaption>
+                    </figure>
+                  </div>
+                </div>
+                <div class="pattern-row">
+                  <span class="pattern-ratio">1:3</span>
+                  <div class="pattern-examples" style="--pattern-count: 4">
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-3/1-5.png"
+                        alt="Hybrid spin-antispin 1:3 pattern from VTG cell 1-5"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>1-5</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-3/3-5.png"
+                        alt="Hybrid spin-antispin 1:3 pattern from VTG cell 3-5"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>3-5</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-3/5-3.png"
+                        alt="Hybrid spin-antispin 1:3 pattern from VTG cell 5-3"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>5-3</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-3/5-1.png"
+                        alt="Hybrid spin-antispin 1:3 pattern from VTG cell 5-1"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>5-1</figcaption>
+                    </figure>
+                  </div>
+                </div>
+                <div class="pattern-row">
+                  <span class="pattern-ratio">1:5</span>
+                  <div class="pattern-examples" style="--pattern-count: 4">
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-5/1-5.png"
+                        alt="Hybrid spin-antispin 1:5 pattern from VTG cell 1-5"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>1-5</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-5/3-5.png"
+                        alt="Hybrid spin-antispin 1:5 pattern from VTG cell 3-5"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>3-5</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-5/5-3.png"
+                        alt="Hybrid spin-antispin 1:5 pattern from VTG cell 5-3"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>5-3</figcaption>
+                    </figure>
+                    <figure class="pattern-cell">
+                      <img
+                        src="/vtg3/assets/patterns/1-5/5-1.png"
+                        alt="Hybrid spin-antispin 1:5 pattern from VTG cell 5-1"
+                        width="512"
+                        height="512"
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <figcaption>5-1</figcaption>
+                    </figure>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="card pattern-card pattern-card-final">
+              <h3>Hybrid Spin-Spin / Anti-Anti</h3>
+              <div class="pattern-final-layout">
+                <div class="pattern-rows">
+                  <div class="pattern-row">
+                    <span class="pattern-ratio">1:1</span>
+                    <div class="pattern-examples" style="--pattern-count: 2">
+                      <figure class="pattern-cell">
+                        <img
+                          src="/vtg3/assets/patterns/1-1/5-5-anti.png"
+                          alt="Hybrid anti-anti 1:1 pattern from VTG cell 5-5"
+                          width="512"
+                          height="512"
+                          loading="eager"
+                          decoding="async"
+                        />
+                        <figcaption>5-5 Anti</figcaption>
+                      </figure>
+                      <figure class="pattern-cell">
+                        <img
+                          src="/vtg3/assets/patterns/1-1/5-5-spin.png"
+                          alt="Hybrid spin-spin 1:1 pattern from VTG cell 5-5"
+                          width="512"
+                          height="512"
+                          loading="eager"
+                          decoding="async"
+                        />
+                        <figcaption>5-5 Spin</figcaption>
+                      </figure>
+                    </div>
+                  </div>
+                  <div class="pattern-row">
+                    <span class="pattern-ratio">1:3</span>
+                    <div class="pattern-examples" style="--pattern-count: 2">
+                      <figure class="pattern-cell">
+                        <img
+                          src="/vtg3/assets/patterns/1-3/5-5-anti.png"
+                          alt="Hybrid anti-anti 1:3 pattern from VTG cell 5-5"
+                          width="512"
+                          height="512"
+                          loading="eager"
+                          decoding="async"
+                        />
+                        <figcaption>5-5 Anti</figcaption>
+                      </figure>
+                      <figure class="pattern-cell">
+                        <img
+                          src="/vtg3/assets/patterns/1-3/5-5-spin.png"
+                          alt="Hybrid spin-spin 1:3 pattern from VTG cell 5-5"
+                          width="512"
+                          height="512"
+                          loading="eager"
+                          decoding="async"
+                        />
+                        <figcaption>5-5 Spin</figcaption>
+                      </figure>
+                    </div>
+                  </div>
+                  <div class="pattern-row">
+                    <span class="pattern-ratio">1:5</span>
+                    <div class="pattern-examples" style="--pattern-count: 2">
+                      <figure class="pattern-cell">
+                        <img
+                          src="/vtg3/assets/patterns/1-5/5-5-anti.png"
+                          alt="Hybrid anti-anti 1:5 pattern from VTG cell 5-5"
+                          width="512"
+                          height="512"
+                          loading="eager"
+                          decoding="async"
+                        />
+                        <figcaption>5-5 Anti</figcaption>
+                      </figure>
+                      <figure class="pattern-cell">
+                        <img
+                          src="/vtg3/assets/patterns/1-5/5-5-spin.png"
+                          alt="Hybrid spin-spin 1:5 pattern from VTG cell 5-5"
+                          width="512"
+                          height="512"
+                          loading="eager"
+                          decoding="async"
+                        />
+                        <figcaption>5-5 Spin</figcaption>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+                <p class="pattern-note">
+                  Note that all the patterns in this category have the same snapshots and can
+                  transition between one another.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="grids" aria-labelledby="grids-title">
+        <span class="number">05</span>
+        <div>
+          <p class="eyebrow">The complete map</p>
+          <h2 id="grids-title">The VTG3 Grid</h2>
+          <div class="grid-intro">
+            <p>The VTG 3 grids are presented at 1:1, 1:3, and 1:5.</p>
+            <div class="tabs" role="tablist" aria-label="Choose a VTG3 ratio grid">
+              <button
+                class="tab"
+                id="grid-tab-1-1"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="grid-1-1"
+                data-grid="grid-1-1"
+              >
+                1:1</button
+              ><button
+                class="tab"
+                id="grid-tab-1-3"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="grid-1-3"
+                data-grid="grid-1-3"
+              >
+                1:3</button
+              ><button
+                class="tab"
+                id="grid-tab-1-5"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="grid-1-5"
+                data-grid="grid-1-5"
+              >
+                1:5
+              </button>
+            </div>
+          </div>
+          <div id="grid-panels"></div>
+        </div>
+      </section>
+
+      <section class="section" id="study" aria-labelledby="study-title">
+        <span class="number">06</span>
+        <div>
+          <p class="eyebrow">One system, many forms</p>
+          <h2 id="study-title">Pattern Study</h2>
+          <p class="lead">The original pattern study from VTG 3 Draft #1.</p>
+          <div class="study-shell">
+            <div
+              class="study-grid"
+              id="study-grid"
+              role="img"
+              aria-label="The VTG3 1:3 pattern study, arranged in the original six-row, eight-column order"
+            ></div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <p>VTG3 and the VTG3 grid were created by Noel Yee.</p>
+        <p>Happy spinning.</p>
+      </footer>
+    </main>
+
+    <script>
+      ;(() => {
+        const dotGroups = { TS: [2, 2, 2, 2], TO: [2, 1, 2, 1], SS: [1, 1, 1, 1], SO: [1, 2, 1, 2] }
+        const timingNames = {
+          TS: ['Tog/Same', 'Together Time', 'Same Direction'],
+          TO: ['Tog/Opp', 'Together Time', 'Opposite Direction'],
+          SS: ['Split/Same', 'Split Time', 'Same Direction'],
+          SO: ['Split/Opp', 'Split Time', 'Opposite Direction'],
+        }
+        const positions = ['top', 'right', 'bottom', 'left']
+        const timingGrid = document.querySelector('#timing-grid')
+        if (timingGrid)
+          timingGrid.innerHTML = Object.entries(timingNames)
+            .map(
+              ([code, names]) =>
+                `<article class="card timing-card"><div class="timing-copy"><span class="code">${code}</span><span class="timing-pair">${names[0]}</span><h3><span>${names[1]}</span><span>${names[2]}</span></h3></div><div class="timing-diagram" aria-hidden="true">${positions.map((position, index) => `<span class="timing-position ${position}">${'<i class="timing-dot"></i>'.repeat(dotGroups[code][index])}</span>`).join('')}</div></article>`,
+            )
+            .join('')
+
+        const snapshots = [
+          [
+            'Tog Out',
+            'Both props are together facing out, either on the left or right or the top and bottom.',
+            'large-start',
+            'large-start',
+          ],
+          [
+            'Split Out',
+            'Props facing out, separated by 180 degrees, and located on opposite sides of the circle.',
+            'large-start',
+            'large-end',
+          ],
+          [
+            'Tog In',
+            'Both props are together facing in, either on the left or right or the top and bottom.',
+            'large-start',
+            'large-start',
+          ],
+          [
+            'Split In',
+            'Props facing in, separated by 180 degrees, and located on opposite sides of the circle.',
+            'large-end',
+            'large-start',
+          ],
+          [
+            'Tog Split',
+            'The hands are together, but the props face 180 degrees apart.',
+            'large-start',
+            'large-end',
+          ],
+          [
+            'Split Tog',
+            'The hands are split, but both props face the same direction.',
+            'large-start',
+            'large-start',
+          ],
+        ]
+        const snapshotGrid = document.querySelector('#snapshot-grid')
+        const axis = (name, rule, firstEnd, secondEnd) =>
+          `<div class="axis"><span class="axis-label">${name}</span><div class="snapshot-box axis-${name}"><div class="snapshot-art rule-${rule}"><i class="prop a ${firstEnd}"></i><i class="prop b ${secondEnd}"></i></div></div></div>`
+        if (snapshotGrid)
+          snapshotGrid.innerHTML = snapshots
+            .map(
+              ([name, description, firstEnd, secondEnd], index) =>
+                `<article class="card snapshot-card"><h3><span class="snapshot-number">${index + 1}.</span> ${name}</h3><p>${description}</p><div class="axis-pair" aria-label="${name} shown on the x and y axes">${axis('x', index + 1, firstEnd, secondEnd)}${axis('y', index + 1, firstEnd, secondEnd)}</div></article>`,
+            )
+            .join('')
+
+        const gridCellLabels = [
+          ['SO/TS', 'SS/TO', 'SO/TS', 'SS/TO', 'SO/TO', 'SS/TS'],
+          ['TS/SO', 'TO/SS', 'TS/SO', 'TO/SS', 'TS/SS', 'TO/SO'],
+          ['SO/SO', 'SS/SS', 'SO/SO', 'SS/SS', 'SO/SS', 'SS/SO'],
+          ['TS/TS', 'TO/TO', 'TS/TS', 'TO/TO', 'TS/TO', 'TO/TS'],
+          ['SO/SO', 'SS/SS', 'SO/SO', 'SS/SS', 'SO/SS', 'SS/SO'],
+          ['TS/TS', 'TO/TO', 'TS/TS', 'TO/TO', 'TS/TO', 'TO/TS'],
+        ]
+        const gridPatternPositions = [
+          { x: 1, y: 1, reference: '1-1' },
+          { x: 3, y: 1, reference: '3-1' },
+          { x: 5, y: 1, reference: '5-1' },
+          { x: 1, y: 3, reference: '1-3' },
+          { x: 3, y: 3, reference: '3-3' },
+          { x: 5, y: 3, reference: '5-3' },
+          { x: 1, y: 5, reference: '1-5' },
+          { x: 3, y: 5, reference: '3-5' },
+          { x: 5, y: 5, reference: '5-5', pair: true },
+        ]
+        const gridSnapshot = (snapshotNumber, orientation) => {
+          const snapshot = snapshots[snapshotNumber - 1]
+          if (!snapshot) return ''
+          const [name, , firstEnd, secondEnd] = snapshot
+          return `<div class="vtg-grid-axis-item"><span class="vtg-grid-axis-name">${name.replace(' ', '<br>')}</span><div class="vtg-grid-snapshot axis-${orientation}" aria-label="Snapshot ${snapshotNumber}: ${name}"><span class="vtg-grid-snapshot-number">${snapshotNumber}</span><div class="snapshot-art rule-${snapshotNumber}" aria-hidden="true"><i class="prop a ${firstEnd}"></i><i class="prop b ${secondEnd}"></i></div></div></div>`
+        }
+        const gridPattern = (ratio, pattern) => {
+          const style = `--pattern-left: ${(pattern.x / 6) * 100}%; --pattern-top: ${((6 - pattern.y) / 6) * 100}%`
+          if (pattern.pair)
+            return `<div class="vtg-grid-pattern pair" style="${style}"><img src="/vtg3/assets/patterns/${ratio}/5-5-anti.png" width="512" height="512" alt="${ratio.replace('-', ':')} 5-5 anti-anti pattern" decoding="async"><img src="/vtg3/assets/patterns/${ratio}/5-5-spin.png" width="512" height="512" alt="${ratio.replace('-', ':')} 5-5 spin-spin pattern" decoding="async"></div>`
+          return `<div class="vtg-grid-pattern" style="${style}"><img src="/vtg3/assets/patterns/${ratio}/${pattern.reference}.png" width="512" height="512" alt="${ratio.replace('-', ':')} pattern at VTG cell ${pattern.reference}" decoding="async"></div>`
+        }
+        const gridPanel = (ratio, index) =>
+          `<div class="grid-panel" id="grid-${ratio}" role="tabpanel" aria-labelledby="grid-tab-${ratio}" ${index ? 'hidden' : ''}><div class="vtg-grid-frame"><div class="vtg-grid-layout"><div class="vtg-grid-y-axis">${[6, 5, 4, 3, 2, 1].map((snapshotNumber) => gridSnapshot(snapshotNumber, 'y')).join('')}</div><div class="vtg-grid-board" role="img" aria-label="Complete VTG3 ${ratio.replace('-', ':')} grid">${gridCellLabels
+            .flat()
+            .map((label) => `<span class="vtg-grid-cell">${label}</span>`)
+            .join(
+              '',
+            )}${gridPatternPositions.map((pattern) => gridPattern(ratio, pattern)).join('')}</div><div class="vtg-grid-x-axis">${[1, 2, 3, 4, 5, 6].map((snapshotNumber) => gridSnapshot(snapshotNumber, 'x')).join('')}</div></div><img class="vtg-grid-credit" src="/vtg3/assets/art/vtg3-credit.png" width="582" height="205" alt="VTG3 created by Noel Yee; inspired by David Cantor and Cassie McKenney" decoding="async"></div></div>`
+
+        const panels = document.querySelector('#grid-panels')
+        if (panels) panels.innerHTML = ['1-1', '1-3', '1-5'].map(gridPanel).join('')
+
+        const studyPatternOrder = [
+          ['1-1', '3-1', '5-1', '1-1', '3-1', '5-1', '1-1', '3-1'],
+          ['5-1', '5-3', '5-5-spin', '5-1', '5-3', '5-5-anti', '5-1', '5-3'],
+          ['1-3', '3-3', '5-3', '1-3', '3-3', '5-3', '1-3', '3-3'],
+          ['1-1', '3-1', '5-1', '1-1', '3-1', '5-1', '1-1', '3-1'],
+          ['5-1', '5-3', '5-5-anti', '5-1', '5-3', '5-5-spin', '5-1', '5-3'],
+          ['1-3', '3-3', '5-3', '1-3', '3-3', '5-3', '1-3', '3-3'],
+        ]
+        const studyGrid = document.querySelector('#study-grid')
+        if (studyGrid)
+          studyGrid.innerHTML = studyPatternOrder
+            .flat()
+            .map(
+              (reference) =>
+                `<span class="study-pattern" aria-hidden="true"><img src="/vtg3/assets/patterns/1-3/${reference}.png" width="512" height="512" alt="" loading="lazy" decoding="async"></span>`,
+            )
+            .join('')
+
+        const tabs = [...document.querySelectorAll('[data-grid]')]
+        const selectGrid = (selectedTab) => {
+          for (const tab of tabs) {
+            const selected = tab === selectedTab
+            tab.setAttribute('aria-selected', String(selected))
+            tab.setAttribute('tabindex', selected ? '0' : '-1')
+            const panel = document.getElementById(tab.getAttribute('data-grid') || '')
+            if (panel) panel.hidden = !selected
+          }
+        }
+        tabs.forEach((tab, index) => {
+          tab.addEventListener('click', () => selectGrid(tab))
+          tab.addEventListener('keydown', (event) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+            event.preventDefault()
+            const nextTab =
+              tabs[(index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length]
+            if (nextTab instanceof HTMLElement) {
+              selectGrid(nextTab)
+              nextTab.focus()
+            }
+          })
+        })
+      })()
+    </script>
+  </body>
+</html>

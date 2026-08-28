@@ -47,7 +47,7 @@ function serveStandalonePagesInDevelopment(): Plugin {
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use((request, _response, next) => {
-        const standalonePages = ['reset', 'vtg-reference']
+        const standalonePages = ['reset', 'vtg-reference', 'vtg3']
 
         for (const page of standalonePages) {
           const route = `/${page}`

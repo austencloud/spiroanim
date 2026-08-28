@@ -206,6 +206,64 @@
         line-height: 1.65;
       }
 
+      .creator-credit {
+        position: relative;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 0.85rem 1.1rem;
+        align-items: center;
+        margin-block-start: 1.5rem;
+        padding: 0.9rem 1.15rem;
+        overflow: hidden;
+        background:
+          linear-gradient(100deg, rgb(169 124 255 / 16%), transparent 42%),
+          linear-gradient(280deg, rgb(89 215 238 / 10%), transparent 40%), var(--paper-raised);
+        border: 1px solid rgb(169 124 255 / 34%);
+        border-inline-start: 0.25rem solid var(--violet);
+        border-radius: 0.25rem;
+        box-shadow: 0 0.8rem 2.2rem rgb(0 0 0 / 16%);
+      }
+
+      .creator-credit::after {
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-end: 1rem;
+        color: rgb(255 255 255 / 4%);
+        font-family: 'Arial Black', 'Segoe UI', Arial, sans-serif;
+        font-size: 3.8rem;
+        font-weight: 900;
+        line-height: 1;
+        content: 'VTG3';
+        transform: translateY(-50%);
+      }
+
+      .creator-credit-label {
+        position: relative;
+        z-index: 1;
+        padding: 0.45rem 0.6rem;
+        color: #090b0f;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 0.7rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        background: var(--accent-soft);
+      }
+
+      .creator-credit p {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+        line-height: 1.55;
+      }
+
+      .creator-credit strong {
+        color: var(--heading);
+        font-size: 0.95rem;
+      }
+
       .section {
         display: grid;
         grid-template-columns: 3rem minmax(0, 1fr);
@@ -712,6 +770,10 @@
           grid-template-columns: 1fr;
         }
 
+        .creator-credit {
+          grid-template-columns: 1fr;
+        }
+
         .slash {
           display: none;
         }
@@ -776,6 +838,14 @@
           </p>
         </aside>
       </header>
+
+      <aside class="creator-credit" aria-label="VTG3 creator credit">
+        <span class="creator-credit-label">Creator spotlight</span>
+        <p>
+          <strong>Big shout-out to Noel Yee.</strong> Noel created the VTG3 grid that organizes the
+          timing-and-direction relationships in this guide. This reference builds on his work.
+        </p>
+      </aside>
 
       <section class="section" aria-labelledby="timing-title">
         <div class="section-number">01</div>

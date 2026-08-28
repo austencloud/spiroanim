@@ -96,13 +96,14 @@ export async function stagePwaBuildTransition(): Promise<StagedPwaBuildTransitio
       cleanupOutdatedCaches: true,
       clientsClaim: true,
       globDirectory: buildDirectory,
-      globIgnores: ['sw.js', 'workbox-*.js'],
+      globIgnores: ['sw.js', 'workbox-*.js', 'vtg3/**'],
       globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
       navigateFallback: 'app-shell.html',
       navigateFallbackDenylist: [
         /^\/(?:index\/?|about\/?|tips\/?)?$/,
         /^\/docs(?:\/|$)/,
         /^\/vtg-reference(?:\/|$)/,
+        /^\/vtg3(?:\/|$)/,
       ],
       swDest: serviceWorkerPath,
     })

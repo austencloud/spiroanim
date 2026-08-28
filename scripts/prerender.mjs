@@ -95,6 +95,7 @@ const serviceWorkerResult = await generateSW({
     'docs/**',
     'reset.html',
     'reset/**',
+    'vtg3/**',
     ...clientOnlyRoutePrecacheIgnores,
   ],
   globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
@@ -104,6 +105,7 @@ const serviceWorkerResult = await generateSW({
     /^\/docs(?:\/|$)/,
     /^\/reset(?:\/|$)/,
     /^\/vtg-reference(?:\/|$)/,
+    /^\/vtg3(?:\/|$)/,
   ],
   swDest: path.join(clientDirectory, 'sw.js'),
 })

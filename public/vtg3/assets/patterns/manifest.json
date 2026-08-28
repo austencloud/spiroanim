@@ -1,0 +1,521 @@
+{
+  "generatedBy": "npm run generate:vtg3-art",
+  "images": [
+    {
+      "speedRatio": "1:1",
+      "reference": "1-1",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.9,
+      "cameraDistance": 19,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 25,
+        "minY": 26,
+        "maxX": 485,
+        "maxY": 485
+      },
+      "file": "1-1/1-1.png"
+    },
+    {
+      "speedRatio": "1:1",
+      "reference": "1-3",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.9,
+      "cameraDistance": 19,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 25,
+        "minY": 182,
+        "maxX": 485,
+        "maxY": 329
+      },
+      "file": "1-1/1-3.png"
+    },
+    {
+      "speedRatio": "1:1",
+      "reference": "1-5",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.9,
+      "cameraDistance": 19,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 25,
+        "minY": 26,
+        "maxX": 485,
+        "maxY": 485
+      },
+      "file": "1-1/1-5.png"
+    },
+    {
+      "speedRatio": "1:1",
+      "reference": "3-1",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.9,
+      "cameraDistance": 19,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 181,
+        "minY": 26,
+        "maxX": 329,
+        "maxY": 485
+      },
+      "file": "1-1/3-1.png"
+    },
+    {
+      "speedRatio": "1:1",
+      "reference": "3-3",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.9,
+      "cameraDistance": 19,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 181,
+        "minY": 182,
+        "maxX": 329,
+        "maxY": 329
+      },
+      "file": "1-1/3-3.png"
+    },
+    {
+      "speedRatio": "1:1",
+      "reference": "3-5",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.9,
+      "cameraDistance": 19,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 181,
+        "minY": 26,
+        "maxX": 329,
+        "maxY": 485
+      },
+      "file": "1-1/3-5.png"
+    },
+    {
+      "speedRatio": "1:1",
+      "reference": "5-1",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.9,
+      "cameraDistance": 19,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 25,
+        "minY": 26,
+        "maxX": 483,
+        "maxY": 485
+      },
+      "file": "1-1/5-1.png"
+    },
+    {
+      "speedRatio": "1:1",
+      "reference": "5-3",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.9,
+      "cameraDistance": 19,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 25,
+        "minY": 182,
+        "maxX": 483,
+        "maxY": 329
+      },
+      "file": "1-1/5-3.png"
+    },
+    {
+      "speedRatio": "1:1",
+      "reference": "5-5",
+      "variant": "spin",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.9,
+      "cameraDistance": 19,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 25,
+        "minY": 26,
+        "maxX": 483,
+        "maxY": 485
+      },
+      "file": "1-1/5-5-spin.png"
+    },
+    {
+      "speedRatio": "1:1",
+      "reference": "5-5",
+      "variant": "anti",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.9,
+      "cameraDistance": 19,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 25,
+        "minY": 26,
+        "maxX": 483,
+        "maxY": 485
+      },
+      "file": "1-1/5-5-anti.png"
+    },
+    {
+      "speedRatio": "1:3",
+      "reference": "1-1",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.8,
+      "cameraDistance": 18,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 29,
+        "minY": 31,
+        "maxX": 480,
+        "maxY": 480
+      },
+      "file": "1-3/1-1.png"
+    },
+    {
+      "speedRatio": "1:3",
+      "reference": "1-3",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.8,
+      "cameraDistance": 18,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 29,
+        "minY": 91,
+        "maxX": 480,
+        "maxY": 420
+      },
+      "file": "1-3/1-3.png"
+    },
+    {
+      "speedRatio": "1:3",
+      "reference": "1-5",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.8,
+      "cameraDistance": 18,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 29,
+        "minY": 31,
+        "maxX": 480,
+        "maxY": 480
+      },
+      "file": "1-3/1-5.png"
+    },
+    {
+      "speedRatio": "1:3",
+      "reference": "3-1",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.8,
+      "cameraDistance": 18,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 89,
+        "minY": 31,
+        "maxX": 420,
+        "maxY": 480
+      },
+      "file": "1-3/3-1.png"
+    },
+    {
+      "speedRatio": "1:3",
+      "reference": "3-3",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.8,
+      "cameraDistance": 18,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 89,
+        "minY": 91,
+        "maxX": 420,
+        "maxY": 420
+      },
+      "file": "1-3/3-3.png"
+    },
+    {
+      "speedRatio": "1:3",
+      "reference": "3-5",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.8,
+      "cameraDistance": 18,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 89,
+        "minY": 31,
+        "maxX": 420,
+        "maxY": 480
+      },
+      "file": "1-3/3-5.png"
+    },
+    {
+      "speedRatio": "1:3",
+      "reference": "5-1",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.8,
+      "cameraDistance": 18,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 29,
+        "minY": 31,
+        "maxX": 479,
+        "maxY": 480
+      },
+      "file": "1-3/5-1.png"
+    },
+    {
+      "speedRatio": "1:3",
+      "reference": "5-3",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.8,
+      "cameraDistance": 18,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 29,
+        "minY": 91,
+        "maxX": 479,
+        "maxY": 420
+      },
+      "file": "1-3/5-3.png"
+    },
+    {
+      "speedRatio": "1:3",
+      "reference": "5-5",
+      "variant": "spin",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.8,
+      "cameraDistance": 18,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 29,
+        "minY": 31,
+        "maxX": 479,
+        "maxY": 480
+      },
+      "file": "1-3/5-5-spin.png"
+    },
+    {
+      "speedRatio": "1:3",
+      "reference": "5-5",
+      "variant": "anti",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 0.8,
+      "cameraDistance": 18,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 29,
+        "minY": 31,
+        "maxX": 479,
+        "maxY": 480
+      },
+      "file": "1-3/5-5-anti.png"
+    },
+    {
+      "speedRatio": "1:5",
+      "reference": "1-1",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 1,
+      "cameraDistance": 20,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 21,
+        "minY": 22,
+        "maxX": 489,
+        "maxY": 489
+      },
+      "file": "1-5/1-1.png"
+    },
+    {
+      "speedRatio": "1:5",
+      "reference": "1-3",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 1,
+      "cameraDistance": 20,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 21,
+        "minY": 50,
+        "maxX": 489,
+        "maxY": 461
+      },
+      "file": "1-5/1-3.png"
+    },
+    {
+      "speedRatio": "1:5",
+      "reference": "1-5",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 1,
+      "cameraDistance": 20,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 21,
+        "minY": 22,
+        "maxX": 489,
+        "maxY": 489
+      },
+      "file": "1-5/1-5.png"
+    },
+    {
+      "speedRatio": "1:5",
+      "reference": "3-1",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 1,
+      "cameraDistance": 20,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 48,
+        "minY": 22,
+        "maxX": 461,
+        "maxY": 489
+      },
+      "file": "1-5/3-1.png"
+    },
+    {
+      "speedRatio": "1:5",
+      "reference": "3-3",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 1,
+      "cameraDistance": 20,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 48,
+        "minY": 50,
+        "maxX": 461,
+        "maxY": 461
+      },
+      "file": "1-5/3-3.png"
+    },
+    {
+      "speedRatio": "1:5",
+      "reference": "3-5",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 1,
+      "cameraDistance": 20,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 48,
+        "minY": 22,
+        "maxX": 461,
+        "maxY": 489
+      },
+      "file": "1-5/3-5.png"
+    },
+    {
+      "speedRatio": "1:5",
+      "reference": "5-1",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 1,
+      "cameraDistance": 20,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 21,
+        "minY": 22,
+        "maxX": 487,
+        "maxY": 489
+      },
+      "file": "1-5/5-1.png"
+    },
+    {
+      "speedRatio": "1:5",
+      "reference": "5-3",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 1,
+      "cameraDistance": 20,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 21,
+        "minY": 50,
+        "maxX": 487,
+        "maxY": 461
+      },
+      "file": "1-5/5-3.png"
+    },
+    {
+      "speedRatio": "1:5",
+      "reference": "5-5",
+      "variant": "spin",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 1,
+      "cameraDistance": 20,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 21,
+        "minY": 22,
+        "maxX": 487,
+        "maxY": 489
+      },
+      "file": "1-5/5-5-spin.png"
+    },
+    {
+      "speedRatio": "1:5",
+      "reference": "5-5",
+      "variant": "anti",
+      "scaleControlValue": 0.8,
+      "adjustedScale": 1,
+      "cameraDistance": 20,
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "contentBounds": {
+        "minX": 21,
+        "minY": 22,
+        "maxX": 487,
+        "maxY": 489
+      },
+      "file": "1-5/5-5-anti.png"
+    }
+  ]
+}
