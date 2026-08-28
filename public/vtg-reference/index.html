@@ -631,8 +631,8 @@
 
       .timing-direction-card {
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: clamp(1rem, 3vw, 2rem);
+        grid-template-columns: minmax(0, 1fr) clamp(9.5rem, 55%, 14rem);
+        gap: 1rem;
         align-items: center;
       }
 
@@ -657,9 +657,9 @@
       .timing-direction-diagram {
         position: relative;
         width: 100%;
-        max-width: 16rem;
         aspect-ratio: 1.45;
-        margin-inline: auto;
+        margin-inline: 0;
+        justify-self: end;
         border: 2px dotted rgb(89 215 238 / 72%);
         border-radius: 1.1rem;
         box-shadow:
@@ -772,6 +772,24 @@
 
         .creator-credit {
           grid-template-columns: 1fr;
+        }
+
+        .timing-direction-card {
+          gap: 0.75rem;
+          padding: 1rem;
+        }
+
+        .timing-direction-card h3 {
+          font-size: 0.72rem;
+          letter-spacing: 0.06em;
+        }
+
+        .timing-direction-code {
+          font-size: clamp(2.45rem, 13vw, 3.2rem);
+        }
+
+        .timing-direction-diagram {
+          max-width: 14rem;
         }
 
         .slash {
