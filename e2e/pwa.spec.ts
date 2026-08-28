@@ -106,10 +106,13 @@ test('serves the PWA reset page outside the application shell', async ({ request
 })
 
 test('serves VTG3 as a standalone document without precaching it', async ({ request }) => {
+  const extensionlessResponse = await request.get('/vtg3')
   const response = await request.get('/vtg3/')
   const html = await response.text()
   const serviceWorker = await (await request.get('/sw.js')).text()
 
+  expect(extensionlessResponse.ok()).toBe(true)
+  expect(await extensionlessResponse.text()).toContain('<h1>Vulcan Tech Gospel 3</h1>')
   expect(response.ok()).toBe(true)
   expect(html).toContain('<h1>Vulcan Tech Gospel 3</h1>')
   expect(html).toContain('VTG3 and the VTG3 grid were created by Noel Yee.')

@@ -1,6 +1,6 @@
 import { fileURLToPath, URL } from 'node:url'
 
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, type Connect, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
@@ -41,27 +41,35 @@ function emitPwaManifests(): Plugin {
   }
 }
 
-function serveStandalonePagesInDevelopment(): Plugin {
+function serveStandalonePages(): Plugin {
+  const middleware: Connect.NextHandleFunction = (request, response, next) => {
+    const standalonePages = ['reset', 'vtg-reference', 'vtg3']
+
+    for (const page of standalonePages) {
+      const route = `/${page}`
+      if (request.url?.startsWith(route) !== true) continue
+
+      const suffix = request.url.slice(route.length)
+      if (suffix === '' || suffix.startsWith('?')) {
+        response.statusCode = 307
+        response.setHeader('Location', `${route}/${suffix}`)
+        response.end()
+        return
+      }
+      if (suffix === '/') request.url = `${route}/index.html`
+      else if (suffix.startsWith('/?')) request.url = `${route}/index.html${suffix.slice(1)}`
+    }
+    next()
+  }
+
   return {
-    name: 'serve-standalone-pages-in-development',
+    name: 'serve-standalone-pages',
     apply: 'serve',
     configureServer(server) {
-      server.middlewares.use((request, _response, next) => {
-        const standalonePages = ['reset', 'vtg-reference', 'vtg3']
-
-        for (const page of standalonePages) {
-          const route = `/${page}`
-          if (request.url?.startsWith(route) !== true) continue
-
-          const suffix = request.url.slice(route.length)
-          if (suffix === '' || suffix === '/' || suffix.startsWith('?')) {
-            request.url = `${route}/index.html${suffix.startsWith('?') ? suffix : ''}`
-          } else if (suffix.startsWith('/?')) {
-            request.url = `${route}/index.html${suffix.slice(1)}`
-          }
-        }
-        next()
-      })
+      server.middlewares.use(middleware)
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(middleware)
     },
   }
 }
@@ -102,7 +110,7 @@ export function createViteConfig(isSsrBuild: boolean) {
       vue(),
       !isSsrBuild && vueDevTools(),
       !isSsrBuild && emitPwaManifests(),
-      serveStandalonePagesInDevelopment(),
+      serveStandalonePages(),
       AutoImport({
         imports: [AutoImports],
         dts: 'src/sys/auto-imports-generated.d.ts',
