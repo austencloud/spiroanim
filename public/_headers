@@ -12,3 +12,9 @@
 
 /reset/*
   Cache-Control: no-cache, no-store, must-revalidate
+
+/vtg-reference
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/vtg-reference/*
+  X-Robots-Tag: noindex, nofollow, noarchive

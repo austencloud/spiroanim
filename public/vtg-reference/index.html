@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="theme-color" content="#090b0f" />
+    <title>VTG: Timing, Direction, and Quarter Placement</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #cbd1d8;
+        --heading: #e2e6ea;
+        --muted: #949da8;
+        --paper: #090b0f;
+        --paper-raised: #151920;
+        --rule: #3c4653;
+        --accent: #ff754f;
+        --accent-soft: #ffb25b;
+        --blue: #59d7ee;
+        --violet: #a97cff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--paper);
+      }
+
+      body {
+        min-width: 20rem;
+        margin: 0;
+        color: var(--ink);
+        font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+        font-weight: 400;
+        letter-spacing: 0.012em;
+        line-height: 1.65;
+        text-rendering: optimizeLegibility;
+        background:
+          radial-gradient(circle at 12% 6%, rgb(255 117 79 / 14%), transparent 30rem),
+          radial-gradient(circle at 88% 35%, rgb(89 215 238 / 10%), transparent 32rem),
+          linear-gradient(90deg, rgb(255 255 255 / 2.5%) 1px, transparent 1px), var(--paper);
+        background-size:
+          auto,
+          5rem 100%;
+      }
+
+      main {
+        width: min(100% - 2rem, 74rem);
+        margin-inline: auto;
+        padding-block: clamp(2rem, 5vw, 5rem);
+      }
+
+      .site-nav {
+        position: sticky;
+        z-index: 10;
+        inset-block-start: 0;
+        display: flex;
+        width: min(100% - 2rem, 74rem);
+        min-height: 4.25rem;
+        gap: 0.45rem;
+        align-items: center;
+        justify-content: space-between;
+        padding-inline: 1rem;
+        margin-inline: auto;
+        background: rgb(9 11 15 / 82%);
+        border-block-end: 1px solid rgb(255 255 255 / 12%);
+        backdrop-filter: blur(1rem);
+      }
+
+      .nav-brand {
+        color: var(--heading);
+        font-family: 'Arial Black', 'Segoe UI', Arial, sans-serif;
+        font-size: 1.15rem;
+        font-weight: 900;
+        letter-spacing: 0.045em;
+        text-transform: uppercase;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 0.35rem;
+      }
+
+      .nav-links a {
+        padding: 0.65rem 0.85rem;
+        color: var(--muted);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+        border-radius: 999px;
+      }
+
+      .nav-links a:hover {
+        color: var(--heading);
+        background: rgb(255 255 255 / 7%);
+        border-color: rgb(255 255 255 / 12%);
+      }
+
+      .nav-links .app-link {
+        color: #090b0f;
+        background: var(--blue);
+      }
+
+      .nav-links .app-link:hover {
+        color: #090b0f;
+        background: #8be8f8;
+        border-color: transparent;
+      }
+
+      .nav-links a:focus-visible {
+        outline: 3px solid var(--blue);
+        outline-offset: 2px;
+      }
+
+      .masthead {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(15rem, 0.55fr);
+        gap: clamp(2rem, 6vw, 6rem);
+        align-items: end;
+        padding-block-end: clamp(2.5rem, 5vw, 4rem);
+        border-block-end: 0.22rem solid var(--accent);
+      }
+
+      .masthead::before {
+        position: absolute;
+        z-index: -1;
+        inset-block-start: -2rem;
+        inset-inline-end: 8%;
+        width: clamp(8rem, 22vw, 17rem);
+        aspect-ratio: 1;
+        border: 1px solid rgb(89 215 238 / 24%);
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 2.2rem rgb(89 215 238 / 4%),
+          0 0 0 4.4rem rgb(169 124 255 / 3%);
+        content: '';
+      }
+
+      .kicker,
+      .section-number,
+      .code,
+      .legend {
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .kicker {
+        margin: 0 0 0.85rem;
+        color: var(--accent);
+        font-size: 0.77rem;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: var(--heading);
+        font-family: 'Arial Black', 'Segoe UI', Arial, sans-serif;
+        font-weight: 900;
+        letter-spacing: 0.01em;
+      }
+
+      h1 {
+        max-width: 14ch;
+        margin: 0;
+        font-size: clamp(3rem, 8.6vw, 7.25rem);
+        line-height: 0.94;
+        letter-spacing: 0.012em;
+        text-transform: uppercase;
+        text-shadow: 0 0.08em 1.2em rgb(255 117 79 / 20%);
+      }
+
+      .intro {
+        margin: 1.7rem 0 0;
+        font-size: clamp(1.08rem, 2vw, 1.35rem);
+        line-height: 1.7;
+      }
+
+      .scope {
+        padding: 1.4rem;
+        background: linear-gradient(145deg, rgb(255 255 255 / 7%), rgb(255 255 255 / 2%));
+        border: 1px solid rgb(255 255 255 / 17%);
+        box-shadow:
+          0.5rem 0.5rem 0 rgb(255 117 79 / 65%),
+          0 1.5rem 4rem rgb(0 0 0 / 28%);
+      }
+
+      .scope h2 {
+        margin: 0 0 0.7rem;
+        font-size: 1.45rem;
+        text-transform: uppercase;
+      }
+
+      .scope p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .section {
+        display: grid;
+        grid-template-columns: 3rem minmax(0, 1fr);
+        gap: clamp(1rem, 3vw, 2.5rem);
+        padding-block: clamp(2.8rem, 6vw, 5rem);
+        border-block-end: 1px solid rgb(255 255 255 / 14%);
+      }
+
+      .section-number {
+        padding-block-start: 0.35rem;
+        color: var(--accent);
+        font-size: 0.8rem;
+        font-weight: 800;
+      }
+
+      .section h2 {
+        margin: 0;
+        font-size: clamp(2.2rem, 5vw, 4.5rem);
+        line-height: 1.05;
+        letter-spacing: 0.015em;
+        text-transform: uppercase;
+      }
+
+      .section-lead {
+        max-width: 48rem;
+        margin: 1rem 0 2rem;
+        color: var(--muted);
+        font-size: clamp(1rem, 1.8vw, 1.2rem);
+        line-height: 1.72;
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+      }
+
+      .card {
+        min-width: 0;
+        padding: clamp(1rem, 2.5vw, 1.5rem);
+        background:
+          linear-gradient(145deg, rgb(255 255 255 / 5%), transparent 60%), var(--paper-raised);
+        border: 1px solid rgb(255 255 255 / 14%);
+        border-radius: 0.35rem;
+        box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 18%);
+      }
+
+      .card h3 {
+        margin: 0.9rem 0 0.45rem;
+        font-size: 1.45rem;
+        letter-spacing: 0.018em;
+        text-transform: uppercase;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .code {
+        display: inline-grid;
+        width: 2.6rem;
+        height: 2.6rem;
+        color: var(--paper-raised);
+        font-size: 1.25rem;
+        font-weight: 900;
+        background: var(--ink);
+        place-items: center;
+      }
+
+      .clock {
+        position: relative;
+        width: 7.5rem;
+        aspect-ratio: 1;
+        margin-inline: auto;
+        border: 2px dotted var(--blue);
+        border-radius: 50%;
+        box-shadow:
+          inset 0 0 2rem rgb(89 215 238 / 7%),
+          0 0 1.6rem rgb(89 215 238 / 7%);
+      }
+
+      .clock::before,
+      .clock::after {
+        position: absolute;
+        width: 1.05rem;
+        aspect-ratio: 1;
+        background: var(--accent-soft);
+        border-radius: 50%;
+        box-shadow: 0 0 0.75rem rgb(255 178 91 / 55%);
+        content: '';
+      }
+
+      .clock::before {
+        inset-block-start: -0.53rem;
+        inset-inline-start: calc(50% - 0.53rem);
+      }
+
+      .clock.together::before {
+        inset-inline-start: calc(50% - 1.18rem);
+      }
+
+      .clock.together::after {
+        inset-block-start: -0.53rem;
+        inset-inline-start: calc(50% + 0.13rem);
+      }
+
+      .clock.split::after {
+        inset-block-end: -0.53rem;
+        inset-inline-start: calc(50% - 0.53rem);
+      }
+
+      .clock.quarter::after {
+        inset-block-start: calc(50% - 0.53rem);
+        inset-inline-end: -0.53rem;
+      }
+
+      .direction-grid,
+      .placement-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+      }
+
+      .label-key {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin: 0;
+      }
+
+      .label-row {
+        display: grid;
+        grid-template-columns: 3.5rem minmax(0, 1fr);
+        gap: 1rem;
+        align-items: center;
+        min-height: 5.4rem;
+        padding: 1rem;
+        background: linear-gradient(110deg, rgb(255 117 79 / 8%), var(--paper-raised) 35%);
+        border: 1px solid rgb(255 255 255 / 14%);
+        border-inline-start: 0.2rem solid var(--accent);
+        border-radius: 0.25rem;
+      }
+
+      .label-row dt,
+      .label-row dd {
+        margin: 0;
+      }
+
+      .label-row dt {
+        color: var(--accent);
+        font-family: 'Arial Black', 'Segoe UI', Arial, sans-serif;
+        font-size: 2.45rem;
+        font-weight: 900;
+        letter-spacing: 0.025em;
+      }
+
+      .label-row dd {
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .label-row strong {
+        color: var(--heading);
+      }
+
+      .formula {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        align-items: center;
+        margin-block: 1.25rem 2rem;
+        color: var(--muted);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .formula strong {
+        padding: 0.65rem 0.8rem;
+        color: var(--paper-raised);
+        background: var(--ink);
+      }
+
+      .motion-mark {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 1rem;
+        align-items: center;
+      }
+
+      .arrows {
+        display: grid;
+        width: 5.8rem;
+        aspect-ratio: 1;
+        color: var(--blue);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 2.35rem;
+        font-weight: 900;
+        border: 2px dotted var(--blue);
+        border-radius: 50%;
+        text-shadow: 0 0 1rem rgb(89 215 238 / 45%);
+        place-items: center;
+      }
+
+      .placement-diagram {
+        position: relative;
+        height: 8.5rem;
+        margin-block-end: 0.5rem;
+      }
+
+      .arm {
+        position: absolute;
+        z-index: 3;
+        inset-block-start: 4.3rem;
+        inset-inline-start: 50%;
+        width: 3rem;
+        height: 2px;
+        background: currentcolor;
+        transform-origin: left center;
+      }
+
+      .arm::after {
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 100%;
+        width: 0.65rem;
+        height: 0.65rem;
+        background: currentcolor;
+        border-radius: 50%;
+        content: '';
+        transform: translate(-50%, -50%);
+      }
+
+      .arm.left {
+        color: var(--blue);
+      }
+
+      .arm.right {
+        color: var(--violet);
+      }
+
+      .same .arm.right {
+        transform: rotate(90deg);
+      }
+
+      .same .arm.left {
+        transform: rotate(180deg);
+      }
+
+      .opp .arm.right {
+        transform: rotate(0deg);
+      }
+
+      .opp .arm.left {
+        transform: rotate(-90deg);
+      }
+
+      .motion-arrow {
+        position: absolute;
+        z-index: 4;
+        display: grid;
+        width: 1.4rem;
+        aspect-ratio: 1;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 1.1rem;
+        font-weight: 800;
+        line-height: 1;
+        background: var(--paper-raised);
+        border: 1px solid currentcolor;
+        border-radius: 50%;
+        box-shadow: 0 0 1rem color-mix(in srgb, currentcolor 20%, transparent);
+        transform: rotate(90deg);
+        place-items: center;
+      }
+
+      .motion-arrow.left-motion {
+        inset-inline-start: calc(50% - 1.7rem);
+        color: var(--blue);
+      }
+
+      .motion-arrow.right-motion {
+        inset-inline-start: calc(50% + 0.3rem);
+        color: var(--violet);
+      }
+
+      .same .motion-arrow {
+        inset-block-start: 2.4rem;
+      }
+
+      .opp .motion-arrow {
+        inset-block-start: 4.8rem;
+      }
+
+      .opp .motion-arrow.right-motion {
+        transform: rotate(270deg);
+      }
+
+      .placement-orbit {
+        position: absolute;
+        z-index: 1;
+        inset-block-start: 0.6rem;
+        inset-inline-start: 50%;
+        width: 7.3rem;
+        aspect-ratio: 1;
+        border: 1px dashed rgb(89 215 238 / 48%);
+        border-radius: 50%;
+        box-shadow:
+          inset 0 0 1.8rem rgb(89 215 238 / 5%),
+          0 0 1.8rem rgb(169 124 255 / 6%);
+        transform: translateX(-50%);
+      }
+
+      .notation {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        gap: clamp(1rem, 4vw, 3rem);
+        align-items: center;
+        padding: clamp(1.4rem, 4vw, 2.5rem);
+        background:
+          linear-gradient(120deg, rgb(89 215 238 / 11%), transparent 42%),
+          linear-gradient(300deg, rgb(169 124 255 / 10%), transparent 38%), var(--paper-raised);
+        color: var(--heading);
+        border: 1px solid rgb(89 215 238 / 28%);
+        border-radius: 0.4rem;
+        box-shadow: 0 1.5rem 3.5rem rgb(0 0 0 / 24%);
+      }
+
+      .notation h3 {
+        margin: 0 0 0.6rem;
+        font-size: 1.5rem;
+        text-transform: uppercase;
+      }
+
+      .notation p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .slash {
+        color: var(--accent-soft);
+        font-family: 'Arial Black', 'Segoe UI', Arial, sans-serif;
+        font-size: clamp(4rem, 8vw, 7rem);
+        font-weight: 900;
+      }
+
+      .example {
+        margin-block-start: 1rem;
+        padding: 1rem 1.2rem;
+        color: var(--ink);
+        background: linear-gradient(90deg, rgb(255 117 79 / 18%), rgb(255 117 79 / 5%));
+        border-inline-start: 0.35rem solid var(--accent);
+        line-height: 1.65;
+      }
+
+      .timing-direction-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+      }
+
+      .timing-direction-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: clamp(1rem, 3vw, 2rem);
+        align-items: center;
+      }
+
+      .timing-direction-card h3 {
+        display: grid;
+        gap: 0.35rem;
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.35;
+        letter-spacing: 0.08em;
+      }
+
+      .timing-direction-code {
+        color: var(--accent);
+        font-family: 'Arial Black', 'Segoe UI', Arial, sans-serif;
+        font-size: clamp(2.8rem, 6vw, 4.8rem);
+        line-height: 0.85;
+        letter-spacing: 0.01em;
+      }
+
+      .timing-direction-diagram {
+        position: relative;
+        width: 100%;
+        max-width: 16rem;
+        aspect-ratio: 1.45;
+        margin-inline: auto;
+        border: 2px dotted rgb(89 215 238 / 72%);
+        border-radius: 1.1rem;
+        box-shadow:
+          inset 0 0 2.5rem rgb(89 215 238 / 5%),
+          0 0 1.8rem rgb(169 124 255 / 7%);
+      }
+
+      .timing-direction-position {
+        position: absolute;
+        display: flex;
+        gap: 0.4rem;
+      }
+
+      .timing-direction-position.top,
+      .timing-direction-position.bottom {
+        inset-inline-start: 50%;
+        transform: translateX(-50%);
+      }
+
+      .timing-direction-position.top {
+        inset-block-start: 0.8rem;
+      }
+
+      .timing-direction-position.bottom {
+        inset-block-end: 0.8rem;
+      }
+
+      .timing-direction-position.left,
+      .timing-direction-position.right {
+        inset-block-start: 50%;
+        flex-direction: column;
+        transform: translateY(-50%);
+      }
+
+      .timing-direction-position.left {
+        inset-inline-start: 0.8rem;
+      }
+
+      .timing-direction-position.right {
+        inset-inline-end: 0.8rem;
+      }
+
+      .timing-direction-dot {
+        width: 0.95rem;
+        aspect-ratio: 1;
+        background: var(--accent-soft);
+        border-radius: 50%;
+        box-shadow: 0 0 0.8rem rgb(255 178 91 / 42%);
+      }
+
+      footer {
+        display: flex;
+        gap: 1rem 2rem;
+        justify-content: space-between;
+        padding-block-start: 2rem;
+        color: var(--muted);
+        font-size: 0.88rem;
+        line-height: 1.65;
+      }
+
+      footer p {
+        max-width: 44rem;
+        margin: 0;
+      }
+
+      @media (max-width: 48rem) {
+        .masthead,
+        .card-grid,
+        .direction-grid,
+        .placement-grid,
+        .timing-direction-grid,
+        .label-key {
+          grid-template-columns: 1fr;
+        }
+
+        .section {
+          grid-template-columns: 1fr;
+        }
+
+        .section-number {
+          padding: 0;
+        }
+
+        .scope {
+          max-width: 32rem;
+        }
+      }
+
+      @media (max-width: 32rem) {
+        .site-nav {
+          width: min(100% - 1.25rem, 74rem);
+        }
+
+        .nav-brand {
+          display: none;
+        }
+
+        .nav-links {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        main {
+          width: min(100% - 1.25rem, 74rem);
+        }
+
+        .notation {
+          grid-template-columns: 1fr;
+        }
+
+        .slash {
+          display: none;
+        }
+
+        footer {
+          display: block;
+        }
+      }
+
+      @media print {
+        :root {
+          color-scheme: light;
+          --ink: #171717;
+          --heading: #171717;
+          --muted: #5c574f;
+          --paper: #ffffff;
+          --paper-raised: #ffffff;
+        }
+
+        body {
+          background: white;
+        }
+
+        .site-nav {
+          display: none;
+        }
+
+        main {
+          width: auto;
+          padding: 0;
+        }
+
+        .section {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="site-nav" aria-label="SpiroAnim pages">
+      <span class="nav-brand">SpiroAnim / VTG Reference</span>
+      <div class="nav-links">
+        <a id="return-to-app" class="app-link" href="/app">Return to App</a>
+      </div>
+    </nav>
+    <main>
+      <header class="masthead">
+        <div>
+          <p class="kicker">Vulcan Tech Gospel - quick reference</p>
+          <h1>Timing &amp; Direction</h1>
+          <p class="intro">
+            Timing and direction describe the relationship between two hands or two props in a
+            pattern. VTG gives that relationship a short label so a complicated movement can be
+            named, compared, and understood at a glance.
+          </p>
+        </div>
+        <aside class="scope">
+          <h2>What this page covers</h2>
+          <p>
+            A short guide to reading VTG labels, including the Quarter Timing and Quarter Placement
+            ideas used in SpiroAnim. Use the app to explore the complete pattern library.
+          </p>
+        </aside>
+      </header>
+
+      <section class="section" aria-labelledby="timing-title">
+        <div class="section-number">01</div>
+        <div>
+          <h2 id="timing-title">Timing</h2>
+          <p class="section-lead">
+            Timing asks:
+            <strong>when do the two hands or props reach the same reference point?</strong>
+            Think of their positions around a circle like hands on a clock.
+          </p>
+          <div class="card-grid">
+            <article class="card">
+              <div class="clock together" aria-hidden="true"></div>
+              <h3><span class="code">T</span> Together</h3>
+              <p>They reach the reference point at the same time: 0 degrees apart.</p>
+            </article>
+            <article class="card">
+              <div class="clock split" aria-hidden="true"></div>
+              <h3><span class="code">S</span> Split</h3>
+              <p>One arrives halfway around the cycle from the other: 180 degrees apart.</p>
+            </article>
+            <article class="card">
+              <div class="clock quarter" aria-hidden="true"></div>
+              <h3><span class="code">Q</span> Quarter</h3>
+              <p>
+                One arrives one-quarter or three-quarters of a cycle after the other: 90 or 270
+                degrees apart.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="direction-title">
+        <div class="section-number">02</div>
+        <div>
+          <h2 id="direction-title">Direction</h2>
+          <p class="section-lead">
+            Direction asks: <strong>are the pair traveling the same way or opposite ways?</strong>
+            It is separate from timing, so two things can share a position without sharing a timing
+            relationship.
+          </p>
+          <div class="direction-grid">
+            <article class="card motion-mark">
+              <div class="arrows" aria-hidden="true">↻ ↻</div>
+              <div>
+                <h3><span class="code">S</span> Same</h3>
+                <p>Both travel in the same direction.</p>
+              </div>
+            </article>
+            <article class="card motion-mark">
+              <div class="arrows" aria-hidden="true">↻ ↺</div>
+              <div>
+                <h3><span class="code">O</span> Opposite</h3>
+                <p>They travel in opposite directions.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="labels-title">
+        <div class="section-number">03</div>
+        <div>
+          <h2 id="labels-title">Build the label</h2>
+          <p class="section-lead">
+            <strong
+              >The timing letter is always first. The direction letter is always second.</strong
+            >
+            Combine one choice from each section to read any two-letter relationship.
+          </p>
+          <div class="formula" aria-label="Timing plus direction equals one relationship label">
+            <strong>Timing</strong><span>+</span><strong>Direction</strong><span>= one label</span>
+          </div>
+          <dl class="label-key">
+            <div class="label-row">
+              <dt>TS</dt>
+              <dd>
+                <strong>Together / Same:</strong> together in time, traveling the same direction.
+              </dd>
+            </div>
+            <div class="label-row">
+              <dt>TO</dt>
+              <dd>
+                <strong>Together / Opposite:</strong> together in time, traveling opposite
+                directions.
+              </dd>
+            </div>
+            <div class="label-row">
+              <dt>SS</dt>
+              <dd><strong>Split / Same:</strong> split in time, traveling the same direction.</dd>
+            </div>
+            <div class="label-row">
+              <dt>SO</dt>
+              <dd>
+                <strong>Split / Opposite:</strong> split in time, traveling opposite directions.
+              </dd>
+            </div>
+            <div class="label-row">
+              <dt>QS</dt>
+              <dd><strong>Quarter / Same:</strong> quarter time, traveling the same direction.</dd>
+            </div>
+            <div class="label-row">
+              <dt>QO</dt>
+              <dd>
+                <strong>Quarter / Opposite:</strong> quarter time, traveling opposite directions.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="reading-title">
+        <div class="section-number">04</div>
+        <div>
+          <h2 id="reading-title">Read both circles</h2>
+          <p class="section-lead">
+            The hands travel around the larger arm circle. The props rotate around the smaller prop
+            circle. Even when they complete the same number of rotations, those two circles can have
+            different timing and direction relationships. VTG therefore gives each one its own
+            label.
+          </p>
+          <div class="notation">
+            <div>
+              <h3>Hands first</h3>
+              <p>The first label describes the relationship between the two hands.</p>
+            </div>
+            <div class="slash" aria-hidden="true">/</div>
+            <div>
+              <h3>Props second</h3>
+              <p>The second label describes the relationship between the two props.</p>
+            </div>
+          </div>
+          <p class="example">
+            <strong>SO / SS</strong> reads: the hands are Split/Opposite, while the props are
+            Split/Same. The slash always means <strong>Hands / Props</strong>.
+          </p>
+          <p class="example">
+            With Quarter Timing, <strong>QO / QS</strong> reads: the hands are Quarter/Opposite,
+            while the props are Quarter/Same. Each side is still measured independently.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="placement-title">
+        <div class="section-number">05</div>
+        <div>
+          <h2 id="placement-title">Quarter Placement</h2>
+          <p class="section-lead">
+            Quarter Placement describes the <strong>shape made by the arms</strong>. It tells you
+            where the arms are in relation to each other, not when they arrive there.
+          </p>
+          <div class="placement-grid">
+            <article class="card same">
+              <div class="placement-diagram" aria-hidden="true">
+                <span class="placement-orbit"></span>
+                <span class="arm left"></span><span class="arm right"></span>
+                <span class="motion-arrow left-motion">↻</span>
+                <span class="motion-arrow right-motion">↻</span>
+              </div>
+              <h3>Quarter-Same</h3>
+              <p>The arms maintain an L shape as they travel around the pattern.</p>
+            </article>
+            <article class="card opp">
+              <div class="placement-diagram" aria-hidden="true">
+                <span class="placement-orbit"></span>
+                <span class="arm left"></span><span class="arm right"></span>
+                <span class="motion-arrow left-motion">↻</span>
+                <span class="motion-arrow right-motion">↺</span>
+              </div>
+              <h3>Quarter-Opp</h3>
+              <p>
+                Other Opposite placements line both arms up on one axis. Quarter-Opp puts one arm on
+                the vertical axis and the other on the horizontal axis, while the hands travel
+                around their circles in opposing directions.
+              </p>
+            </article>
+          </div>
+          <p class="example">
+            <strong>Keep the distinction:</strong> Quarter Timing describes a phase relationship;
+            Quarter Placement describes an arm arrangement. They are separate qualities, and a
+            pattern may have one without the other. Both use Quarter for the halfway point between
+            Together/Same and Split.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="timing-direction-title">
+        <div class="section-number">06</div>
+        <div>
+          <h2 id="timing-direction-title">Timing and Direction</h2>
+          <p class="section-lead">The four core combinations at a glance.</p>
+          <div class="timing-direction-grid">
+            <article class="card timing-direction-card">
+              <h3><span class="timing-direction-code">TS</span>Together / Same</h3>
+              <div class="timing-direction-diagram" aria-hidden="true">
+                <span class="timing-direction-position top"
+                  ><i class="timing-direction-dot"></i><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position right"
+                  ><i class="timing-direction-dot"></i><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position bottom"
+                  ><i class="timing-direction-dot"></i><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position left"
+                  ><i class="timing-direction-dot"></i><i class="timing-direction-dot"></i
+                ></span>
+              </div>
+            </article>
+
+            <article class="card timing-direction-card">
+              <h3><span class="timing-direction-code">TO</span>Together / Opposite</h3>
+              <div class="timing-direction-diagram" aria-hidden="true">
+                <span class="timing-direction-position top"
+                  ><i class="timing-direction-dot"></i><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position right"
+                  ><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position bottom"
+                  ><i class="timing-direction-dot"></i><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position left"
+                  ><i class="timing-direction-dot"></i
+                ></span>
+              </div>
+            </article>
+
+            <article class="card timing-direction-card">
+              <h3><span class="timing-direction-code">SS</span>Split / Same</h3>
+              <div class="timing-direction-diagram" aria-hidden="true">
+                <span class="timing-direction-position top"
+                  ><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position right"
+                  ><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position bottom"
+                  ><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position left"
+                  ><i class="timing-direction-dot"></i
+                ></span>
+              </div>
+            </article>
+
+            <article class="card timing-direction-card">
+              <h3><span class="timing-direction-code">SO</span>Split / Opposite</h3>
+              <div class="timing-direction-diagram" aria-hidden="true">
+                <span class="timing-direction-position top"
+                  ><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position right"
+                  ><i class="timing-direction-dot"></i><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position bottom"
+                  ><i class="timing-direction-dot"></i
+                ></span>
+                <span class="timing-direction-position left"
+                  ><i class="timing-direction-dot"></i><i class="timing-direction-dot"></i
+                ></span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <p>
+          Based on the Vulcan Tech Gospel framework developed by Noel Yee, David Cantor, Brian
+          Thompson, Lorq Nichols, and collaborators. This page is a concise SpiroAnim reference, not
+          a replacement for the original VTG documents.
+        </p>
+        <p class="legend">Happy spinning.</p>
+      </footer>
+    </main>
+    <script>
+      ;(() => {
+        const returnLink = document.querySelector('#return-to-app')
+        if (!(returnLink instanceof HTMLAnchorElement)) return
+
+        const returnFlagKey = 'spiroanim:vtg-return-through-history'
+        let canReturnThroughHistory = false
+
+        try {
+          const referrer = document.referrer ? new URL(document.referrer) : null
+          const arrivedFromApp =
+            referrer?.origin === window.location.origin &&
+            ![
+              '/',
+              '/about',
+              '/tips',
+              '/reset',
+              '/reset/',
+              '/vtg-reference',
+              '/vtg-reference/',
+            ].includes(referrer.pathname)
+
+          if (arrivedFromApp) sessionStorage.setItem(returnFlagKey, 'true')
+          canReturnThroughHistory =
+            arrivedFromApp || sessionStorage.getItem(returnFlagKey) === 'true'
+        } catch {
+          canReturnThroughHistory = false
+        }
+
+        if (!canReturnThroughHistory) return
+
+        returnLink.addEventListener('click', (event) => {
+          event.preventDefault()
+          sessionStorage.removeItem(returnFlagKey)
+          history.back()
+        })
+      })()
+    </script>
+  </body>
+</html>

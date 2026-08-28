@@ -41,16 +41,23 @@ function emitPwaManifests(): Plugin {
   }
 }
 
-function serveResetPageInDevelopment(): Plugin {
+function serveStandalonePagesInDevelopment(): Plugin {
   return {
-    name: 'serve-reset-page-in-development',
+    name: 'serve-standalone-pages-in-development',
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use((request, _response, next) => {
-        if (request.url?.startsWith('/reset/') === true) {
-          const suffix = request.url.slice('/reset/'.length)
-          if (suffix === '' || suffix.startsWith('?')) {
-            request.url = `/reset/index.html${suffix}`
+        const standalonePages = ['reset', 'vtg-reference']
+
+        for (const page of standalonePages) {
+          const route = `/${page}`
+          if (request.url?.startsWith(route) !== true) continue
+
+          const suffix = request.url.slice(route.length)
+          if (suffix === '' || suffix === '/' || suffix.startsWith('?')) {
+            request.url = `${route}/index.html${suffix.startsWith('?') ? suffix : ''}`
+          } else if (suffix.startsWith('/?')) {
+            request.url = `${route}/index.html${suffix.slice(1)}`
           }
         }
         next()
@@ -95,7 +102,7 @@ export function createViteConfig(isSsrBuild: boolean) {
       vue(),
       !isSsrBuild && vueDevTools(),
       !isSsrBuild && emitPwaManifests(),
-      serveResetPageInDevelopment(),
+      serveStandalonePagesInDevelopment(),
       AutoImport({
         imports: [AutoImports],
         dts: 'src/sys/auto-imports-generated.d.ts',

@@ -105,6 +105,38 @@ test('serves the PWA reset page outside the application shell', async ({ request
   expect(html).not.toContain('<div id="app"></div>')
 })
 
+test('caches the VTG reference and returns to the exact app history entry', async ({
+  context,
+  page,
+}) => {
+  await page.goto('/app')
+  await page.evaluate(async () => navigator.serviceWorker.ready)
+  await expect
+    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .toBe(true)
+
+  const appPath = '/play-time?vtgReturnTest=preserved#last-pattern'
+  await page.evaluate((path) => history.replaceState(history.state, '', path), appPath)
+
+  await page.goto('/vtg-reference/')
+  await expect(page.getByRole('heading', { name: 'Timing & Direction' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Return to App' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Home' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'About' })).toHaveCount(0)
+
+  await context.setOffline(true)
+  try {
+    const offlineResponse = requireResponse(await page.reload())
+    expect(offlineResponse.fromServiceWorker()).toBe(true)
+
+    await page.getByRole('link', { name: 'Return to App' }).click()
+    await expect(page).toHaveURL(new RegExp(`${appPath.replace('?', '\\?')}\$`))
+    await expect(page.locator('[data-role="main-container"]')).toBeVisible()
+  } finally {
+    await context.setOffline(false)
+  }
+})
+
 test('removes service workers and all locally stored app data for the current origin', async ({
   page,
 }) => {

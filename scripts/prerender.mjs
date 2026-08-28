@@ -103,6 +103,7 @@ const serviceWorkerResult = await generateSW({
     /^\/(?:index\/?|about\/?|tips\/?)?$/,
     /^\/docs(?:\/|$)/,
     /^\/reset(?:\/|$)/,
+    /^\/vtg-reference(?:\/|$)/,
   ],
   swDest: path.join(clientDirectory, 'sw.js'),
 })

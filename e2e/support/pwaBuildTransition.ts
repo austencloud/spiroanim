@@ -99,7 +99,11 @@ export async function stagePwaBuildTransition(): Promise<StagedPwaBuildTransitio
       globIgnores: ['sw.js', 'workbox-*.js'],
       globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
       navigateFallback: 'app-shell.html',
-      navigateFallbackDenylist: [/^\/(?:index\/?|about\/?|tips\/?)?$/, /^\/docs(?:\/|$)/],
+      navigateFallbackDenylist: [
+        /^\/(?:index\/?|about\/?|tips\/?)?$/,
+        /^\/docs(?:\/|$)/,
+        /^\/vtg-reference(?:\/|$)/,
+      ],
       swDest: serviceWorkerPath,
     })
 
