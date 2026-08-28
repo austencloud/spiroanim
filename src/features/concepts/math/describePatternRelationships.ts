@@ -1,34 +1,27 @@
-import type {
-  VtgDirectionCode,
-  VtgPatternLabel,
-  VtgRelationshipCode,
-  VtgTimingCode,
-} from '@/features/vtg/types'
+import type { VtgDirectionCode, VtgRelationshipCode, VtgTimingCode } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { InitialPoint } from '@/math/animation/OrthogonalFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 export type RelationshipVector = readonly [number, number, number]
 
-interface RelativePhase {
-  timing: VtgTimingCode
-  orientation: 1 | -1
-}
-
+export const indeterminateRelationshipCode = 'XX' as const
 export const patternRelationshipErrorLabel = 'XX / XX' as const
-export type PatternRelationshipLabel = VtgPatternLabel | typeof patternRelationshipErrorLabel
+export type PatternRelationshipCode = VtgRelationshipCode | typeof indeterminateRelationshipCode
+export type PatternRelationshipLabel = `${PatternRelationshipCode} / ${PatternRelationshipCode}`
+
+export interface PatternRelationship {
+  timing: VtgTimingCode
+  direction: VtgDirectionCode
+}
 
 export interface PatternRelationships {
   label: PatternRelationshipLabel
   description: string
-  hands?: {
-    timing: VtgTimingCode
-    direction: VtgDirectionCode
-  }
-  props?: {
-    timing: VtgTimingCode
-    direction: VtgDirectionCode
-  }
+  hands?: PatternRelationship
+  props?: PatternRelationship
+  handsIndeterminate: boolean
+  propsIndeterminate: boolean
 }
 
 export type PatternRelationshipCheckpoint = 'source' | 'destination'
@@ -37,7 +30,7 @@ const relationshipTolerance = 0.000_001
 const relationshipPhaseRadians = (Math.PI * 3) / 2
 const fullRotationRadians = Math.PI * 2
 const quarterRotationRadians = Math.PI / 2
-const propTimingReference: RelationshipVector = [InitialPoint.x, InitialPoint.y, InitialPoint.z]
+const timingReference: RelationshipVector = [InitialPoint.x, InitialPoint.y, InitialPoint.z]
 
 const dotProduct = (first: RelationshipVector, second: RelationshipVector): number =>
   first[0] * second[0] + first[1] * second[1] + first[2] * second[2]
@@ -88,7 +81,7 @@ const directedPhaseToReference = (
 ): number => {
   const axis = normalizedVector(velocityAxis)
   const planarOrientation = projectedUnitVector(orientation, axis)
-  const planarReference = projectedUnitVector(propTimingReference, axis)
+  const planarReference = projectedUnitVector(timingReference, axis)
   return normalizedRadians(
     Math.atan2(
       orientedCrossProduct(planarOrientation, planarReference, axis),
@@ -98,11 +91,11 @@ const directedPhaseToReference = (
 }
 
 /**
- * Classifies prop timing by comparing each prop's directed phase to the common bottom reference.
+ * Classifies timing by comparing each member's directed phase to the common bottom reference.
  * The velocity axes include spin direction, so equal Cartesian orientations are not assumed to
- * have equal timing when the props rotate in opposite directions.
+ * have equal timing when the members move in opposite directions.
  */
-export const classifyDirectedPropTiming = (
+export const classifyDirectedTiming = (
   firstOrientation: RelationshipVector,
   firstVelocityAxis: RelationshipVector,
   secondOrientation: RelationshipVector,
@@ -168,28 +161,6 @@ const relationshipSign = (first: RelationshipVector, second: RelationshipVector)
   return dot > 0 ? 1 : -1
 }
 
-const classifyRelativePhase = (
-  first: RelationshipVector,
-  second: RelationshipVector,
-  firstAxis: RelationshipVector,
-): RelativePhase => {
-  const dot = dotProduct(first, second)
-  if (Math.abs(Math.abs(dot) - 1) <= relationshipTolerance) {
-    return { timing: dot > 0 ? 'T' : 'S', orientation: dot > 0 ? 1 : -1 }
-  }
-
-  if (Math.abs(dot) > relationshipTolerance) {
-    throw new Error(`Expected together, split, or quarter relationship vectors, received ${dot}`)
-  }
-
-  const orientation = orientedCrossProduct(first, second, firstAxis)
-  if (Math.abs(Math.abs(orientation) - 1) > relationshipTolerance) {
-    throw new Error(`Expected an oriented quarter relationship, received ${orientation}`)
-  }
-
-  return { timing: 'Q', orientation: orientation > 0 ? 1 : -1 }
-}
-
 const directionCode = (sign: number): VtgDirectionCode => (sign > 0 ? 'S' : 'O')
 
 const scaledVector = (vector: RelationshipVector, scale: number): RelationshipVector => [
@@ -197,20 +168,6 @@ const scaledVector = (vector: RelationshipVector, scale: number): RelationshipVe
   vector[1] * scale,
   vector[2] * scale,
 ]
-
-const normalizedTravelVector = (
-  start: RelationshipVector,
-  end: RelationshipVector,
-): RelationshipVector | undefined => {
-  const travel: RelationshipVector = [end[0] - start[0], end[1] - start[1], end[2] - start[2]]
-  const length = Math.hypot(...travel)
-  return length <= relationshipTolerance ? undefined : scaledVector(travel, 1 / length)
-}
-
-const isDiagonalPlanarVector = (vector: RelationshipVector): boolean =>
-  Math.abs(Math.abs(vector[0]) - Math.abs(vector[1])) <= relationshipTolerance &&
-  Math.abs(vector[0]) > relationshipTolerance &&
-  Math.abs(vector[1]) > relationshipTolerance
 
 const timingDescriptions = {
   T: 'Together',
@@ -226,6 +183,41 @@ const directionDescriptions = {
 const describeRelationship = (timing: VtgTimingCode, direction: VtgDirectionCode): string =>
   `${timingDescriptions[timing]} / ${directionDescriptions[direction]}`
 
+const relationshipCode = (
+  relationship: PatternRelationship | undefined,
+): PatternRelationshipCode =>
+  relationship ? `${relationship.timing}${relationship.direction}` : indeterminateRelationshipCode
+
+const relationshipDescription = (
+  name: 'Hands' | 'Props',
+  relationship: PatternRelationship | undefined,
+): string =>
+  relationship
+    ? `${name}: ${describeRelationship(relationship.timing, relationship.direction)}`
+    : `${name}: Indeterminate`
+
+export const createPatternRelationships = (
+  hands: PatternRelationship | undefined,
+  props: PatternRelationship | undefined,
+): PatternRelationships => ({
+  label: `${relationshipCode(hands)} / ${relationshipCode(props)}`,
+  description: `${relationshipDescription('Hands', hands)}\n${relationshipDescription('Props', props)}`,
+  ...(hands ? { hands } : undefined),
+  ...(props ? { props } : undefined),
+  handsIndeterminate: hands === undefined,
+  propsIndeterminate: props === undefined,
+})
+
+const classifyRelationship = (
+  classify: () => PatternRelationship,
+): PatternRelationship | undefined => {
+  try {
+    return classify()
+  } catch {
+    return undefined
+  }
+}
+
 const describePatternRelationshipsUnsafe = (
   animation: RootDataFinal,
   checkpoint: PatternRelationshipCheckpoint = 'destination',
@@ -239,75 +231,75 @@ const describePatternRelationshipsUnsafe = (
     throw new Error('Pattern relationships require two props with at least two compiled frames')
   }
 
-  const handStartPhase = classifyRelativePhase(firstStart.pos, secondStart.pos, firstStart.posx)
-  const firstHandTravel = normalizedTravelVector(firstStart.pos, firstEnd.pos)
-  const secondHandTravel = normalizedTravelVector(secondStart.pos, secondEnd.pos)
-  const handDestinationPhase =
-    firstHandTravel &&
-    secondHandTravel &&
-    isDiagonalPlanarVector(firstEnd.pos) &&
-    isDiagonalPlanarVector(secondEnd.pos)
-      ? classifyRelativePhase(firstHandTravel, secondHandTravel, firstEnd.posx)
-      : classifyRelativePhase(firstEnd.pos, secondEnd.pos, firstEnd.posx)
-  // VTG relationship labels describe the props at their three-quarter phase checkpoint. Unequal
-  // ratios change how many degrees each prop travels per beat, so their Cartesian endpoints can
-  // coincide even when the paths represent a Split relationship. Advance each real starting
-  // orientation through the canonical checkpoint using its actual incoming axis and direction.
-  // At 1:3 this is the compiled endpoint; at other ratios it preserves the same path semantics.
-  const firstPropPhase = semanticPropPhase(
-    firstStart.rot,
-    firstEnd.rotx,
-    firstEnd.turns + firstEnd.arc,
-  )
-  const secondPropPhase = semanticPropPhase(
-    secondStart.rot,
-    secondEnd.rotx,
-    secondEnd.turns + secondEnd.arc,
-  )
-  const handDirection = directionCode(relationshipSign(firstEnd.posx, secondEnd.posx))
-  const handPhase = checkpoint === 'source' ? handStartPhase : handDestinationPhase
+  const hands = classifyRelationship(() => {
+    const startTiming = classifyDirectedTiming(
+      firstStart.pos,
+      firstEnd.posx,
+      secondStart.pos,
+      secondEnd.posx,
+    )
+    const destinationTiming = classifyDirectedTiming(
+      firstEnd.pos,
+      firstEnd.posx,
+      secondEnd.pos,
+      secondEnd.posx,
+    )
+    return {
+      timing: checkpoint === 'source' ? startTiming : destinationTiming,
+      direction: directionCode(relationshipSign(firstEnd.posx, secondEnd.posx)),
+    }
+  })
 
-  const firstRotationDirection = Math.sign(firstEnd.turns + firstEnd.arc)
-  const secondRotationDirection = Math.sign(secondEnd.turns + secondEnd.arc)
-  const firstVelocityAxis = scaledVector(firstEnd.rotx, firstRotationDirection || 1)
-  const secondVelocityAxis = scaledVector(secondEnd.rotx, secondRotationDirection || 1)
-  const propTiming =
-    checkpoint === 'source'
-      ? classifyDirectedPropTiming(
-          firstStart.rot,
-          firstVelocityAxis,
-          secondStart.rot,
-          secondVelocityAxis,
-        )
-      : classifyDirectedPropTiming(
-          firstPropPhase,
-          firstVelocityAxis,
-          secondPropPhase,
-          secondVelocityAxis,
-        )
-  const propDirection = directionCode(relationshipSign(firstVelocityAxis, secondVelocityAxis))
+  const props = classifyRelationship(() => {
+    // VTG relationship labels describe the props at their three-quarter phase checkpoint. Unequal
+    // ratios change how many degrees each prop travels per beat, so their Cartesian endpoints can
+    // coincide even when the paths represent a Split relationship. Advance each real starting
+    // orientation through the canonical checkpoint using its actual incoming axis and direction.
+    // At 1:3 this is the compiled endpoint; at other ratios it preserves the same path semantics.
+    const firstPropPhase = semanticPropPhase(
+      firstStart.rot,
+      firstEnd.rotx,
+      firstEnd.turns + firstEnd.arc,
+    )
+    const secondPropPhase = semanticPropPhase(
+      secondStart.rot,
+      secondEnd.rotx,
+      secondEnd.turns + secondEnd.arc,
+    )
+    const firstRotationDirection = Math.sign(firstEnd.turns + firstEnd.arc)
+    const secondRotationDirection = Math.sign(secondEnd.turns + secondEnd.arc)
+    const firstVelocityAxis = scaledVector(firstEnd.rotx, firstRotationDirection || 1)
+    const secondVelocityAxis = scaledVector(secondEnd.rotx, secondRotationDirection || 1)
+    const timing =
+      checkpoint === 'source'
+        ? classifyDirectedTiming(
+            firstStart.rot,
+            firstVelocityAxis,
+            secondStart.rot,
+            secondVelocityAxis,
+          )
+        : classifyDirectedTiming(
+            firstPropPhase,
+            firstVelocityAxis,
+            secondPropPhase,
+            secondVelocityAxis,
+          )
+    return {
+      timing,
+      direction: directionCode(relationshipSign(firstVelocityAxis, secondVelocityAxis)),
+    }
+  })
 
-  const hands: VtgRelationshipCode = `${handPhase.timing}${handDirection}`
-  const props: VtgRelationshipCode = `${propTiming}${propDirection}`
-  const label: VtgPatternLabel = `${hands} / ${props}`
-
-  return {
-    label,
-    description: `Hands: ${describeRelationship(handPhase.timing, handDirection)}\nProps: ${describeRelationship(propTiming, propDirection)}`,
-    hands: { timing: handPhase.timing, direction: handDirection },
-    props: { timing: propTiming, direction: propDirection },
-  }
+  return createPatternRelationships(hands, props)
 }
 
-export const createPatternRelationshipError = (
-  error: unknown,
-  context?: Readonly<Record<string, unknown>>,
-): PatternRelationships => {
+export const createPatternRelationshipError = (error: unknown): PatternRelationships => {
   const message = error instanceof Error ? error.message : String(error)
-  console.warn('Unable to classify pattern relationships.', { ...context, error })
   return {
     label: patternRelationshipErrorLabel,
     description: `Pattern relationship error: ${message}`,
+    handsIndeterminate: true,
+    propsIndeterminate: true,
   }
 }
 
@@ -318,6 +310,6 @@ export const describePatternRelationships = (
   try {
     return describePatternRelationshipsUnsafe(animation, checkpoint)
   } catch (error) {
-    return createPatternRelationshipError(error, { checkpoint })
+    return createPatternRelationshipError(error)
   }
 }

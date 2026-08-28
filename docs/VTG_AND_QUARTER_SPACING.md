@@ -274,13 +274,13 @@ while a QTR pattern whose prop phase is counter-rotated can produce `QS / SS`.
 ## Relationship classification
 
 Matrix labels and cell tooltips are derived from each compiled pattern rather than a cell-label
-table. Hand timing retains the established compiled path-phase comparison. Prop timing is classified
-independently from the hands. For each prop, the classifier measures the directed angular phase from
-its orientation to the common bottom reference along its physical spin direction. Equal directed
-phases are Together (`T`), phases separated by 180 degrees are Split (`S`), and phases separated by
-90 or 270 degrees are Quarter (`Q`). Measuring directed phase is necessary for Opposite-direction
-patterns: two props can occupy the same Cartesian orientation while having Split timing, or occupy
-mirrored orientations while reaching bottom Together.
+table. Hands and Props are classified independently with the same directed-phase definition. Hand
+timing measures each hand position against the common bottom reference along its physical path axis.
+Prop timing measures each prop orientation against bottom along its physical spin direction. Equal
+directed phases are Together (`T`), phases separated by 180 degrees are Split (`S`), and phases
+separated by 90 or 270 degrees are Quarter (`Q`). Directed phase is necessary for
+Opposite-direction patterns: two members can occupy the same Cartesian orientation while having
+Split timing, or occupy mirrored orientations while reaching bottom Together.
 
 The prop orientations are evaluated at the VTG three-quarter semantic checkpoint. Unequal ratios
 change the Cartesian endpoint reached in one beat, so both starting orientations are advanced by the
@@ -307,31 +307,30 @@ hydration, including a URL reload without selection metadata, may canonicalize a
 to another equivalent interpretation because the rendered animation does not contain enough
 information to distinguish how it was authored.
 
-Beat and the QTR/VTG transition are playback-only controls and are removed before
-relationship classification.
-This distinction matters for unequal speed ratios: advancing both tracks by one beat can change
-their instantaneous Together/Split checkpoint because their relative phase advances at the
-difference between their rates. That checkpoint change does not change the semantic catalog
-pattern. Changes to these playback controls still rerun semantic classification so this invariant
-remains validated in the reactive UI. Shape, Speed Ratio, Anti, Swap, 180°, and the Qtr mode remain part of
-the relationship input because they define the pattern itself rather than only its playback origin
-or subdivision.
+The selected Beat is part of relationship classification. Every Beats slider input rebuilds and
+reclassifies every matrix cell at that playback origin, so the labels always describe the currently
+selected beat. Equal-rate standard VTG and QTR patterns are reclassified but retain the same Hands
+and Props timing relationships across Beats. For a compound ratio, the matrix also determines
+whether each side can retain one truthful label for the complete repeating Beat cycle. Each
+half-Beat shift advances a prop by 45 degrees times its `denominator / numerator` rate. Together and
+Split remain stable only when the relative advance closes modulo 360 degrees. Quarter remains
+stable when it closes modulo 180 degrees because both 90 and 270 degrees are Quarter Timing. This
+calculation is exact ratio arithmetic, not a per-cell label table or an exhaustive list of special
+cases.
 
-### Catalog labels versus instantaneous labels
+When a side is uncalculable or would use different timing codes at different Beats, text layout
+shows `XX` for only that side and Elemental layout shows a red prohibited icon. A stable side remains
+visible, so `TS / XX` means the Hands relationship is consistently Together/Same while the Props
+relationship has no single valid whole-cycle label. Internally, the selected-Beat classifier still
+returns the exact relationship at that Beat for matching and inference. Hand phase advances equally
+on both tracks in the VTG/QTR model, so a calculable Hands relationship is Beat-invariant; an
+uncalculable Hands relationship receives the same `XX`/prohibited treatment.
 
-The two relationship entry points intentionally answer different questions:
-
-- `describePatternRelationships(animation)` classifies the compiled animation at the supplied
-  playback origin and checkpoint. Its result can therefore describe an instantaneous Beat-shifted
-  state.
-- `describePatternSelectionRelationships(selection)` removes Beat and transition controls, rebuilds
-  the selection at its canonical playback origin, and returns the semantic label used by VTG cells.
-
-This normalization is applied uniformly. It does not contain a cell-label table, forced labels, or
-cell-specific exceptions. Consequently, an imported animation can have an instantaneous label that
-differs from the matched catalog cell label. One retained quarter-turn fixture is `QO / TO` at its
-encoded playback origin and `QO / SO` after catalog normalization. That difference records playback
-state versus catalog semantics; it is not an override for that cell.
+The QTR/VTG transition controls remain excluded from cell relationship classification because they
+describe a transition away from the selected catalog pattern rather than its starting relationship.
+Shape, Speed Ratio, Anti, Swap, 180°, QTR mode, retained prop rotation, and Beat remain relationship
+inputs. This rule is applied uniformly; there is no cell-label table, forced label, canonical-beat
+override, or cell-specific exception.
 
 Prop direction is classified separately from prop timing. Each compiled rotation axis is multiplied
 by the sign of that track's rotation amount (`turns + arc`) to obtain its physical angular-velocity

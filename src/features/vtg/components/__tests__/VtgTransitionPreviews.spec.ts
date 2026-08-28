@@ -115,6 +115,32 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.find('.elemental-relationship-icons__icon--moon').exists()).toBe(true)
   })
 
+  it('shows a prohibited icon for an indeterminate Builder relationship side', () => {
+    useConceptsStore().elementalLayout = true
+    const indeterminateRelationship = {
+      ...relationship,
+      label: 'TS / XX' as const,
+      props: undefined,
+      propsIndeterminate: true,
+    }
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [indeterminateRelationship],
+        refreshKey: 'elemental-indeterminate',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        scale: 1,
+      },
+    })
+
+    expect(wrapper.get('.elemental-relationship-icons').attributes('aria-label')).toBe(
+      'Earth / Indeterminate',
+    )
+    expect(wrapper.find('[data-element="Indeterminate"]').exists()).toBe(true)
+    expect(wrapper.find('.elemental-relationship-icons__icon--indeterminate').exists()).toBe(true)
+  })
+
   it('hides Swap for portions whose two props are both Anti or both In', () => {
     const inSpinAnimation = createDefaultVtgAnimation({ reference: '3-1', speedRatio: '1:3' })
     if (!inSpinAnimation) throw new Error('Expected a supported In/In VTG pattern')

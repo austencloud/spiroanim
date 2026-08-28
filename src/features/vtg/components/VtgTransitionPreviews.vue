@@ -58,6 +58,8 @@
               class="vtg-transition-previews__label"
               :hands="previewRelationships[index]?.hands"
               :props="previewRelationships[index]?.props"
+              :hands-indeterminate="previewRelationships[index]?.handsIndeterminate"
+              :props-indeterminate="previewRelationships[index]?.propsIndeterminate"
               :size="16"
             />
             <span v-else class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>

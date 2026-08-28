@@ -241,6 +241,8 @@
                       responsive
                       :hands="tile.hands"
                       :props="tile.props"
+                      :hands-indeterminate="tile.handsIndeterminate"
+                      :props-indeterminate="tile.propsIndeterminate"
                     />
                   </span>
                   <span v-else class="vtg-tile__label-text">{{ tile.label }}</span>
@@ -412,7 +414,7 @@ import PatternPlaybackControls from '@/features/concepts/components/PatternPlayb
 import PatternTransitionControls from '@/features/concepts/components/PatternTransitionControls.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import {
-  describePatternSelectionRelationships,
+  describePatternSelectionRelationshipsAcrossBeats,
   inferPatternRelationshipOrientation,
   inferPatternRelationshipPropRotationOffsets,
 } from '@/features/concepts/math/describePatternSelectionRelationships'
@@ -525,6 +527,8 @@ interface VtgMatrixTile {
   reference: VtgCellReference
   hands?: ElementalRelationship
   props?: ElementalRelationship
+  handsIndeterminate?: boolean
+  propsIndeterminate?: boolean
 }
 
 type VtgMatrixAddress = Omit<VtgMatrixTile, 'label' | 'description'>
@@ -900,7 +904,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
         ? { ...baseSelection, quarters: 1 }
         : baseSelection
 
-      const relationships = describePatternSelectionRelationships(selection)
+      const relationships = describePatternSelectionRelationshipsAcrossBeats(selection)
       if (!compactBuilder.value) return { ...address, ...relationships }
 
       const animation = isQtr.value
@@ -923,10 +927,18 @@ const displayCellReference = (tile: VtgMatrixTile): string =>
 
 const getTileDescription = (tile: VtgMatrixTile) => tile.description
 const getBuilderSpinLabel = (tile: VtgMatrixTile) => tile.label.split(' / ')[0] ?? tile.label
+const getElementalAccessibleLabel = (
+  relationship: ElementalRelationship | undefined,
+  indeterminate: boolean | undefined,
+): string | undefined => {
+  if (indeterminate) return 'Indeterminate'
+  if (relationship?.timing === 'Q') return relationship.direction === 'S' ? 'Sun' : 'Moon'
+  return relationshipElement(relationship)
+}
 const getTileAccessibleLabel = (tile: VtgMatrixTile) => {
   if (!elementalLayout.value) return tile.label
-  const handsElement = relationshipElement(tile.hands)
-  const propsElement = relationshipElement(tile.props)
+  const handsElement = getElementalAccessibleLabel(tile.hands, tile.handsIndeterminate)
+  const propsElement = getElementalAccessibleLabel(tile.props, tile.propsIndeterminate)
   return handsElement && propsElement ? `${handsElement} / ${propsElement}` : tile.label
 }
 

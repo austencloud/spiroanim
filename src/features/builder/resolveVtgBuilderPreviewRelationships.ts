@@ -1,4 +1,4 @@
-import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
+import { describePatternSelectionRelationshipsAcrossBeats } from '@/features/concepts/math/describePatternSelectionRelationships'
 import type { PatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { resizeVtgTransitionPatternPreview } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { getVtgQuickSlotBeatCount } from '@/features/vtg/math/getVtgQuickSlotBeatCount'
@@ -21,7 +21,7 @@ export const resolveVtgBuilderPreviewRelationships = async (
       if (result.status !== 'matched') return undefined
 
       const { match } = result
-      return describePatternSelectionRelationships({
+      return describePatternSelectionRelationshipsAcrossBeats({
         reference: match.reference,
         speedRatio: match.speedRatio,
         isAnti: match.isAnti,

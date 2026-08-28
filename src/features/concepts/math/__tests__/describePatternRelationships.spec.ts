@@ -1,13 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
-  classifyDirectedPropTiming,
+  classifyDirectedTiming,
   describePatternRelationships,
 } from '@/features/concepts/math/describePatternRelationships'
-import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
+import type { PatternRelationshipLabel } from '@/features/concepts/math/describePatternRelationships'
+import {
+  describePatternSelectionRelationships,
+  describePatternSelectionRelationshipsAcrossBeats,
+  isPatternPropTimingBeatInvariant,
+} from '@/features/concepts/math/describePatternSelectionRelationships'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { qtrModes } from '@/features/vtg/types'
-import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import {
+  applyVtgPropRotationOffsets,
+  createDefaultVtgAnimation,
+} from '@/features/vtg/createVtgAnimation'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import type { VtgCellReference, VtgPatternLabel, VtgRuleNumber } from '@/features/vtg/types'
 import { vtgSpeedRatios } from '@/features/vtg/types'
@@ -26,7 +34,7 @@ const expectedLabelsByRow = {
   6: ['TO / TS', 'SS / SO', 'TO / TS', 'SS / SO', 'TO / SO', 'SS / TS'],
 } as const satisfies Readonly<Record<VtgRuleNumber, readonly VtgPatternLabel[]>>
 
-const expectedDescription = (label: VtgPatternLabel): string => {
+const expectedDescription = (label: PatternRelationshipLabel): string => {
   const timingDescriptions = { T: 'Together', S: 'Split', Q: 'Quarter' } as const
   const directionDescriptions = { S: 'Same', O: 'Opposite' } as const
   const [hands, props] = label.split(' / ')
@@ -36,17 +44,17 @@ const expectedDescription = (label: VtgPatternLabel): string => {
 }
 
 describe('describePatternRelationships', () => {
-  it('uses directed phase rather than Cartesian prop spacing', () => {
+  it('uses directed phase rather than Cartesian spacing', () => {
     const bottom = [0, -1, 0] as const
     const right = [1, 0, 0] as const
     const left = [-1, 0, 0] as const
     const positiveAxis = [0, 0, 1] as const
     const negativeAxis = [0, 0, -1] as const
 
-    expect(classifyDirectedPropTiming(bottom, positiveAxis, bottom, positiveAxis)).toBe('T')
-    expect(classifyDirectedPropTiming(bottom, positiveAxis, right, positiveAxis)).toBe('Q')
-    expect(classifyDirectedPropTiming(right, positiveAxis, left, negativeAxis)).toBe('T')
-    expect(classifyDirectedPropTiming(right, positiveAxis, right, negativeAxis)).toBe('S')
+    expect(classifyDirectedTiming(bottom, positiveAxis, bottom, positiveAxis)).toBe('T')
+    expect(classifyDirectedTiming(bottom, positiveAxis, right, positiveAxis)).toBe('Q')
+    expect(classifyDirectedTiming(right, positiveAxis, left, negativeAxis)).toBe('T')
+    expect(classifyDirectedTiming(right, positiveAxis, right, negativeAxis)).toBe('S')
   })
 
   it('keeps Quarter Spacing independent from prop Quarter Time', () => {
@@ -76,7 +84,7 @@ describe('describePatternRelationships', () => {
     ).toBe('QO / QS')
   })
 
-  it('warns and returns an obvious label when classification fails', () => {
+  it('returns an obvious label without logging when the complete classification fails', () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     if (!animation) throw new Error('Missing VTG animation')
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -84,9 +92,25 @@ describe('describePatternRelationships', () => {
     expect(describePatternRelationships({ ...animation, props: [] })).toMatchObject({
       label: 'XX / XX',
       description: expect.stringContaining('Pattern relationship error:'),
+      handsIndeterminate: true,
+      propsIndeterminate: true,
     })
-    expect(warning).toHaveBeenCalledOnce()
+    expect(warning).not.toHaveBeenCalled()
     warning.mockRestore()
+  })
+
+  it('keeps the calculable side when only one relationship is indeterminate', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Missing VTG animation')
+
+    expect(
+      describePatternRelationships(applyVtgPropRotationOffsets(animation, [45, 0])),
+    ).toMatchObject({
+      label: 'TS / XX',
+      hands: { timing: 'T', direction: 'S' },
+      handsIndeterminate: false,
+      propsIndeterminate: true,
+    })
   })
 
   it('derives even-ratio labels from local path phase without changing 1:3', () => {
@@ -109,32 +133,84 @@ describe('describePatternRelationships', () => {
     ).toBe('TO / TO')
   })
 
-  it('keeps every VTG relationship invariant across playback-only controls', () => {
-    const mismatches: string[] = []
+  it('keeps equal-rate VTG timing invariant while reclassifying unequal-rate hybrids', () => {
+    for (const speedRatio of vtgSpeedRatios) {
+      for (const row of ruleNumbers) {
+        for (const column of ruleNumbers) {
+          const reference: VtgCellReference = `${row}-${column}`
+          const startingRelationships = describePatternSelectionRelationships({
+            reference,
+            speedRatio,
+            beat: 1,
+          })
 
-    for (const row of ruleNumbers) {
-      for (const column of ruleNumbers) {
-        const reference: VtgCellReference = `${row}-${column}`
-        const expected = expectedLabelsByRow[row][column - 1]
-        if (!expected) throw new Error(`Missing expected label for ${reference}`)
-
-        for (const beat of getVtgBeats('1:3')) {
-          for (const transition of booleanOptions) {
-            const actual = describePatternSelectionRelationships({
+          for (const beat of getVtgBeats(speedRatio)) {
+            const currentRelationships = describePatternSelectionRelationships({
               reference,
-              speedRatio: '1:3',
+              speedRatio,
               beat,
-              transition,
-            }).label
-            if (actual !== expected) {
-              mismatches.push(`${reference}/${beat}/${transition}: ${expected} -> ${actual}`)
-            }
+            })
+            const transitionRelationships = describePatternSelectionRelationships({
+              reference,
+              speedRatio,
+              beat,
+              transition: true,
+            })
+
+            expect(transitionRelationships).toEqual(currentRelationships)
+            expect(currentRelationships).toEqual(startingRelationships)
           }
         }
       }
     }
 
-    expect(mismatches).toEqual([])
+    expect(
+      describePatternSelectionRelationships({
+        reference: '1-2',
+        speedRatio: '1:3',
+        beat: 1.5,
+      }).label,
+    ).toBe('SO / SO')
+    expect(
+      getVtgBeats('1:1v1:3').map(
+        (beat) =>
+          describePatternSelectionRelationships({
+            reference: '1-1',
+            speedRatio: '1:1v1:3',
+            beat,
+          }).label,
+      ),
+    ).toEqual([
+      'TS / SO',
+      'TS / QO',
+      'TS / TO',
+      'TS / QO',
+      'TS / SO',
+      'TS / QO',
+      'TS / TO',
+      'TS / QO',
+    ])
+  })
+
+  it('derives hybrid display stability from the exact relative phase increment', () => {
+    expect(isPatternPropTimingBeatInvariant('1:1v1:3', 'T')).toBe(false)
+    expect(isPatternPropTimingBeatInvariant('1:1v1:3', 'Q')).toBe(false)
+    expect(isPatternPropTimingBeatInvariant('1:1v1:5', 'T')).toBe(false)
+    expect(isPatternPropTimingBeatInvariant('1:1v1:5', 'Q')).toBe(true)
+    expect(isPatternPropTimingBeatInvariant('1:1v1:9', 'T')).toBe(true)
+
+    expect(
+      describePatternSelectionRelationshipsAcrossBeats({
+        reference: '1-1',
+        speedRatio: '1:1v1:3',
+        beat: 1.5,
+      }),
+    ).toMatchObject({
+      label: 'TS / XX',
+      hands: { timing: 'T', direction: 'S' },
+      handsIndeterminate: false,
+      propsIndeterminate: true,
+    })
   })
 
   it.each([
@@ -177,7 +253,7 @@ describe('describePatternRelationships', () => {
     },
   )
 
-  it('keeps a retained rotation relationship after selecting cell 1-2 at beat 1.5', () => {
+  it('classifies a retained rotation relationship at the selected beat', () => {
     const selection = {
       reference: '1-2',
       speedRatio: '1:3',
@@ -193,7 +269,7 @@ describe('describePatternRelationships', () => {
     expect(describePatternSelectionRelationships(match).label).toBe('SO / QO')
   })
 
-  it('keeps retained quarter-turn relationships stable across every standard cell and half-beat', () => {
+  it('applies retained quarter-turn relationships to every cell at its selected beat', () => {
     for (const row of ruleNumbers) {
       for (const column of ruleNumbers) {
         const reference: VtgCellReference = `${row}-${column}`
@@ -202,7 +278,11 @@ describe('describePatternRelationships', () => {
             [-90, 0],
             [90, 0],
           ] as const) {
-            const base = describePatternSelectionRelationships({ reference, speedRatio: '1:3' })
+            const base = describePatternSelectionRelationships({
+              reference,
+              speedRatio: '1:3',
+              beat,
+            })
             const rotated = describePatternSelectionRelationships({
               reference,
               speedRatio: '1:3',
@@ -254,31 +334,33 @@ describe('describePatternRelationships', () => {
     },
   )
 
-  it('keeps every Qtr relationship invariant across playback-only controls', () => {
+  it('keeps every equal-rate Qtr relationship invariant across Beats', () => {
     const mismatches: string[] = []
 
-    for (const row of ruleNumbers) {
-      for (const column of ruleNumbers) {
-        const reference: VtgCellReference = `${row}-${column}`
-        for (const quarters of qtrModes) {
-          const expected = describePatternSelectionRelationships({
-            reference,
-            speedRatio: '1:3',
-            quarters,
-          }).label
-          for (const beat of getVtgBeats('1:3')) {
-            for (const transition of booleanOptions) {
-              const actual = describePatternSelectionRelationships({
-                reference,
-                speedRatio: '1:3',
-                quarters,
-                beat,
-                transition,
-              }).label
-              if (actual !== expected) {
-                mismatches.push(
-                  `${reference}/${quarters}/${beat}/${transition}: ${expected} -> ${actual}`,
-                )
+    for (const speedRatio of vtgSpeedRatios) {
+      for (const row of ruleNumbers) {
+        for (const column of ruleNumbers) {
+          const reference: VtgCellReference = `${row}-${column}`
+          for (const quarters of qtrModes) {
+            const expected = describePatternSelectionRelationships({
+              reference,
+              speedRatio,
+              quarters,
+            }).label
+            for (const beat of getVtgBeats(speedRatio)) {
+              for (const transition of booleanOptions) {
+                const actual = describePatternSelectionRelationships({
+                  reference,
+                  speedRatio,
+                  quarters,
+                  beat,
+                  transition,
+                }).label
+                if (actual !== expected) {
+                  mismatches.push(
+                    `${reference}/${speedRatio}/${quarters}/${beat}/${transition}: ${expected} -> ${actual}`,
+                  )
+                }
               }
             }
           }

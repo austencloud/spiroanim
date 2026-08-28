@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import {
+  mdiCancel,
   mdiEarth,
   mdiFire,
   mdiMoonWaningCrescent,
@@ -37,13 +38,20 @@ const props = withDefaults(
   defineProps<{
     hands?: ElementalRelationship
     props?: ElementalRelationship
+    handsIndeterminate?: boolean
+    propsIndeterminate?: boolean
     size?: number | string
     responsive?: boolean
   }>(),
-  { size: 18, responsive: false },
+  {
+    handsIndeterminate: false,
+    propsIndeterminate: false,
+    size: 18,
+    responsive: false,
+  },
 )
 
-type RelationshipSymbol = ElementName | 'Sun' | 'Moon'
+type RelationshipSymbol = ElementName | 'Sun' | 'Moon' | 'Indeterminate'
 interface RelationshipToken {
   symbol: RelationshipSymbol
   label: string
@@ -56,18 +64,29 @@ const relationshipIcons: Readonly<Record<RelationshipSymbol, string>> = {
   Fire: mdiFire,
   Sun: mdiWeatherSunny,
   Moon: mdiMoonWaningCrescent,
+  Indeterminate: mdiCancel,
+}
+const createRelationshipTokens = (
+  relationship: ElementalRelationship | undefined,
+  indeterminate: boolean,
+): readonly RelationshipToken[] => {
+  if (indeterminate) return [{ symbol: 'Indeterminate', label: 'Indeterminate' }]
+  if (!relationship) return []
+  const symbol: RelationshipSymbol | undefined =
+    relationship.timing === 'Q'
+      ? relationship.direction === 'S'
+        ? 'Sun'
+        : 'Moon'
+      : relationshipElement(relationship)
+  return symbol ? [{ symbol, label: symbol }] : []
 }
 const tokens = computed<readonly RelationshipToken[]>(() =>
-  [props.hands, props.props].flatMap((relationship) => {
-    if (!relationship) return []
-    const symbol: RelationshipSymbol | undefined =
-      relationship.timing === 'Q'
-        ? relationship.direction === 'S'
-          ? 'Sun'
-          : 'Moon'
-        : relationshipElement(relationship)
-    return symbol ? [{ symbol, label: symbol }] : []
-  }),
+  [
+    { relationship: props.hands, indeterminate: props.handsIndeterminate },
+    { relationship: props.props, indeterminate: props.propsIndeterminate },
+  ].flatMap(({ relationship, indeterminate }) =>
+    createRelationshipTokens(relationship, indeterminate),
+  ),
 )
 </script>
 
@@ -120,5 +139,9 @@ const tokens = computed<readonly RelationshipToken[]>(() =>
 
 .elemental-relationship-icons__icon--moon {
   color: var(--color-element-moon);
+}
+
+.elemental-relationship-icons__icon--indeterminate {
+  color: var(--color-status-error);
 }
 </style>

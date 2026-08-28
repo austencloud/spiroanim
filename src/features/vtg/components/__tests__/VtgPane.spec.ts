@@ -2133,12 +2133,11 @@ describe('VtgPane', () => {
     })
   })
 
-  it('keeps every cell relationship stable when selecting at a half beat', async () => {
+  it('marks beat-varying hybrid timing indeterminate in text and Elemental layouts', async () => {
     const initialSelection = {
       reference: '1-1',
-      speedRatio: '1:3',
-      beat: 1.5,
-      propRotationOffsets: [-90, 0],
+      speedRatio: '1:1v1:3',
+      beat: 1,
     } as const
     const animation = createDefaultVtgAnimation(initialSelection)
     if (!animation) throw new Error('Expected a supported VTG animation')
@@ -2162,12 +2161,25 @@ describe('VtgPane', () => {
     await vi.waitFor(() => {
       expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
     })
-    const target = () => wrapper.get('[data-cell-reference="1-2"]')
-    const labelBeforeSelection = target().text()
-    expect(labelBeforeSelection).toContain('SO / QO')
+    const target = () => wrapper.get('[data-cell-reference="1-1"]')
+    expect(target().text()).toContain('TS / XX')
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').setValue('1.5')
+    expect(target().text()).toContain('TS / XX')
 
     await target().trigger('click')
-    expect(target().text()).toBe(labelBeforeSelection)
+    expect(target().text()).toContain('TS / XX')
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]').setValue(true)
+    expect(
+      target()
+        .findAll('.elemental-relationship-icons__icon')
+        .map((icon) => icon.attributes('data-element')),
+    ).toEqual(['Earth', 'Indeterminate'])
+    expect(target().get('[data-element="Indeterminate"]').classes()).toContain(
+      'elemental-relationship-icons__icon--indeterminate',
+    )
+    expect(target().attributes('aria-label')).toContain('Earth / Indeterminate')
   })
 
   it('ignores a stale match after a newer animation has been hydrated', async () => {

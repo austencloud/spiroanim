@@ -1,9 +1,11 @@
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import type { QtrPatternSelection } from '@/features/vtg/types'
+import { getVtgPropSpeedRatios, parseVtgIndividualSpeedRatio } from '@/features/vtg/types'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import type { VtgPatternSelection } from '@/features/vtg/types'
 import { createCompiledVtgPatternSignature } from '@/features/vtg/math/createVtgAnimationSignature'
 import {
+  createPatternRelationships,
   createPatternRelationshipError,
   describePatternRelationships,
 } from '@/features/concepts/math/describePatternRelationships'
@@ -11,11 +13,10 @@ import type { RootDataFinal } from '@/types/AnimTypes'
 
 type MatrixPatternSelection = VtgPatternSelection | QtrPatternSelection
 
-/** Classifies pattern semantics without playback-only Beat and transition transforms. */
+/** Classifies pattern semantics at the selected Beat without transition-only transforms. */
 export const describePatternSelectionRelationships = (selection: MatrixPatternSelection) => {
   try {
     const {
-      beat: _beat,
       transition: _transition,
       transitionBeats: _transitionBeats,
       transitionQuad: _transitionQuad,
@@ -56,8 +57,49 @@ export const describePatternSelectionRelationships = (selection: MatrixPatternSe
         : 'destination'
     return describePatternRelationships(animation, checkpoint)
   } catch (error) {
-    return createPatternRelationshipError(error, { selection })
+    return createPatternRelationshipError(error)
   }
+}
+
+/**
+ * Whether a prop timing code remains valid after every half-Beat starting shift.
+ *
+ * Each frame advances a prop by 45 degrees times its denominator/numerator rate. Together and
+ * Split require the relative advance to close modulo 360 degrees. Quarter treats both 90 and 270
+ * degrees as the same code, so it closes modulo 180 degrees instead.
+ */
+export const isPatternPropTimingBeatInvariant = (
+  speedRatio: VtgPatternSelection['speedRatio'],
+  timing: NonNullable<ReturnType<typeof describePatternRelationships>['props']>['timing'],
+): boolean => {
+  const [firstRatio, secondRatio] = getVtgPropSpeedRatios(speedRatio)
+  const first = parseVtgIndividualSpeedRatio(firstRatio)
+  const second = parseVtgIndividualSpeedRatio(secondRatio)
+  if (!first || !second) return false
+
+  const relativeRateNumerator =
+    first.denominator * second.numerator - second.denominator * first.numerator
+  const phaseModulus = timing === 'Q' ? 4 : 8
+  return relativeRateNumerator % (phaseModulus * first.numerator * second.numerator) === 0
+}
+
+/**
+ * Produces matrix/Elemental labels that remain truthful for the complete repeating Beat cycle.
+ * The selected-Beat classifier remains separate so matching can still inspect the exact animation.
+ */
+export const describePatternSelectionRelationshipsAcrossBeats = (
+  selection: MatrixPatternSelection,
+) => {
+  const current = describePatternSelectionRelationships(selection)
+  const hands = current.handsIndeterminate ? undefined : current.hands
+  const props =
+    current.props &&
+    !current.propsIndeterminate &&
+    isPatternPropTimingBeatInvariant(selection.speedRatio, current.props.timing)
+      ? current.props
+      : undefined
+
+  return createPatternRelationships(hands, props)
 }
 
 export const inferPatternRelationshipPropRotationOffsets = (

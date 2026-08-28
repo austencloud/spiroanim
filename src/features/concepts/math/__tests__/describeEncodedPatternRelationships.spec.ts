@@ -493,7 +493,7 @@ describe('encoded pattern relationships', () => {
       return describePatternRelationships(animation).label
     })
 
-    expect(labels).toEqual(['TO / SO', 'QO / QO', 'QO / QO', 'SO / SO'])
+    expect(labels).toEqual(['SO / SO', 'QO / QO', 'QO / QO', 'SO / SO'])
   })
 
   it('classifies relationships from actual hand and directed prop phase', async () => {
@@ -522,7 +522,7 @@ describe('encoded pattern relationships', () => {
     expect(labels).toEqual(['TS / TS', 'SO / SO', 'QO / QO', 'SO / QO', 'TS / QS', 'TO / QO'])
   })
 
-  it('keeps a shifted half-beat pattern on its canonical relationship', async () => {
+  it('keeps a shifted half-beat pattern on its current relationship', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -631,7 +631,7 @@ describe('encoded pattern relationships', () => {
     })
   })
 
-  it('distinguishes instantaneous prop timing from the semantic playback origin', async () => {
+  it('keeps a matched selection aligned with its instantaneous prop timing', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -652,7 +652,7 @@ describe('encoded pattern relationships', () => {
     expect(describePatternRelationships(animation).label).toBe('QO / TO')
     expect(propRotationOffsets).toBeDefined()
     expect(describePatternSelectionRelationships({ ...match, propRotationOffsets }).label).toBe(
-      'QO / SO',
+      'QO / TO',
     )
   })
 })
