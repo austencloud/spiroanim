@@ -1,5 +1,6 @@
 import {
   applyVtgPlaybackControls,
+  applyVtgPropRotationOffsets,
   createDefaultVtgAnimation,
   createVtgAnimation,
   toVtgPreviewAnimation,
@@ -65,31 +66,18 @@ const transformQtrAnimation = (
   return shiftPropArc(shiftPropArc(animation, 0, direction * amounts[0]), 1, direction * amounts[1])
 }
 
-export const removeQtrArcs = (
-  animation: RootDataFinal,
-  quarterMode: QtrMode,
-  swapProps: boolean,
-): RootDataFinal => {
-  const semantic = swapProps
-    ? applyPatternFinalTransforms(animation, { swapProps: true })
-    : animation
-  const transformed = transformQtrAnimation(semantic, quarterMode, -1)
-  return swapProps ? applyPatternFinalTransforms(transformed, { swapProps: true }) : transformed
-}
-
 const withoutFinalTransforms = ({
   swapProps: _swapProps,
   reversePlane: _reversePlane,
   initialTurnsOffset: _initialTurnsOffset,
   initialTurnsOffsetBeat: _initialTurnsOffsetBeat,
+  propRotationOffsets: _propRotationOffsets,
   ...selection
 }: QtrPatternSelection): QtrPatternSelection => selection
 
-// Qtr #2 remains accepted for legacy callers, while the current UI always emits Qtr #1 and uses
-// the shared 180 control to select the alternate face-on orientation.
-const getSelectedQtrMode = (selection: QtrPatternSelection): QtrMode => {
-  return selection.reversePlane ? 2 : selection.quarters
-}
+// Qtr #2 remains accepted for legacy callers. Swap and 180 are shared final transforms and must
+// not select a different QTR base geometry.
+const getSelectedQtrMode = (selection: QtrPatternSelection): QtrMode => selection.quarters
 
 const applyQtrFinalTransforms = (
   animation: RootDataFinal,
@@ -129,7 +117,8 @@ export const createQtrAnimation = (
   }
 
   const transformed = applyQtrFinalTransforms(completed, selection)
-  return applyVtgInitialTurnsPlayback(transformed, selection)
+  const aligned = applyVtgPropRotationOffsets(transformed, selection.propRotationOffsets)
+  return applyVtgInitialTurnsPlayback(aligned, selection)
 }
 
 export const createDefaultQtrAnimation = (
@@ -144,7 +133,8 @@ export const createDefaultQtrAnimation = (
   }
 
   const transformed = applyQtrFinalTransforms(completed, selection)
-  return applyVtgInitialTurnsPlayback(transformed, selection)
+  const aligned = applyVtgPropRotationOffsets(transformed, selection.propRotationOffsets)
+  return applyVtgInitialTurnsPlayback(aligned, selection)
 }
 
 export const createQtrPreviewAnimation = (

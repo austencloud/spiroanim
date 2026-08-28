@@ -84,7 +84,6 @@ describe('45 Trans initial-turn matching', () => {
       const selection = {
         reference: '6-3',
         speedRatio: '1:2',
-        shape: 'box',
         beat: 2,
         reversePlane: true,
         orientation: -90,
@@ -150,7 +149,6 @@ describe('45 Trans initial-turn matching', () => {
       const match = findVtgPatternMatch(animation, preferences)
       expect(match).toMatchObject({
         speedRatio: '1:2',
-        shape: 'box',
         initialTurnsOffset: expectedOffset,
       })
       if (!match) throw new Error('Expected a transition-derived VTG match')
@@ -181,7 +179,6 @@ describe('45 Trans initial-turn matching', () => {
     if (resolution.status !== 'matched') throw new Error('Expected every Quick Slot to resolve')
     expect(codec.encodeQS(resolution.animations[1]!, false)).toEqual(queryFrom(q2ExactQuery))
     expect(findVtgPatternMatch(resolution.animations[1]!)).toMatchObject({
-      reference: '1-1',
       speedRatio: '1:2',
       orientation: -90,
     })
@@ -196,31 +193,28 @@ describe('45 Trans initial-turn matching', () => {
       for (const row of rules) {
         for (const column of rules) {
           const reference: VtgCellReference = `${row}-${column}`
-          for (const shape of ['diamond', 'box'] as const) {
-            for (const beat of [1, 2, 3, 4] as const) {
-              for (const orientation of getVtgPatternOrientations(speedRatio)) {
-                const baseSelection: VtgPatternSelection = {
-                  reference,
-                  speedRatio,
-                  shape,
-                  beat,
-                  orientation,
-                }
-                const vtg = createDefaultVtgAnimation(baseSelection)
-                if (vtg) {
-                  expectExactVtgMatch(vtg, `VTG ${speedRatio} ${reference}`)
-                  checkedPatterns += 1
-                }
-
-                const qtrSelection: QtrPatternSelection = {
-                  ...baseSelection,
-                  quarters: 1,
-                }
-                const qtr = createDefaultQtrAnimation(qtrSelection)
-                if (!qtr) continue
-                expectExactQtrMatch(qtr, `QTR ${speedRatio} ${reference}`)
+          for (const beat of [1, 2, 3, 4] as const) {
+            for (const orientation of getVtgPatternOrientations(speedRatio)) {
+              const baseSelection: VtgPatternSelection = {
+                reference,
+                speedRatio,
+                beat,
+                orientation,
+              }
+              const vtg = createDefaultVtgAnimation(baseSelection)
+              if (vtg) {
+                expectExactVtgMatch(vtg, `VTG ${speedRatio} ${reference}`)
                 checkedPatterns += 1
               }
+
+              const qtrSelection: QtrPatternSelection = {
+                ...baseSelection,
+                quarters: 1,
+              }
+              const qtr = createDefaultQtrAnimation(qtrSelection)
+              if (!qtr) continue
+              expectExactQtrMatch(qtr, `QTR ${speedRatio} ${reference}`)
+              checkedPatterns += 1
             }
           }
         }

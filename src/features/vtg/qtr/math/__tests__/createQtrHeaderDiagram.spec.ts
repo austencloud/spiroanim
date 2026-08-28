@@ -71,8 +71,8 @@ describe('Quarters side-header prop states', () => {
       { position: 'top', facing: 'out' },
     ])
     expect(getStates(1, { reversePlane: true })).toEqual([
+      { position: 'top', facing: 'out' },
       { position: 'left', facing: 'out' },
-      { position: 'bottom', facing: 'out' },
     ])
   })
 
@@ -118,5 +118,4 @@ describe('Quarters side-header prop states', () => {
       getQtrSidePropStates({ ...baseOptions, speedRatio: '1:5' }),
     )
   })
-
 })

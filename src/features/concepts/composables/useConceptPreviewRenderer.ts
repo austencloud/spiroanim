@@ -16,6 +16,7 @@ interface UseConceptPreviewRendererOptions<Reference extends string> {
   label: string
   partialIndexes?: readonly number[]
   activeIndexes?: Readonly<Ref<readonly number[]>>
+  active?: Readonly<Ref<boolean>>
   frame?: 'first' | 'final'
 }
 
@@ -32,6 +33,7 @@ export const useConceptPreviewRenderer = <Reference extends string>({
   label,
   partialIndexes = [],
   activeIndexes,
+  active,
   frame = 'first',
 }: UseConceptPreviewRendererOptions<Reference>) => {
   const previewUrls = ref<string[]>(Array.from({ length: references.length }, () => ''))
@@ -45,6 +47,7 @@ export const useConceptPreviewRenderer = <Reference extends string>({
   let renderedVersion = 0
   let requestedPartialVersion = 0
   let renderedPartialVersion = 0
+  const isActive = () => active?.value !== false
 
   const getActiveIndexes = () => activeIndexes?.value ?? references.map((_, index) => index)
   const hasRenderableDimensions = () =>
@@ -56,22 +59,23 @@ export const useConceptPreviewRenderer = <Reference extends string>({
 
   const requestPreviews = () => {
     requestedVersion++
-    if (initialized && !rendering) void renderRequestedPreviews()
+    if (initialized && isActive() && !rendering) void renderRequestedPreviews()
   }
 
   const requestPartialPreviews = () => {
     requestedPartialVersion++
-    if (initialized && !rendering) void renderRequestedPreviews()
+    if (initialized && isActive() && !rendering) void renderRequestedPreviews()
   }
 
   const renderRequestedPreviews = async () => {
-    if (!channel || rendering || !hasRenderableDimensions()) return
+    if (!channel || rendering || !isActive() || !hasRenderableDimensions()) return
 
     rendering = true
 
     try {
       while (
         !disposed &&
+        isActive() &&
         (renderedVersion !== requestedVersion || renderedPartialVersion !== requestedPartialVersion)
       ) {
         const renderAll = renderedVersion !== requestedVersion
@@ -86,6 +90,7 @@ export const useConceptPreviewRenderer = <Reference extends string>({
         for (const index of previewIndexes) {
           if (
             disposed ||
+            !isActive() ||
             version !== requestedVersion ||
             (!renderAll && partialVersion !== requestedPartialVersion)
           )
@@ -123,6 +128,7 @@ export const useConceptPreviewRenderer = <Reference extends string>({
 
             if (
               disposed ||
+              !isActive() ||
               version !== requestedVersion ||
               (!renderAll && partialVersion !== requestedPartialVersion)
             ) {
@@ -151,10 +157,17 @@ export const useConceptPreviewRenderer = <Reference extends string>({
       if (
         !disposed &&
         initialized &&
+        isActive() &&
         (renderedVersion !== requestedVersion || renderedPartialVersion !== requestedPartialVersion)
       )
         void renderRequestedPreviews()
     }
+  }
+
+  if (active) {
+    watch(active, (isActive) => {
+      if (isActive && initialized && !rendering) void renderRequestedPreviews()
+    })
   }
 
   onMounted(async () => {

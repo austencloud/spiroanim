@@ -234,34 +234,31 @@ const cloneAnimation = (animation: RootDataFinal): RootDataFinal => ({
 
 const shiftClosedAnimation = (
   animation: RootDataFinal,
-  repetitions: number,
+  shiftCount: number,
   allowEndpointMismatch = false,
 ): RootDataFinal | undefined => {
-  let shifted = cloneAnimation(animation)
+  if (shiftCount === 0) return cloneAnimation(animation)
 
-  for (let repetition = 0; repetition < repetitions; repetition++) {
-    const compiled = rootCompile(shifted)
-    const shiftedFrames = shifted.props.map((prop, propIndex) => {
-      const compiledProp = compiled.props[propIndex]
-      if (!compiledProp) return undefined
-      return allowEndpointMismatch
-        ? shiftAnimationFrameRange(prop.anim, compiledProp.anim, 0, prop.anim.length - 1, {
-            allowEndpointMismatch: true,
-          })
-        : shiftAnimationFrames(prop.anim, compiledProp.anim)
-    })
-    if (shiftedFrames.some((frames) => frames === undefined)) return undefined
+  const compiled = rootCompile(animation)
+  const shiftedFrames = animation.props.map((prop, propIndex) => {
+    const compiledProp = compiled.props[propIndex]
+    if (!compiledProp) return undefined
+    return allowEndpointMismatch
+      ? shiftAnimationFrameRange(prop.anim, compiledProp.anim, 0, prop.anim.length - 1, {
+          allowEndpointMismatch: true,
+          shiftCount,
+        })
+      : shiftAnimationFrames(prop.anim, compiledProp.anim, shiftCount)
+  })
+  if (shiftedFrames.some((frames) => frames === undefined)) return undefined
 
-    shifted = {
-      ...shifted,
-      props: shifted.props.map((prop, propIndex) => ({
-        ...prop,
-        anim: shiftedFrames[propIndex]!,
-      })),
-    }
+  return {
+    ...animation,
+    props: animation.props.map((prop, propIndex) => ({
+      ...prop,
+      anim: shiftedFrames[propIndex]!,
+    })),
   }
-
-  return shifted
 }
 
 const extractDoubledCycle = (

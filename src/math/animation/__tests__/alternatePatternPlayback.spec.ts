@@ -154,9 +154,9 @@ describe('alternatePatternPlayback', () => {
     )
     expect(codec.encodeQS(animation, false)).toEqual({
       r: 'Ew08Yk11Y',
-      p0: 'Q__.mBE_____q.5JEsR......_ZEvF............_ZEsR.....',
+      p0: 'Q__.mBE_____q.5JEvF......_ZEsR............_ZEvF.....',
       m0: '_1_mxqv__',
-      p1: 'N__.07______q.5L_sR............_ZEvF...........',
+      p1: 'N__.07______q.5L_vF............_ZEsR...........',
       c: '_f_bhq',
       v: '6',
     })

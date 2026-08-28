@@ -61,35 +61,31 @@ describe('createQtrAnimation', () => {
     expect(swapped?.props[1]?.anim).toEqual(quarter?.props[0]?.anim)
   })
 
-  it('uses 180 to select Qtr #2 and reverse its completed motion planes before Swap', () => {
+  it('keeps legacy Qtr #2 explicit while applying Swap and 180 as final transforms', () => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:3',
       quarters: 1,
       beat: 3,
     } as const satisfies QtrPatternSelection
-    const secondQuarter = createQtrAnimation(createCurrentAnimation(), {
-      ...selection,
-      quarters: 2,
-    })
+    const base = createQtrAnimation(createCurrentAnimation(), selection)
     const transformed = createQtrAnimation(createCurrentAnimation(), {
       ...selection,
       swapProps: true,
       reversePlane: true,
     })
-    if (!secondQuarter) throw new Error('Expected a completed Qtr animation')
+    if (!base) throw new Error('Expected a completed Qtr animation')
 
     expect(transformed).toEqual(
-      applyPatternFinalTransforms(secondQuarter, { swapProps: true, reversePlane: true }),
+      applyPatternFinalTransforms(base, { swapProps: true, reversePlane: true }),
     )
   })
 
-  it('keeps QTR Box on its base orientation and only reverses the completed motion planes', () => {
+  it('keeps QTR on its base orientation and only reverses the completed motion planes', () => {
     const selection = {
       reference: '5-1',
       speedRatio: '1:3',
       quarters: 1,
-      shape: 'box',
     } as const satisfies QtrPatternSelection
     const base = createQtrAnimation(createCurrentAnimation(), selection)
     const reversed = createQtrAnimation(createCurrentAnimation(), {
@@ -155,7 +151,6 @@ describe('createQtrAnimation', () => {
       quarters: 1,
       swapProps: true,
       reversePlane: true,
-      shape: 'box',
     } as const satisfies QtrPatternSelection
     const completed = createQtrAnimation(createCurrentAnimation(), {
       ...selection,

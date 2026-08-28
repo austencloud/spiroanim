@@ -17,17 +17,6 @@ const catalog: Readonly<Partial<Record<VtgCellReference, Readonly<VtgPatternDefi
   ...vtgRowPatterns,
 }
 
-/** @deprecated Retained for source compatibility; VTG no longer applies shape transforms. */
-export const vtgFixedShapeCells: ReadonlySet<VtgCellReference> = new Set([
-  '1-1', '1-2', '2-1', '2-2', '3-3', '3-4', '4-3', '4-4',
-])
-
-/** @deprecated Retained for source compatibility; VTG no longer applies shape transforms. */
-export const hasFixedVtgPatternShape = (
-  reference: VtgCellReference,
-  _speedRatio: VtgPatternSelection['speedRatio'],
-): boolean => vtgFixedShapeCells.has(reference)
-
 export const buildVtgPattern = (
   selection: VtgPatternSelection,
 ): VtgReadableAnimation | undefined => {
@@ -43,23 +32,22 @@ export const buildVtgPattern = (
   )
   const applyScale = selection.scale !== undefined || adjustedScale !== vtgScaleControl.default
 
-  const transformedProps =
-    applyScale
-      ? pattern.props.map((prop) => {
-          const baseFrame = prop.anim[0]
-          if (baseFrame === undefined) return prop
+  const transformedProps = applyScale
+    ? pattern.props.map((prop) => {
+        const baseFrame = prop.anim[0]
+        if (baseFrame === undefined) return prop
 
-          return {
-            ...prop,
-            anim: prop.anim.map((frame, frameIndex) => ({
-              ...frame,
-              ...(frameIndex === 0 && applyScale
-                ? { scale: toVtgInternalScale(adjustedScale) }
-                : undefined),
-            })),
-          }
-        })
-      : pattern.props
+        return {
+          ...prop,
+          anim: prop.anim.map((frame, frameIndex) => ({
+            ...frame,
+            ...(frameIndex === 0 && applyScale
+              ? { scale: toVtgInternalScale(adjustedScale) }
+              : undefined),
+          })),
+        }
+      })
+    : pattern.props
 
   return {
     ...pattern,

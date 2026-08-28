@@ -456,7 +456,6 @@ import { exactlyMatchesQtrSelection } from '@/features/vtg/qtr/matchQtrAnimation
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { exactlyMatchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
 import { stripVtgPropertySettings } from '@/features/vtg/stripVtgPropertySettings'
-import { shiftVtgStartingFrames } from '@/features/vtg/math/shiftVtgStartingBeat'
 import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import {
@@ -494,7 +493,6 @@ import {
   formatVtgSpeedRatio,
   getVtgBeats,
   getVtgPropSpeedRatios,
-  supportsVtgPatternOrientation,
   getDefaultVtgPatternOrientation,
   getVtgTimingCycleCount,
   getVtgPatternOrientations,
@@ -768,9 +766,7 @@ const hideColumnHeaderDetails = computed(
   () => compactBuilder.value || isQtr.value || !topHeaderRule.value.showDetails,
 )
 const usesQuarterTurnHeaderLayout = computed(
-  () =>
-    supportsVtgPatternOrientation(speedRatio.value) &&
-    (orientation.value === 90 || orientation.value === -90),
+  () => orientation.value === 90 || orientation.value === -90,
 )
 const columnHeaderOrientation = computed(() =>
   usesQuarterTurnHeaderLayout.value ? 'horizontal' : 'vertical',
@@ -780,8 +776,7 @@ const sideHeaderOrientation = computed(() =>
 )
 const sideHeaderReversed = computed(() => {
   if (usesQuarterTurnHeaderLayout.value) return orientation.value === -90
-  const hasHalfTurnRotation =
-    supportsVtgPatternOrientation(speedRatio.value) && orientation.value === 180
+  const hasHalfTurnRotation = orientation.value === 180
   return reversePlane.value !== hasHalfTurnRotation
 })
 const activeQtrMode = computed<1 | false>(() => (isQtr.value ? 1 : false))
@@ -797,8 +792,6 @@ const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
   }
 })
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
-const patternMatchingEnabled = true
-
 const createQSlots = async () => {
   quickSlotCreationError.value = undefined
   if (!props.animation) return
@@ -843,6 +836,7 @@ let lastEmittedSelection: VtgPatternSelection | QtrPatternSelection | undefined
 let componentMounted = false
 let initialAnimationHandled = false
 let ratioOrientationChangeActive = false
+const previewsReady = ref(false)
 
 const beginPatternEmitSuppression = () => {
   suppressPatternEmit = true
@@ -897,9 +891,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
               initialTurnsOffset: initialTurnsOffset.value,
               initialTurnsOffsetBeat: initialTurnsOffsetBeat.value,
             }),
-        ...(supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0
-          ? { orientation: orientation.value }
-          : undefined),
+        ...(orientation.value !== 0 ? { orientation: orientation.value } : undefined),
         ...(propRotationOffsets.value === undefined
           ? undefined
           : { propRotationOffsets: propRotationOffsets.value }),
@@ -1022,43 +1014,6 @@ const selectedCellReference = computed<VtgCellReference | undefined>(
   () => matchedCellReference.value,
 )
 
-const rotationSelection = computed<VtgPatternSelection | QtrPatternSelection | undefined>(() => {
-  const reference = selectedCellReference.value
-  if (!reference) return undefined
-
-  const baseSelection: VtgPatternSelection = {
-    reference,
-    speedRatio: speedRatio.value,
-    ...(spinToggleCells.has(reference) ? { isAnti: isAnti.value } : undefined),
-    ...(beat.value === 1 ? undefined : { beat: beat.value }),
-    ...(transition.value ? { transition: true } : undefined),
-    ...(transition.value && transitionAfterBeat.value ? { transitionAfterBeat: true } : undefined),
-    ...(transition.value && transitionBeats.value !== vtgDefaultTransitionBeats
-      ? { transitionBeats: transitionBeats.value }
-      : undefined),
-    ...(transition.value && transitionQuad.value ? { transitionQuad: true } : undefined),
-    ...(transition.value && transitionQuad.value && transitionSecond.value
-      ? { transitionSecond: true }
-      : undefined),
-    ...(initialTurnsOffset.value === undefined
-      ? undefined
-      : {
-          initialTurnsOffset: initialTurnsOffset.value,
-          initialTurnsOffsetBeat: initialTurnsOffsetBeat.value,
-        }),
-  }
-  return isQtr.value ? { ...baseSelection, quarters: 1 } : baseSelection
-})
-
-const availablePatternOrientations = ref<readonly VtgPatternOrientation[]>(
-  getVtgPatternOrientations(speedRatio.value),
-)
-let orientationResolutionVersion = 0
-
-const resolvePatternOrientations = async (selection: VtgPatternSelection | QtrPatternSelection) => {
-  return getVtgPatternOrientations(selection.speedRatio)
-}
-
 const includeCurrentOrientation = (
   orientations: readonly VtgPatternOrientation[],
 ): readonly VtgPatternOrientation[] =>
@@ -1066,32 +1021,9 @@ const includeCurrentOrientation = (
     ? orientations
     : [...orientations, orientation.value].sort((left, right) => left - right)
 
-watch(
-  [rotationSelection, speedRatio],
-  async ([selection, currentSpeedRatio]) => {
-    const version = ++orientationResolutionVersion
-    const allOrientations = getVtgPatternOrientations(currentSpeedRatio)
-    availablePatternOrientations.value = includeCurrentOrientation(allOrientations)
-    if (!selection) return
-
-    try {
-      const available = await resolvePatternOrientations(selection)
-      if (version !== orientationResolutionVersion) return
-      availablePatternOrientations.value = includeCurrentOrientation(available)
-    } catch (error) {
-      if (version === orientationResolutionVersion) {
-        console.warn('VTG pattern rotation matching failed.', error)
-      }
-    }
-  },
-  { immediate: true },
+const availablePatternOrientations = computed(() =>
+  includeCurrentOrientation(getVtgPatternOrientations(speedRatio.value)),
 )
-
-const retainAvailableOrientation = () => {
-  if (!availablePatternOrientations.value.includes(orientation.value)) orientation.value = 0
-}
-
-watch(availablePatternOrientations, retainAvailableOrientation, { flush: 'sync' })
 
 watch(
   transition,
@@ -1141,7 +1073,7 @@ const createPatternSelection = (
     baseSelection.initialTurnsOffset = initialTurnsOffset.value
     baseSelection.initialTurnsOffsetBeat = initialTurnsOffsetBeat.value
   }
-  if (supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0) {
+  if (orientation.value !== 0) {
     baseSelection.orientation = orientation.value
   }
   if (propRotationOffsets.value !== undefined) {
@@ -1372,7 +1304,6 @@ const selectTile = (tile: VtgMatrixTile) => {
     const suppressionOwner = beginPatternEmitSuppression()
     selectedCell.value = { column: tile.column, row: tile.row }
     if (isReselectedSpinToggleCell) isAnti.value = !isAnti.value
-    retainAvailableOrientation()
     releasePatternEmitSuppression(suppressionOwner)
     emitBuilderPreview(tile)
     return
@@ -1386,7 +1317,6 @@ const selectTile = (tile: VtgMatrixTile) => {
     row: tile.row,
   }
   if (isReselectedSpinToggleCell) isAnti.value = !isAnti.value
-  retainAvailableOrientation()
   emitPatternSelection(tile)
 }
 
@@ -1427,7 +1357,6 @@ const selectColumn = (column: VtgRuleNumber) => {
 const toggleSpinDirection = (tile: VtgMatrixTile) => {
   const suppressionOwner = props.builderActive ? beginPatternEmitSuppression() : undefined
   isAnti.value = !isAnti.value
-  retainAvailableOrientation()
   if (suppressionOwner !== undefined) {
     releasePatternEmitSuppression(suppressionOwner)
     emitBuilderPreview(tile)
@@ -1466,20 +1395,10 @@ const resetPatternControls = async () => {
 
 watch(
   beat,
-  (nextBeat, previousBeat) => {
+  () => {
     if (suppressPatternEmit || ratioOrientationChangeActive || props.builderActive) return
-    if (!props.animation) {
-      const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
-      if (tile !== undefined) emitPatternSelection(tile)
-      return
-    }
-
-    const patternAnimation = stripVtgPropertySettings(props.animation)
-    const shifted = shiftVtgStartingFrames(patternAnimation, (nextBeat - previousBeat) * 2)
-    if (!shifted) return
-
-    lastEmittedSelection = createCustomizationSelection()
-    emit('animationUpdate', conceptsStore.applyVtgPropertyControls(shifted))
+    const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
+    if (tile !== undefined) emitPatternSelection(tile)
   },
   { flush: 'sync' },
 )
@@ -1581,7 +1500,6 @@ watch(
 )
 
 const matchPattern = async (request: Parameters<PatternMatchingClient['matchVtg']>[0]) => {
-  if (!patternMatchingEnabled) return { status: 'unmatched' } as const
   if (props.patternMatcher) return props.patternMatcher.matchVtg(request)
 
   const { matchVtgPatternRequest } =
@@ -1593,7 +1511,10 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   const version = ++hydrationVersion
   conceptsStore.hydrateVtgPropertyControls(animation)
   const patternAnimation = stripVtgPropertySettings(animation)
-  const selection = lastEmittedSelection
+  // The parent suppresses revisions produced by this pane. A supplied revision therefore marks
+  // an external change (Editor, Timeline, Quick Slots, or another control surface) and must be
+  // canonicalized independently instead of preserving the pane's previous cell alias.
+  const selection = props.animationRevision === undefined ? lastEmittedSelection : undefined
   lastEmittedSelection = undefined
 
   const matchPreferences = {
@@ -1613,12 +1534,16 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   } catch (error) {
     if (version === hydrationVersion && componentMounted) {
       console.warn('VTG pattern matching failed.', error)
+      previewsReady.value = true
     }
     return
   }
 
   if (version !== hydrationVersion || !componentMounted || props.animation !== animation) return
-  if (result.status === 'unchanged') return
+  if (result.status === 'unchanged') {
+    previewsReady.value = true
+    return
+  }
 
   const match = result.status === 'matched' ? result.match : undefined
   const suppressionOwner = beginPatternEmitSuppression()
@@ -1639,27 +1564,16 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     initialTurnsOffset.value = match.initialTurnsOffset
     initialTurnsOffsetBeat.value =
       match.initialTurnsOffset === undefined ? undefined : (match.beat ?? 1)
-    const exactQtrMatch =
+    const exactPatternMatch =
       result.status === 'matched' &&
-      result.source === 'qtr' &&
-      exactlyMatchesQtrSelection(patternAnimation, result.match)
-    const exactVtgMatch =
-      result.status === 'matched' &&
-      result.source === 'vtg' &&
-      exactlyMatchesVtgSelection(patternAnimation, result.match)
-    const exactPatternMatch = exactQtrMatch || exactVtgMatch
+      (result.exact ??
+        (result.source === 'qtr'
+          ? exactlyMatchesQtrSelection(patternAnimation, result.match)
+          : exactlyMatchesVtgSelection(patternAnimation, result.match)))
     const inferredOrientation = exactPatternMatch
       ? undefined
       : inferPatternRelationshipOrientation(patternAnimation, match)
-    if (supportsVtgPatternOrientation(match.speedRatio)) {
-      orientation.value = match.orientation ?? inferredOrientation ?? 0
-      if (!availablePatternOrientations.value.includes(orientation.value)) {
-        availablePatternOrientations.value = [
-          ...availablePatternOrientations.value,
-          orientation.value,
-        ].sort((left, right) => left - right)
-      }
-    }
+    orientation.value = match.orientation ?? inferredOrientation ?? 0
     const relationshipSelection =
       inferredOrientation === undefined ? match : { ...match, orientation: inferredOrientation }
     propRotationOffsets.value =
@@ -1702,6 +1616,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   }
 
   releasePatternEmitSuppression(suppressionOwner)
+  previewsReady.value = true
 }
 
 const selectInitialRandomPattern = () => {
@@ -1727,18 +1642,28 @@ const selectInitialRandomPattern = () => {
 }
 
 const syncPatternControls = () => {
-  if (!componentMounted || props.builderActive || !props.animationReady || !props.animation) return
+  if (!componentMounted || props.builderActive) return
+  if (!props.animationReady) {
+    previewsReady.value = false
+    return
+  }
+  if (!props.animation) {
+    previewsReady.value = true
+    return
+  }
 
   if (props.animation.props.length === 0) {
     if (initialAnimationHandled) return
 
     initialAnimationHandled = true
     selectInitialRandomPattern()
+    previewsReady.value = true
     return
   }
 
   initialAnimationHandled = true
-  if (patternMatchingEnabled) void hydratePatternControls(props.animation)
+  previewsReady.value = false
+  void hydratePatternControls(props.animation)
 }
 
 watch(
@@ -1756,6 +1681,7 @@ watch(
   (active) => {
     hydrationVersion++
     if (active) {
+      previewsReady.value = true
       const suppressionOwner = beginPatternEmitSuppression()
       selectedCell.value = undefined
       isQtr.value = false
@@ -2018,6 +1944,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   initialTurnsOffset,
   initialTurnsOffsetBeat,
   activeReferences: computed(() => displayedPreviews.value.map(({ reference }) => reference)),
+  active: previewsReady,
 })
 
 let blankObserver: ResizeObserver | undefined

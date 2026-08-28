@@ -10,7 +10,6 @@ import type {
   QtrPatternSelection,
   VtgPatternMatch,
   VtgPatternMatchPreferences,
-  VtgPatternOrientation,
   VtgPatternRotationFilter,
   VtgPatternSelection,
 } from '@/features/vtg/types'
@@ -27,12 +26,8 @@ export interface VtgPatternMatchRequest {
 export type VtgPatternMatchResult =
   | { status: 'unchanged' }
   | { status: 'unmatched' }
-  | { status: 'matched'; source: 'vtg'; match: VtgPatternMatch }
-  | { status: 'matched'; source: 'qtr'; match: QtrPatternMatch }
-
-export interface VtgPatternOrientationsRequest {
-  selection: VtgPatternSelection | QtrPatternSelection
-}
+  | { status: 'matched'; source: 'vtg'; match: VtgPatternMatch; exact?: boolean }
+  | { status: 'matched'; source: 'qtr'; match: QtrPatternMatch; exact?: boolean }
 
 export interface EightStepPatternMatchRequest {
   animation: RootDataFinal
@@ -60,10 +55,6 @@ export interface PatternMatchingBridgeMap {
     arg: VtgPatternMatchRequest
     ret: VtgPatternMatchResult
   }
-  getUniqueVtgPatternOrientations: {
-    arg: VtgPatternOrientationsRequest
-    ret: readonly VtgPatternOrientation[]
-  }
   matchEightStep: {
     arg: EightStepPatternMatchRequest
     ret: EightStepPatternMatchResult
@@ -76,9 +67,6 @@ export interface PatternMatchingBridgeMap {
 
 export interface PatternMatchingClient {
   matchVtg: (request: VtgPatternMatchRequest) => Promise<VtgPatternMatchResult>
-  getUniqueVtgPatternOrientations: (
-    request: VtgPatternOrientationsRequest,
-  ) => Promise<readonly VtgPatternOrientation[]>
   matchEightStep: (request: EightStepPatternMatchRequest) => Promise<EightStepPatternMatchResult>
   matchQst: (request: QstPatternMatchRequest) => Promise<QstPatternMatchResult>
 }

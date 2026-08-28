@@ -14,7 +14,7 @@ import {
 import type { AnimData, AnimDataCompiled } from '@/types/AnimTypes'
 
 const endpointTolerance = 1e-6
-const integerSnapTolerance = 1e-9
+const integerSnapTolerance = endpointTolerance
 
 export interface ShiftAnimationRangeOptions {
   allowEndpointMismatch?: boolean

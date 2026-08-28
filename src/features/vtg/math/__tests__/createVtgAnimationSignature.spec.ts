@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
-import {
-  createFinalTransformedVtgAnimationSignature,
-  createVtgAnimationSignature,
-} from '@/features/vtg/math/createVtgAnimationSignature'
+import { createVtgAnimationSignature } from '@/features/vtg/math/createVtgAnimationSignature'
 
 const createAnimation = () => {
   const animation = createDefaultVtgAnimation({ reference: '2-1', speedRatio: '1:3' })
@@ -24,20 +20,4 @@ describe('createVtgAnimationSignature', () => {
 
     expect(createVtgAnimationSignature(omitted)).toBe(createVtgAnimationSignature(explicit))
   })
-
-  it.each([
-    { swapProps: false, reversePlane: false },
-    { swapProps: false, reversePlane: true },
-    { swapProps: true, reversePlane: false },
-    { swapProps: true, reversePlane: true },
-  ])(
-    'matches the compiled result of final transforms for $swapProps/$reversePlane',
-    (transforms) => {
-      const animation = createAnimation()
-
-      expect(createFinalTransformedVtgAnimationSignature(animation, transforms)).toBe(
-        createVtgAnimationSignature(applyPatternFinalTransforms(animation, transforms)),
-      )
-    },
-  )
 })

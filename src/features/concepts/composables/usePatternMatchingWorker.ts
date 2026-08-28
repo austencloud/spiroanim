@@ -10,7 +10,6 @@ import type {
   QstPatternMatchResult,
   VtgPatternMatchRequest,
   VtgPatternMatchResult,
-  VtgPatternOrientationsRequest,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
 const patternMatchingWorkerIdleMs = 30_000
@@ -29,14 +28,6 @@ const matchVtgWithoutWorker = async (
   const { matchVtgPatternRequest } =
     await import('@/workers/pattern-matching/handlePatternMatchingRequest')
   return matchVtgPatternRequest(request)
-}
-
-const getUniqueVtgPatternOrientationsWithoutWorker = async (
-  request: VtgPatternOrientationsRequest,
-) => {
-  const { getUniqueVtgPatternOrientationsRequest } =
-    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
-  return getUniqueVtgPatternOrientationsRequest(request)
 }
 
 const matchEightStepWithoutWorker = async (
@@ -119,12 +110,6 @@ export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
       () => matchVtgWithoutWorker(request),
     )
 
-  const getUniqueVtgPatternOrientations = (request: VtgPatternOrientationsRequest) =>
-    callWorker(
-      (activeChannel) => activeChannel.call('getUniqueVtgPatternOrientations', request),
-      () => getUniqueVtgPatternOrientationsWithoutWorker(request),
-    )
-
   const matchEightStep = (request: EightStepPatternMatchRequest) =>
     callWorker(
       (activeChannel) => activeChannel.call('matchEightStep', request),
@@ -159,7 +144,7 @@ export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
   })
 
   return {
-    client: { matchVtg, getUniqueVtgPatternOrientations, matchEightStep, matchQst },
+    client: { matchVtg, matchEightStep, matchQst },
     acquire,
   }
 }

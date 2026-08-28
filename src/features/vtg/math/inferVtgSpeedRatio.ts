@@ -1,4 +1,5 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
+import type { CompiledVtgAnimation } from '@/features/vtg/math/createVtgAnimationSignature'
 import type { AnimDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 import type { VtgIndividualSpeedRatio, VtgSpeedRatio } from '@/features/vtg/types'
 import { formatVtgIndividualSpeedRatio, formatVtgSpeedRatio } from '@/features/vtg/types'
@@ -121,7 +122,13 @@ export const inferVtgDoubledPortionSpeedRatio = (
   inferVtgTimingAtFrame(animation, firstContinuationFrameIndex)?.speedRatio
 
 /** Infers each prop's ordered reduced timing ratio and spin from its continuation beats. */
-export const inferVtgTiming = (animation: RootDataFinal): VtgTiming | undefined => {
+export const inferVtgTiming = (animation: RootDataFinal): VtgTiming | undefined =>
+  inferVtgTimingFromCompiled(animation, rootCompile(animation))
+
+export const inferVtgTimingFromCompiled = (
+  animation: RootDataFinal,
+  compiled: CompiledVtgAnimation,
+): VtgTiming | undefined => {
   const frameCount = animation.props[0]?.anim.length
   if (
     frameCount === undefined ||
@@ -132,7 +139,6 @@ export const inferVtgTiming = (animation: RootDataFinal): VtgTiming | undefined 
     return undefined
   }
 
-  const compiled = rootCompile(animation)
   const hasShiftedSeamGauge = compiled.props.every((prop) => {
     const start = prop.anim[0]
     const end = prop.anim.at(-1)

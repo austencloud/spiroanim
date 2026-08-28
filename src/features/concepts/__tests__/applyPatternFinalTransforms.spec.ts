@@ -4,10 +4,6 @@ import {
   applyPatternFinalTransforms,
   applyPatternInitialArcRotation,
 } from '@/features/concepts/applyPatternFinalTransforms'
-import {
-  createFinalTransformedVtgAnimationSignature,
-  createVtgAnimationSignature,
-} from '@/features/vtg/math/createVtgAnimationSignature'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import type { RootData } from '@/types/AnimTypes'
 
@@ -64,20 +60,6 @@ describe('applyPatternFinalTransforms', () => {
     ])
   })
 
-  it('can derive final-transform signatures without cloning the animation', () => {
-    const source = createAnimation()
-
-    for (const swapProps of [false, true]) {
-      for (const reversePlane of [false, true]) {
-        const transforms = { swapProps, reversePlane }
-
-        expect(createFinalTransformedVtgAnimationSignature(source, transforms)).toBe(
-          createVtgAnimationSignature(applyPatternFinalTransforms(source, transforms)),
-        )
-      }
-    }
-  })
-
   it('shifts the stored arcs for pattern rotation without changing other frame values', () => {
     const source = createAnimation()
     const transformed = applyPatternInitialArcRotation(source, 90)
@@ -116,8 +98,5 @@ describe('applyPatternFinalTransforms', () => {
       [{ arc: 180, plane: 180 }, { turns: 180 }],
       [{ arc: 315, plane: 0, axis: 90 }, { turns: -180 }],
     ])
-    expect(createFinalTransformedVtgAnimationSignature(oriented, transforms)).toBe(
-      createVtgAnimationSignature(transformed),
-    )
   })
 })

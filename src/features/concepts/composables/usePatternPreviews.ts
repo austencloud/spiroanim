@@ -13,7 +13,6 @@ import type {
   VtgPatternOrientation,
   VtgTransitionInitialTurnsOffset,
 } from '@/features/vtg/types'
-import { supportsVtgPatternOrientation } from '@/features/vtg/types'
 import type { PatternPropColor } from '@/features/concepts/patternPropColors'
 import type { PropInd } from '@/types/AnimTypes'
 
@@ -35,6 +34,7 @@ interface UseVtgPreviewsOptions {
   initialTurnsOffset: Ref<VtgTransitionInitialTurnsOffset | undefined>
   initialTurnsOffsetBeat: Ref<VtgBeat | undefined>
   activeReferences: Readonly<Ref<readonly VtgCellReference[]>>
+  active?: Readonly<Ref<boolean>>
 }
 
 export const pairedPatternPreviewReferences = [1, 2, 3, 4, 5, 6].flatMap((row) =>
@@ -76,6 +76,7 @@ export const usePatternPreviews = ({
   initialTurnsOffset,
   initialTurnsOffsetBeat,
   activeReferences,
+  active,
 }: UseVtgPreviewsOptions) => {
   const activePreviewIndexes = computed(() => {
     return activeReferences.value.map((reference) =>
@@ -103,7 +104,7 @@ export const usePatternPreviews = ({
       selection.initialTurnsOffset = initialTurnsOffset.value
       selection.initialTurnsOffsetBeat = initialTurnsOffsetBeat.value
     }
-    if (supportsVtgPatternOrientation(speedRatio.value) && orientation.value !== 0) {
+    if (orientation.value !== 0) {
       selection.orientation = orientation.value
     }
     if (propRotationOffsets.value !== undefined) {
@@ -118,6 +119,7 @@ export const usePatternPreviews = ({
     label: 'VTG',
     partialIndexes: spinPreviewIndexes,
     activeIndexes: activePreviewIndexes,
+    active,
     createAnimation: (reference) => {
       const selection = buildSelection(reference)
       return 'quarters' in selection

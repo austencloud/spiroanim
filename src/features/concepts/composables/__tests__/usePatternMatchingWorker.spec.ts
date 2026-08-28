@@ -12,7 +12,7 @@ import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMa
 
 interface FakeWorkerMessage {
   id?: string
-  type: 'matchVtg' | 'getUniqueVtgPatternOrientations' | 'matchEightStep' | 'matchQst'
+  type: 'matchVtg' | 'matchEightStep' | 'matchQst'
   data: unknown
 }
 
@@ -37,10 +37,7 @@ class FakeWorker extends EventTarget implements Worker {
     const request = message as FakeWorkerMessage
     if (!request.id) return
 
-    const data =
-      request.type === 'getUniqueVtgPatternOrientations'
-        ? [0]
-        : { status: 'unmatched' as const }
+    const data = { status: 'unmatched' as const }
     const respond = () => {
       const event = new MessageEvent('message', {
         data: { id: request.id, type: request.type, data },
@@ -99,13 +96,6 @@ describe('usePatternMatchingWorker', () => {
 
     expect(FakeWorker.instances).toHaveLength(1)
     expect(FakeWorker.instances[0]!.source).toContain('PatternMatchingWorker')
-
-    await expect(
-      client.getUniqueVtgPatternOrientations({
-        selection: { reference: '5-1', speedRatio: '1:2' },
-      }),
-    ).resolves.toEqual([0])
-    expect(FakeWorker.instances).toHaveLength(1)
 
     await expect(client.matchEightStep({ animation })).resolves.toEqual({ status: 'unmatched' })
     expect(FakeWorker.instances).toHaveLength(1)

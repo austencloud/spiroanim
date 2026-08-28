@@ -6,7 +6,6 @@ import {
   createVtgPreviewAnimation as createVtgPreviewAnimationForSelection,
 } from '@/features/vtg/createVtgAnimation'
 import { buildVtgPattern as buildSelectedVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
-import { vtgFixedShapeCells } from '@/features/vtg/data/vtgPatternCatalog'
 import {
   getAdjustedVtgScale,
   vtgPlayerSettings,
@@ -15,11 +14,11 @@ import {
 import { getVtgBeats, vtgSpeedRatios } from '@/features/vtg/types'
 import type { VtgCellReference, VtgPatternSelection, VtgRuleNumber } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { inferVtgTiming } from '@/features/vtg/math/inferVtgSpeedRatio'
 import { reverseAngle } from '@/math/animation/AngleFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { doublePlaybackMultiplier } from '@/math/animation/subdivideAnimationPlayback'
 import type { RootData, RootDataFinal } from '@/types/AnimTypes'
-import { patternShapes } from '@/types/PatternTypes'
 
 const createVtgAnimation = (current: RootDataFinal, selection: VtgPatternSelection) =>
   createVtgAnimationForSelection(current, selection)
@@ -56,17 +55,13 @@ const expectVectorClose = (actual: readonly number[], expected: readonly number[
 
 describe('createVtgAnimation', () => {
   it('assigns compound ratios to prop indexes', () => {
-    const leftTwoRightThree = buildSelectedVtgPattern({
-      reference: '1-5',
-      speedRatio: '1:2v3',
-    })
-    const leftThreeRightTwo = buildSelectedVtgPattern({
-      reference: '1-5',
-      speedRatio: '1:3v2',
-    })
+    const propRatios = (speedRatio: '1:2v3' | '1:3v2') => {
+      const animation = createDefaultVtgAnimation({ reference: '1-5', speedRatio })
+      return animation ? inferVtgTiming(animation)?.props.map(({ ratio }) => ratio) : undefined
+    }
 
-    expect(leftTwoRightThree?.props.map((prop) => prop.anim[1]?.turns)).toEqual([-135, 90])
-    expect(leftThreeRightTwo?.props.map((prop) => prop.anim[1]?.turns)).toEqual([-180, 45])
+    expect(propRatios('1:2v3')).toEqual(['1:2', '1:3'])
+    expect(propRatios('1:3v2')).toEqual(['1:3', '1:2'])
   })
 
   it('leaves compound Swap out of table generation and swaps completed tracks', () => {
@@ -131,26 +126,23 @@ describe('createVtgAnimation', () => {
         const antiOptions = spinToggleCells.has(reference) ? booleanOptions : ([false] as const)
         for (const speedRatio of vtgSpeedRatios) {
           for (const isAnti of antiOptions) {
-            for (const shape of patternShapes) {
-              for (const beat of getVtgBeats(speedRatio)) {
-                for (const swapProps of booleanOptions) {
-                  for (const reversePlane of booleanOptions) {
-                    const animation = createDefaultVtgAnimation({
-                      reference,
-                      speedRatio,
-                      isAnti,
-                      shape,
-                      beat,
-                      swapProps,
-                      reversePlane,
-                      transition: true,
-                    })
-                    if (!animation) continue
+            for (const beat of getVtgBeats(speedRatio)) {
+              for (const swapProps of booleanOptions) {
+                for (const reversePlane of booleanOptions) {
+                  const animation = createDefaultVtgAnimation({
+                    reference,
+                    speedRatio,
+                    isAnti,
+                    beat,
+                    swapProps,
+                    reversePlane,
+                    transition: true,
+                  })
+                  if (!animation) continue
 
-                    for (const prop of animation.props) {
-                      expect(prop.anim[4]).toEqual({})
-                      expect(prop.anim[6]).toEqual({})
-                    }
+                  for (const prop of animation.props) {
+                    expect(prop.anim[4]).toEqual({})
+                    expect(prop.anim[6]).toEqual({})
                   }
                 }
               }
@@ -167,7 +159,6 @@ describe('createVtgAnimation', () => {
       speedRatio: '1:3',
       swapProps: true,
       reversePlane: true,
-      shape: 'box',
     } as const satisfies VtgPatternSelection
     const originalAnimation = createVtgAnimationForSelection(createCurrentAnimation(), selection)
     const shiftedAnimation = createVtgAnimationForSelection(createCurrentAnimation(), {
@@ -246,92 +237,6 @@ describe('createVtgAnimation', () => {
       })
 
       expect(transitioned?.bpm).toBe(original?.bpm)
-    },
-  )
-
-  it('rotates only the initial prop arcs by 45 degrees before the final 180 transform', () => {
-    const baseSelection = {
-      reference: '5-1',
-      speedRatio: '1:3',
-    } as const satisfies VtgPatternSelection
-    const diamond = createVtgAnimationForSelection(createCurrentAnimation(), baseSelection)
-    const box = createVtgAnimationForSelection(createCurrentAnimation(), {
-      ...baseSelection,
-      shape: 'box',
-    })
-    const reversedBox = createVtgAnimationForSelection(createCurrentAnimation(), {
-      ...baseSelection,
-      shape: 'box',
-      reversePlane: true,
-    })
-    if (!diamond || !box || !reversedBox) throw new Error('Expected Diamond and Box VTG animations')
-
-    const diamondCompiled = rootCompile(diamond)
-    const boxCompiled = rootCompile(box)
-
-    expect(boxCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
-      diamondCompiled.props.map((prop) => {
-        const firstFrame = prop.anim[0]!
-        const delta = Math.abs(firstFrame.plane) === 180 ? -45 : 45
-        return (firstFrame.arc + delta + 360) % 360
-      }),
-    )
-    expect(boxCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
-      diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
-    )
-    expect(reversedBox.props.map((prop) => prop.anim[0]?.arc)).toEqual(
-      box.props.map((prop) => prop.anim[0]?.arc),
-    )
-    expect(reversedBox.props.map((prop) => prop.anim[0]?.plane)).toEqual(
-      box.props.map((prop) => reverseAngle(prop.anim[0]?.plane ?? 0)),
-    )
-  })
-
-  it('keeps the eight fixed-shape cells unchanged in Box mode', () => {
-    expect([...vtgFixedShapeCells]).toEqual([
-      '1-1',
-      '1-2',
-      '2-1',
-      '2-2',
-      '3-3',
-      '3-4',
-      '4-3',
-      '4-4',
-    ])
-
-    for (const reference of vtgFixedShapeCells) {
-      const selection = { reference, speedRatio: '1:3' } as const satisfies VtgPatternSelection
-      const diamond = createVtgAnimationForSelection(createCurrentAnimation(), selection)
-      const box = createVtgAnimationForSelection(createCurrentAnimation(), {
-        ...selection,
-        shape: 'box',
-      })
-
-      expect(box).toEqual(diamond)
-    }
-  })
-
-  it.each(['1:2', '1:4'] as const)(
-    'applies Tilted to every otherwise fixed-shape cell at %s',
-    (speedRatio) => {
-      for (const reference of vtgFixedShapeCells) {
-        const selection = { reference, speedRatio } as const satisfies VtgPatternSelection
-        const diamond = createVtgAnimationForSelection(createCurrentAnimation(), selection)
-        const tilted = createVtgAnimationForSelection(createCurrentAnimation(), {
-          ...selection,
-          shape: 'box',
-        })
-        if (!diamond || !tilted) throw new Error(`Expected VTG animations for ${reference}`)
-
-        expect(tilted.props.map((prop) => prop.anim[0]?.arc)).toEqual(
-          diamond.props.map((prop) => {
-            const firstFrame = prop.anim[0]
-            if (!firstFrame) return undefined
-            const delta = Math.abs(firstFrame.plane ?? 0) === 180 ? -45 : 45
-            return ((firstFrame.arc ?? 0) + delta + 360) % 360
-          }),
-        )
-      }
     },
   )
 

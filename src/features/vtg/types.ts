@@ -1,5 +1,4 @@
 import type { PropInd, PropReadable, RootDataFinal, RootReadable } from '@/types/AnimTypes'
-import type { PatternShape } from '@/types/PatternTypes'
 import type { PatternPropVisibilitySelection } from '@/features/concepts/patternPropVisibility'
 import type { PatternPropSpacingSelection } from '@/features/concepts/patternPropSpacing'
 import type { PatternPropColorSelection } from '@/features/concepts/patternPropColors'
@@ -155,7 +154,6 @@ export const getVtgPatternOrientations = (
   _speedRatio: VtgSpeedRatio,
 ): readonly VtgPatternOrientation[] => vtgPatternOrientations
 export const vtgDefaultPatternOrientation = -90 satisfies VtgPatternOrientation
-export const supportsVtgPatternOrientation = (_speedRatio: VtgSpeedRatio) => true
 export const getDefaultVtgPatternOrientation = (
   speedRatio: VtgSpeedRatio,
 ): VtgPatternOrientation =>
@@ -172,8 +170,6 @@ export interface VtgPatternSelection
   isAnti?: boolean
   swapProps?: boolean
   reversePlane?: boolean
-  /** @deprecated VTG no longer applies Tilted/Box shape transforms. */
-  shape?: PatternShape
   beat?: VtgBeat
   transition?: boolean
   transitionAfterBeat?: boolean
@@ -200,8 +196,6 @@ export interface VtgPatternMatch {
   isAnti: boolean
   swapProps: boolean
   reversePlane: boolean
-  /** @deprecated VTG matching no longer returns Tilted/Box variants. */
-  shape?: PatternShape
   beat?: VtgBeat
   transition?: boolean
   transitionAfterBeat?: boolean

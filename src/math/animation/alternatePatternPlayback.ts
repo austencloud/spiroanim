@@ -5,6 +5,8 @@ import { vtgDefaultTransitionBeats, type VtgTransitionBeats } from '@/features/v
 
 const transitionPlane = 180
 const doubledIntervalsPerHandRotation = 8
+const isTransitionPlane = (value: number | undefined) =>
+  value !== undefined && Math.abs(((((value + 180) % 360) + 360) % 360) - 180) === 180
 
 const appendFrames = (
   animation: RootDataFinal,
@@ -170,8 +172,8 @@ export const analyzeAlternatingPatternPlayback = (
       const beats = (firstProp.anim.length - 1) / (eventCount * doublePlaybackMultiplier)
       if (!isTransitionBeatCount(beats)) return false
       const firstChangeIndex = beats * doublePlaybackMultiplier + frameOffset
-      const changedPropCount = animation.props.filter(
-        (prop) => prop.anim[firstChangeIndex]?.plane === transitionPlane,
+      const changedPropCount = animation.props.filter((prop) =>
+        isTransitionPlane(prop.anim[firstChangeIndex]?.plane),
       ).length
       return changedPropCount === (quad ? 1 : animation.props.length)
     })
@@ -182,7 +184,7 @@ export const analyzeAlternatingPatternPlayback = (
   if (!isTransitionBeatCount(transitionBeats)) return undefined
   const firstChangeIndex = transitionBeats * doublePlaybackMultiplier + frameOffset
   const changedPropIndexes = animation.props.flatMap((prop, propIndex) =>
-    prop.anim[firstChangeIndex]?.plane === transitionPlane ? [propIndex] : [],
+    isTransitionPlane(prop.anim[firstChangeIndex]?.plane) ? [propIndex] : [],
   )
   const transitionSecond = transitionQuad && changedPropIndexes[0] === 1
 

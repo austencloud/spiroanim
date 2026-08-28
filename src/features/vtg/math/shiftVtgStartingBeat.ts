@@ -8,6 +8,8 @@ export const shiftVtgStartingFrames = (
   animation: RootDataFinal,
   shiftCount: number,
 ): RootDataFinal | undefined => {
+  if (shiftCount === 0) return animation
+
   const compiled = rootCompile(animation)
   const shiftedProps = []
   for (const [propIndex, prop] of animation.props.entries()) {

@@ -1,6 +1,5 @@
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import {
-  getUniqueVtgPatternOrientationsRequest,
   matchEightStepPatternRequest,
   matchQstPatternRequest,
   matchVtgPatternRequest,
@@ -12,6 +11,5 @@ const { register } = createMessageChannel<PatternMatchingBridgeMap>(
 )
 
 register('matchVtg', matchVtgPatternRequest)
-register('getUniqueVtgPatternOrientations', getUniqueVtgPatternOrientationsRequest)
 register('matchEightStep', matchEightStepPatternRequest)
 register('matchQst', matchQstPatternRequest)

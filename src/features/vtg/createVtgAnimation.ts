@@ -27,7 +27,7 @@ import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 
 const vtgIntervalsPerHandRotation = 8
 
-const applyPropRotationOffsets = (
+export const applyVtgPropRotationOffsets = (
   animation: RootDataFinal,
   offsets: VtgPatternSelection['propRotationOffsets'],
 ): RootDataFinal =>
@@ -167,7 +167,7 @@ export const createVtgAnimation = (
   }
 
   const transformed = applyPatternFinalTransforms(completed, selection)
-  const aligned = applyPropRotationOffsets(transformed, selection.propRotationOffsets)
+  const aligned = applyVtgPropRotationOffsets(transformed, selection.propRotationOffsets)
   const playback = applyVtgInitialTurnsPlayback(aligned, selection)
   return playback ? applyPatternPropColors(playback, selection) : undefined
 }

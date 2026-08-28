@@ -1,6 +1,7 @@
-import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
+
+export type CompiledVtgAnimation = ReturnType<typeof rootCompile>
 
 const precision = 1e9
 const normalizeNumber = (value: number) => {
@@ -13,9 +14,8 @@ const normalizeAngle = (value: number) => {
 }
 
 /** Describes the complete compiled frame paths for exact catalog regeneration comparisons. */
-export const createCompiledVtgPatternSignature = (animation: RootDataFinal) => {
-  const compiled = rootCompile(animation)
-  return JSON.stringify({
+export const createCompiledVtgPatternSignatureFromCompiled = (compiled: CompiledVtgAnimation) =>
+  JSON.stringify({
     props: compiled.props.map((prop) =>
       prop.anim.map((frame) => [
         normalizeNumber(frame.turns),
@@ -31,7 +31,9 @@ export const createCompiledVtgPatternSignature = (animation: RootDataFinal) => {
       ]),
     ),
   })
-}
+
+export const createCompiledVtgPatternSignature = (animation: RootDataFinal) =>
+  createCompiledVtgPatternSignatureFromCompiled(rootCompile(animation))
 const getPositionOrientation = (position: readonly number[], fallback: number) => {
   const x = position[0] ?? 0
   const y = position[1] ?? 0
@@ -94,10 +96,14 @@ export interface VtgDirectionSignature {
  */
 export const createVtgDirectionSignature = (
   animation: RootDataFinal,
+): VtgDirectionSignature | undefined =>
+  createVtgDirectionSignatureFromCompiled(animation, rootCompile(animation))
+
+export const createVtgDirectionSignatureFromCompiled = (
+  animation: RootDataFinal,
+  compiled: CompiledVtgAnimation,
 ): VtgDirectionSignature | undefined => {
   if (animation.props.length !== 2 || hasUnsupportedPatternFields(animation)) return undefined
-
-  const compiled = rootCompile(animation)
   const first = compiled.props[0]?.anim[0]
   if (!first) return undefined
   const orientation = getPositionOrientation(first.pos, normalizeAngle(first.arc))
@@ -115,6 +121,7 @@ export const createVtgDirectionSignature = (
   })
   const tracks = compiled.props.map((prop) => {
     const directions = prop.anim.slice(1).map(getCompiledSpinDirection)
+    const beatScale = prop.anim[1]?.beats ?? 1
     const continuationDirection = directions[1]
     const normalizeShiftedSeam =
       hasShiftedSeamGauge &&
@@ -130,7 +137,9 @@ export const createVtgDirectionSignature = (
             normalizeShiftedSeam && frameIndex === 1
               ? continuationDirection
               : getCompiledSpinDirection(frame),
-            normalizeNumber(frame.beats),
+            // Uniform frame-duration scaling changes playback tempo, not the VTG pattern.
+            // Retain relative durations so authored nonuniform timing still remains distinct.
+            normalizeNumber(beatScale === 0 ? frame.beats : frame.beats / beatScale),
           ],
     )
   })
@@ -140,16 +149,6 @@ export const createVtgDirectionSignature = (
 
 export const createVtgAnimationSignature = (animation: RootDataFinal): string | undefined =>
   createVtgDirectionSignature(animation)?.key
-
-export const getVtgStartingTurns = (
-  animation: RootDataFinal,
-): readonly [number, number] | undefined => {
-  if (animation.props.length !== 2) return undefined
-  const compiled = rootCompile(animation)
-  const left = compiled.props[0]?.anim[0]?.turns
-  const right = compiled.props[1]?.anim[0]?.turns
-  return left === undefined || right === undefined ? undefined : [left, right]
-}
 
 const getSignedRotationDifference = (
   axis: readonly number[],
@@ -165,17 +164,34 @@ const getSignedRotationDifference = (
   return normalizeAngle((Math.atan2(sine, cosine) * 180) / Math.PI)
 }
 
+const axesAreEquivalent = (first: number, second: number) =>
+  Math.abs(Math.sin(((first - second) * Math.PI) / 180)) <= semanticTolerance
+
 export const getVtgPropRotationOffsets = (
   animation: RootDataFinal,
   candidate: RootDataFinal,
+): readonly [number, number] | undefined =>
+  getVtgPropRotationOffsetsFromCompiled(
+    animation,
+    candidate,
+    rootCompile(animation),
+    rootCompile(candidate),
+  )
+
+export const getVtgPropRotationOffsetsFromCompiled = (
+  animation: RootDataFinal,
+  candidate: RootDataFinal,
+  compiled: CompiledVtgAnimation,
+  compiledCandidate: CompiledVtgAnimation,
 ): readonly [number, number] | undefined => {
   if (animation.props.length !== 2 || candidate.props.length !== 2) return undefined
-  const compiled = rootCompile(animation)
-  const compiledCandidate = rootCompile(candidate)
   const offsets = compiled.props.map((prop, index) => {
     const frame = prop.anim[0]
     const candidateFrame = compiledCandidate.props[index]?.anim[0]
     if (!frame || !candidateFrame) return undefined
+    const authoredAxis = animation.props[index]?.anim[0]?.axis ?? 0
+    const candidateAxis = candidate.props[index]?.anim[0]?.axis ?? 0
+    if (!axesAreEquivalent(authoredAxis, candidateAxis)) return undefined
     const difference = getSignedRotationDifference(
       candidateFrame.rotx,
       candidateFrame.rot,
@@ -188,12 +204,6 @@ export const getVtgPropRotationOffsets = (
   const right = offsets[1]
   return left === undefined || right === undefined ? undefined : [left, right]
 }
-
-export const createFinalTransformedVtgAnimationSignature = (
-  animation: RootDataFinal,
-  transforms: { swapProps: boolean; reversePlane: boolean; initialTurnsOffset?: number },
-): string | undefined =>
-  createVtgAnimationSignature(applyPatternFinalTransforms(animation, transforms))
 
 export const getVtgAnimationScale = (animation: RootDataFinal): number | undefined => {
   const firstScale =

@@ -246,6 +246,37 @@ describe('describePatternRelationships', () => {
     expect(mismatches).toEqual([])
   })
 
+  it('toggles only prop Quarter timing for a retained quarter-turn across the Qtr grid', () => {
+    const orientations = [-90, -45, 0, 45, 90, 180] as const
+
+    for (const row of ruleNumbers) {
+      for (const column of ruleNumbers) {
+        const reference: VtgCellReference = `${row}-${column}`
+        for (const quarters of qtrModes) {
+          for (const orientation of orientations) {
+            const base = describePatternSelectionRelationships({
+              reference,
+              speedRatio: '1:3',
+              quarters,
+              orientation,
+            })
+            const rotated = describePatternSelectionRelationships({
+              reference,
+              speedRatio: '1:3',
+              quarters,
+              orientation,
+              propRotationOffsets: [90, 0],
+            })
+
+            expect(rotated.hands).toEqual(base.hands)
+            expect(rotated.props?.direction).toBe(base.props?.direction)
+            expect(rotated.props?.timing === 'Q').toBe(base.props?.timing !== 'Q')
+          }
+        }
+      }
+    }
+  })
+
   it('derives every established VTG label and tooltip across supported settings', () => {
     for (const row of ruleNumbers) {
       for (const column of ruleNumbers) {

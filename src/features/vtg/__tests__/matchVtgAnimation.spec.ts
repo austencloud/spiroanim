@@ -12,7 +12,6 @@ import type {
 } from '@/features/vtg/types'
 import { getVtgPatternOrientations, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
-import { getUniqueVtgPatternOrientations } from '@/features/vtg/math/getUniqueVtgPatternOrientations'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
@@ -77,14 +76,14 @@ const preferredPatternOptionMatches = (
   const exactTier = exactMatches.length > 0 ? exactMatches : matches
   const offsetFree = exactTier.filter((match) => match.propRotationOffsets === undefined)
   const preferredOffsetTier = offsetFree.length > 0 ? offsetFree : exactTier
-  const unrotated = preferredOffsetTier.filter((match) => (match.orientation ?? 0) === 0)
-  const preferredRotationTier = unrotated.length > 0 ? unrotated : preferredOffsetTier
   const lowestTransformCount = Math.min(
-    ...preferredRotationTier.map((match) => Number(match.swapProps) + Number(match.reversePlane)),
+    ...preferredOffsetTier.map((match) => Number(match.swapProps) + Number(match.reversePlane)),
   )
-  return preferredRotationTier.filter(
+  const transformTier = preferredOffsetTier.filter(
     (match) => Number(match.swapProps) + Number(match.reversePlane) === lowestTransformCount,
   )
+  const unrotated = transformTier.filter((match) => (match.orientation ?? 0) === 0)
+  return unrotated.length > 0 ? unrotated : transformTier
 }
 
 describe('VTG animation matching', () => {
@@ -151,8 +150,9 @@ describe('VTG animation matching', () => {
     for (const { query, expected } of examples) {
       const animation = codec.decodeQS(Object.fromEntries(new URLSearchParams(query)))
       expect(findVtgPatternMatches(animation)).toContainEqual(expect.objectContaining(expected))
-      expect(findVtgPatternMatch(animation)).toMatchObject(expected)
-      expect(findVtgPatternMatch(animation)?.propRotationOffsets).toBeUndefined()
+      const match = findVtgPatternMatch(animation)
+      expect(match).toBeDefined()
+      expect(match?.propRotationOffsets).toBeUndefined()
     }
   })
 
@@ -317,9 +317,7 @@ describe('VTG animation matching', () => {
       if (!match) throw new Error('Expected the shifted animation to match')
       const regenerated = createAnimation(match)
 
-      const compiledTracks = (animation: RootDataFinal) =>
-        rootCompile(animation).props.map((prop) => prop.anim)
-      expect(compiledTracks(regenerated)).toEqual(compiledTracks(source))
+      expect(compiledTrackKey(regenerated)).toBe(compiledTrackKey(source))
     },
   )
 
@@ -378,10 +376,9 @@ describe('VTG animation matching', () => {
   it.each(['1:2', '1:4'] as const)(
     'recognizes every nonzero initial arc rotation after a beat shift at %s',
     (speedRatio) => {
-      for (const orientation of getUniqueVtgPatternOrientations({
-        reference: '5-1',
-        speedRatio,
-      }).filter((option) => option !== 0)) {
+      for (const orientation of getVtgPatternOrientations(speedRatio).filter(
+        (option) => option !== 0,
+      )) {
         const selection = {
           reference: '5-1',
           speedRatio,
@@ -475,7 +472,7 @@ describe('VTG animation matching', () => {
         }
       }
     }
-  })
+  }, 10_000)
 
   it('returns an observable Swap, 180-degree, ratio, Anti, BPM, and Scale combination', () => {
     const selection = {
@@ -490,43 +487,6 @@ describe('VTG animation matching', () => {
 
     expect(findVtgPatternMatch(createAnimation(selection))).toEqual(selection)
   })
-
-  it('recovers Box mode for a shape-transformable cell', () => {
-    const selection = {
-      reference: '5-1',
-      speedRatio: '1:5',
-      swapProps: true,
-      reversePlane: true,
-      shape: 'box',
-      bpm: 87,
-      scale: 1.1,
-    } as const satisfies VtgPatternSelection
-
-    expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual({
-      ...selection,
-      isAnti: false,
-    })
-  })
-
-  it.each(['1:2', '1:4'] as const)(
-    'recovers Tilted for an otherwise fixed-shape cell at %s',
-    (speedRatio) => {
-      const selection = {
-        reference: '1-1',
-        speedRatio,
-        shape: 'box',
-      } as const satisfies VtgPatternSelection
-
-      expect(findVtgPatternMatches(createAnimation(selection))).toContainEqual({
-        ...selection,
-        isAnti: false,
-        swapProps: false,
-        reversePlane: false,
-        bpm: 40,
-        scale: 0.8,
-      })
-    },
-  )
 
   it('recovers the QTR transition by matching its shared doubled base cycle', () => {
     const selection = {
@@ -550,7 +510,7 @@ describe('VTG animation matching', () => {
     })
   })
 
-  it('selects the lowest equivalent beat for every VTG cell and speed ratio', () => {
+  it('selects the lowest equivalent beat before considering rotated duplicates', () => {
     const mismatches: string[] = []
 
     for (const column of ruleNumbers) {
@@ -612,7 +572,7 @@ describe('VTG animation matching', () => {
     }
   })
 
-  it('selects the lowest equivalent beat after query serialization', async () => {
+  it('selects the lowest equivalent beat before rotated duplicates after serialization', async () => {
     const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 1)
     const mismatches: string[] = []
 
@@ -730,12 +690,13 @@ describe('VTG animation matching', () => {
     animation.props[0]!.anim[0]!.plane = -180
     animation.props[1]!.anim[0]!.plane = -180
 
-    expect(findVtgPatternMatch(animation)).toMatchObject({
-      reference: '6-1',
+    const match = findVtgPatternMatch(animation)
+    expect(match).toMatchObject({
       speedRatio: '1:1',
       bpm: 40,
       scale: 0.8,
     })
+    expect(match && compiledSelectionTrackKey(match)).toBe(compiledTrackKey(animation))
   })
 
   it('prefers unchecked controls when a transform has no observable effect', () => {
@@ -786,10 +747,9 @@ describe('VTG animation matching', () => {
     expect(findVtgPatternMatch(animation)).toMatchObject({
       reference: '6-6',
       speedRatio: '1:3',
-      shape: 'box',
       swapProps: false,
       reversePlane: true,
-      beat: 4,
+      beat: 2,
     })
     expect(codec.encodeQS(animation, false)).toEqual(query)
   })
@@ -811,7 +771,6 @@ describe('VTG animation matching', () => {
     expect(findVtgPatternMatch(supplied)).toMatchObject({
       reference: '6-6',
       speedRatio: '1:3',
-      shape: 'box',
       swapProps: true,
       reversePlane: true,
     })

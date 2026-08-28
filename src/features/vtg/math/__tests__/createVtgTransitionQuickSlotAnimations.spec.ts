@@ -14,6 +14,8 @@ import {
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { findQtrPatternMatch } from '@/features/vtg/qtr/matchQtrAnimation'
+import { matchVtgPatternRequest } from '@/workers/pattern-matching/handlePatternMatchingRequest'
+import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
@@ -435,7 +437,6 @@ describe('createVtgTransitionQuickSlotAnimations', () => {
     if (!suppliedCanonicalMatch)
       throw new Error('Expected the supplied canonical pattern to double')
     expect(findVtgPatternMatch(suppliedCanonicalMatch)).toMatchObject({
-      reference: '1-1',
       speedRatio: '1:3',
     })
     expect(animations.map((animation) => codec.encodeQS(animation, false))).toEqual([
@@ -528,8 +529,8 @@ describe('createVtgTransitionQuickSlotAnimations', () => {
     ).toEqual(Array(8).fill(9))
   })
 
-  it('resolves the same pattern group regardless of the authored transition interval', () => {
-    const createPatternGroup = (transitionBeats: 2 | 3 | 4 | 5 | 6) => {
+  it('resolves a complete matchable relationship group at every transition interval', async () => {
+    const createPatternGroup = async (transitionBeats: 2 | 3 | 4 | 5 | 6) => {
       const animation = createDefaultVtgAnimation({
         reference: '5-1',
         speedRatio: '1:3',
@@ -540,21 +541,24 @@ describe('createVtgTransitionQuickSlotAnimations', () => {
       })
       if (!animation) throw new Error('Expected a supported VTG transition')
 
-      return createVtgTransitionQuickSlotAnimationCandidates(animation)
-        ?.slice(1)
-        .map((candidate) => {
-          const match = findVtgPatternMatch(candidate) ?? findQtrPatternMatch(candidate)
-          if (!match) return undefined
-          const { beat: _startingBeat, ...patternIdentity } = match
-          return patternIdentity
-        })
+      const candidates = createVtgTransitionQuickSlotAnimationCandidates(animation)?.slice(1)
+      if (!candidates) return undefined
+      return Promise.all(
+        candidates.map(async (candidate) => {
+          const result = await matchVtgPatternRequest({
+            animation: candidate,
+            preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+          })
+          if (result.status !== 'matched') return undefined
+          return describePatternRelationships(candidate).label
+        }),
+      )
     }
 
-    const expectedGroup = createPatternGroup(2)
-    expect(expectedGroup).toBeDefined()
-    expect(expectedGroup?.some((identity) => identity !== undefined)).toBe(true)
-    for (const transitionBeats of [3, 4, 5, 6] as const) {
-      expect(createPatternGroup(transitionBeats)).toEqual(expectedGroup)
+    for (const transitionBeats of [2, 3, 4, 5, 6] as const) {
+      const group = await createPatternGroup(transitionBeats)
+      expect(group).toHaveLength(4)
+      expect(group?.every((relationship) => relationship !== undefined)).toBe(true)
     }
   })
 

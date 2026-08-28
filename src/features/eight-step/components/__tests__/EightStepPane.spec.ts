@@ -665,7 +665,6 @@ describe('EightStepPane', () => {
       .mockReturnValueOnce(second.promise)
     const patternMatcher: PatternMatchingClient = {
       matchVtg: async () => ({ status: 'unmatched' }),
-      getUniqueVtgPatternOrientations: async () => [0],
       matchEightStep,
       matchQst: async () => ({ status: 'unmatched' }),
     }

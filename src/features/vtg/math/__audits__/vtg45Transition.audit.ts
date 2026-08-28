@@ -9,7 +9,6 @@ import {
   type VtgTransitionQuickSlotCandidates,
   type VtgTransitionQuickSlotMatchKind,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
-import { getUniqueVtgPatternOrientations } from '@/features/vtg/math/getUniqueVtgPatternOrientations'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { findQtrPatternMatch } from '@/features/vtg/qtr/matchQtrAnimation'
 import type {
@@ -25,23 +24,19 @@ import type {
 import { getVtgBeats, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { doubleAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
-import type { PatternShape } from '@/types/PatternTypes'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
-const shapes = ['diamond', 'box'] as const satisfies readonly PatternShape[]
 const transitionModes = vtgTransitionBeats.flatMap((transitionBeats) => [
   { transitionBeats, transitionQuad: false, transitionSecond: false },
   { transitionBeats, transitionQuad: true, transitionSecond: false },
   { transitionBeats, transitionQuad: true, transitionSecond: true },
 ])
 const exhaustiveAuditTimeout = 10 * 60 * 1000
-const orientationAuditTimeout = 30 * 1000
 
 interface UnclassifiedTransition {
   reference: VtgCellReference
   speedRatio: VtgSpeedRatio
-  shape: PatternShape
   beat: VtgBeat
   transitionBeats: VtgTransitionBeats
   transitionQuad: boolean
@@ -56,7 +51,6 @@ interface IncorrectQuickSlot extends UnclassifiedTransition {
 interface IncorrectExtraction {
   reference: VtgCellReference
   speedRatio: VtgSpeedRatio
-  shape: PatternShape
   beat: VtgBeat
   transitionBeats: VtgTransitionBeats
   transitionQuad: boolean
@@ -205,87 +199,80 @@ describe('VTG 45 transition catalog audit', () => {
         for (const row of ruleNumbers) {
           for (const column of ruleNumbers) {
             const reference: VtgCellReference = `${row}-${column}`
-            for (const shape of shapes) {
-              for (const beat of getVtgBeats(speedRatio)) {
-                for (const mode of transitionModes) {
-                  const animation = createDefaultVtgAnimation({
+            for (const beat of getVtgBeats(speedRatio)) {
+              for (const mode of transitionModes) {
+                const animation = createDefaultVtgAnimation({
+                  reference,
+                  speedRatio,
+                  beat,
+                  transition: true,
+                  ...mode,
+                })
+                if (!animation) continue
+                const candidates = createVtgTransitionQuickSlotAnimationCandidates(animation)
+                if (!candidates) throw new Error(`Could not extract ${speedRatio} ${reference}`)
+
+                const extractionError = validateTransitionExtractions(
+                  animation,
+                  candidates,
+                  mode.transitionBeats,
+                )
+                if (extractionError) {
+                  incorrectExtractions.push({
                     reference,
                     speedRatio,
-                    shape,
                     beat,
-                    transition: true,
                     ...mode,
+                    reason: extractionError,
                   })
-                  if (!animation) continue
-                  const candidates = createVtgTransitionQuickSlotAnimationCandidates(animation)
-                  if (!candidates) throw new Error(`Could not extract ${speedRatio} ${reference}`)
+                }
 
-                  const extractionError = validateTransitionExtractions(
-                    animation,
-                    candidates,
-                    mode.transitionBeats,
-                  )
-                  if (extractionError) {
-                    incorrectExtractions.push({
+                const result = await resolveVtgTransitionQuickSlotAnimations(
+                  candidates,
+                  getMatchKind,
+                )
+                if (result.status === 'partial') {
+                  unclassified.push(
+                    ...result.unmatchedSlots.map((slot) => ({
                       reference,
                       speedRatio,
-                      shape,
                       beat,
                       ...mode,
-                      reason: extractionError,
-                    })
-                  }
-
-                  const result = await resolveVtgTransitionQuickSlotAnimations(
-                    candidates,
-                    getMatchKind,
+                      slot,
+                    })),
                   )
-                  if (result.status === 'partial') {
-                    unclassified.push(
-                      ...result.unmatchedSlots.map((slot) => ({
-                        reference,
-                        speedRatio,
-                        shape,
-                        beat,
-                        ...mode,
-                        slot,
-                      })),
-                    )
+                }
+
+                for (let slotIndex = 1; slotIndex < result.animations.length; slotIndex++) {
+                  if (
+                    result.status === 'partial' &&
+                    result.unmatchedSlots.includes(slotIndex + 1)
+                  ) {
+                    continue
                   }
 
-                  for (let slotIndex = 1; slotIndex < result.animations.length; slotIndex++) {
-                    if (
-                      result.status === 'partial' &&
-                      result.unmatchedSlots.includes(slotIndex + 1)
-                    ) {
-                      continue
-                    }
-
-                    const resolved = result.animations[slotIndex]
-                    const candidate = candidates[slotIndex]
-                    if (!resolved || resolved !== candidate) {
-                      incorrect.push({
-                        reference,
-                        speedRatio,
-                        shape,
-                        beat,
-                        ...mode,
-                        slot: slotIndex + 1,
-                        reason: 'resolver returned an animation outside the extracted candidates',
-                      })
-                      continue
-                    }
-                    if (!matchRegeneratesExactly(resolved)) {
-                      incorrect.push({
-                        reference,
-                        speedRatio,
-                        shape,
-                        beat,
-                        ...mode,
-                        slot: slotIndex + 1,
-                        reason: 'selected controls did not regenerate the resolved animation',
-                      })
-                    }
+                  const resolved = result.animations[slotIndex]
+                  const candidate = candidates[slotIndex]
+                  if (!resolved || resolved !== candidate) {
+                    incorrect.push({
+                      reference,
+                      speedRatio,
+                      beat,
+                      ...mode,
+                      slot: slotIndex + 1,
+                      reason: 'resolver returned an animation outside the extracted candidates',
+                    })
+                    continue
+                  }
+                  if (!matchRegeneratesExactly(resolved)) {
+                    incorrect.push({
+                      reference,
+                      speedRatio,
+                      beat,
+                      ...mode,
+                      slot: slotIndex + 1,
+                      reason: 'selected controls did not regenerate the resolved animation',
+                    })
                   }
                 }
               }
@@ -315,33 +302,5 @@ describe('VTG 45 transition catalog audit', () => {
       )
     },
     exhaustiveAuditTimeout,
-  )
-
-  it(
-    'returns valid duplicate-free rotation options at every ratio',
-    () => {
-      for (const speedRatio of vtgSpeedRatios) {
-        for (const row of ruleNumbers) {
-          for (const column of ruleNumbers) {
-            const reference: VtgCellReference = `${row}-${column}`
-            for (const shape of ['diamond', 'box'] as const) {
-              for (const quarters of [false, true] as const) {
-                const selection = {
-                  reference,
-                  speedRatio,
-                  ...(shape === 'box' ? { shape } : undefined),
-                  ...(quarters ? { quarters: 1 as const } : undefined),
-                }
-                const orientations = getUniqueVtgPatternOrientations(selection)
-
-                expect(orientations).toContain(0)
-                expect(new Set(orientations).size).toBe(orientations.length)
-              }
-            }
-          }
-        }
-      }
-    },
-    orientationAuditTimeout,
   )
 })

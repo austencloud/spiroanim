@@ -5,16 +5,17 @@ import type {
   QstPatternMatchResult,
   VtgPatternMatchRequest,
   VtgPatternMatchResult,
-  VtgPatternOrientationsRequest,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
-export const getUniqueVtgPatternOrientationsRequest = async ({
-  selection,
-}: VtgPatternOrientationsRequest) => {
-  const { getUniqueVtgPatternOrientations } =
-    await import('@/features/vtg/math/getUniqueVtgPatternOrientations')
-  return getUniqueVtgPatternOrientations(selection)
-}
+const matchedVtg = (
+  match: Extract<VtgPatternMatchResult, { source: 'vtg' }>['match'],
+  exact: boolean,
+): VtgPatternMatchResult => ({ status: 'matched', source: 'vtg', match, exact })
+
+const matchedQtr = (
+  match: Extract<VtgPatternMatchResult, { source: 'qtr' }>['match'],
+  exact: boolean,
+): VtgPatternMatchResult => ({ status: 'matched', source: 'qtr', match, exact })
 
 export const matchVtgPatternRequest = async ({
   animation,
@@ -23,47 +24,71 @@ export const matchVtgPatternRequest = async ({
   lastSelection,
 }: VtgPatternMatchRequest): Promise<VtgPatternMatchResult> => {
   if (!rotationFilter && lastSelection && 'quarters' in lastSelection) {
-    const { matchesQtrSelection } = await import('@/features/vtg/qtr/matchQtrAnimation')
-    if (matchesQtrSelection(animation, lastSelection)) return { status: 'unchanged' }
+    const { exactlyMatchesQtrSelection } = await import('@/features/vtg/qtr/matchQtrAnimation')
+    if (exactlyMatchesQtrSelection(animation, lastSelection)) return { status: 'unchanged' }
   }
 
-  const { exactlyMatchesVtgSelection, findVtgPatternMatch, matchesVtgSelection } =
+  const { exactlyMatchesVtgSelection, findVtgPatternMatchResolution } =
     await import('@/features/vtg/matchVtgAnimation')
   if (!rotationFilter && lastSelection && !('quarters' in lastSelection)) {
-    if (matchesVtgSelection(animation, lastSelection)) return { status: 'unchanged' }
+    if (exactlyMatchesVtgSelection(animation, lastSelection)) return { status: 'unchanged' }
   }
 
-  const { exactlyMatchesQtrSelection, findQtrPatternMatch } = await import(
-    '@/features/vtg/qtr/matchQtrAnimation'
-  )
-  const qtrMatch = findQtrPatternMatch(animation, preferences, rotationFilter)
-  const vtgMatch = findVtgPatternMatch(animation, preferences, rotationFilter)
-  const qtrExactlyRegenerates = qtrMatch ? exactlyMatchesQtrSelection(animation, qtrMatch) : false
-  const vtgExactlyRegenerates = vtgMatch ? exactlyMatchesVtgSelection(animation, vtgMatch) : false
+  const { findQtrPatternMatchResolution } = await import('@/features/vtg/qtr/matchQtrAnimation')
+  const qtrResolution = findQtrPatternMatchResolution(animation, preferences, rotationFilter)
+  const vtgResolution = findVtgPatternMatchResolution(animation, preferences, rotationFilter)
+  const qtrMatch = qtrResolution?.match
+  const vtgMatch = vtgResolution?.match
+  const qtrExactlyRegenerates = qtrResolution?.exact ?? false
+  const vtgExactlyRegenerates = vtgResolution?.exact ?? false
 
-  if (vtgMatch && vtgExactlyRegenerates && !qtrExactlyRegenerates) {
-    return { status: 'matched', source: 'vtg', match: vtgMatch }
+  if (qtrMatch && qtrExactlyRegenerates && vtgMatch && vtgExactlyRegenerates) {
+    const qtrUsesPropRotation = qtrMatch.propRotationOffsets !== undefined
+    const vtgUsesPropRotation = vtgMatch.propRotationOffsets !== undefined
+    if (qtrUsesPropRotation !== vtgUsesPropRotation) {
+      return qtrUsesPropRotation ? matchedVtg(vtgMatch, true) : matchedQtr(qtrMatch, true)
+    }
+
+    const qtrIsRotated = (qtrMatch.orientation ?? 0) !== 0
+    const vtgIsRotated = (vtgMatch.orientation ?? 0) !== 0
+    if (qtrIsRotated !== vtgIsRotated) {
+      return qtrIsRotated ? matchedVtg(vtgMatch, true) : matchedQtr(qtrMatch, true)
+    }
+
+    const qtrBeat = qtrMatch.beat ?? 1
+    const vtgBeat = vtgMatch.beat ?? 1
+    const controlsDifferWithinCell =
+      qtrMatch.reference === vtgMatch.reference &&
+      (qtrBeat !== vtgBeat || (qtrMatch.orientation ?? 0) !== (vtgMatch.orientation ?? 0))
+    if (controlsDifferWithinCell) {
+      return matchedQtr(qtrMatch, true)
+    }
+
+    if (qtrBeat !== vtgBeat) {
+      return qtrBeat < vtgBeat ? matchedQtr(qtrMatch, true) : matchedVtg(vtgMatch, true)
+    }
+
+    return qtrMatch.reference !== vtgMatch.reference
+      ? matchedQtr(qtrMatch, true)
+      : matchedVtg(vtgMatch, true)
   }
 
-  if (
-    qtrMatch &&
-    qtrExactlyRegenerates &&
-    (!vtgMatch || vtgMatch.reference !== qtrMatch.reference)
-  ) {
-    return { status: 'matched', source: 'qtr', match: qtrMatch }
+  if (qtrMatch && qtrExactlyRegenerates) {
+    return matchedQtr(qtrMatch, true)
+  }
+  if (vtgMatch && vtgExactlyRegenerates) {
+    return matchedVtg(vtgMatch, true)
   }
 
   if (vtgMatch?.orientation !== undefined || qtrMatch?.orientation !== undefined) {
     if (vtgMatch && vtgMatch.initialTurnsOffset === undefined) {
-      return { status: 'matched', source: 'vtg', match: vtgMatch }
+      return matchedVtg(vtgMatch, false)
     }
     if (qtrMatch && qtrMatch.initialTurnsOffset === undefined) {
-      return { status: 'matched', source: 'qtr', match: qtrMatch }
+      return matchedQtr(qtrMatch, false)
     }
-    if (vtgMatch) return { status: 'matched', source: 'vtg', match: vtgMatch }
-    return qtrMatch
-      ? { status: 'matched', source: 'qtr', match: qtrMatch }
-      : { status: 'unmatched' }
+    if (vtgMatch) return matchedVtg(vtgMatch, false)
+    return qtrMatch ? matchedQtr(qtrMatch, false) : { status: 'unmatched' }
   }
 
   const {
@@ -71,9 +96,8 @@ export const matchVtgPatternRequest = async ({
     inferPatternRelationshipOrientation,
     inferPatternRelationshipPropRotationOffsets,
   } = await import('@/features/concepts/math/describePatternSelectionRelationships')
-  const { describePatternRelationships } = await import(
-    '@/features/concepts/math/describePatternRelationships'
-  )
+  const { describePatternRelationships } =
+    await import('@/features/concepts/math/describePatternRelationships')
   const actualRelationship = describePatternRelationships(animation).label
   const vtgRelationshipOffsets = vtgMatch
     ? inferPatternRelationshipPropRotationOffsets(animation, vtgMatch)
@@ -88,7 +112,7 @@ export const matchVtgPatternRequest = async ({
     resolvedVtgMatch !== undefined &&
     describePatternSelectionRelationships(resolvedVtgMatch).label === actualRelationship
   if (vtgPreservesRelationship && resolvedVtgMatch.initialTurnsOffset === undefined) {
-    return { status: 'matched', source: 'vtg', match: resolvedVtgMatch }
+    return matchedVtg(resolvedVtgMatch, false)
   }
 
   const qtrRelationshipOrientation = qtrMatch
@@ -121,19 +145,17 @@ export const matchVtgPatternRequest = async ({
     describePatternSelectionRelationships(resolvedQtrMatch).label === actualRelationship
 
   if (qtrPreservesRelationship && !vtgPreservesRelationship) {
-    return { status: 'matched', source: 'qtr', match: resolvedQtrMatch }
+    return matchedQtr(resolvedQtrMatch, false)
   }
   if (resolvedVtgMatch && resolvedVtgMatch.initialTurnsOffset === undefined) {
-    return { status: 'matched', source: 'vtg', match: resolvedVtgMatch }
+    return matchedVtg(resolvedVtgMatch, false)
   }
 
   if (resolvedQtrMatch && resolvedQtrMatch.initialTurnsOffset === undefined) {
-    return { status: 'matched', source: 'qtr', match: resolvedQtrMatch }
+    return matchedQtr(resolvedQtrMatch, false)
   }
-  if (resolvedVtgMatch) return { status: 'matched', source: 'vtg', match: resolvedVtgMatch }
-  return resolvedQtrMatch
-    ? { status: 'matched', source: 'qtr', match: resolvedQtrMatch }
-    : { status: 'unmatched' }
+  if (resolvedVtgMatch) return matchedVtg(resolvedVtgMatch, false)
+  return resolvedQtrMatch ? matchedQtr(resolvedQtrMatch, false) : { status: 'unmatched' }
 }
 
 export const matchEightStepPatternRequest = async ({

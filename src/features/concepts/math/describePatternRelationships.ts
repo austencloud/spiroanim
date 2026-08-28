@@ -192,7 +192,12 @@ const describePatternRelationshipsUnsafe = (
   const handDirection = directionCode(relationshipSign(firstEnd.posx, secondEnd.posx))
   const handPhase = checkpoint === 'source' ? handStartPhase : handDestinationPhase
   const worldPropPhase = checkpoint === 'source' ? propStartPhase : propDestinationPhase
-  const propPhase = relativePropPhase(worldPropPhase, handPhase)
+  // When quarter-starting hands finish in a Together/Split phase, describe the props against
+  // that starting quarter frame. Otherwise their actual world orientation is already the label.
+  const propPhase =
+    handStartPhase.timing === 'Q' && handPhase.timing !== 'Q'
+      ? relativePropPhase(worldPropPhase, handStartPhase)
+      : worldPropPhase
 
   const firstRotationDirection = Math.sign(firstEnd.turns + firstEnd.arc)
   const secondRotationDirection = Math.sign(secondEnd.turns + secondEnd.arc)

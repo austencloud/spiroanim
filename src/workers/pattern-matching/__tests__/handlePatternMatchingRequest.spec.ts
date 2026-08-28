@@ -8,21 +8,12 @@ import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import {
-  getUniqueVtgPatternOrientationsRequest,
   matchEightStepPatternRequest,
   matchQstPatternRequest,
   matchVtgPatternRequest,
 } from '@/workers/pattern-matching/handlePatternMatchingRequest'
 
 describe('handlePatternMatchingRequest', () => {
-  it('resolves unique VTG orientations through the worker request handler', async () => {
-    await expect(
-      getUniqueVtgPatternOrientationsRequest({
-        selection: { reference: '5-1', speedRatio: '1:2' },
-      }),
-    ).resolves.toEqual([0])
-  })
-
   it('matches VTG and preserves a selection that produced the animation', async () => {
     const selection = {
       reference: '2-2',
@@ -97,14 +88,16 @@ describe('handlePatternMatchingRequest', () => {
     ).resolves.toEqual({
       status: 'matched',
       source: 'qtr',
+      exact: true,
       match: {
-        reference: '3-5',
+        reference: '2-6',
         speedRatio: '1:3',
         quarters: 1,
         isAnti: false,
         swapProps: false,
         reversePlane: false,
-        shape: 'box',
+        beat: 1.5,
+        propRotationOffsets: [90, 0],
         bpm: 40,
         scale: 0.8,
       },
@@ -119,16 +112,16 @@ describe('handlePatternMatchingRequest', () => {
     ).resolves.toEqual({
       status: 'matched',
       source: 'qtr',
+      exact: true,
       match: {
-        reference: '6-4',
+        reference: '4-6',
         speedRatio: '1:3',
         quarters: 1,
         isAnti: false,
         swapProps: false,
         reversePlane: false,
-        orientation: 90,
-        beat: 4,
-        shape: 'box',
+        orientation: -45,
+        beat: 2,
         bpm: 40,
         scale: 0.8,
       },
