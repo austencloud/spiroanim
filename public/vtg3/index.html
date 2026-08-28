@@ -908,6 +908,9 @@
         .pattern-intro p:last-child {
           grid-column: auto;
         }
+        .slash {
+          display: none;
+        }
         .tabs {
           margin-block-start: 1rem;
         }
@@ -951,6 +954,29 @@
         footer p + p {
           display: inline-block;
           margin-block-start: 0.3rem;
+        }
+      }
+      @media (orientation: landscape) and (max-height: 32rem) {
+        .topbar {
+          width: min(100% - 0.75rem, 78rem);
+          min-height: 2.5rem;
+          gap: 0.3rem;
+          padding-inline: 0.35rem;
+          backdrop-filter: blur(0.4rem);
+        }
+        .brand {
+          font-size: 0.72rem;
+          letter-spacing: 0.035em;
+        }
+        .links {
+          flex-wrap: nowrap;
+          gap: 0.15rem;
+        }
+        .links a {
+          padding: 0.3rem 0.45rem;
+          font-size: 0.6rem;
+          letter-spacing: 0.05em;
+          border-radius: 0.35rem;
         }
       }
       @media (prefers-reduced-motion: reduce) {
