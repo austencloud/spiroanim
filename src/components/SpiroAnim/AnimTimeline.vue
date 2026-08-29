@@ -104,6 +104,7 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useViewportStore } from '@/stores/useViewportStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import {
   MAX_TIMELINE_COLUMN_OFFSET,
@@ -145,6 +146,7 @@ const quickSlotsFloat = computed(() => {
   return page === 'timeline' || page?.split('-').includes('time') === true
 })
 const { pSELECTED, pFRAMES, showFullTimeline } = storeToRefs(usePropertiesStore(props.store))
+const { editorLoaded } = storeToRefs(useEditorAccessStore())
 const timelineSettingsStore = useTimelineSettingsStore()
 const { decreaseColumnOffset, increaseColumnOffset, adjustedColumnCount } = timelineSettingsStore
 const { columnOffset } = storeToRefs(timelineSettingsStore)
@@ -207,7 +209,7 @@ const ownTimes = computed(() => {
   const displayedTimes =
     pFRAMES.value === 'camera'
       ? frameTimes
-      : showFullTimeline.value
+      : !editorLoaded.value || showFullTimeline.value
         ? PTIMES.value
         : frameTimes.filter((_, index) => pSELECTED.value[index])
   return [...new Set(displayedTimes.flat())].sort((first, second) => first - second)
@@ -432,7 +434,7 @@ onMounted(() => {
       const displayedPropTimes =
         pFRAMES.value === 'camera'
           ? []
-          : showFullTimeline.value
+          : !editorLoaded.value || showFullTimeline.value
             ? PTIMES.value
             : pFRAMES.value === 'animation'
               ? PTIMES.value
@@ -709,7 +711,7 @@ function isThumbnailSelected(index: number): boolean {
 }
 
 function isPropMarkerVisible(prop: number): boolean {
-  return showFullTimeline.value || pSELECTED.value[prop] === true
+  return !editorLoaded.value || showFullTimeline.value || pSELECTED.value[prop] === true
 }
 
 function isPlaceholder(index: number): boolean {

@@ -78,6 +78,7 @@ import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useTimelinePaneStore } from '@/features/timeline/stores/useTimelinePaneStore'
 import { resolveEmbeddedTimelineColumns } from '@/features/timeline/resolveEmbeddedTimelineColumns'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
@@ -106,6 +107,7 @@ const playerStore = usePlayerStore(props.store)
 const { ROOT } = playerStore.raw()
 const { ETIMES, PTIMES, UTIMES } = storeToRefs(playerStore)
 const { pSELECTED, showFullTimeline } = storeToRefs(usePropertiesStore(props.store))
+const { editorLoaded } = storeToRefs(useEditorAccessStore())
 const paneStore = useTimelinePaneStore()
 const { setViewInPane, registerComponentEl } = paneStore
 const { parents, paneVisible, viewVisible, ePlayer, eTimeline, eTop, eBottom, eHidden } =
@@ -149,6 +151,7 @@ const hasHiddenTimelineProps = computed(() =>
 )
 const canShowAllTimelineProps = computed(
   () =>
+    editorLoaded.value &&
     mainParents.value.editor === 'hidden' &&
     !showFullTimeline.value &&
     (!isShowingFullTimeline.value || hasHiddenTimelineProps.value),

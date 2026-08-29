@@ -10,6 +10,7 @@ import type {
 } from '@/types/AnimTypes'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { UNQTIMES } from '@/math/animation/PlayerFunc'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 
 export interface AnimIdent {
   prop: number
@@ -39,6 +40,7 @@ export const usePropertiesStore = (id: string) => {
     `sa-properties-${id}`,
     () => {
       const playerStore = usePlayerStore(id)
+      const { editorLoaded } = storeToRefs(useEditorAccessStore())
       const { ROOT, COMPILED } = playerStore.raw()
       const { EINDEX, SELECTION, SELECTED, PTIMES, MTIMES, CTIMES, UTIMES, ETIMES } =
         storeToRefs(playerStore)
@@ -91,7 +93,17 @@ export const usePropertiesStore = (id: string) => {
       const pEXPANDED = ref<Record<string, string[]>>(pMOBILE.value)
 
       watch(
-        [COMPILED, EINDEX, SELECTION, SELECTED, pBOUND, pSELECTED, pFRAMES, showFullTimeline],
+        [
+          COMPILED,
+          EINDEX,
+          SELECTION,
+          SELECTED,
+          pBOUND,
+          pSELECTED,
+          pFRAMES,
+          showFullTimeline,
+          editorLoaded,
+        ],
         () => {
           const propTimes =
             pFRAMES.value === 'animation'
@@ -99,7 +111,7 @@ export const usePropertiesStore = (id: string) => {
               : pFRAMES.value === 'motion'
                 ? MTIMES.value
                 : [CTIMES.value]
-          const timelinePropTimes = showFullTimeline.value
+          const timelinePropTimes = !editorLoaded.value || showFullTimeline.value
             ? PTIMES.value
             : pFRAMES.value === 'camera'
               ? propTimes

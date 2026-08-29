@@ -56,6 +56,7 @@ import { useViewDimensions } from '@/composables/useViewDimensions'
 
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useEditorPaneStore } from '@/features/editor/stores/useEditorPaneStore'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 import { resolveEmbeddedTimelineColumns } from '@/features/timeline/resolveEmbeddedTimelineColumns'
 
 const emit = defineEmits<{
@@ -70,6 +71,7 @@ const props = defineProps<{
 }>()
 
 const dim: Readonly<typeof props.dim> = readonly(props.dim)
+const editorAccessStore = useEditorAccessStore()
 
 const splitterStore = useSplitterStore('editor', 'top', 'bottom')
 const { topWidth, topHeight, bottomWidth, bottomHeight, topPerc } = storeToRefs(splitterStore)
@@ -166,6 +168,7 @@ watchImmediate([topPerc, enabled], () => {
 })
 
 onMounted(() => {
+  editorAccessStore.editorLoaded = true
   // Register elements with splitterStore
   splitterStore.trackElements(eTop.value, eBottom.value)
 })
