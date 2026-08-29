@@ -149,6 +149,7 @@ const currentRoute = useRoute()
 useEditorPaneAvailability()
 const playerStore = usePlayerStore('main')
 const conceptsStore = useConceptsStore()
+const { vtgAdvanced } = storeToRefs(conceptsStore)
 const qsStore = useQSMainStore()
 const queryVersionStore = useQueryVersionStore()
 const { ROOT } = playerStore.raw()
@@ -288,7 +289,7 @@ const toggleBuilder = () => {
 }
 
 watch(
-  [() => paneStore.isPaneHijacked, builderFullGrid, builderFullCatalogForced],
+  [() => paneStore.isPaneHijacked, builderFullGrid, builderFullCatalogForced, vtgAdvanced],
   async () => {
     await nextTick()
     const conceptsPane = parents.value.concepts
@@ -297,9 +298,9 @@ watch(
     const concepts = eConcepts.value
     if (!pane || !concepts) return
 
-    // Android Chromium can scroll both the visible pane and the nested Concepts scroller to keep
-    // the focused Full Grid control in place while the catalog changes height. Reset both after
-    // the DOM update and once more after layout settles.
+    // Android Chromium can scroll both the visible pane and the nested Concepts scroller when
+    // controls above a focused toggle are added or removed. Keep this protection at the workspace
+    // boundary so Advanced and every Pattern Builder layout mode follow the same invariant.
     const resetConceptsScroll = () => {
       pane.scrollTop = 0
       concepts.scrollTop = 0
