@@ -15,7 +15,10 @@ describe('AnimEditor', () => {
 
   const globalStubs = {
     Properties: { template: '<div data-type="properties" />' },
-    Timeline: { template: '<div data-type="timeline" />' },
+    Timeline: {
+      props: ['cols'],
+      template: '<div data-type="timeline" :data-cols="cols" />',
+    },
     PaneSplitter: { template: '<div data-role="editor-splitter" />' },
   }
 
@@ -48,6 +51,7 @@ describe('AnimEditor', () => {
 
     const paneStore = useEditorPaneStore()
     expect(paneStore.parents).toEqual({ properties: 'top', timeline: 'bottom' })
+    expect(wrapper.get('[data-type="timeline"]').attributes('data-cols')).toBe('4')
 
     await wrapper.get('button[aria-label="Swap Editor Views"]').trigger('click')
     expect(paneStore.parents).toEqual({ properties: 'bottom', timeline: 'top' })

@@ -84,7 +84,9 @@ describe('SpiroAnim view', () => {
         plugins: [pinia, router],
         stubs: {
           Player: { template: '<div>Player</div>' },
-          Timeline: { template: '<div>Timeline</div>' },
+          Timeline: {
+            template: '<div>Timeline<button type="button" aria-label="Show Full Timeline" /></div>',
+          },
         },
       },
     })
@@ -115,10 +117,6 @@ describe('SpiroAnim view', () => {
     const swapViews = wrapper.findAll('button[aria-label="Swap Views"]')[1]!
     expect(showAllTimelineProps.element.closest('[data-role="right-pane"]')).toBe(rightPane.element)
     expect(swapViews.element.closest('[data-role="right-pane"]')).toBe(rightPane.element)
-    await showAllTimelineProps.trigger('click')
-    expect(propertiesStore.pFRAMES).toBe('motion')
-    expect(propertiesStore.showFullTimeline).toBe(true)
-    expect(wrapper.find('button[aria-label="Show Full Timeline"]').exists()).toBe(false)
 
     const paneStore = useMainPaneStore()
     paneStore.setViewInPane('concepts', 'right')
@@ -261,11 +259,11 @@ describe('SpiroAnim view', () => {
     const builderTopPane = builderView.get('[data-role="top-pane"]')
     const builderBottomPane = builderView.get('[data-role="bottom-pane"]')
     expect(
-      wrapper.get('[data-role="builder-player"]').element.closest('[data-role="bottom-pane"]'),
-    ).toBe(builderBottomPane.element)
-    expect(
-      wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="top-pane"]'),
+      wrapper.get('[data-role="builder-player"]').element.closest('[data-role="top-pane"]'),
     ).toBe(builderTopPane.element)
+    expect(
+      wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="bottom-pane"]'),
+    ).toBe(builderBottomPane.element)
     expect(
       wrapper
         .get('[aria-label="Builder Columns"]')
@@ -274,11 +272,11 @@ describe('SpiroAnim view', () => {
     await wrapper.get('button[aria-label="Swap Builder Views"]').trigger('click')
     await flushPromises()
     expect(
-      wrapper.get('[data-role="builder-player"]').element.closest('[data-role="top-pane"]'),
-    ).toBe(builderTopPane.element)
-    expect(
-      wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="bottom-pane"]'),
+      wrapper.get('[data-role="builder-player"]').element.closest('[data-role="bottom-pane"]'),
     ).toBe(builderBottomPane.element)
+    expect(
+      wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="top-pane"]'),
+    ).toBe(builderTopPane.element)
     await wrapper.get('button[aria-label="Increase Builder Columns"]').trigger('click')
     expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('5')
     expect(

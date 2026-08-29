@@ -20,7 +20,7 @@
         data-role="timeline-view"
         :dim="dTimeline"
         :landscape="false"
-        :cols="tCols"
+        :cols="timelineColumns"
         @quick-slot-apply="emit('quickSlotApply', $event)"
         @quick-slot-save="emit('quickSlotSave', $event)"
       />
@@ -56,6 +56,7 @@ import { useViewDimensions } from '@/composables/useViewDimensions'
 
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useEditorPaneStore } from '@/features/editor/stores/useEditorPaneStore'
+import { resolveEmbeddedTimelineColumns } from '@/features/timeline/resolveEmbeddedTimelineColumns'
 
 const emit = defineEmits<{
   quickSlotApply: [path: string]
@@ -119,10 +120,6 @@ const flexBottom = ref<CSSProperties['flex']>('0 0 0')
 const minTimeHeight = 300
 const minTimeCols = 2
 
-// TODO: add slot at bottom of timeline, add +/- buttons, and move value to persist store
-// Sets column count in the editor's timeline
-const tCols = ref(4)
-
 // Number of columns in the properties view
 const pCols = ref(2)
 
@@ -134,6 +131,7 @@ const enabled = computed(
     pCols.value >= minTimeCols &&
     dim.height > minTimeHeight,
 )
+const timelineColumns = computed(() => resolveEmbeddedTimelineColumns(viewVisible.value.timeline))
 
 // Calculate the properties column count
 watchImmediate(dim, () => {

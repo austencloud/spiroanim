@@ -2,23 +2,9 @@
   <div class="spiro-workspace" data-role="main-container" :style="containerStyle">
     <div v-show="paneVisible.left" ref="eLeft" data-role="left-pane" :style="leftStyle">
       <PaneRotate pane="left" />
-      <PaneSwapButton
-        v-if="parents.timeline === 'left' && canShowAllTimelineProps"
-        class="timeline-show-all"
-        label="Show Full Timeline"
-        :icon="mdiFilterOff"
-        @click="showAllTimelineFrames"
-      />
     </div>
     <div v-show="paneVisible.right" ref="eRight" data-role="right-pane" :style="rightStyle">
       <PaneRotate pane="right" />
-      <PaneSwapButton
-        v-if="parents.timeline === 'right' && canShowAllTimelineProps"
-        class="timeline-show-all"
-        label="Show Full Timeline"
-        :icon="mdiFilterOff"
-        @click="showAllTimelineFrames"
-      />
     </div>
     <div v-show="false" ref="eHidden" data-role="hidden-pane">
       <Player
@@ -49,7 +35,7 @@
         data-type="timeline"
         data-role="timeline-view"
         :dim="dTimeline"
-        :landscape="isLandscape"
+        :player-visible="viewVisible.player"
         @quick-slot-apply="applyQuickSlotFromView($event, 'timeline')"
         @quick-slot-save="saveCurrentPatternToQuickSlot"
       />
@@ -103,12 +89,11 @@
 
 import PaneSplitter from '@/components/layout/PaneSplitter.vue'
 import PaneRotate from '@/components/layout/PaneRotate.vue'
-import PaneSwapButton from '@/components/layout/PaneSwapButton.vue'
 import AppNavigationMenu from '@/components/layout/AppNavigationMenu.vue'
 
 import Player from '@/components/SpiroAnim/AnimPlayer.vue'
 import Editor from '@/components/SpiroAnim/AnimEditor.vue'
-import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
+import Timeline from '@/features/timeline/components/TimelinePane.vue'
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
 import BuilderPane from '@/features/builder/components/BuilderPane.vue'
 import { applyConceptPattern as createConceptPattern } from '@/features/concepts/applyConceptPattern'
@@ -132,7 +117,6 @@ import { useQueryVersionStore } from '@/stores/useQueryVersionStore'
 import { UnsupportedSpiroAnimQSVersionError } from '@/services/query/versions'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { useEditorPaneAvailability } from '@/features/editor/composables/useEditorPaneAvailability'
-import { mdiFilterOff } from '@mdi/js'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 useScrollSelectScale()
@@ -178,8 +162,7 @@ const builderFullCatalogForced = computed(
     (ROOT.value.props.length === 0 || selectedBuilderPreviewIndex.value === 0),
 )
 const builderFullCatalog = computed(() => builderFullCatalogForced.value || builderFullGrid.value)
-const { ETIMES, PTIMES, UTIMES } = storeToRefs(playerStore)
-const { pSELECTED, showFullTimeline } = storeToRefs(usePropertiesStore('main'))
+const { showFullTimeline } = storeToRefs(usePropertiesStore('main'))
 const { registerComponentEl } = paneStore
 
 const {
@@ -195,35 +178,6 @@ const {
   eRight,
   eHidden,
 } = storeToRefs(paneStore)
-
-const fullAnimationTimes = computed(() => {
-  const times = [...new Set(PTIMES.value.flat())].sort((first, second) => first - second)
-  const overallEnd = UTIMES.value.at(-1) ?? 0
-
-  if (times.length === 0) return [0]
-  return overallEnd > times.at(-1)! ? [...times, overallEnd] : times
-})
-
-const isShowingFullTimeline = computed(
-  () =>
-    ETIMES.value.length === fullAnimationTimes.value.length &&
-    ETIMES.value.every((time, index) => time === fullAnimationTimes.value[index]),
-)
-
-const hasHiddenTimelineProps = computed(() =>
-  ROOT.value.props.some((_, index) => pSELECTED.value[index] !== true),
-)
-
-const canShowAllTimelineProps = computed(
-  () =>
-    parents.value.editor === 'hidden' &&
-    !showFullTimeline.value &&
-    (!isShowingFullTimeline.value || hasHiddenTimelineProps.value),
-)
-
-function showAllTimelineFrames() {
-  showFullTimeline.value = true
-}
 
 watch(
   () => parents.value.editor,
@@ -506,12 +460,5 @@ const rightStyle = computed<CSSProperties>(() => ({
 .spiro-workspace :deep(.range--custom:focus-visible::-moz-range-thumb),
 .spiro-workspace :deep(.range--selection:focus-visible::-moz-range-thumb) {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-action-primary) 40%, transparent);
-}
-
-.timeline-show-all {
-  position: absolute;
-  bottom: var(--space-workspace-bottom-offset);
-  left: calc(1px + var(--size-pane-switch-button) + var(--space-2));
-  z-index: 1010;
 }
 </style>
