@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useEditorPaneStore } from '@/features/editor/stores/useEditorPaneStore'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 
 class FakeResizeObserver {
   disconnect(): void {}
@@ -50,6 +51,7 @@ describe('AnimEditor', () => {
     await nextTick()
 
     const paneStore = useEditorPaneStore()
+    expect(useEditorAccessStore().editorLoaded).toBe(true)
     expect(paneStore.parents).toEqual({ properties: 'top', timeline: 'bottom' })
     expect(wrapper.get('[data-type="timeline"]').attributes('data-cols')).toBe('4')
 

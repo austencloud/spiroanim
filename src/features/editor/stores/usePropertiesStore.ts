@@ -111,11 +111,12 @@ export const usePropertiesStore = (id: string) => {
               : pFRAMES.value === 'motion'
                 ? MTIMES.value
                 : [CTIMES.value]
-          const timelinePropTimes = !editorLoaded.value || showFullTimeline.value
-            ? PTIMES.value
-            : pFRAMES.value === 'camera'
-              ? propTimes
-              : propTimes.filter((_, index) => pSELECTED.value[index])
+          const timelinePropTimes =
+            !editorLoaded.value || showFullTimeline.value
+              ? PTIMES.value
+              : pFRAMES.value === 'camera'
+                ? propTimes
+                : propTimes.filter((_, index) => pSELECTED.value[index])
           const ownTimes = UNQTIMES(timelinePropTimes)
           const overallEnd = UTIMES.value.at(-1) ?? 0
           const unqTimes =

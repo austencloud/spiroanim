@@ -44,10 +44,10 @@
               @keydown.enter="thumbClick(index, $event)"
               @keydown.space.prevent="thumbClick(index, $event)"
             />
-            <AppTooltip class="thumbStart" text="Index: Beat">
+            <AppTooltip class="thumbStart" :text="showFrameIndexes ? 'Index: Beat' : 'Beats'">
               <template #activator="{ props: tooltipProps }">
                 <span v-bind="tooltipProps"
-                  ><span class="thumbIndex">{{ index + 1 }}: </span
+                  ><span v-if="showFrameIndexes" class="thumbIndex">{{ index + 1 }}: </span
                   >{{ msToBeat(time, ROOT.bpm) }}</span
                 >
               </template>
@@ -213,6 +213,21 @@ const ownTimes = computed(() => {
         ? PTIMES.value
         : frameTimes.filter((_, index) => pSELECTED.value[index])
   return [...new Set(displayedTimes.flat())].sort((first, second) => first - second)
+})
+
+const showFrameIndexes = computed(() => {
+  const showAnimationFrames = !editorLoaded.value || showFullTimeline.value
+
+  if (!showAnimationFrames && pFRAMES.value === 'camera') {
+    return ROOT.value.camera.some((frame) => frame.orbit?.beats !== undefined)
+  }
+
+  return ROOT.value.props.some((prop, index) => {
+    if (!showAnimationFrames && pSELECTED.value[index] !== true) return false
+
+    const frames = showAnimationFrames || pFRAMES.value === 'animation' ? prop.anim : prop.motion
+    return frames?.some((frame) => frame.beats !== undefined) === true
+  })
 })
 
 const gridTemplateColumns = ref<CSSProperties['grid-template-columns']>('repeat(1, 100%)')
@@ -422,36 +437,39 @@ onMounted(() => {
   )
 
   // Update circles / colors data
-  watchImmediate([ROOT, pFRAMES, showFullTimeline, PTIMES, MTIMES, CTIMES, ETIMES], ([data]) => {
-    const result: TimelineCircle[][] = []
-    if (!ETIMES.value?.length) return
+  watchImmediate(
+    [ROOT, pFRAMES, showFullTimeline, editorLoaded, PTIMES, MTIMES, CTIMES, ETIMES],
+    ([data]) => {
+      const result: TimelineCircle[][] = []
+      if (!ETIMES.value?.length) return
 
-    // Loop through each unique timestamp
-    for (let i = 0; i < ETIMES.value.length; i++) {
-      const time = ETIMES.value[i]!
-      const row: TimelineCircle[] = []
+      // Loop through each unique timestamp
+      for (let i = 0; i < ETIMES.value.length; i++) {
+        const time = ETIMES.value[i]!
+        const row: TimelineCircle[] = []
 
-      const displayedPropTimes =
-        pFRAMES.value === 'camera'
-          ? []
-          : !editorLoaded.value || showFullTimeline.value
-            ? PTIMES.value
-            : pFRAMES.value === 'animation'
+        const displayedPropTimes =
+          pFRAMES.value === 'camera'
+            ? []
+            : !editorLoaded.value || showFullTimeline.value
               ? PTIMES.value
-              : MTIMES.value
-      for (let j = 0; j < displayedPropTimes.length; j++) {
-        const times = displayedPropTimes[j]!
-        if (times.includes(time)) {
-          const prop = data.props[j]!
-          const colIndex = prop.color ?? data.color
-          // Prop colors are fixed animation content rather than theme UI colors.
-          row.push({ color: COLSET[colIndex]![0], prop: j })
+              : pFRAMES.value === 'animation'
+                ? PTIMES.value
+                : MTIMES.value
+        for (let j = 0; j < displayedPropTimes.length; j++) {
+          const times = displayedPropTimes[j]!
+          if (times.includes(time)) {
+            const prop = data.props[j]!
+            const colIndex = prop.color ?? data.color
+            // Prop colors are fixed animation content rather than theme UI colors.
+            row.push({ color: COLSET[colIndex]![0], prop: j })
+          }
         }
+        result.push(row)
       }
-      result.push(row)
-    }
-    circles.value = result
-  })
+      circles.value = result
+    },
+  )
 
   watch([pFRAMES, ETIMES], invalidateImages, { deep: true })
 

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import AnimTimeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
@@ -96,6 +97,7 @@ describe('AnimTimeline', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+    useEditorAccessStore().editorLoaded = true
     FakeWorker.instances = []
     FakeIntersectionObserver.instances = []
     vi.stubGlobal('Worker', FakeWorker)
@@ -234,6 +236,31 @@ describe('AnimTimeline', () => {
     wrapper.unmount()
     await flushPromises()
     expect(FakeWorker.instances[0]!.terminate).toHaveBeenCalledOnce()
+  })
+
+  it('shows only beat values when no displayed frame has an authored beat duration', async () => {
+    const storeId = 'timeline-default-beats'
+    const store = usePlayerStore(storeId)
+    store.raw().ROOT.value = {
+      ...store.raw().ROOT.value,
+      bpm: 60,
+      props: [{ anim: [{}, {}, {}], motion: [] }],
+    }
+    await nextTick()
+
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: storeId,
+        dim: { width: 600, height: 400, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.findAll('.thumbStart').map((label) => label.text())).toEqual(['0', '1', '2'])
+    expect(wrapper.findAll('.thumbIndex')).toHaveLength(0)
+
+    wrapper.unmount()
+    await flushPromises()
   })
 
   it('shows a centered timeline value control and updates its number', async () => {
@@ -601,6 +628,38 @@ describe('AnimTimeline', () => {
       wrapper.findAll('.circle').every((circle) => circle.classes('circle--prop-visible')),
     ).toBe(true)
     expect(properties.showFullTimeline).toBe(true)
+
+    wrapper.unmount()
+    await flushPromises()
+  })
+
+  it('shows all Timeline props before Editor has loaded', async () => {
+    useEditorAccessStore().editorLoaded = false
+    const storeId = 'timeline-before-editor'
+    const store = usePlayerStore(storeId)
+    store.raw().ROOT.value = {
+      ...store.raw().ROOT.value,
+      bpm: 60,
+      props: [
+        { color: 0, anim: [{ beats: 1 }, {}], motion: [] },
+        { color: 1, anim: [{ beats: 0.5 }, { beats: 1.5 }, {}], motion: [] },
+      ],
+    }
+    usePropertiesStore(storeId).pSELECTED = { 0: true, 1: false }
+    await nextTick()
+
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: storeId,
+        dim: { width: 600, height: 400, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.findAll('.timeline-cell')).toHaveLength(4)
+    expect(
+      wrapper.findAll('.circle').every((circle) => circle.classes('circle--prop-visible')),
+    ).toBe(true)
 
     wrapper.unmount()
     await flushPromises()

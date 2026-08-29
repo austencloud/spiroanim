@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useProperties } from '@/features/editor/composables/useProperties'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 import { cartesianToMotionAngles, createMotionDirectionState } from '@/math/animation/MotionFunc'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
@@ -18,6 +19,7 @@ describe('usePropertiesStore', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+    useEditorAccessStore().editorLoaded = true
   })
 
   async function createPopulatedStore(id: string) {
@@ -31,6 +33,29 @@ describe('usePropertiesStore', () => {
     await nextTick()
     return { player, properties: usePropertiesStore(id) }
   }
+
+  it('shows every prop time until Editor has loaded in the session', async () => {
+    setActivePinia(createPinia())
+    const player = usePlayerStore('timeline-before-editor')
+    player.raw().ROOT.value = {
+      ...player.raw().ROOT.value,
+      bpm: 60,
+      props: [
+        { anim: [{ beats: 1 }, {}], motion: [] },
+        { anim: [{ beats: 0.5 }, { beats: 1.5 }, {}], motion: [] },
+      ],
+    }
+    const properties = usePropertiesStore('timeline-before-editor')
+    properties.pSELECTED = { 0: true, 1: false }
+    await nextTick()
+
+    expect(player.ETIMES).toEqual([0, 500, 1000, 2000])
+
+    useEditorAccessStore().editorLoaded = true
+    await nextTick()
+
+    expect(player.ETIMES).toEqual([0, 1000, 2000])
+  })
 
   it('derives the active property and animation from the player selection', async () => {
     const { properties } = await createPopulatedStore('editor-selection')

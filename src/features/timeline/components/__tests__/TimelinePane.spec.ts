@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import TimelinePane from '@/features/timeline/components/TimelinePane.vue'
 import { useTimelinePaneStore } from '@/features/timeline/stores/useTimelinePaneStore'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 class FakeResizeObserver {
@@ -123,6 +124,10 @@ describe('TimelinePane', () => {
     const wrapper = mountTimelinePane()
     const playerStore = usePlayerStore('main')
     const propertiesStore = usePropertiesStore('main')
+    expect(wrapper.find('button[aria-label="Show Full Timeline"]').exists()).toBe(false)
+
+    useEditorAccessStore().editorLoaded = true
+    await flushPromises()
     playerStore.ETIMES = [-1]
     await flushPromises()
 

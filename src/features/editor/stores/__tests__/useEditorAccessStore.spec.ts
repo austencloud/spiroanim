@@ -21,6 +21,7 @@ describe('useEditorAccessStore', () => {
     const { app, store } = mountStore()
 
     expect(store.editorEnabled).toBe(false)
+    expect(store.editorLoaded).toBe(false)
     app.unmount()
   })
 
@@ -30,6 +31,23 @@ describe('useEditorAccessStore', () => {
     const { app, store } = mountStore()
 
     expect(store.editorEnabled).toBe(true)
+    expect(store.editorLoaded).toBe(false)
     app.unmount()
+  })
+
+  it('does not persist whether Editor loaded during the session', async () => {
+    const { app, store } = mountStore()
+    store.editorEnabled = true
+    store.editorLoaded = true
+    await nextTick()
+
+    expect(JSON.parse(localStorage.getItem('sa-editor-access') ?? '{}')).toEqual({
+      editorEnabled: true,
+    })
+    app.unmount()
+
+    const remounted = mountStore()
+    expect(remounted.store.editorLoaded).toBe(false)
+    remounted.app.unmount()
   })
 })
