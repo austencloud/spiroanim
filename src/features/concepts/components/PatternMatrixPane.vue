@@ -1269,7 +1269,6 @@ const startBuilderPointerDrag = (tile: VtgMatrixTile, event: PointerEvent) => {
   suppressBuilderPointerClick = false
   if (
     !props.builderActive ||
-    !touchDevice ||
     event.pointerType === 'mouse' ||
     event.button !== 0 ||
     !event.isPrimary
@@ -1286,7 +1285,9 @@ const startBuilderPointerDrag = (tile: VtgMatrixTile, event: PointerEvent) => {
     preview: createBuilderPointerPreview(tile, source),
     active: false,
   }
-  ;(event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId)
+  if (source && typeof source.setPointerCapture === 'function') {
+    source.setPointerCapture(event.pointerId)
+  }
 }
 
 const moveBuilderPointerDrag = (event: PointerEvent) => {
@@ -2446,7 +2447,7 @@ defineExpose({
   white-space: nowrap;
 }
 
-.vtg-pane--touch.vtg-pane--builder-drag-active .vtg-tile {
+.vtg-pane--builder-drag-active .vtg-tile {
   touch-action: none;
 }
 

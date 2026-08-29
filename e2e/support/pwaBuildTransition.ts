@@ -102,7 +102,7 @@ export async function stagePwaBuildTransition(): Promise<StagedPwaBuildTransitio
       navigateFallbackDenylist: [
         /^\/(?:index\/?|about\/?|tips\/?)?$/,
         /^\/docs(?:\/|$)/,
-        /^\/vtg-reference(?:\/|$)/,
+        /^\/vtg4(?:\/|$)/,
         /^\/vtg3(?:\/|$)/,
       ],
       swDest: serviceWorkerPath,

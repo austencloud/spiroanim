@@ -211,7 +211,6 @@ import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import { mdiRotate3dVariant, mdiSwapHorizontal, mdiTrashCanOutline } from '@mdi/js'
-import { isTouchDevice } from '@/utils/device'
 import { useTouchSafeRangeSlider } from '@/composables/useTouchSafeRangeSlider'
 import {
   builderPatternPointerDropEvent,
@@ -253,7 +252,6 @@ const emit = defineEmits<{
   selectionChange: [index: number | undefined]
 }>()
 const dragActive = ref(false)
-const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 const { protectTouchScrolling, beginPointerSlider, endPointerSlider, cancelPointerSlider } =
   useTouchSafeRangeSlider({
     begin: () => emit('sliderStart'),
@@ -341,17 +339,17 @@ const endPointerDrag = () => {
   pointerPosition.value = undefined
 }
 useEventListener(
-  touchDevice && typeof document !== 'undefined' ? document : null,
+  typeof document !== 'undefined' ? document : null,
   builderPatternPointerMoveEvent,
   handlePointerMove,
 )
 useEventListener(
-  touchDevice && typeof document !== 'undefined' ? document : null,
+  typeof document !== 'undefined' ? document : null,
   builderPatternPointerDropEvent,
   handlePointerDrop,
 )
 useEventListener(
-  touchDevice && typeof document !== 'undefined' ? document : null,
+  typeof document !== 'undefined' ? document : null,
   builderPatternPointerEndEvent,
   endPointerDrag,
 )

@@ -383,8 +383,7 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.emitted('sliderEnd')).toHaveLength(1)
   })
 
-  it('accepts a pointer drag drop on touch devices', async () => {
-    device.touch = true
+  it('accepts a touch pointer drag without device-level touch detection', async () => {
     const wrapper = mount(VtgTransitionPreviews, {
       attachTo: document.body,
       props: {

@@ -62,9 +62,10 @@ documented in [`QUICK_SLOTS.md`](./QUICK_SLOTS.md).
 Scale, Thick, Spacing, and BPM appear below the Starting Beat and transition controls in VTG. Each
 slider gesture is one undo step. The sliders begin a query
 history group on pointer-down or key-down and end it on pointer-up, pointer-cancel, key-up, or blur,
-matching the editor slider interaction boundary. On devices recognized by the shared mobile/iPad
-detection, sliders allow vertical touch panning. If the browser cancels a slider gesture to begin
-page scrolling, its original value is restored rather than committing the touch-down position.
+matching the editor slider interaction boundary. Touch and pen pointer input allows vertical page
+panning without relying on device or user-agent detection. If the browser cancels a slider gesture
+to begin page scrolling, its original value is restored rather than committing the touch-down
+position.
 
 Paths, Hands, Arms, Left, and Right are native checkbox controls above the sliders. Left and Right
 represent `props[0]` and `props[1]` and default to checked. Unchecking one writes `paths`, `hands`,

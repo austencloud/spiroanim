@@ -1,6 +1,7 @@
 <template>
   <section class="concepts-pane scrollbar" aria-label="Concepts" data-concepts-pane>
     <div
+      v-if="selectedConcept === 'vtg'"
       class="concepts-pane__docs-anchor"
       :class="{ 'concepts-pane__docs-anchor--below-navigation': pane === 'left' }"
       data-role="concept-docs-anchor"
@@ -25,7 +26,7 @@
         aria-label="Concept"
         data-role="concept-selector"
       >
-        <option value="vtg">Vulcan Tech Gospel</option>
+        <option value="vtg">Vulcan Tech Gospel 4</option>
         <option value="8stp">Eight Step</option>
         <option value="qst">Quarter Space Tech</option>
         <option value="to">Third Order</option>

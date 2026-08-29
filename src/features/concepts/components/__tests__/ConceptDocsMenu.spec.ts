@@ -27,12 +27,12 @@ describe('ConceptDocsMenu', () => {
       })),
     ).toEqual([
       {
-        href: '/vtg-reference/?returnTo=%2Fplay-vtg%3Fr%3Dpattern%23selected',
-        text: 'VTG Reference',
+        href: '/vtg4/?returnTo=%2Fplay-vtg%3Fr%3Dpattern%23selected',
+        text: 'VTG4 Expansion',
       },
       {
         href: '/vtg3/?returnTo=%2Fplay-vtg%3Fr%3Dpattern%23selected',
-        text: "Noel's VTG3",
+        text: 'VTG3 Reference',
       },
     ])
   })

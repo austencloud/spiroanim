@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
+import { builderPatternPointerMoveEvent } from '@/features/builder/patternPointerDrag'
 import { getCompiledVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
@@ -1992,8 +1993,7 @@ describe('VtgPane', () => {
     })
   })
 
-  it('restores a mobile slider when a touch gesture becomes page scrolling', async () => {
-    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Android')
+  it('restores a slider for touch input on a desktop-class hybrid device', async () => {
     const wrapper = mount(VtgPane)
     const scale = wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]')
 
@@ -3375,6 +3375,44 @@ describe('VtgPane', () => {
     expect(desktopDragImage.style.width).toBe('120px')
     expect(desktopDragImage.style.height).toBe('80px')
     expect(desktopDragImage.textContent).toContain(tile.text())
+  })
+
+  it('starts Builder pointer dragging from touch input on a hybrid device', async () => {
+    const wrapper = mount(VtgPane, { props: { builderActive: true } })
+    const tile = wrapper.get<HTMLElement>('[data-cell-reference="1-1"]')
+    const handlePointerMove = vi.fn<(event: Event) => void>()
+    document.addEventListener(builderPatternPointerMoveEvent, handlePointerMove)
+
+    try {
+      const pointerDown = new MouseEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+        clientX: 10,
+        clientY: 10,
+      })
+      Object.defineProperties(pointerDown, {
+        isPrimary: { value: true },
+        pointerId: { value: 7 },
+        pointerType: { value: 'touch' },
+      })
+      tile.element.dispatchEvent(pointerDown)
+
+      const pointerMove = new MouseEvent('pointermove', {
+        bubbles: true,
+        clientX: 30,
+        clientY: 10,
+      })
+      Object.defineProperties(pointerMove, {
+        pointerId: { value: 7 },
+        pointerType: { value: 'touch' },
+      })
+      tile.element.dispatchEvent(pointerMove)
+
+      expect(handlePointerMove).toHaveBeenCalledOnce()
+    } finally {
+      document.removeEventListener(builderPatternPointerMoveEvent, handlePointerMove)
+      wrapper.unmount()
+    }
   })
 
   it('shows the full VTG grid and source controls for an empty Builder', () => {

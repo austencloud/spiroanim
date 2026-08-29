@@ -59,7 +59,6 @@ import { useAnimWorkerCamera } from '@/composables/useAnimWorkerCamera'
 import { fitToAspect } from '@/math/aspectRatio'
 import { videoExportFrameCount } from '@/math/videoExportTiming'
 import { getPointerClientPosition } from '@/utils/pointerEvent'
-import { isTouchDevice } from '@/utils/device'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
@@ -289,8 +288,7 @@ onMounted(() => {
   })
 
   if (!props.minimal) {
-    if (isTouchDevice()) registerTouchCanvasPlayback()
-    else useEventListener(eCanvas, 'click', canvasClick)
+    registerCanvasInteraction()
   }
 })
 
@@ -390,7 +388,7 @@ const touchTapMovementThreshold = 8
 const hasCanvasInteraction = () =>
   PLAYBACK_COMPILED.value.props.some((prop) => typeof prop.click === 'number' && prop.click >= 0)
 
-const registerTouchCanvasPlayback = () => {
+const registerCanvasInteraction = () => {
   type TouchGesture = {
     pointerId: number
     startX: number
@@ -400,7 +398,14 @@ const registerTouchCanvasPlayback = () => {
 
   let gesture: TouchGesture | undefined
 
+  useEventListener(eCanvas, 'click', (event: MouseEvent) => {
+    const pointerType = Reflect.get(event, 'pointerType')
+    if (typeof pointerType === 'string' && pointerType !== '' && pointerType !== 'mouse') return
+    canvasClick(event)
+  })
+
   useEventListener(eCanvas, 'pointerdown', (event: PointerEvent) => {
+    if (event.pointerType === 'mouse' || event.button !== 0) return
     if (!event.isPrimary) {
       if (gesture) gesture.moved = true
       return
@@ -425,6 +430,7 @@ const registerTouchCanvasPlayback = () => {
   })
 
   useEventListener(eCanvas, 'pointerup', (event: PointerEvent) => {
+    if (event.pointerType === 'mouse') return
     if (!gesture || event.pointerId !== gesture.pointerId) return
     const completedGesture = gesture
     gesture = undefined

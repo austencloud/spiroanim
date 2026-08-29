@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow, noarchive" />
     <meta name="theme-color" content="#090b0f" />
-    <title>VTG: Timing, Direction, and Quarter Placement</title>
+    <title>VTG4: Timing, Direction, and Quarter Placement</title>
     <style>
       :root {
         color-scheme: dark;
@@ -41,10 +41,15 @@
         background:
           radial-gradient(circle at 12% 6%, rgb(255 117 79 / 14%), transparent 30rem),
           radial-gradient(circle at 88% 35%, rgb(89 215 238 / 10%), transparent 32rem),
+          radial-gradient(circle at 52% 68%, rgb(169 124 255 / 14%), transparent 30rem),
+          radial-gradient(ellipse at 88% 91%, rgb(91 232 173 / 13%), transparent 28rem),
           linear-gradient(90deg, rgb(255 255 255 / 2.5%) 1px, transparent 1px), var(--paper);
         background-size:
           auto,
-          5rem 100%;
+          5rem 100%,
+          auto,
+          auto,
+          auto;
       }
 
       main {
@@ -119,11 +124,45 @@
         outline-offset: 2px;
       }
 
+      .section-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        padding-block: 1.25rem;
+        border-block-end: 1px solid rgb(255 255 255 / 12%);
+      }
+
+      .section-nav a {
+        padding: 0.62rem 0.8rem;
+        color: var(--muted);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+        text-transform: uppercase;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 999px;
+      }
+
+      .section-nav a:hover {
+        color: var(--heading);
+        background: rgb(255 255 255 / 7%);
+        border-color: rgb(255 255 255 / 12%);
+      }
+
+      .section-nav a:focus-visible {
+        outline: 3px solid var(--blue);
+        outline-offset: 2px;
+      }
+
       .masthead {
         position: relative;
         display: grid;
         grid-template-columns: minmax(0, 1.45fr) minmax(15rem, 0.55fr);
-        gap: clamp(2rem, 6vw, 6rem);
+        column-gap: clamp(2rem, 6vw, 6rem);
+        row-gap: 1.5rem;
         align-items: end;
         padding-block-end: clamp(2.5rem, 5vw, 4rem);
         border-block-end: 0.22rem solid var(--accent);
@@ -209,10 +248,11 @@
       .creator-credit {
         position: relative;
         display: grid;
+        grid-column: 1 / -1;
         grid-template-columns: auto minmax(0, 1fr);
         gap: 0.85rem 1.1rem;
         align-items: center;
-        margin-block-start: 1.5rem;
+        margin-block-start: 0;
         padding: 0.9rem 1.15rem;
         overflow: hidden;
         background:
@@ -270,6 +310,7 @@
         gap: clamp(1rem, 3vw, 2.5rem);
         padding-block: clamp(2.8rem, 6vw, 5rem);
         border-block-end: 1px solid rgb(255 255 255 / 14%);
+        scroll-margin-block-start: 4.5rem;
       }
 
       .section-number {
@@ -858,7 +899,7 @@
   </head>
   <body>
     <nav class="site-nav" aria-label="SpiroAnim pages">
-      <span class="nav-brand">SpiroAnim / VTG Reference</span>
+      <span class="nav-brand">SpiroAnim / VTG4</span>
       <div class="nav-links">
         <a id="return-to-app" class="app-link" href="/app">Return to App</a>
       </div>
@@ -866,7 +907,7 @@
     <main>
       <header class="masthead">
         <div>
-          <p class="kicker">Vulcan Tech Gospel - quick reference</p>
+          <p class="kicker">Vulcan Tech Gospel 4</p>
           <h1>Timing &amp; Direction</h1>
           <p class="intro">
             Timing and direction describe the relationship between two hands or two props in a
@@ -881,17 +922,25 @@
             ideas used in SpiroAnim. Use the app to explore the complete pattern library.
           </p>
         </aside>
+        <aside class="creator-credit" aria-label="VTG4 and VTG3 relationship">
+          <span class="creator-credit-label">Creator spotlight</span>
+          <p>
+            <strong>Big shout-out to Noel Yee.</strong> Noel created the VTG3 grid that organizes
+            the timing-and-direction relationships in VTG4, which builds on that foundation with
+            Quarter Timing, Quarter Placement, and a broader set of tools for exploring them in the
+            app.
+          </p>
+        </aside>
       </header>
 
-      <aside class="creator-credit" aria-label="VTG3 creator credit">
-        <span class="creator-credit-label">Creator spotlight</span>
-        <p>
-          <strong>Big shout-out to Noel Yee.</strong> Noel created the VTG3 grid that organizes the
-          timing-and-direction relationships in this guide. This reference builds on his work.
-        </p>
-      </aside>
+      <nav class="section-nav" aria-label="On this page">
+        <a href="#timing">Timing</a><a href="#direction">Direction</a
+        ><a href="#labels">Build the Label</a><a href="#reading">Read Both Circles</a
+        ><a href="#placement">Quarter Placement</a
+        ><a href="#timing-direction">Timing + Direction</a>
+      </nav>
 
-      <section class="section" aria-labelledby="timing-title">
+      <section class="section" id="timing" aria-labelledby="timing-title">
         <div class="section-number">01</div>
         <div>
           <h2 id="timing-title">Timing</h2>
@@ -923,7 +972,7 @@
         </div>
       </section>
 
-      <section class="section" aria-labelledby="direction-title">
+      <section class="section" id="direction" aria-labelledby="direction-title">
         <div class="section-number">02</div>
         <div>
           <h2 id="direction-title">Direction</h2>
@@ -951,7 +1000,7 @@
         </div>
       </section>
 
-      <section class="section" aria-labelledby="labels-title">
+      <section class="section" id="labels" aria-labelledby="labels-title">
         <div class="section-number">03</div>
         <div>
           <h2 id="labels-title">Build the label</h2>
@@ -1002,7 +1051,7 @@
         </div>
       </section>
 
-      <section class="section" aria-labelledby="reading-title">
+      <section class="section" id="reading" aria-labelledby="reading-title">
         <div class="section-number">04</div>
         <div>
           <h2 id="reading-title">Read both circles</h2>
@@ -1034,7 +1083,7 @@
         </div>
       </section>
 
-      <section class="section" aria-labelledby="placement-title">
+      <section class="section" id="placement" aria-labelledby="placement-title">
         <div class="section-number">05</div>
         <div>
           <h2 id="placement-title">Quarter Placement</h2>
@@ -1070,14 +1119,15 @@
           </div>
           <p class="example">
             <strong>Keep the distinction:</strong> Quarter Timing describes a phase relationship;
-            Quarter Placement describes an arm arrangement. They are separate qualities, and a
-            pattern may have one without the other. Both use Quarter for the halfway point between
-            Together/Same and Split.
+            Quarter Placement describes the arms' spatial arrangement. They are independent
+            qualities, so a pattern may have either, both, or neither. In each case, Quarter
+            indicates a 90-degree relationship - halfway between Together (0 degrees) and Split (180
+            degrees) - while Same/Opposite describes direction separately.
           </p>
         </div>
       </section>
 
-      <section class="section" aria-labelledby="timing-direction-title">
+      <section class="section" id="timing-direction" aria-labelledby="timing-direction-title">
         <div class="section-number">06</div>
         <div>
           <h2 id="timing-direction-title">Timing and Direction</h2>
@@ -1155,14 +1205,18 @@
               </div>
             </article>
           </div>
+          <p class="example">
+            <strong>Why QS and QO aren't shown:</strong> At these reference positions, they align
+            visually with SS.
+          </p>
         </div>
       </section>
 
       <footer>
         <p>
           Based on the Vulcan Tech Gospel framework developed by Noel Yee, David Cantor, Brian
-          Thompson, Lorq Nichols, and collaborators. This page is a concise SpiroAnim reference, not
-          a replacement for the original VTG documents.
+          Thompson, Lorq Nichols, and collaborators. VTG4 is a concise SpiroAnim reference, not a
+          replacement for the original VTG documents.
         </p>
         <p class="legend">Happy spinning.</p>
       </footer>

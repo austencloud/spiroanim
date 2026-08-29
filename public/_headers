@@ -13,10 +13,10 @@
 /reset/*
   Cache-Control: no-cache, no-store, must-revalidate
 
-/vtg-reference
+/vtg4
   X-Robots-Tag: noindex, nofollow, noarchive
 
-/vtg-reference/*
+/vtg4/*
   X-Robots-Tag: noindex, nofollow, noarchive
 
 /vtg3

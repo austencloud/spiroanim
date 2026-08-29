@@ -109,9 +109,7 @@ test('shares Free Camera with the interactive Builder Mini-Player', async ({ pag
   expect(pageErrors).toEqual([])
 })
 
-test('opens VTG documents and returns from the reference to the exact app URL', async ({
-  page,
-}) => {
+test('opens VTG documents and returns to the exact app URL', async ({ page }) => {
   await page.goto('/vulcan-tech-gospel?docsReturn=preserved#selected-pattern')
   await expect.poll(() => new URL(page.url()).pathname).toBe('/play-vtg')
   const appUrl = page.url()
@@ -141,23 +139,24 @@ test('opens VTG documents and returns from the reference to the exact app URL', 
   await expect.poll(async () => (await docsButton.boundingBox())?.y).toBeCloseTo(docsBox!.y, 0)
 
   await docsButton.click()
-  await expect(docsMenu.locator('a', { hasText: "Noel's VTG3" })).toHaveAttribute(
+  await expect(docsMenu.locator('a', { hasText: 'VTG3 Reference' })).toHaveAttribute(
     'href',
     /\/vtg3\/\?returnTo=/,
   )
-  await docsMenu.locator('a', { hasText: 'VTG Reference' }).click()
+  await docsMenu.locator('a', { hasText: 'VTG4 Expansion' }).click()
 
   await expect(page.getByRole('heading', { name: 'Timing & Direction' })).toBeVisible()
+  await expect(page.getByText('VTG4 expands on VTG3')).toBeVisible()
   expect(new URL(page.url()).searchParams.get('returnTo')).toBe(appReturnPath)
   await page.getByRole('link', { name: 'Return to App' }).click()
   await expect(page).toHaveURL(appUrl)
   await expect(docsButton).toBeVisible()
 
   await docsButton.click()
-  await docsMenu.locator('a', { hasText: "Noel's VTG3" }).click()
+  await docsMenu.locator('a', { hasText: 'VTG3 Reference' }).click()
 
   await expect(page.getByRole('heading', { name: 'Vulcan Tech Gospel 3' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'VTG Reference' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'VTG4 Expansion' })).toHaveCount(0)
   await page.getByRole('link', { name: 'Return to App' }).click()
   await expect(page).toHaveURL(appUrl)
 })

@@ -21,12 +21,16 @@ function supportsES2022(): boolean {
 
 function supportsRendering(): boolean {
   try {
+    if (typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined') return false
+
     const canvas = document.createElement('canvas')
+    const offscreen = new OffscreenCanvas(1, 1)
 
     return (
-      typeof OffscreenCanvas !== 'undefined' &&
       typeof canvas.transferControlToOffscreen === 'function' &&
-      canvas.getContext('webgl2') !== null
+      canvas.getContext('webgl2') !== null &&
+      offscreen.getContext('webgl2') !== null &&
+      typeof offscreen.convertToBlob === 'function'
     )
   } catch {
     return false

@@ -14,7 +14,14 @@ describe('isBrowserSupported', () => {
     vi.spyOn(canvas, 'getContext').mockReturnValue({} as WebGL2RenderingContext)
 
     vi.spyOn(document, 'createElement').mockReturnValue(canvas)
-    vi.stubGlobal('OffscreenCanvas', class OffscreenCanvas {})
+    vi.stubGlobal('Worker', class Worker {})
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class OffscreenCanvas {
+        convertToBlob = vi.fn<() => Promise<Blob>>()
+        getContext = vi.fn<() => object>(() => ({}))
+      },
+    )
 
     expect(isBrowserSupported()).toBe(true)
   })
@@ -25,7 +32,32 @@ describe('isBrowserSupported', () => {
     vi.spyOn(canvas, 'getContext').mockReturnValue(null)
 
     vi.spyOn(document, 'createElement').mockReturnValue(canvas)
-    vi.stubGlobal('OffscreenCanvas', class OffscreenCanvas {})
+    vi.stubGlobal('Worker', class Worker {})
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class OffscreenCanvas {
+        convertToBlob = vi.fn<() => Promise<Blob>>()
+        getContext = vi.fn<() => object>(() => ({}))
+      },
+    )
+
+    expect(isBrowserSupported()).toBe(false)
+  })
+
+  it('rejects partial OffscreenCanvas implementations without WebGL 2', () => {
+    const canvas = document.createElement('canvas')
+    canvas.transferControlToOffscreen = vi.fn<() => OffscreenCanvas>()
+    vi.spyOn(canvas, 'getContext').mockReturnValue({} as WebGL2RenderingContext)
+
+    vi.spyOn(document, 'createElement').mockReturnValue(canvas)
+    vi.stubGlobal('Worker', class Worker {})
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class OffscreenCanvas {
+        convertToBlob = vi.fn<() => Promise<Blob>>()
+        getContext = vi.fn<() => null>(() => null)
+      },
+    )
 
     expect(isBrowserSupported()).toBe(false)
   })

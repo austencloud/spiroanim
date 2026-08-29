@@ -1,5 +1,3 @@
-import { isTouchDevice } from '@/utils/device'
-
 interface TouchSafeRangeSliderOptions {
   begin: () => void
   end: () => void
@@ -7,7 +5,9 @@ interface TouchSafeRangeSliderOptions {
 
 /** Shares the iOS-safe pointer lifecycle used by application range sliders. */
 export const useTouchSafeRangeSlider = ({ begin, end }: TouchSafeRangeSliderOptions) => {
-  const protectTouchScrolling = typeof navigator !== 'undefined' && isTouchDevice()
+  // Applying pan-y is harmless for mouse input, while pointerType keeps the value rollback scoped
+  // to touch and pen gestures. This also covers hybrid devices without user-agent detection.
+  const protectTouchScrolling = true
   let touchSliderStart:
     | {
         input: HTMLInputElement

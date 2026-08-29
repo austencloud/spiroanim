@@ -27,8 +27,8 @@
       '/tips',
       '/reset',
       '/reset/',
-      '/vtg-reference',
-      '/vtg-reference/',
+      '/vtg4',
+      '/vtg4/',
       '/vtg3',
       '/vtg3/',
     ]

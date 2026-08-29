@@ -43,7 +43,7 @@ function emitPwaManifests(): Plugin {
 
 function serveStandalonePages(): Plugin {
   const middleware: Connect.NextHandleFunction = (request, response, next) => {
-    const standalonePages = ['reset', 'vtg-reference', 'vtg3']
+    const standalonePages = ['reset', 'vtg4', 'vtg3']
 
     for (const page of standalonePages) {
       const route = `/${page}`

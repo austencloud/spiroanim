@@ -5,7 +5,6 @@
 */
 
 import { useViewportStore } from '@/stores/useViewportStore'
-import { getPointerClientPosition } from '@/utils/pointerEvent'
 
 type Dimensions = { width: number; height: number }
 
@@ -47,6 +46,8 @@ export function useSplitHandle({
   const pos = reactive({ left: 0, top: 0 })
 
   let dragging = false
+  let activePointerId: number | undefined
+  let captureElement: HTMLElement | undefined
   let IX = 0
   let IY = 0
   let animationFrameId: number | null = null
@@ -72,7 +73,9 @@ export function useSplitHandle({
     perc.value = Math.round((landscape.value ? left / width : top / height) * 100)
   }
 
-  const dragStart = (e: MouseEvent | TouchEvent) => {
+  const dragStart = (e: PointerEvent) => {
+    if (!e.isPrimary || e.button !== 0) return
+
     if (perc.value == 100) {
       emit('perc', 100 - snap)
       return
@@ -81,17 +84,20 @@ export function useSplitHandle({
       return
     }
 
-    const position = getPointerClientPosition(e)
-    if (!position) return
-
     dragging = true
-    IX = position.clientX
-    IY = position.clientY
+    activePointerId = e.pointerId
+    IX = e.clientX
+    IY = e.clientY
 
-    document.addEventListener('mousemove', dragMove)
-    document.addEventListener('touchmove', dragMove, { passive: false })
-    document.addEventListener('mouseup', dragEnd)
-    document.addEventListener('touchend', dragEnd, { passive: false })
+    const target = e.currentTarget
+    if (target instanceof HTMLElement && typeof target.setPointerCapture === 'function') {
+      captureElement = target
+      target.setPointerCapture(e.pointerId)
+    }
+
+    document.addEventListener('pointermove', dragMove)
+    document.addEventListener('pointerup', dragEnd)
+    document.addEventListener('pointercancel', dragEnd)
   }
 
   const dragCancel = () => {
@@ -100,19 +106,28 @@ export function useSplitHandle({
       cancelAnimationFrame(animationFrameId)
       animationFrameId = null
     }
-    document.removeEventListener('mousemove', dragMove)
-    document.removeEventListener('touchmove', dragMove)
-    document.removeEventListener('mouseup', dragEnd)
-    document.removeEventListener('touchend', dragEnd)
+    document.removeEventListener('pointermove', dragMove)
+    document.removeEventListener('pointerup', dragEnd)
+    document.removeEventListener('pointercancel', dragEnd)
+
+    if (
+      captureElement &&
+      activePointerId !== undefined &&
+      typeof captureElement.hasPointerCapture === 'function' &&
+      captureElement.hasPointerCapture(activePointerId)
+    ) {
+      captureElement.releasePointerCapture(activePointerId)
+    }
+    activePointerId = undefined
+    captureElement = undefined
   }
 
-  const dragMove = (e: MouseEvent | TouchEvent) => {
-    if (!dragging) return
+  const dragMove = (e: PointerEvent) => {
+    if (!dragging || e.pointerId !== activePointerId) return
 
-    const position = getPointerClientPosition(e)
-    if (!position) return
-    const cX = position.clientX
-    const cY = position.clientY
+    e.preventDefault()
+    const cX = e.clientX
+    const cY = e.clientY
     const dX = cX - IX
     const dY = cY - IY
 
@@ -128,7 +143,8 @@ export function useSplitHandle({
     }
   }
 
-  const dragEnd = () => {
+  const dragEnd = (e?: PointerEvent) => {
+    if (e && e.pointerId !== activePointerId) return
     setPerc()
     perc.value = Math.max(0, Math.min(perc.value, 100))
     dragCancel()
@@ -170,22 +186,13 @@ export function useSplitHandle({
     zIndex: zIndex,
   })
 
-  // Did it this way because @mousedown without .passive throws a warning in Chrome and will drive me nuts
-  // Keeping .passive doesn't allow .prevent to work, and elements under the button were otherwise being clicked
   onMounted(() => {
-    useEventListener(element, 'touchstart', handleTouchStart, { passive: false })
     updateStyle()
   })
 
   onBeforeUnmount(() => {
     if (dragging) dragCancel()
   })
-
-  // See onMounted comment
-  const handleTouchStart = (e: TouchEvent) => {
-    e.preventDefault()
-    dragStart(e)
-  }
 
   watchImmediate([object, parent], resize)
   watchImmediate(pos, updateStyle)

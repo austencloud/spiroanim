@@ -8,7 +8,7 @@
         class="pane-splitter"
         type="button"
         @click.prevent
-        @mousedown.prevent="dragStart"
+        @pointerdown.prevent="dragStart"
       >
         <BaseIcon :path="icon" />
       </button>
@@ -71,6 +71,7 @@ const { dragStart, iconStyle, icon } = useSplitHandle({
   place-items: center;
   color: var(--color-text-muted);
   cursor: grab;
+  touch-action: none;
   background: transparent;
   border: 0;
   border-radius: var(--radius-sm);

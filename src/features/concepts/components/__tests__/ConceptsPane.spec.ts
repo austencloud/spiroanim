@@ -45,6 +45,21 @@ describe('ConceptsPane', () => {
     expect(docsAnchor.classes()).not.toContain('concepts-pane__docs-anchor--below-navigation')
   })
 
+  it('shows Docs only for VTG', async () => {
+    const wrapper = mount(ConceptsPane)
+    const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
+
+    expect(wrapper.find('[data-role="concept-docs-anchor"]').exists()).toBe(true)
+
+    await selector.setValue('8stp')
+
+    expect(wrapper.find('[data-role="concept-docs-anchor"]').exists()).toBe(false)
+
+    await selector.setValue('vtg')
+
+    expect(wrapper.find('[data-role="concept-docs-anchor"]').exists()).toBe(true)
+  })
+
   it('requests the current pattern when an empty Quick Slot is selected', async () => {
     const store = useConceptsStore()
     store.restoreQuickSlots()
@@ -94,7 +109,7 @@ describe('ConceptsPane', () => {
     expect(selector.element.value).toBe('vtg')
     expect(selector.attributes('aria-label')).toBe('Concept')
     expect(selector.findAll('option').map((option) => option.text())).toEqual([
-      'Vulcan Tech Gospel',
+      'Vulcan Tech Gospel 4',
       'Eight Step',
       'Quarter Space Tech',
       'Third Order',

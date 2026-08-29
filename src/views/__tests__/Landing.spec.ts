@@ -35,18 +35,6 @@ describe('Landing view', () => {
     )
     expect(wrapper.get('.project-note').text()).not.toContain('More features are on the way')
     expect(wrapper.get('.project-note').text()).not.toContain('rough edges')
-    expect(wrapper.get('.project-note').text()).toContain(
-      'Now includes a VTG3 Generator, a duplicate of Vulcan Tech Gospel v3',
-    )
-    expect(wrapper.get('.project-note').text()).toContain('Credit to:')
-    expect(wrapper.get('.project-note').findAll('br')).toHaveLength(2)
-    const vtgLink = wrapper.get('a.vtg-link')
-    expect(vtgLink.text()).toBe('vtg-v3.web.app')
-    expect(vtgLink.attributes()).toMatchObject({
-      href: 'https://vtg-v3.web.app/',
-      target: '_blank',
-      rel: 'noopener noreferrer',
-    })
     expect(wrapper.get('.creator-note h2').text()).toBe('Built for the way I want to animate')
     expect(wrapper.get('.creator-note').text()).toContain(
       'I always wanted to explore and animate POI concepts the way I imagined them.',

@@ -219,9 +219,9 @@ Eight Step reuses the shared Concepts controls and store used by VTG and Quarter
 At least one prop must remain enabled. Disabling the only enabled side automatically enables the
 opposite side.
 
-Scale, Thick, Spacing, and BPM are placed below the Diamond/Box controls. On detected mobile devices,
-including modern iPads that identify as Macs, vertical touch gestures beginning on these sliders
-remain page-scroll gestures and restore any touch-down value change.
+Scale, Thick, Spacing, and BPM are placed below the Diamond/Box controls. Touch and pen pointer input,
+including input from hybrid desktop-class devices, keeps vertical gestures available for page
+scrolling and restores any touch-down value change when the browser cancels the slider gesture.
 
 Changing concepts does not reset these shared settings. A setting remains available even when the
 currently displayed animation does not correspond to an active cell in the newly opened concept.

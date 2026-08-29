@@ -3,6 +3,23 @@ import { mount } from '@vue/test-utils'
 import { h } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const createPointerEvent = (
+  type: 'pointerdown' | 'pointerup' | 'pointercancel',
+  {
+    clientX = 0,
+    clientY = 0,
+    pointerId,
+  }: { clientX?: number; clientY?: number; pointerId: number },
+) => {
+  const event = new MouseEvent(type, { bubbles: true, button: 0, clientX, clientY })
+  Object.defineProperties(event, {
+    isPrimary: { value: true },
+    pointerId: { value: pointerId },
+    pointerType: { value: 'mouse' },
+  })
+  return event
+}
+
 describe('useSplitHandle', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -49,41 +66,74 @@ describe('useSplitHandle', () => {
     expect(center + button.offsetHeight / 2).toBe(100)
   })
 
-  it('starts mouse dragging when the TouchEvent constructor is unavailable', async () => {
-    const touchEventDescriptor = Object.getOwnPropertyDescriptor(window, 'TouchEvent')
-    Reflect.deleteProperty(window, 'TouchEvent')
+  it('handles mouse dragging through pointer events', async () => {
     const emit = vi.fn<(event: 'perc', value: number) => void>()
 
-    try {
-      const { useSplitHandle } = await import('@/composables/useSplitHandle')
-      const wrapper = mount(
-        defineComponent({
-          setup() {
-            const element = ref<HTMLElement>()
-            const { dragStart } = useSplitHandle({
-              parent: ref({ width: 200, height: 100 }),
-              object: ref({ width: 100, height: 100 }),
-              landscape: ref(true),
-              emit,
-              element,
-              iconMap: { vertical: '', horizontal: '', close: '' },
-            })
+    const { useSplitHandle } = await import('@/composables/useSplitHandle')
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          const element = ref<HTMLElement>()
+          const { dragStart } = useSplitHandle({
+            parent: ref({ width: 200, height: 100 }),
+            object: ref({ width: 100, height: 100 }),
+            landscape: ref(true),
+            emit,
+            element,
+            iconMap: { vertical: '', horizontal: '', close: '' },
+          })
 
-            return () => h('button', { ref: element, onMousedown: dragStart })
-          },
-        }),
-      )
-      await nextTick()
+          return () => h('button', { ref: element, onPointerdown: dragStart })
+        },
+      }),
+    )
+    await nextTick()
 
-      await wrapper.get('button').trigger('mousedown', { clientX: 100, clientY: 50 })
-      document.dispatchEvent(new MouseEvent('mouseup'))
+    wrapper.get('button').element.dispatchEvent(
+      createPointerEvent('pointerdown', {
+        clientX: 100,
+        clientY: 50,
+        pointerId: 7,
+      }),
+    )
+    document.dispatchEvent(createPointerEvent('pointerup', { pointerId: 7 }))
 
-      expect(emit).toHaveBeenCalledWith('perc', 50)
-      wrapper.unmount()
-    } finally {
-      if (touchEventDescriptor) {
-        Object.defineProperty(window, 'TouchEvent', touchEventDescriptor)
-      }
-    }
+    expect(emit).toHaveBeenCalledWith('perc', 50)
+    wrapper.unmount()
+  })
+
+  it('finishes dragging when the active pointer is cancelled', async () => {
+    const emit = vi.fn<(event: 'perc', value: number) => void>()
+    const { useSplitHandle } = await import('@/composables/useSplitHandle')
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          const element = ref<HTMLElement>()
+          const { dragStart } = useSplitHandle({
+            parent: ref({ width: 200, height: 100 }),
+            object: ref({ width: 100, height: 100 }),
+            landscape: ref(true),
+            emit,
+            element,
+            iconMap: { vertical: '', horizontal: '', close: '' },
+          })
+
+          return () => h('button', { ref: element, onPointerdown: dragStart })
+        },
+      }),
+    )
+    await nextTick()
+
+    wrapper.get('button').element.dispatchEvent(
+      createPointerEvent('pointerdown', {
+        clientX: 100,
+        clientY: 50,
+        pointerId: 9,
+      }),
+    )
+    document.dispatchEvent(createPointerEvent('pointercancel', { pointerId: 9 }))
+
+    expect(emit).toHaveBeenCalledWith('perc', 50)
+    wrapper.unmount()
   })
 })

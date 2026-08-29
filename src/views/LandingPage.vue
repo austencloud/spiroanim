@@ -11,17 +11,7 @@
           <p class="eyebrow">Early preview</p>
           <h2 id="preview-title">A playground for advanced flow arts concepts</h2>
           <p>
-            SpiroAnim is an exploration and visualization tool for advanced flow arts concepts.<br />
-            Now includes a VTG3 Generator, a duplicate of Vulcan Tech Gospel v3 with several
-            functional additions and upgrades.<br />
-            Credit to:
-            <a
-              class="vtg-link"
-              href="https://vtg-v3.web.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              >vtg-v3.web.app</a
-            >
+            SpiroAnim is an exploration and visualization tool for advanced flow arts concepts.
           </p>
         </section>
 
@@ -184,17 +174,6 @@ h1 {
   margin: 0;
   color: var(--color-text-muted);
   line-height: 1.6;
-}
-
-.vtg-link {
-  color: var(--color-action-primary);
-  font-weight: 700;
-  text-underline-offset: 0.2em;
-}
-
-.vtg-link:focus-visible {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: 2px;
 }
 
 .creator-note {
