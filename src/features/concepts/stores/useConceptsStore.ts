@@ -50,7 +50,7 @@ export type VtgFoldValues = [Record<string, VtgFoldValue>, Record<string, VtgFol
 export type VtgFoldMode = 'simple' | 'advanced'
 export type VtgFoldSpan = 'eighth' | 'quarter'
 export type VtgFoldSideSettings<T> = [T, T]
-export type VtgPropertyKey = 'axis' | 'twist' | 'turns'
+export type VtgPropertyKey = 'offset' | 'axis' | 'twist' | 'turns'
 
 const quickSlotSetIdPrefix = 'quick-slot-set-'
 const defaultQuickSlotSetName = (number: number) => `Quick Slot Set #${number}`
@@ -66,6 +66,7 @@ export const useConceptsStore = defineStore(
     const quickSlotSets = ref<QuickSlotSet[]>([])
     const selectedQuickSlotSetId = ref<string | null>(null)
     const nextQuickSlotSetId = ref(1)
+    const vtgAdvanced = ref(false)
     const qtrEnabled = ref(false)
     const speedRatio = ref<VtgSpeedRatio>(vtgDefaultSpeedRatio)
     const swapProps = ref(false)
@@ -98,7 +99,6 @@ export const useConceptsStore = defineStore(
     const vtgFoldAlternate = ref<VtgFoldSideSettings<boolean>>([false, false])
     const vtgFoldSpan = ref<VtgFoldSpan>('eighth')
     const vtgFoldMirror = ref(true)
-    const vtgPropertiesExpanded = ref(false)
     const vtgActiveProperty = ref<VtgPropertyKey | null>(null)
 
     const setVtgTwistValue = (propIndex: 0 | 1, beat: number, value?: number) => {
@@ -318,6 +318,7 @@ export const useConceptsStore = defineStore(
       quickSlotSets,
       selectedQuickSlotSetId,
       nextQuickSlotSetId,
+      vtgAdvanced,
       qtrEnabled,
       speedRatio,
       swapProps,
@@ -354,7 +355,6 @@ export const useConceptsStore = defineStore(
       vtgFoldAlternate,
       vtgFoldSpan,
       vtgFoldMirror,
-      vtgPropertiesExpanded,
       vtgActiveProperty,
       resetPatternControls,
       addQuickSlot,
@@ -383,6 +383,7 @@ export const useConceptsStore = defineStore(
         'quickSlotSets',
         'selectedQuickSlotSetId',
         'nextQuickSlotSetId',
+        'vtgAdvanced',
         'qtrEnabled',
         'speedRatio',
         'swapProps',
@@ -401,7 +402,6 @@ export const useConceptsStore = defineStore(
         'rightPropColor',
         'prop',
         'sliders',
-        'vtgPropertiesExpanded',
         'vtgActiveProperty',
         'customizeExpanded',
         'classicLayout',
@@ -416,6 +416,7 @@ export const useConceptsStore = defineStore(
         if (!conceptKeys.some((concept) => concept === store.selectedConcept)) {
           store.selectedConcept = 'vtg'
         }
+        if (typeof store.vtgAdvanced !== 'boolean') store.vtgAdvanced = false
         if (!Number.isSafeInteger(store.quickSlotCount) || store.quickSlotCount < 0) {
           store.quickSlotCount = defaultQuickSlotCount
         }
@@ -526,10 +527,7 @@ export const useConceptsStore = defineStore(
           store.prop = 2
         }
         if (typeof store.sliders !== 'boolean') store.sliders = !isTouchDevice()
-        if (typeof store.vtgPropertiesExpanded !== 'boolean') {
-          store.vtgPropertiesExpanded = false
-        }
-        if (!['axis', 'twist', 'turns', null].includes(store.vtgActiveProperty)) {
+        if (!['offset', 'axis', 'twist', 'turns', null].includes(store.vtgActiveProperty)) {
           store.vtgActiveProperty = null
         }
         if (typeof store.customizeExpanded !== 'boolean') store.customizeExpanded = false

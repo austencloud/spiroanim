@@ -1,5 +1,13 @@
 <template>
   <section class="concepts-pane scrollbar" aria-label="Concepts" data-concepts-pane>
+    <div
+      class="concepts-pane__docs-anchor"
+      :class="{ 'concepts-pane__docs-anchor--below-navigation': pane === 'left' }"
+      data-role="concept-docs-anchor"
+    >
+      <ConceptDocsMenu :return-path="docsReturnPath" />
+    </div>
+
     <QuickSlotsControl
       v-if="quickSlotCount > 0"
       @apply="emit('quickSlotApply', $event)"
@@ -86,6 +94,7 @@ import EightStepPane from '@/features/eight-step/components/EightStepPane.vue'
 import { mdiPlus } from '@mdi/js'
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import ConceptDocsMenu from '@/features/concepts/components/ConceptDocsMenu.vue'
 import { usePatternMatchingClient } from '@/features/concepts/composables/usePatternMatchingWorker'
 import QuickSlotsControl from '@/features/concepts/components/QuickSlotsControl.vue'
 import QuickSlotVisual from '@/features/concepts/components/QuickSlotVisual.vue'
@@ -106,6 +115,8 @@ const props = defineProps<{
   builderFullCatalog?: boolean
   builderFullCatalogForced?: boolean
   builderFullGrid?: boolean
+  docsReturnPath?: string
+  pane?: 'left' | 'right' | 'hidden'
 }>()
 
 const emit = defineEmits<{
@@ -145,6 +156,22 @@ const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
   overflow-anchor: none;
   overscroll-behavior: contain;
   color: var(--color-text);
+}
+
+.concepts-pane__docs-anchor {
+  position: sticky;
+  inset-block-start: 1px;
+  inset-inline-start: 1px;
+  z-index: 2900;
+  width: 0;
+  height: calc(var(--size-editor-toolbar-height) - 1px);
+  margin-block-end: calc(1px - var(--size-editor-toolbar-height));
+  overflow: visible;
+  pointer-events: none;
+}
+
+.concepts-pane__docs-anchor--below-navigation {
+  inset-block-start: calc(var(--size-editor-toolbar-height) + var(--space-2));
 }
 
 .concepts-pane__selector-row {

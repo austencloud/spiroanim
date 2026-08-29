@@ -116,6 +116,10 @@ test('serves VTG3 as a standalone document without precaching it', async ({ requ
   expect(response.ok()).toBe(true)
   expect(html).toContain('<h1>Vulcan Tech Gospel 3</h1>')
   expect(html).toContain('VTG3 and the VTG3 grid were created by Noel Yee.')
+  expect(html).toContain('id="return-to-app"')
+  expect(html).toContain('>Return to App</a')
+  expect(html).not.toContain('>VTG Reference</a')
+  expect(html).toContain('/docs-return-to-app.js')
   expect(html).toContain('The VTG 3 was born out of the VTG 1 and the VTG 2.')
   expect(html).toContain('Timing and direction refer to the relative timing')
   for (const abbreviation of ['Tog/Same', 'Tog/Opp', 'Split/Same', 'Split/Opp']) {
@@ -131,7 +135,7 @@ test('serves VTG3 as a standalone document without precaching it', async ({ requ
     html.indexOf('</section>', html.indexOf('id="patterns"')),
   )
   const patternSources = [
-    ...patternSection.matchAll(/src="(\/vtg3\/assets\/patterns\/[^\"]+\.png)"/g),
+    ...patternSection.matchAll(/src="(\/vtg3\/assets\/patterns\/[^"]+\.png)"/g),
   ]
     .map((match) => match[1])
     .filter((source) => source !== undefined)
@@ -162,18 +166,12 @@ test('serves VTG3 as a standalone document without precaching it', async ({ requ
   expect(serviceWorker).not.toContain('vtg3/')
 })
 
-test('caches the VTG reference and returns to the exact app history entry', async ({
-  context,
-  page,
-}) => {
+test('caches the VTG reference and returns to the app offline', async ({ context, page }) => {
   await page.goto('/app')
   await page.evaluate(async () => navigator.serviceWorker.ready)
   await expect
     .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
     .toBe(true)
-
-  const appPath = '/play-time?vtgReturnTest=preserved#last-pattern'
-  await page.evaluate((path) => history.replaceState(history.state, '', path), appPath)
 
   await page.goto('/vtg-reference/')
   await expect(page.getByRole('heading', { name: 'Timing & Direction' })).toBeVisible()
@@ -187,7 +185,6 @@ test('caches the VTG reference and returns to the exact app history entry', asyn
     expect(offlineResponse.fromServiceWorker()).toBe(true)
 
     await page.getByRole('link', { name: 'Return to App' }).click()
-    await expect(page).toHaveURL(new RegExp(`${appPath.replace('?', '\\?')}\$`))
     await expect(page.locator('[data-role="main-container"]')).toBeVisible()
   } finally {
     await context.setOffline(false)

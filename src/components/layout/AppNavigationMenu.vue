@@ -1,170 +1,156 @@
 <template>
-  <div ref="rootElement" class="app-navigation-menu">
+  <div class="app-navigation-menu">
     <AppTooltip text="Open SpiroAnim menu" placement="bottom" :disabled="isOpen">
       <template #activator="{ props: tooltipProps }">
-        <button
-          :id="triggerId"
-          ref="triggerElement"
-          v-bind="tooltipProps"
-          class="menu-trigger"
-          type="button"
-          aria-label="Open SpiroAnim menu"
-          aria-haspopup="menu"
-          :aria-controls="menuId"
-          :aria-expanded="isOpen"
-          @click="toggleMenu"
-          @keydown.arrow-down.prevent="openAndFocusFirst"
-          @keydown.esc.stop.prevent="closeAndFocusTrigger"
+        <BasePopupMenu
+          v-model:open="isOpen"
+          class="app-navigation-menu__popup"
+          panel-class="menu-panel"
+          :trigger-attrs="tooltipProps"
+          trigger-aria-label="Open SpiroAnim menu"
+          trigger-class="menu-trigger"
         >
-          <span class="site-mark" aria-hidden="true" />
-          <span class="menu-chevron" aria-hidden="true">
-            <BaseIcon :path="mdiChevronDown" :size="14" />
-          </span>
-        </button>
+          <template #trigger>
+            <span class="site-mark" aria-hidden="true" />
+            <span class="menu-chevron" :class="{ 'menu-chevron--open': isOpen }" aria-hidden="true">
+              <BaseIcon :path="mdiChevronDown" :size="14" />
+            </span>
+          </template>
+
+          <button
+            v-if="showFullscreen"
+            class="menu-link menu-action fullscreen-menu-item"
+            type="button"
+            role="menuitem"
+            @click="toggleFullscreenMode"
+          >
+            <BaseIcon :path="fullscreenIcon" :size="22" />
+            <span>{{ fullscreenLabel }}</span>
+          </button>
+          <section class="menu-group" role="group" aria-labelledby="spiroanim-heading">
+            <h2 id="spiroanim-heading">SpiroAnim</h2>
+            <button
+              class="menu-link menu-action share-menu-item"
+              type="button"
+              role="menuitem"
+              @click="openShareDialog"
+            >
+              <BaseIcon :path="mdiShareVariantOutline" :size="22" />
+              <span>Share This</span>
+            </button>
+            <RouterLink
+              class="menu-link"
+              exact-active-class="menu-link--active"
+              role="menuitem"
+              to="/tips"
+              @click="closeMenu"
+            >
+              <BaseIcon :path="mdiLightbulbOnOutline" :size="22" />
+              <span>Tips</span>
+            </RouterLink>
+            <button
+              class="menu-link menu-action quick-slots-menu-item"
+              type="button"
+              role="menuitem"
+              @click="openQuickSlotSetsDialog"
+            >
+              <BaseIcon :path="mdiViewGridOutline" :size="22" />
+              <span>Quick Slots</span>
+            </button>
+            <template v-if="playerVisible">
+              <button
+                class="menu-link menu-action export-image-menu-item"
+                type="button"
+                role="menuitem"
+                @click="openExportImageDialog"
+              >
+                <BaseIcon :path="mdiPanoramaVariant" :size="22" />
+                <span>Export Image</span>
+              </button>
+              <button
+                class="menu-link menu-action export-video-menu-item"
+                :class="{ 'menu-action--unavailable': !videoExportAvailable }"
+                type="button"
+                role="menuitem"
+                :aria-disabled="!videoExportAvailable"
+                @click="openExportVideoDialog"
+              >
+                <BaseIcon :path="mdiMovieOpenOutline" :size="22" />
+                <span>Export Video</span>
+              </button>
+            </template>
+            <button
+              class="menu-link menu-action progressive-paths-menu-item"
+              type="button"
+              role="menuitem"
+              :aria-pressed="PROGRESSIVE_PATHS"
+              @click="toggleProgressivePaths"
+            >
+              <BaseIcon :path="mdiAnimationPlayOutline" :size="22" />
+              <span>{{ progressivePathsLabel }}</span>
+            </button>
+            <button
+              class="menu-link menu-action all-head-paths-menu-item"
+              type="button"
+              role="menuitem"
+              :aria-pressed="ALL_HEAD_PATHS"
+              @click="toggleAllHeadPaths"
+            >
+              <BaseIcon :path="mdiVectorPolyline" :size="22" />
+              <span>{{ allHeadPathsLabel }}</span>
+            </button>
+            <button
+              v-if="playerVisible"
+              class="menu-link menu-action tracer-menu-item"
+              type="button"
+              role="menuitem"
+              :aria-pressed="TRACER"
+              @click="toggleTracerMode"
+            >
+              <BaseIcon :path="tracerIcon" :size="22" />
+              <span>{{ tracerLabel }}</span>
+            </button>
+            <button
+              class="menu-link menu-action editor-access-menu-item"
+              type="button"
+              role="menuitem"
+              :aria-pressed="editorEnabled"
+              @click="toggleEditorAccess"
+            >
+              <BaseIcon :path="editorAccessIcon" :size="22" />
+              <span>{{ editorAccessLabel }}</span>
+            </button>
+          </section>
+          <section class="menu-group" role="group" aria-labelledby="navigation-heading">
+            <h2 id="navigation-heading">Navigation</h2>
+            <RouterLink
+              v-for="item in navigationLinks"
+              :key="item.path"
+              class="menu-link"
+              exact-active-class="menu-link--active"
+              role="menuitem"
+              :to="item.path"
+              @click="closeMenu"
+            >
+              <BaseIcon :path="item.icon" :size="22" />
+              <span>{{ item.label }}</span>
+            </RouterLink>
+            <PwaInstallControl variant="menu" @prompted="closeMenu" />
+          </section>
+          <div class="menu-footer" role="presentation">
+            <button
+              class="menu-link menu-action reset-menu-item"
+              type="button"
+              role="menuitem"
+              @click="openResetDialog"
+            >
+              <BaseIcon :path="mdiRestoreAlert" :size="22" />
+              <span>Reset App</span>
+            </button>
+          </div>
+        </BasePopupMenu>
       </template>
     </AppTooltip>
-
-    <div
-      v-if="isOpen"
-      :id="menuId"
-      ref="menuElement"
-      class="menu-panel"
-      role="menu"
-      :aria-labelledby="triggerId"
-      @keydown="onMenuKeydown"
-    >
-      <button
-        v-if="showFullscreen"
-        class="menu-link menu-action fullscreen-menu-item"
-        type="button"
-        role="menuitem"
-        @click="toggleFullscreenMode"
-      >
-        <BaseIcon :path="fullscreenIcon" :size="22" />
-        <span>{{ fullscreenLabel }}</span>
-      </button>
-      <section class="menu-group" role="group" aria-labelledby="spiroanim-heading">
-        <h2 id="spiroanim-heading">SpiroAnim</h2>
-        <button
-          class="menu-link menu-action share-menu-item"
-          type="button"
-          role="menuitem"
-          @click="openShareDialog"
-        >
-          <BaseIcon :path="mdiShareVariantOutline" :size="22" />
-          <span>Share This</span>
-        </button>
-        <RouterLink
-          class="menu-link"
-          exact-active-class="menu-link--active"
-          role="menuitem"
-          to="/tips"
-          @click="closeMenu"
-        >
-          <BaseIcon :path="mdiLightbulbOnOutline" :size="22" />
-          <span>Tips</span>
-        </RouterLink>
-        <button
-          class="menu-link menu-action quick-slots-menu-item"
-          type="button"
-          role="menuitem"
-          @click="openQuickSlotSetsDialog"
-        >
-          <BaseIcon :path="mdiViewGridOutline" :size="22" />
-          <span>Quick Slots</span>
-        </button>
-        <template v-if="playerVisible">
-          <button
-            class="menu-link menu-action export-image-menu-item"
-            type="button"
-            role="menuitem"
-            @click="openExportImageDialog"
-          >
-            <BaseIcon :path="mdiPanoramaVariant" :size="22" />
-            <span>Export Image</span>
-          </button>
-          <button
-            class="menu-link menu-action export-video-menu-item"
-            :class="{ 'menu-action--unavailable': !videoExportAvailable }"
-            type="button"
-            role="menuitem"
-            :aria-disabled="!videoExportAvailable"
-            @click="openExportVideoDialog"
-          >
-            <BaseIcon :path="mdiMovieOpenOutline" :size="22" />
-            <span>Export Video</span>
-          </button>
-        </template>
-        <button
-          class="menu-link menu-action progressive-paths-menu-item"
-          type="button"
-          role="menuitem"
-          :aria-pressed="PROGRESSIVE_PATHS"
-          @click="toggleProgressivePaths"
-        >
-          <BaseIcon :path="mdiAnimationPlayOutline" :size="22" />
-          <span>{{ progressivePathsLabel }}</span>
-        </button>
-        <button
-          class="menu-link menu-action all-head-paths-menu-item"
-          type="button"
-          role="menuitem"
-          :aria-pressed="ALL_HEAD_PATHS"
-          @click="toggleAllHeadPaths"
-        >
-          <BaseIcon :path="mdiVectorPolyline" :size="22" />
-          <span>{{ allHeadPathsLabel }}</span>
-        </button>
-        <button
-          v-if="playerVisible"
-          class="menu-link menu-action tracer-menu-item"
-          type="button"
-          role="menuitem"
-          :aria-pressed="TRACER"
-          @click="toggleTracerMode"
-        >
-          <BaseIcon :path="tracerIcon" :size="22" />
-          <span>{{ tracerLabel }}</span>
-        </button>
-        <button
-          class="menu-link menu-action editor-access-menu-item"
-          type="button"
-          role="menuitem"
-          :aria-pressed="editorEnabled"
-          @click="toggleEditorAccess"
-        >
-          <BaseIcon :path="editorAccessIcon" :size="22" />
-          <span>{{ editorAccessLabel }}</span>
-        </button>
-      </section>
-      <section class="menu-group" role="group" aria-labelledby="navigation-heading">
-        <h2 id="navigation-heading">Navigation</h2>
-        <RouterLink
-          v-for="item in navigationLinks"
-          :key="item.path"
-          class="menu-link"
-          exact-active-class="menu-link--active"
-          role="menuitem"
-          :to="item.path"
-          @click="closeMenu"
-        >
-          <BaseIcon :path="item.icon" :size="22" />
-          <span>{{ item.label }}</span>
-        </RouterLink>
-        <PwaInstallControl variant="menu" @prompted="closeMenu" />
-      </section>
-      <div class="menu-footer" role="presentation">
-        <button
-          class="menu-link menu-action reset-menu-item"
-          type="button"
-          role="menuitem"
-          @click="openResetDialog"
-        >
-          <BaseIcon :path="mdiRestoreAlert" :size="22" />
-          <span>Reset App</span>
-        </button>
-      </div>
-    </div>
     <ShareDialog ref="shareDialog" />
     <QuickSlotSetsDialog ref="quickSlotSetsDialog" />
     <PwaResetDialog ref="resetDialog" />
@@ -200,8 +186,7 @@ import {
   mdiViewGridOutline,
   mdiVectorPolyline,
 } from '@mdi/js'
-import { onClickOutside, useFullscreen } from '@vueuse/core'
-import { useId } from 'vue'
+import { useFullscreen } from '@vueuse/core'
 import { RouterLink } from 'vue-router'
 
 import AppTooltip from '@/components/AppTooltip.vue'
@@ -213,6 +198,7 @@ import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
 import PwaResetDialog from '@/components/layout/PwaResetDialog.vue'
 import QuickSlotSetsDialog from '@/components/layout/QuickSlotSetsDialog.vue'
 import ShareDialog from '@/components/layout/ShareDialog.vue'
+import BasePopupMenu from '@/components/ui/BasePopupMenu.vue'
 import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 import { hasVideoExportApi, probeVideoExportCodecs } from '@/services/videoExportSupport'
 import { videoExportDurationMs } from '@/math/videoExportTiming'
@@ -238,17 +224,12 @@ const navigationLinks: MenuLink[] = [
 ]
 
 const isOpen = ref(false)
-const rootElement = ref<HTMLElement>()
-const triggerElement = ref<HTMLButtonElement>()
-const menuElement = ref<HTMLElement>()
 const shareDialog = ref<InstanceType<typeof ShareDialog>>()
 const quickSlotSetsDialog = ref<InstanceType<typeof QuickSlotSetsDialog>>()
 const resetDialog = ref<InstanceType<typeof PwaResetDialog>>()
 const exportImageDialog = ref<InstanceType<typeof ExportImageDialog>>()
 const exportVideoDialog = ref<InstanceType<typeof ExportVideoDialog>>()
 const exportVideoProgressDialog = ref<InstanceType<typeof ExportVideoProgressDialog>>()
-const triggerId = useId()
-const menuId = useId()
 const {
   isFullscreen,
   isSupported: isFullscreenSupported,
@@ -405,61 +386,6 @@ function cancelVideoExport() {
   }
 }
 
-function toggleMenu() {
-  isOpen.value = !isOpen.value
-}
-
-async function openAndFocusFirst() {
-  isOpen.value = true
-  await nextTick()
-  menuItems()[0]?.focus()
-}
-
-function closeAndFocusTrigger() {
-  closeMenu()
-  triggerElement.value?.focus()
-}
-
-function menuItems(): HTMLElement[] {
-  return Array.from(menuElement.value?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
-}
-
-function focusRelativeItem(direction: 1 | -1) {
-  const items = menuItems()
-  if (items.length === 0) return
-
-  const currentIndex = items.indexOf(document.activeElement as HTMLElement)
-  const nextIndex = currentIndex < 0 ? 0 : (currentIndex + direction + items.length) % items.length
-  items[nextIndex]?.focus()
-}
-
-function onMenuKeydown(event: KeyboardEvent) {
-  switch (event.key) {
-    case 'Escape':
-      event.preventDefault()
-      closeAndFocusTrigger()
-      break
-    case 'ArrowDown':
-      event.preventDefault()
-      focusRelativeItem(1)
-      break
-    case 'ArrowUp':
-      event.preventDefault()
-      focusRelativeItem(-1)
-      break
-    case 'Home':
-      event.preventDefault()
-      menuItems()[0]?.focus()
-      break
-    case 'End':
-      event.preventDefault()
-      menuItems().at(-1)?.focus()
-      break
-  }
-}
-
-onClickOutside(rootElement, closeMenu)
-
 onMounted(async () => {
   if (!hasVideoExportApi()) return
   const codecs = await probeVideoExportCodecs({
@@ -475,23 +401,16 @@ onMounted(async () => {
 <style scoped>
 .app-navigation-menu {
   position: absolute;
-  inset-block-start: 1px;
-  inset-inline-start: 1px;
+  inset-block-start: var(--space-workspace-corner-control);
+  inset-inline-start: var(--space-workspace-corner-control);
   z-index: 3000;
 }
 
-.menu-trigger {
-  position: relative;
-  display: grid;
-  width: var(--size-editor-toolbar-height);
-  height: calc(var(--size-editor-toolbar-height) - 1px);
-  padding: var(--space-1);
-  place-items: center;
-  color: var(--color-action-primary);
-  background: color-mix(in srgb, var(--color-surface) 58%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
-  border-radius: var(--radius-sm);
-  backdrop-filter: blur(0.45rem);
+.app-navigation-menu__popup {
+  --popup-menu-panel-width: min(18rem, calc(100vw - var(--space-8)));
+  --popup-menu-panel-max-height: calc(
+    100dvh - var(--size-editor-toolbar-height) - var(--space-4) - var(--safe-area-inset-bottom)
+  );
 }
 
 .site-mark {
@@ -517,42 +436,8 @@ onMounted(async () => {
   transition: transform var(--transition-fast);
 }
 
-.menu-trigger[aria-expanded='true'] {
-  background: color-mix(in srgb, var(--color-action-primary) 14%, var(--color-surface));
-  border-color: var(--color-action-primary);
-}
-
-.menu-trigger[aria-expanded='true'] .menu-chevron {
+.menu-chevron--open {
   transform: rotate(180deg);
-}
-
-.menu-trigger:hover {
-  background: color-mix(in srgb, var(--color-action-primary) 10%, var(--color-surface));
-  border-color: var(--color-action-primary);
-}
-
-.menu-trigger:focus-visible {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: -2px;
-}
-
-.menu-panel {
-  position: absolute;
-  inset-block-start: calc(var(--size-editor-toolbar-height) + var(--space-2));
-  inset-inline-start: 0;
-  width: min(18rem, calc(100vw - var(--space-8)));
-  max-height: calc(
-    100dvh - var(--size-editor-toolbar-height) - var(--space-4) - var(--safe-area-inset-bottom)
-  );
-  padding: var(--space-2);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 1rem 3rem color-mix(in srgb, var(--color-text) 24%, transparent);
-  backdrop-filter: blur(1rem);
 }
 
 .menu-group h2 {
@@ -574,13 +459,6 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 1.5rem 1fr;
   gap: var(--space-3);
-  min-height: 2.75rem;
-  align-items: center;
-  padding-inline: var(--space-3);
-  color: var(--color-text);
-  font-weight: 700;
-  text-decoration: none;
-  border-radius: var(--radius-sm);
 }
 
 .menu-action {
@@ -603,16 +481,9 @@ onMounted(async () => {
   background: color-mix(in srgb, var(--color-surface) 70%, transparent);
 }
 
-.menu-link:hover,
-.menu-link:focus-visible,
 .menu-link--active {
   color: var(--color-action-primary);
   background: color-mix(in srgb, var(--color-action-primary) 10%, transparent);
-}
-
-.menu-link:focus-visible {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: -2px;
 }
 
 .reset-menu-item {
@@ -626,8 +497,8 @@ onMounted(async () => {
 }
 
 @media (max-width: 32rem) {
-  .menu-panel {
-    width: min(18rem, calc(100vw - var(--space-6)));
+  .app-navigation-menu__popup {
+    --popup-menu-panel-width: min(18rem, calc(100vw - var(--space-6)));
   }
 }
 

@@ -10,13 +10,18 @@ describe('PlayerProgress', () => {
     const dimensions = reactive({ width: 320, height: 180 })
     const wrapper = mount(PlayerProgress, {
       props: { store: 'progress-compact', compact: true },
-      slots: { play: '<button>Play</button>', mode: '<button>Mode</button>' },
+      slots: {
+        play: '<button>Play</button>',
+        mode: '<button>Mode</button>',
+        end: '<button>Free Camera</button>',
+      },
       global: { provide: { dim: dimensions } },
     })
 
     expect(wrapper.get('.slider').classes()).toContain('slider--compact')
     expect(wrapper.text()).toContain('Play')
     expect(wrapper.text()).not.toContain('Mode')
+    expect(wrapper.text()).toContain('Free Camera')
     expect((wrapper.get('.slider').element as HTMLElement).style.width).toBe('320px')
     expect(wrapper.findAll('.slider-control')).toHaveLength(2)
 
@@ -24,6 +29,22 @@ describe('PlayerProgress', () => {
     await nextTick()
 
     expect((wrapper.get('.slider').element as HTMLElement).style.width).toBe('480px')
+  })
+
+  it('reserves compact end space for an adjacent pane control', () => {
+    const wrapper = mount(PlayerProgress, {
+      props: {
+        store: 'progress-compact-clearance',
+        compact: true,
+        compactEndClearance: 'calc(var(--size-pane-switch-button) + var(--space-2))',
+      },
+      global: { provide: { dim: { width: 320, height: 180 } } },
+    })
+    const style = (wrapper.get('.slider').element as HTMLElement).style
+
+    expect(style.width).toContain('320px')
+    expect(style.width).toContain('var(--size-pane-switch-button)')
+    expect(style.right).toBe('calc(var(--size-pane-switch-button) + var(--space-2))')
   })
 
   beforeEach(() => {

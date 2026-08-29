@@ -38,6 +38,7 @@ describe('useConceptsStore', () => {
     expect(store.quickSlotCount).toBe(0)
     expect(store.selectedQuickSlot).toBeNull()
     expect(store.quickSlotPaths).toEqual([])
+    expect(store.vtgAdvanced).toBe(false)
     expect(store.qtrEnabled).toBe(false)
     expect(store.speedRatio).toBe('1:3')
     expect(store.swapProps).toBe(false)
@@ -70,7 +71,6 @@ describe('useConceptsStore', () => {
     expect(store.vtgFoldAlternate).toEqual([false, false])
     expect(store.vtgFoldSpan).toBe('eighth')
     expect(store.vtgFoldMirror).toBe(true)
-    expect(store.vtgPropertiesExpanded).toBe(false)
     expect(store.vtgActiveProperty).toBeNull()
     app.unmount()
   })
@@ -111,8 +111,7 @@ describe('useConceptsStore', () => {
     first.store.vtgFoldAlternate = [true, false]
     first.store.vtgFoldSpan = 'quarter'
     first.store.vtgFoldValuesMaterialized = true
-    first.store.vtgPropertiesExpanded = true
-    first.store.vtgActiveProperty = 'axis'
+    first.store.vtgActiveProperty = 'offset'
     first.app.unmount()
 
     const second = mountStore()
@@ -125,8 +124,7 @@ describe('useConceptsStore', () => {
     expect(second.store.vtgFoldAlternate).toEqual([false, false])
     expect(second.store.vtgFoldSpan).toBe('eighth')
     expect(second.store.vtgFoldValuesMaterialized).toBe(false)
-    expect(second.store.vtgPropertiesExpanded).toBe(true)
-    expect(second.store.vtgActiveProperty).toBe('axis')
+    expect(second.store.vtgActiveProperty).toBe('offset')
     second.app.unmount()
   })
 
@@ -139,6 +137,16 @@ describe('useConceptsStore', () => {
     const second = mountStore()
     expect(second.store.classicLayout).toBe(false)
     expect(second.store.elementalLayout).toBe(true)
+    second.app.unmount()
+  })
+
+  it('persists the VTG Advanced preference', () => {
+    const first = mountStore()
+    first.store.vtgAdvanced = true
+    first.app.unmount()
+
+    const second = mountStore()
+    expect(second.store.vtgAdvanced).toBe(true)
     second.app.unmount()
   })
 

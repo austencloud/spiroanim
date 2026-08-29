@@ -63,6 +63,8 @@
         :builder-full-catalog="builderFullCatalog"
         :builder-full-catalog-forced="builderFullCatalogForced"
         :builder-full-grid="builderFullGrid"
+        :docs-return-path="currentRoute.fullPath"
+        :pane="parents.concepts"
         data-type="concepts"
         data-role="concepts-view"
         @pattern-select="applyConceptPattern"
@@ -143,6 +145,7 @@ const splitterStore = useSplitterStore('main')
 const { leftWidth, leftHeight, rightWidth, rightHeight, leftPerc } = storeToRefs(splitterStore)
 
 const paneStore = useMainPaneStore()
+const currentRoute = useRoute()
 useEditorPaneAvailability()
 const playerStore = usePlayerStore('main')
 const conceptsStore = useConceptsStore()

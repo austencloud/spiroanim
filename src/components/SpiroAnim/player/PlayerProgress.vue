@@ -61,18 +61,27 @@
         />
       </template>
     </div>
-    <div v-if="!compact" class="slider-control"><slot name="mode" /></div>
-    <div v-else class="slider-control" aria-hidden="true" />
+    <div class="slider-control">
+      <slot v-if="compact" name="end" />
+      <slot v-else name="mode" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
-const props = defineProps<{
-  store: string
-  compact?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    store: string
+    compact?: boolean
+    compactEndClearance?: string
+  }>(),
+  {
+    compact: false,
+    compactEndClearance: '0px',
+  },
+)
 
 const playerStore = usePlayerStore(props.store)
 const { CURRENT } = playerStore.raw()
@@ -216,12 +225,19 @@ const positionFillStyle = computed<CSSProperties>(() => {
   }
 })
 
-const sliderStyle = computed<CSSProperties>(() => ({
-  width: `${Math.max((dim?.width ?? 0) - (props.compact ? 0 : 34), 0)}px`,
-  position: 'absolute',
-  bottom: props.compact ? 'var(--space-2)' : 'var(--space-workspace-bottom-offset)',
-  right: '0px',
-}))
+const sliderStyle = computed<CSSProperties>(() => {
+  const width = Math.max((dim?.width ?? 0) - (props.compact ? 0 : 34), 0)
+  const hasCompactClearance = props.compact && props.compactEndClearance !== '0px'
+
+  return {
+    width: hasCompactClearance
+      ? `max(0px, calc(${width}px - ${props.compactEndClearance}))`
+      : `${width}px`,
+    position: 'absolute',
+    bottom: props.compact ? 'var(--space-2)' : 'var(--space-workspace-bottom-offset)',
+    right: hasCompactClearance ? props.compactEndClearance : '0px',
+  }
+})
 </script>
 
 <style scoped>

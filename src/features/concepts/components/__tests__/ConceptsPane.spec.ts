@@ -14,6 +14,7 @@ describe('ConceptsPane', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+    useConceptsStore().vtgAdvanced = true
     scrollIntoView.mockClear()
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
       configurable: true,
@@ -31,6 +32,17 @@ describe('ConceptsPane', () => {
 
     expect(store.selectedQuickSlot).toBe(3)
     expect(wrapper.get<HTMLInputElement>('input[value="3"]').element.checked).toBe(true)
+  })
+
+  it('keeps Docs pinned below the app menu only in the left pane', async () => {
+    const wrapper = mount(ConceptsPane, { props: { pane: 'left' } })
+    const docsAnchor = wrapper.get('[data-role="concept-docs-anchor"]')
+
+    expect(docsAnchor.classes()).toContain('concepts-pane__docs-anchor--below-navigation')
+
+    await wrapper.setProps({ pane: 'right' })
+
+    expect(docsAnchor.classes()).not.toContain('concepts-pane__docs-anchor--below-navigation')
   })
 
   it('requests the current pattern when an empty Quick Slot is selected', async () => {
@@ -90,8 +102,9 @@ describe('ConceptsPane', () => {
     ])
     expect(wrapper.findAll('[data-role^="quick-slot-"]')).toHaveLength(6)
     expect(wrapper.findAll('input[name="quick-slot"]')).toHaveLength(4)
-    expect(pane.element.children[0]?.getAttribute('data-role')).toBe('quick-slots')
-    expect(pane.element.children[1]?.querySelector('[data-role="concept-selector"]')).not.toBeNull()
+    expect(pane.element.children[0]?.getAttribute('data-role')).toBe('concept-docs-anchor')
+    expect(pane.element.children[1]?.getAttribute('data-role')).toBe('quick-slots')
+    expect(pane.element.children[2]?.querySelector('[data-role="concept-selector"]')).not.toBeNull()
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-concept')).toBe('vtg')
     const vtgCustomize = wrapper.get<HTMLDetailsElement>('[data-role="vtg-customize"]')
     expect(vtgCustomize.element.open).toBe(false)

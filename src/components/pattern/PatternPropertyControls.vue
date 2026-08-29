@@ -1,287 +1,379 @@
 <template>
-  <details
+  <section
     ref="rootElement"
     class="pattern-property-controls"
-    :open="propertiesExpanded"
     :data-role="`${context}-properties`"
     :data-context="context"
-    @toggle="emitPropertiesExpanded"
   >
-    <summary :data-role="`${context}-properties-toggle`">PROPERTIES...</summary>
-    <div class="pattern-property-controls__content">
-      <div v-for="property in visibleProperties" :key="property.key">
-        <BaseTooltip
-          class="pattern-property-controls__property-tooltip"
-          :text="propertyTooltip(property)"
-          :disabled="touchDevice || (property.key !== 'axis' && property.key !== 'twist')"
-        >
-          <template #activator="{ props: tooltipProps }">
-            <button
-              v-bind="tooltipProps"
-              :id="`${controlId}-${property.key}-toggle`"
-              class="pattern-property-controls__toggle"
-              type="button"
-              :aria-expanded="activeProperty === property.key"
-              :aria-controls="`${controlId}-${property.key}-controls`"
-              :data-role="`${context}-property-${property.key}-toggle`"
-              @click="toggleProperty(property.key)"
+    <div
+      class="pattern-property-controls__tabs"
+      role="tablist"
+      aria-label="Pattern properties"
+      @click="collapseFromTabRow"
+    >
+      <BaseTooltip
+        v-for="property in visibleProperties"
+        :key="property.key"
+        class="pattern-property-controls__property-tooltip"
+        :text="propertyTooltip(property)"
+        :disabled="touchDevice || !propertyTooltip(property)"
+      >
+        <template #activator="{ props: tooltipProps }">
+          <button
+            v-bind="tooltipProps"
+            :id="`${controlId}-${property.key}-toggle`"
+            class="pattern-property-controls__toggle"
+            type="button"
+            role="tab"
+            :aria-selected="activeProperty === property.key"
+            :aria-expanded="activeProperty === property.key"
+            :aria-controls="`${controlId}-${property.key}-controls`"
+            :data-role="`${context}-property-${property.key}-toggle`"
+            @click="toggleProperty(property.key)"
+          >
+            {{ propertyLabel(property) }}
+          </button>
+        </template>
+      </BaseTooltip>
+      <button
+        v-if="activeProperty !== null"
+        class="pattern-property-controls__collapse"
+        type="button"
+        aria-label="Collapse property controls"
+        :data-role="`${context}-properties-collapse`"
+        @click.stop="emit('update:activeProperty', null)"
+      >
+        -
+      </button>
+    </div>
+    <div
+      v-for="property in visibleProperties"
+      v-show="activeProperty === property.key"
+      :id="`${controlId}-${property.key}-controls`"
+      :key="property.key"
+      class="pattern-property-controls__panel"
+      role="tabpanel"
+      :aria-labelledby="`${controlId}-${property.key}-toggle`"
+      :data-role="`${context}-property-${property.key}-controls`"
+    >
+      <template v-if="property.key === 'offset'">
+        <div class="pattern-property-controls__twist-columns">
+          <section
+            v-for="(label, propIndex) in propLabels"
+            :key="label"
+            class="pattern-property-controls__twist-column pattern-property-controls__offset-column"
+            :aria-label="`${label} Offset`"
+          >
+            <h3 class="pattern-property-controls__offset-heading">{{ label }}</h3>
+            <div
+              class="pattern-property-controls__offset-controls"
+              :class="{
+                'pattern-property-controls__twist-frame--inherited': !offsetIsSet(propIndex),
+                'pattern-property-controls__offset-controls--set': offsetIsSet(propIndex),
+                'pattern-property-controls__offset-controls--stepper': !sliders,
+              }"
             >
-              {{ propertyLabel(property) }}
-            </button>
-          </template>
-        </BaseTooltip>
-        <div
-          v-show="activeProperty === property.key"
-          :id="`${controlId}-${property.key}-controls`"
-          class="pattern-property-controls__panel"
-          role="region"
-          :aria-labelledby="`${controlId}-${property.key}-toggle`"
-          :data-role="`${context}-property-${property.key}-controls`"
-        >
-          <template v-if="property.key === 'axis'">
-            <div class="pattern-property-controls__fold-options">
-              <div class="pattern-property-controls__fold-option-row">
-                <fieldset class="pattern-property-controls__option-group">
-                  <legend class="pattern-property-controls__visually-hidden">Folds detail</legend>
-                  <label v-for="mode in foldModes" :key="mode">
-                    <input
-                      type="radio"
-                      :name="`${controlId}-fold-mode`"
-                      :checked="foldMode === mode"
-                      @change="emit('update:foldMode', mode)"
-                    />
-                    <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
-                  </label>
-                </fieldset>
-              </div>
-              <div v-if="foldMode === 'simple'" class="pattern-property-controls__fold-option-row">
-                <fieldset class="pattern-property-controls__option-group">
-                  <legend class="pattern-property-controls__visually-hidden">Fold span</legend>
-                  <label v-for="span in foldSpans" :key="span">
-                    <input
-                      type="radio"
-                      :name="`${controlId}-fold-span`"
-                      :checked="foldSpan === span"
-                      @change="emit('update:foldSpan', span)"
-                    />
-                    <span>{{ span === 'quarter' ? 'Quarter' : 'Eighth' }}</span>
-                  </label>
-                </fieldset>
-                <fieldset class="pattern-property-controls__option-group">
-                  <legend class="pattern-property-controls__visually-hidden">Fold mirroring</legend>
-                  <label>
-                    <input
-                      type="checkbox"
-                      :checked="foldMirror"
-                      aria-label="Mirror folds"
-                      @change="emitFoldMirror"
-                    />
-                    <span>Mirror</span>
-                  </label>
-                </fieldset>
-              </div>
-            </div>
-            <div class="pattern-property-controls__twist-columns">
-              <section
-                v-for="(column, propIndex) in foldColumns"
-                :key="column.label"
-                class="pattern-property-controls__twist-column"
-                :aria-label="`${column.label} Folds`"
+              <input
+                v-if="sliders"
+                type="range"
+                min="-90"
+                max="90"
+                step="90"
+                :value="offsetSliderValue(offsetValue(propIndex))"
+                :aria-valuetext="`${offsetValue(propIndex)}°`"
+                :aria-label="`${label} offset`"
+                :data-role="`${context}-offset-${propIndex}`"
+                @input="setOffsetFromSlider(propIndex, $event)"
+              />
+              <ConceptStepper
+                v-else
+                :model-value="offsetValue(propIndex)"
+                :min="-90"
+                :max="90"
+                :step="90"
+                :label="`${label} offset`"
+                :data-role="`${context}-offset-${propIndex}-stepper`"
+                :display-value="`${offsetValue(propIndex)}°`"
+                @update:model-value="setOffsetFromStepper(propIndex, $event)"
+              />
+              <input
+                class="pattern-property-controls__offset-input"
+                type="text"
+                inputmode="numeric"
+                :value="offsetDraftValues[propIndex]"
+                :aria-label="`${label} offset value`"
+                :data-role="`${context}-offset-${propIndex}-input`"
+                @focus="focusOffset(propIndex)"
+                @input="setOffsetFromText(propIndex, $event)"
+                @blur="blurOffset(propIndex)"
+              />
+              <button
+                type="button"
+                class="pattern-property-controls__delete"
+                :disabled="!offsetIsSet(propIndex)"
+                :aria-label="`Clear ${label} offset`"
+                @click="clearOffset(propIndex)"
               >
-                <header class="pattern-property-controls__twist-header">
-                  <span>Beat</span>
-                  <h3>{{ foldMirror && foldMode === 'simple' ? '' : column.label }}</h3>
-                  <span>Value</span>
-                </header>
-                <div v-if="foldMode === 'simple'" class="pattern-property-controls__fold-schedule">
-                  <fieldset class="pattern-property-controls__option-group">
-                    <legend class="pattern-property-controls__visually-hidden">
-                      {{ column.label }} folds repetition
-                    </legend>
-                    <label>
-                      <input
-                        type="checkbox"
-                        :checked="foldRepeat[propIndex]"
-                        @change="emitFoldRepeat(propIndex, $event)"
-                      />
-                      <span>Repeat</span>
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        :checked="foldAlternate[propIndex]"
-                        :disabled="!foldRepeat[propIndex]"
-                        @change="emitFoldAlternate(propIndex, $event)"
-                      />
-                      <span>Alternate</span>
-                    </label>
-                  </fieldset>
-                  <div class="pattern-property-controls__fold-timing">
-                    <label class="pattern-property-controls__select">
-                      <span>{{ foldRepeat[propIndex] ? 'Start' : 'Beat' }}</span>
-                      <select
-                        :value="foldBeat[propIndex]"
-                        :aria-label="`${column.label} folds ${foldRepeat[propIndex] ? 'start' : 'beat'}`"
-                        @change="emitFoldBeat(propIndex, $event)"
-                      >
-                        <option v-for="beat in foldBeatOptions" :key="beat" :value="beat">
-                          {{ formatBeat(beat) }}
-                        </option>
-                      </select>
-                    </label>
-                    <label v-if="foldRepeat[propIndex]" class="pattern-property-controls__select">
-                      <span>Every</span>
-                      <select
-                        :value="foldEvery[propIndex]"
-                        :aria-label="`${column.label} repeat folds every`"
-                        @change="emitFoldEvery(propIndex, $event)"
-                      >
-                        <option v-for="beat in foldEveryOptions" :key="beat" :value="beat">
-                          {{ formatBeat(beat) }}
-                        </option>
-                      </select>
-                    </label>
-                  </div>
-                </div>
-                <div
-                  v-for="frame in column.frames"
-                  :key="frame.index"
-                  class="pattern-property-controls__fold-frame"
-                >
-                  <span class="pattern-property-controls__beat">{{ formatBeat(frame.beat) }}</span>
-                  <div class="pattern-property-controls__fold-controls">
-                    <label
-                      v-for="fold in folds"
-                      :key="fold.key"
-                      class="pattern-property-controls__fold-control"
-                      :class="{
-                        'pattern-property-controls__twist-frame--inherited':
-                          frame.values[fold.key] === undefined,
-                        'pattern-property-controls__value-set':
-                          frame.values[fold.key] !== undefined,
-                        'pattern-property-controls__fold-control--stepper': !sliders,
-                      }"
-                    >
-                      <span>{{ fold.label }}</span>
-                      <input
-                        v-if="sliders"
-                        type="range"
-                        min="0"
-                        :max="angleOptions(fold.min, fold.max).length - 1"
-                        step="1"
-                        :value="angleSliderIndex(frame.displayValues[fold.key], fold.min, fold.max)"
-                        :aria-valuetext="`${frame.displayValues[fold.key]}°`"
-                        :aria-label="`${column.label} ${fold.label} at beat ${formatBeat(frame.beat)}`"
-                        @input="setFold(propIndex, frame.beat, fold.key, $event)"
-                      />
-                      <ConceptStepper
-                        v-else
-                        :model-value="frame.displayValues[fold.key]"
-                        :label="`${column.label} ${fold.label} at beat ${formatBeat(frame.beat)}`"
-                        :data-role="`${context}-${fold.key}-${propIndex}-${frame.index}-stepper`"
-                        :min="fold.min"
-                        :max="fold.max"
-                        :step="90"
-                        :display-value="`${frame.displayValues[fold.key]}°`"
-                        @update:model-value="emitFoldValue(propIndex, frame.beat, fold.key, $event)"
-                      />
-                      <output v-if="sliders">{{ frame.displayValues[fold.key] }}°</output>
-                      <button
-                        type="button"
-                        class="pattern-property-controls__delete"
-                        :disabled="frame.values[fold.key] === undefined"
-                        :aria-label="`Clear ${column.label} ${fold.label} at beat ${formatBeat(frame.beat)}`"
-                        @click="clearFold(propIndex, frame.beat, fold.key)"
-                      >
-                        <BaseIcon :path="mdiTrashCanOutline" :size="18" />
-                      </button>
-                    </label>
-                  </div>
-                </div>
-              </section>
+                <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+              </button>
             </div>
-          </template>
-          <template v-else-if="property.key === 'twist'">
-            <fieldset
-              class="pattern-property-controls__option-group pattern-property-controls__twist-mode"
-            >
-              <legend class="pattern-property-controls__visually-hidden">Twist detail</legend>
-              <label v-for="mode in twistModes" :key="mode">
+          </section>
+        </div>
+      </template>
+      <template v-else-if="property.key === 'axis'">
+        <p
+          v-if="context === 'vtg'"
+          class="pattern-property-controls__usage-note"
+          :data-role="`${context}-property-axis-note`"
+        >
+          For Static Props, allowing off-axis turns
+        </p>
+        <div class="pattern-property-controls__fold-options">
+          <div class="pattern-property-controls__fold-option-row">
+            <fieldset class="pattern-property-controls__option-group">
+              <legend class="pattern-property-controls__visually-hidden">Folds detail</legend>
+              <label v-for="mode in foldModes" :key="mode">
                 <input
                   type="radio"
-                  :name="`${controlId}-twist-mode`"
-                  :value="mode"
-                  :checked="twistMode === mode"
-                  @change="emit('update:twistMode', mode)"
+                  :name="`${controlId}-fold-mode`"
+                  :checked="foldMode === mode"
+                  @change="emit('update:foldMode', mode)"
                 />
                 <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
               </label>
             </fieldset>
-            <div class="pattern-property-controls__twist-columns">
-              <section
-                v-for="(column, propIndex) in twistColumns"
-                :key="column.label"
-                class="pattern-property-controls__twist-column"
-                :aria-label="`${column.label} Twist`"
-              >
-                <header class="pattern-property-controls__twist-header">
-                  <span>Beat</span>
-                  <h3>{{ column.label }}</h3>
-                  <span>Value</span>
-                </header>
+          </div>
+          <div v-if="foldMode === 'simple'" class="pattern-property-controls__fold-option-row">
+            <fieldset class="pattern-property-controls__option-group">
+              <legend class="pattern-property-controls__visually-hidden">Fold span</legend>
+              <label v-for="span in foldSpans" :key="span">
+                <input
+                  type="radio"
+                  :name="`${controlId}-fold-span`"
+                  :checked="foldSpan === span"
+                  @change="emit('update:foldSpan', span)"
+                />
+                <span>{{ span === 'quarter' ? 'Quarter' : 'Eighth' }}</span>
+              </label>
+            </fieldset>
+            <fieldset class="pattern-property-controls__option-group">
+              <legend class="pattern-property-controls__visually-hidden">Fold mirroring</legend>
+              <label>
+                <input
+                  type="checkbox"
+                  :checked="foldMirror"
+                  aria-label="Mirror folds"
+                  @change="emitFoldMirror"
+                />
+                <span>Mirror</span>
+              </label>
+            </fieldset>
+          </div>
+        </div>
+        <div class="pattern-property-controls__twist-columns">
+          <section
+            v-for="(column, propIndex) in foldColumns"
+            :key="column.label"
+            class="pattern-property-controls__twist-column"
+            :aria-label="`${column.label} Folds`"
+          >
+            <header class="pattern-property-controls__twist-header">
+              <span>Beat</span>
+              <h3>{{ foldMirror && foldMode === 'simple' ? '' : column.label }}</h3>
+              <span>Value</span>
+            </header>
+            <div v-if="foldMode === 'simple'" class="pattern-property-controls__fold-schedule">
+              <fieldset class="pattern-property-controls__option-group">
+                <legend class="pattern-property-controls__visually-hidden">
+                  {{ column.label }} folds repetition
+                </legend>
+                <label>
+                  <input
+                    type="checkbox"
+                    :checked="foldRepeat[propIndex]"
+                    @change="emitFoldRepeat(propIndex, $event)"
+                  />
+                  <span>Repeat</span>
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    :checked="foldAlternate[propIndex]"
+                    :disabled="!foldRepeat[propIndex]"
+                    @change="emitFoldAlternate(propIndex, $event)"
+                  />
+                  <span>Alternate</span>
+                </label>
+              </fieldset>
+              <div class="pattern-property-controls__fold-timing">
+                <label class="pattern-property-controls__select">
+                  <span>{{ foldRepeat[propIndex] ? 'Start' : 'Beat' }}</span>
+                  <select
+                    :value="foldBeat[propIndex]"
+                    :aria-label="`${column.label} folds ${foldRepeat[propIndex] ? 'start' : 'beat'}`"
+                    @change="emitFoldBeat(propIndex, $event)"
+                  >
+                    <option v-for="beat in foldBeatOptions" :key="beat" :value="beat">
+                      {{ formatBeat(beat) }}
+                    </option>
+                  </select>
+                </label>
+                <label v-if="foldRepeat[propIndex]" class="pattern-property-controls__select">
+                  <span>Every</span>
+                  <select
+                    :value="foldEvery[propIndex]"
+                    :aria-label="`${column.label} repeat folds every`"
+                    @change="emitFoldEvery(propIndex, $event)"
+                  >
+                    <option v-for="beat in foldEveryOptions" :key="beat" :value="beat">
+                      {{ formatBeat(beat) }}
+                    </option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <div
+              v-for="frame in column.frames"
+              :key="frame.index"
+              class="pattern-property-controls__fold-frame"
+            >
+              <span class="pattern-property-controls__beat">{{ formatBeat(frame.beat) }}</span>
+              <div class="pattern-property-controls__fold-controls">
                 <label
-                  v-for="frame in column.frames"
-                  :key="frame.index"
-                  class="pattern-property-controls__twist-frame"
+                  v-for="fold in folds"
+                  :key="fold.key"
+                  class="pattern-property-controls__fold-control"
                   :class="{
-                    'pattern-property-controls__twist-frame--inherited': !frame.isSet,
-                    'pattern-property-controls__value-set': frame.isSet,
-                    'pattern-property-controls__twist-frame--stepper': !sliders,
+                    'pattern-property-controls__twist-frame--inherited':
+                      frame.values[fold.key] === undefined,
+                    'pattern-property-controls__value-set': frame.values[fold.key] !== undefined,
+                    'pattern-property-controls__fold-control--stepper': !sliders,
                   }"
                 >
-                  <span class="pattern-property-controls__beat">{{ formatBeat(frame.beat) }}</span>
+                  <span>{{ fold.label }}</span>
                   <input
                     v-if="sliders"
                     type="range"
                     min="0"
-                    :max="angleOptions(-360, 360).length - 1"
+                    :max="angleOptions(fold.min, fold.max).length - 1"
                     step="1"
-                    :value="angleSliderIndex(frame.value, -360, 360)"
-                    :aria-valuetext="`${frame.value}°`"
-                    :aria-label="`${column.label} Twist at beat ${formatBeat(frame.beat)}`"
-                    :data-role="`${context}-twist-${propIndex}-${frame.index}`"
-                    @input="setTwist(propIndex, frame.index, $event)"
+                    :value="angleSliderIndex(frame.displayValues[fold.key], fold.min, fold.max)"
+                    :aria-valuetext="`${frame.displayValues[fold.key]}°`"
+                    :aria-label="`${column.label} ${fold.label} at beat ${formatBeat(frame.beat)}`"
+                    @input="setFold(propIndex, frame.beat, fold.key, $event)"
                   />
                   <ConceptStepper
                     v-else
-                    :model-value="frame.value"
-                    :label="`${column.label} Twist at beat ${formatBeat(frame.beat)}`"
-                    :data-role="`${context}-twist-${propIndex}-${frame.index}-stepper`"
-                    :min="-360"
-                    :max="360"
+                    :model-value="frame.displayValues[fold.key]"
+                    :label="`${column.label} ${fold.label} at beat ${formatBeat(frame.beat)}`"
+                    :data-role="`${context}-${fold.key}-${propIndex}-${frame.index}-stepper`"
+                    :min="fold.min"
+                    :max="fold.max"
                     :step="90"
-                    :display-value="`${frame.value}°`"
-                    @update:model-value="emitTwistValue(propIndex, frame.beat, $event)"
+                    :display-value="`${frame.displayValues[fold.key]}°`"
+                    @update:model-value="emitFoldValue(propIndex, frame.beat, fold.key, $event)"
                   />
-                  <output v-if="sliders">{{ frame.value }}°</output>
+                  <output v-if="sliders">{{ frame.displayValues[fold.key] }}°</output>
                   <button
                     type="button"
                     class="pattern-property-controls__delete"
-                    :disabled="!frame.isSet"
-                    :aria-label="`Clear ${column.label} Twist at beat ${formatBeat(frame.beat)}`"
-                    @click="clearTwist(propIndex, frame.index)"
+                    :disabled="frame.values[fold.key] === undefined"
+                    :aria-label="`Clear ${column.label} ${fold.label} at beat ${formatBeat(frame.beat)}`"
+                    @click="clearFold(propIndex, frame.beat, fold.key)"
                   >
                     <BaseIcon :path="mdiTrashCanOutline" :size="18" />
                   </button>
                 </label>
-              </section>
+              </div>
             </div>
-          </template>
-          <p v-else>{{ propertyName(property) }} controls will go here.</p>
+          </section>
         </div>
-      </div>
+      </template>
+      <template v-else-if="property.key === 'twist'">
+        <p
+          class="pattern-property-controls__usage-note"
+          :data-role="`${context}-property-twist-note`"
+        >
+          For Roll-Sensitive Props, like Fans and Triads
+        </p>
+        <fieldset
+          class="pattern-property-controls__option-group pattern-property-controls__twist-mode"
+        >
+          <legend class="pattern-property-controls__visually-hidden">Twist detail</legend>
+          <label v-for="mode in twistModes" :key="mode">
+            <input
+              type="radio"
+              :name="`${controlId}-twist-mode`"
+              :value="mode"
+              :checked="twistMode === mode"
+              @change="emit('update:twistMode', mode)"
+            />
+            <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
+          </label>
+        </fieldset>
+        <div class="pattern-property-controls__twist-columns">
+          <section
+            v-for="(column, propIndex) in twistColumns"
+            :key="column.label"
+            class="pattern-property-controls__twist-column"
+            :aria-label="`${column.label} Twist`"
+          >
+            <header class="pattern-property-controls__twist-header">
+              <span>Beat</span>
+              <h3>{{ column.label }}</h3>
+              <span>Value</span>
+            </header>
+            <label
+              v-for="frame in column.frames"
+              :key="frame.index"
+              class="pattern-property-controls__twist-frame"
+              :class="{
+                'pattern-property-controls__twist-frame--inherited': !frame.isSet,
+                'pattern-property-controls__value-set': frame.isSet,
+                'pattern-property-controls__twist-frame--stepper': !sliders,
+              }"
+            >
+              <span class="pattern-property-controls__beat">{{ formatBeat(frame.beat) }}</span>
+              <input
+                v-if="sliders"
+                type="range"
+                min="0"
+                :max="angleOptions(-360, 360).length - 1"
+                step="1"
+                :value="angleSliderIndex(frame.value, -360, 360)"
+                :aria-valuetext="`${frame.value}°`"
+                :aria-label="`${column.label} Twist at beat ${formatBeat(frame.beat)}`"
+                :data-role="`${context}-twist-${propIndex}-${frame.index}`"
+                @input="setTwist(propIndex, frame.index, $event)"
+              />
+              <ConceptStepper
+                v-else
+                :model-value="frame.value"
+                :label="`${column.label} Twist at beat ${formatBeat(frame.beat)}`"
+                :data-role="`${context}-twist-${propIndex}-${frame.index}-stepper`"
+                :min="-360"
+                :max="360"
+                :step="90"
+                :display-value="`${frame.value}°`"
+                @update:model-value="emitTwistValue(propIndex, frame.beat, $event)"
+              />
+              <output v-if="sliders">{{ frame.value }}°</output>
+              <button
+                type="button"
+                class="pattern-property-controls__delete"
+                :disabled="!frame.isSet"
+                :aria-label="`Clear ${column.label} Twist at beat ${formatBeat(frame.beat)}`"
+                @click="clearTwist(propIndex, frame.index)"
+              >
+                <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+              </button>
+            </label>
+          </section>
+        </div>
+      </template>
+      <p v-else>{{ propertyName(property) }} controls will go here.</p>
     </div>
-  </details>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -303,6 +395,7 @@ import type {
 } from '@/features/concepts/stores/useConceptsStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { isTouchDevice } from '@/utils/device'
+import type { VtgPatternSelection } from '@/features/vtg/types'
 
 type PatternPropertyContext = 'vtg' | 'builder'
 type PatternPropertyKey = VtgPropertyKey
@@ -312,6 +405,7 @@ const props = withDefaults(
     context: PatternPropertyContext
     showTurns?: boolean
     animation?: RootDataFinal
+    offsetValues?: VtgPatternSelection['propRotationOffsets']
     twistMode?: VtgTwistMode
     twistValues?: VtgTwistValues
     foldValues?: VtgFoldValues
@@ -324,7 +418,6 @@ const props = withDefaults(
     foldAlternate?: VtgFoldSideSettings<boolean>
     foldSpan?: VtgFoldSpan
     foldMirror?: boolean
-    propertiesExpanded?: boolean
     activeProperty?: PatternPropertyKey | null
   }>(),
   {
@@ -341,12 +434,12 @@ const props = withDefaults(
     foldAlternate: () => [false, false],
     foldSpan: 'eighth',
     foldMirror: true,
-    propertiesExpanded: false,
     activeProperty: null,
   },
 )
 
 const emit = defineEmits<{
+  offsetUpdate: [propIndex: 0 | 1, value?: number]
   twistUpdate: [propIndex: 0 | 1, beat: number, value?: number]
   'update:twistMode': [mode: VtgTwistMode]
   foldUpdate: [propIndex: 0 | 1, beat: number, fold: keyof VtgFoldValue, value?: number]
@@ -357,26 +450,29 @@ const emit = defineEmits<{
   'update:foldAlternate': [propIndex: 0 | 1, alternate: boolean]
   'update:foldSpan': [span: VtgFoldSpan]
   'update:foldMirror': [mirror: boolean]
-  'update:propertiesExpanded': [expanded: boolean]
   'update:activeProperty': [property: PatternPropertyKey | null]
 }>()
 const twistModes = ['simple', 'advanced'] as const
 const foldModes = ['simple', 'advanced'] as const
 const foldSpans = ['quarter', 'eighth'] as const
+const propLabels = ['Left', 'Right'] as const
 const folds = [
   { key: 'rotate', label: 'Rotate', min: -360, max: 360 },
   { key: 'yaw', label: 'Direct', min: -90, max: 90 },
 ] as const
 
 const properties = [
+  { key: 'offset', name: 'Offset', label: 'Offset' },
   { key: 'axis', name: 'Axis', label: 'Axis' },
-  { key: 'twist', name: 'Twist', label: 'Twist - For Roll-Sensitive Props' },
+  { key: 'twist', name: 'Twist', label: 'Twist' },
   { key: 'turns', name: 'Turns', label: 'Turns' },
 ] as const satisfies readonly { key: PatternPropertyKey; name: string; label: string }[]
 
 const controlId = `pattern-properties-${useId()}`
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
-const rootElement = ref<HTMLDetailsElement>()
+const rootElement = ref<HTMLElement>()
+const offsetDraftValues = ref<[string, string]>(['0', '0'])
+const focusedOffsetProp = ref<0 | 1>()
 const visibleProperties = computed(() =>
   properties.filter((property) => property.key !== 'turns' || props.showTurns),
 )
@@ -390,6 +486,40 @@ const propertyTooltip = (property: (typeof properties)[number]) =>
     : property.key === 'twist'
       ? 'Set twist changes by beat for roll-sensitive props.'
       : ''
+
+const offsetValue = (propIndex: number) => props.offsetValues?.[propIndex] ?? 0
+const offsetIsSet = (propIndex: number) => offsetValue(propIndex) !== 0
+const offsetSliderValue = (value: number) => (value < 0 ? -90 : value > 0 ? 90 : 0)
+const setOffsetFromSlider = (propIndex: number, event: Event) => {
+  if (!isPropIndex(propIndex)) return
+  emit('offsetUpdate', propIndex, Number((event.target as HTMLInputElement).value))
+}
+const setOffsetFromStepper = (propIndex: number, value: number) => {
+  if (!isPropIndex(propIndex)) return
+  emit('offsetUpdate', propIndex, value)
+}
+const focusOffset = (propIndex: number) => {
+  if (!isPropIndex(propIndex)) return
+  focusedOffsetProp.value = propIndex
+}
+const setOffsetFromText = (propIndex: number, event: Event) => {
+  if (!isPropIndex(propIndex)) return
+  const value = (event.target as HTMLInputElement).value
+  offsetDraftValues.value[propIndex] = value
+  if (!/^[+-]?\d+$/.test(value)) return
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed < -180 || parsed > 180) return
+  emit('offsetUpdate', propIndex, parsed)
+}
+const blurOffset = (propIndex: number) => {
+  if (!isPropIndex(propIndex)) return
+  focusedOffsetProp.value = undefined
+  offsetDraftValues.value[propIndex] = String(offsetValue(propIndex))
+}
+const clearOffset = (propIndex: number) => {
+  if (!isPropIndex(propIndex)) return
+  emit('offsetUpdate', propIndex)
+}
 
 const twistColumns = computed(() =>
   ['Left', 'Right'].map((label, propIndex) => {
@@ -486,6 +616,17 @@ const skipZero = (value: number, previous: number) =>
 
 const formatBeat = (beat: number) => (Number.isInteger(beat) ? String(beat) : String(beat))
 const isPropIndex = (propIndex: number): propIndex is 0 | 1 => propIndex === 0 || propIndex === 1
+watch(
+  () => props.offsetValues,
+  (values) => {
+    for (const propIndex of [0, 1] as const) {
+      if (focusedOffsetProp.value !== propIndex) {
+        offsetDraftValues.value[propIndex] = String(values?.[propIndex] ?? 0)
+      }
+    }
+  },
+  { immediate: true },
+)
 const emitFoldRepeat = (propIndex: number, event: Event) => {
   if (!isPropIndex(propIndex)) return
   emit('update:foldRepeat', propIndex, (event.target as HTMLInputElement).checked)
@@ -557,8 +698,13 @@ const toggleProperty = (property: PatternPropertyKey) => {
   emit('update:activeProperty', props.activeProperty === property ? null : property)
 }
 
+const collapseFromTabRow = (event: MouseEvent) => {
+  if ((event.target as Element).closest('[role="tab"]')) return
+  emit('update:activeProperty', null)
+}
+
 const revealOpenedProperty = async (property: PatternPropertyKey | null) => {
-  if (property !== 'axis' && property !== 'twist') return
+  if (property !== 'offset' && property !== 'axis' && property !== 'twist') return
   await nextTick()
   const root = rootElement.value
   const target = root?.querySelector<HTMLElement>(
@@ -583,9 +729,6 @@ const revealOpenedProperty = async (property: PatternPropertyKey | null) => {
   })
 }
 watch(() => props.activeProperty, revealOpenedProperty)
-const emitPropertiesExpanded = (event: Event) => {
-  emit('update:propertiesExpanded', (event.currentTarget as HTMLDetailsElement).open)
-}
 </script>
 
 <style scoped>
@@ -602,96 +745,146 @@ const emitPropertiesExpanded = (event: Event) => {
   container-type: inline-size;
 }
 
-.pattern-property-controls > summary {
+.pattern-property-controls__tabs {
   display: flex;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1);
   color: var(--color-action-primary);
   font-size: 0.8125rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   cursor: pointer;
-  list-style: none;
   background: color-mix(in srgb, var(--color-action-primary) 7%, var(--color-surface));
   align-items: center;
-  justify-content: space-between;
-  transition: background var(--transition-fast);
+  justify-content: flex-start;
+  gap: var(--space-1);
 }
 
-.pattern-property-controls > summary::-webkit-details-marker {
-  display: none;
-}
-
-.pattern-property-controls > summary::after {
-  content: '+';
-  font-size: 1rem;
-}
-
-.pattern-property-controls[open] > summary::after {
-  content: '-';
-}
-
-.pattern-property-controls[open] > summary {
-  background: color-mix(in srgb, var(--color-action-primary) 13%, var(--color-surface));
-  border-block-end: 1px solid var(--color-border);
-}
-
-.pattern-property-controls > summary:hover {
-  background: color-mix(in srgb, var(--color-action-primary) 13%, var(--color-surface));
-}
-
-.pattern-property-controls > summary:focus-visible,
-.pattern-property-controls__toggle:focus-visible {
+.pattern-property-controls__toggle:focus-visible,
+.pattern-property-controls__collapse:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: -2px;
 }
 
-.pattern-property-controls__content {
-  display: grid;
-  padding: var(--space-2);
-  gap: var(--space-1);
-}
-
 .pattern-property-controls__toggle {
-  width: 100%;
+  width: auto;
   padding: var(--space-2) var(--space-3);
-  color: var(--color-text);
-  font-size: 0.875rem;
-  font-weight: 700;
+  color: var(--color-action-primary);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   text-align: start;
   cursor: pointer;
-  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-action-primary));
-  border: 1px solid var(--color-border);
+  background: transparent;
+  border: 0;
   border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
 }
 
 .pattern-property-controls__property-tooltip {
   display: flex;
-  width: 100%;
+  width: auto;
+}
+
+.pattern-property-controls__toggle:hover {
+  background: color-mix(in srgb, var(--color-action-primary) 13%, var(--color-surface));
 }
 
 .pattern-property-controls__toggle[aria-expanded='true'] {
   color: var(--color-action-primary);
-  background: color-mix(in srgb, var(--color-action-primary) 10%, var(--color-surface));
-  border-end-start-radius: 0;
-  border-end-end-radius: 0;
+  background: color-mix(in srgb, var(--color-action-primary) 13%, var(--color-surface));
+}
+
+.pattern-property-controls__collapse {
+  padding: var(--space-2) var(--space-3);
+  margin-inline-start: auto;
+  color: var(--color-action-primary);
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+}
+
+.pattern-property-controls__collapse:hover {
+  background: color-mix(in srgb, var(--color-action-primary) 13%, var(--color-surface));
 }
 
 .pattern-property-controls__panel {
   padding: var(--space-2) var(--space-3);
   color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-block-start: 0;
-  border-end-start-radius: var(--radius-sm);
-  border-end-end-radius: var(--radius-sm);
+  border-block-start: 1px solid var(--color-border);
 }
 
 .pattern-property-controls__panel p {
   margin: 0;
 }
 
+.pattern-property-controls__panel .pattern-property-controls__usage-note {
+  margin-block-end: var(--space-2);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 .pattern-property-controls__twist-columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pattern-property-controls__offset-column {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.pattern-property-controls__offset-heading {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.pattern-property-controls__offset-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem 2rem;
+  min-height: 2rem;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pattern-property-controls__offset-controls--stepper {
+  grid-template-columns: minmax(7.5rem, 1fr) 4.5rem 2rem;
+}
+
+.pattern-property-controls__offset-controls input[type='range'],
+.pattern-property-controls__twist-frame input[type='range'],
+.pattern-property-controls__fold-control input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--color-action-primary);
+}
+
+.pattern-property-controls__offset-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.pattern-property-controls__offset-input:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+.pattern-property-controls__offset-controls--set .pattern-property-controls__delete {
+  color: var(--color-property-value-defined);
 }
 
 .pattern-property-controls__fold-options {
@@ -709,7 +902,7 @@ const emitPropertiesExpanded = (event: Event) => {
   gap: var(--space-2);
 }
 
-.pattern-property-controls__twist-mode {
+.pattern-property-controls__option-group.pattern-property-controls__twist-mode {
   margin: 0 0 var(--space-3);
   justify-content: center;
 }
@@ -850,11 +1043,6 @@ const emitPropertiesExpanded = (event: Event) => {
   gap: var(--space-1);
 }
 
-.pattern-property-controls__twist-frame input[type='range'] {
-  width: 100%;
-  min-width: 0;
-}
-
 .pattern-property-controls__twist-frame + .pattern-property-controls__twist-frame {
   border-block-start: 1px solid var(--color-border);
 }
@@ -879,11 +1067,6 @@ const emitPropertiesExpanded = (event: Event) => {
   gap: var(--space-1);
 }
 
-.pattern-property-controls__fold-control input[type='range'] {
-  width: 100%;
-  min-width: 0;
-}
-
 .pattern-property-controls__fold-control output {
   font-size: 0.75rem;
   text-align: end;
@@ -901,7 +1084,7 @@ const emitPropertiesExpanded = (event: Event) => {
   color: var(--color-text-muted);
 }
 
-.pattern-property-controls__twist-frame--inherited input {
+.pattern-property-controls__twist-frame--inherited input[type='range'] {
   opacity: 0.55;
 }
 

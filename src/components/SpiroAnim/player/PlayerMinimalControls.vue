@@ -1,5 +1,5 @@
 <template>
-  <PlayerProgress :store="store" compact>
+  <PlayerProgress :store="store" compact :compact-end-clearance="endClearance">
     <template #play>
       <AppTooltip text="Play / Pause">
         <template #activator="{ props: tooltipProps }">
@@ -15,6 +15,9 @@
         </template>
       </AppTooltip>
     </template>
+    <template #end>
+      <PlayerFreeCameraControl :store="store" compact />
+    </template>
   </PlayerProgress>
 </template>
 
@@ -23,10 +26,19 @@ import { mdiPauseCircleOutline, mdiPlayCircleOutline } from '@mdi/js'
 
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import PlayerFreeCameraControl from '@/components/SpiroAnim/player/PlayerFreeCameraControl.vue'
 import PlayerProgress from '@/components/SpiroAnim/player/PlayerProgress.vue'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
-const props = defineProps<{ store: string }>()
+const props = withDefaults(
+  defineProps<{
+    store: string
+    endClearance?: string
+  }>(),
+  {
+    endClearance: '0px',
+  },
+)
 const { PLAYING, PREVIEW_PLAYING, PLAYBACK_TEMPORARY_ACTIVE } = storeToRefs(
   usePlayerStore(props.store),
 )

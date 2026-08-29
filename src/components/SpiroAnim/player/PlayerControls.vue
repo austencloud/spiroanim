@@ -33,21 +33,7 @@
     </template>
   </Progress>
 
-  <AppTooltip class="btnCenter" text="Free Camera">
-    <template #activator="{ props: tooltipProps }">
-      <button
-        v-bind="tooltipProps"
-        class="icon-button"
-        :class="{ 'icon-button--primary': freeCamera }"
-        type="button"
-        :aria-pressed="freeCamera"
-        aria-label="Free camera"
-        @click="freeCamera = !freeCamera"
-      >
-        <BaseIcon :path="mdiImageFilterCenterFocusWeak" size="30" />
-      </button>
-    </template>
-  </AppTooltip>
+  <PlayerFreeCameraControl class="btnCenter" :store="props.store" />
 
   <AppTooltip v-if="canUndo && !props.editorVisible" class="btnUndo" text="Undo">
     <template #activator="{ props: tooltipProps }">
@@ -79,7 +65,6 @@
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
 import {
-  mdiImageFilterCenterFocusWeak,
   mdiPauseCircleOutline,
   mdiPlayCircleOutline,
   mdiUndoVariant,
@@ -88,6 +73,7 @@ import {
 } from '@mdi/js'
 
 import Progress from './PlayerProgress.vue'
+import PlayerFreeCameraControl from './PlayerFreeCameraControl.vue'
 
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useQSMainStore } from '@/stores/useQSMainStore'
@@ -104,8 +90,7 @@ const props = withDefaults(
 
 const playerStore = usePlayerStore(props.store)
 const { ROOT, CURRENT } = playerStore.raw()
-const { freeCamera, PLAYING, SELECTION, EINDEX, ETIMES, UPDATE, SELECTED } =
-  storeToRefs(playerStore)
+const { PLAYING, SELECTION, EINDEX, ETIMES, UPDATE, SELECTED } = storeToRefs(playerStore)
 
 const qsStore = useQSMainStore()
 const { qsHistory } = storeToRefs(qsStore)
@@ -142,9 +127,7 @@ const clickUndo = () => {
   if (previous !== undefined) ROOT.value = previous
 }
 
-const playIcon = computed(() =>
-  PLAYING.value ? mdiPauseCircleOutline : mdiPlayCircleOutline,
-)
+const playIcon = computed(() => (PLAYING.value ? mdiPauseCircleOutline : mdiPlayCircleOutline))
 const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelectionMultiple))
 </script>
 

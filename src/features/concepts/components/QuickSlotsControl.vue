@@ -211,6 +211,11 @@ onBeforeUnmount(() => {
 <style scoped>
 .quick-slots {
   display: flex;
+  width: max(
+    0px,
+    calc(100% - var(--size-concepts-docs-trigger) - var(--size-concepts-docs-trigger))
+  );
+  min-inline-size: 0;
   max-inline-size: 100%;
   padding: var(--space-1);
   margin: 0 auto;

@@ -12,10 +12,12 @@
 
   --size-editor-toolbar-height: 42px;
   --size-editor-scrollbar: 8px;
+  --size-concepts-docs-trigger: 4.5rem;
   --size-concept-content-min-width: 20rem;
   --size-concept-control-block: 1.8125rem;
   --space-concept-control-row-inline: 0.625rem;
   --space-concept-control-inline: var(--space-2);
+  --space-workspace-corner-control: 1px;
   --font-size-concept-control: 0.875rem;
   --size-pane-switch-button: 2rem;
   --space-pane-switch-bottom: 10px;

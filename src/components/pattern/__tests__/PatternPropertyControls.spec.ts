@@ -6,25 +6,43 @@ import PatternPropertyControls from '@/components/pattern/PatternPropertyControl
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 
 describe('PatternPropertyControls', () => {
-  it('identifies its host context and starts collapsed', () => {
+  it('identifies its host context and starts with every tab collapsed', () => {
     const wrapper = mount(PatternPropertyControls, { props: { context: 'vtg' } })
-    const properties = wrapper.get<HTMLDetailsElement>('[data-role="vtg-properties"]')
+    const properties = wrapper.get<HTMLElement>('[data-role="vtg-properties"]')
 
     expect(properties.attributes('data-context')).toBe('vtg')
-    expect(properties.element.open).toBe(false)
-    expect(wrapper.get('[data-role="vtg-properties-toggle"]').text()).toBe('PROPERTIES...')
+    expect(properties.element.tagName).toBe('SECTION')
+    expect(wrapper.find('[data-role="vtg-properties-toggle"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-properties-collapse"]').exists()).toBe(false)
+    expect(wrapper.find('[role="tabpanel"]:not([style*="display: none"])').exists()).toBe(false)
   })
 
   it('shows only the selected property controls and allows them to collapse', async () => {
     const wrapper = mount(PatternPropertyControls, { props: { context: 'vtg' } })
-    await wrapper.get('[data-role="vtg-properties-toggle"]').trigger('click')
+    const offset = wrapper.get('[data-role="vtg-property-offset-toggle"]')
     const axis = wrapper.get('[data-role="vtg-property-axis-toggle"]')
     const twist = wrapper.get('[data-role="vtg-property-twist-toggle"]')
     const turns = wrapper.find('[data-role="vtg-property-turns-toggle"]')
 
-    expect([axis.text(), twist.text()]).toEqual(['Rotate', 'Twist - For Roll-Sensitive Props'])
+    expect([offset.text(), axis.text(), twist.text()]).toEqual(['Offset', 'Rotate', 'Twist'])
     expect(turns.exists()).toBe(false)
+    expect(offset.attributes('aria-selected')).toBe('false')
     expect(axis.attributes('aria-expanded')).toBe('false')
+
+    await offset.trigger('click')
+    expect(wrapper.emitted('update:activeProperty')?.at(-1)).toEqual(['offset'])
+    await wrapper.setProps({ activeProperty: 'offset' })
+    expect(offset.attributes('aria-selected')).toBe('true')
+    expect(wrapper.get('[data-role="vtg-property-offset-controls"]').text()).toBe('LeftRight')
+    const collapse = wrapper.get('[data-role="vtg-properties-collapse"]')
+    expect(collapse.text()).toBe('-')
+
+    await collapse.trigger('click')
+    expect(wrapper.emitted('update:activeProperty')?.at(-1)).toEqual([null])
+    await wrapper.setProps({ activeProperty: null })
+    expect(wrapper.find('[data-role="vtg-properties-collapse"]').exists()).toBe(false)
+
+    expect(offset.attributes('aria-selected')).toBe('false')
 
     await axis.trigger('click')
     expect(wrapper.emitted('update:activeProperty')?.at(-1)).toEqual(['axis'])
@@ -35,6 +53,12 @@ describe('PatternPropertyControls', () => {
     expect(wrapper.get<HTMLInputElement>('input[aria-label="Mirror folds"]').element.checked).toBe(
       true,
     )
+
+    await wrapper.get('[role="tablist"]').trigger('click')
+    expect(wrapper.emitted('update:activeProperty')?.at(-1)).toEqual([null])
+    await wrapper.setProps({ activeProperty: null })
+    await axis.trigger('click')
+    await wrapper.setProps({ activeProperty: 'axis' })
 
     await twist.trigger('click')
     expect(wrapper.emitted('update:activeProperty')?.at(-1)).toEqual(['twist'])
@@ -55,6 +79,67 @@ describe('PatternPropertyControls', () => {
     ).toBe('none')
   })
 
+  it('edits and clears independent prop offsets with constrained sliders and validated text', async () => {
+    const wrapper = mount(PatternPropertyControls, {
+      props: { context: 'vtg', activeProperty: 'offset', offsetValues: [90, 0] },
+    })
+    const leftSlider = wrapper.get<HTMLInputElement>('[data-role="vtg-offset-0"]')
+    const rightSlider = wrapper.get<HTMLInputElement>('[data-role="vtg-offset-1"]')
+    const leftInput = wrapper.get<HTMLInputElement>('[data-role="vtg-offset-0-input"]')
+    const rightInput = wrapper.get<HTMLInputElement>('[data-role="vtg-offset-1-input"]')
+    const leftDelete = wrapper.get<HTMLButtonElement>('button[aria-label="Clear Left offset"]')
+    const rightDelete = wrapper.get<HTMLButtonElement>('button[aria-label="Clear Right offset"]')
+
+    expect(
+      wrapper
+        .findAll('.pattern-property-controls__offset-heading')
+        .map((heading) => heading.text()),
+    ).toEqual(['Left', 'Right'])
+    expect(wrapper.findAll('[data-role="vtg-property-offset-controls"] fieldset')).toHaveLength(0)
+    expect(leftSlider.attributes()).toMatchObject({ min: '-90', max: '90', step: '90' })
+    expect(leftSlider.attributes('aria-valuetext')).toBe('90°')
+    expect(rightSlider.attributes('aria-valuetext')).toBe('0°')
+    expect(leftInput.attributes()).toMatchObject({ type: 'text', inputmode: 'numeric' })
+    expect(leftInput.element.value).toBe('90')
+    expect(rightInput.element.value).toBe('0')
+    expect(leftDelete.element.disabled).toBe(false)
+    expect(rightDelete.element.disabled).toBe(true)
+    expect(leftDelete.element.parentElement?.classList).toContain(
+      'pattern-property-controls__offset-controls--set',
+    )
+
+    leftSlider.element.value = '-90'
+    await leftSlider.trigger('input')
+    rightSlider.element.value = '90'
+    await rightSlider.trigger('input')
+    expect(wrapper.emitted('offsetUpdate')?.slice(-2)).toEqual([
+      [0, -90],
+      [1, 90],
+    ])
+    leftSlider.element.value = '0'
+    await leftSlider.trigger('input')
+    expect(wrapper.emitted('offsetUpdate')?.at(-1)).toEqual([0, 0])
+    await wrapper.setProps({ offsetValues: [0, 0] })
+    expect(leftDelete.element.disabled).toBe(true)
+
+    await leftInput.trigger('focus')
+    await leftInput.setValue('45')
+    expect(wrapper.emitted('offsetUpdate')?.at(-1)).toEqual([0, 45])
+    await wrapper.setProps({ offsetValues: [45, 0] })
+
+    const validUpdateCount = wrapper.emitted('offsetUpdate')?.length
+    await leftInput.setValue('12.5')
+    await leftInput.setValue('181')
+    await leftInput.setValue('anything')
+    expect(wrapper.emitted('offsetUpdate')).toHaveLength(validUpdateCount ?? 0)
+    expect(leftInput.element.value).toBe('anything')
+    await leftInput.trigger('blur')
+    expect(leftInput.element.value).toBe('45')
+
+    await leftDelete.trigger('click')
+    expect(wrapper.emitted('offsetUpdate')?.at(-1)).toEqual([0])
+  })
+
   it('adds descriptive tooltips to Folds and Twist', () => {
     const wrapper = mount(PatternPropertyControls, { props: { context: 'vtg' } })
 
@@ -64,6 +149,20 @@ describe('PatternPropertyControls', () => {
     expect(
       wrapper.get('[data-role="vtg-property-twist-toggle"]').attributes('aria-describedby'),
     ).toBeTruthy()
+  })
+
+  it('shows prop compatibility notes at the top of Rotate and Twist', async () => {
+    const wrapper = mount(PatternPropertyControls, {
+      props: { context: 'vtg', activeProperty: 'axis' },
+    })
+
+    expect(wrapper.get('[data-role="vtg-property-axis-note"]').text()).toBe(
+      'For Static Props, allowing off-axis turns',
+    )
+    await wrapper.setProps({ activeProperty: 'twist' })
+    expect(wrapper.get('[data-role="vtg-property-twist-note"]').text()).toBe(
+      'For Roll-Sensitive Props, like Fans and Triads',
+    )
   })
 
   it('instantly reveals an opened Folds or Twist header above the scroll viewport', async () => {
@@ -83,7 +182,7 @@ describe('PatternPropertyControls', () => {
 
     const wrapper = mount(PatternPropertyControls, {
       attachTo: scrollParent,
-      props: { context: 'vtg', propertiesExpanded: true },
+      props: { context: 'vtg' },
     })
     const folds = wrapper.get<HTMLElement>('[data-role="vtg-property-axis-toggle"]')
     folds.element.getBoundingClientRect = () =>
@@ -104,6 +203,7 @@ describe('PatternPropertyControls', () => {
     expect(wrapper.get('[data-role="builder-properties"]').attributes('data-context')).toBe(
       'builder',
     )
+    expect(wrapper.get('[data-role="builder-property-offset-toggle"]').text()).toBe('Offset')
     expect(wrapper.get('[data-role="builder-property-axis-toggle"]').text()).toBe('Axis')
     expect(wrapper.find('[data-role="builder-property-turns-toggle"]').exists()).toBe(false)
   })
@@ -291,7 +391,7 @@ describe('PatternPropertyControls', () => {
     ).toBe('180°')
   })
 
-  it('uses steppers for Twist and Folds when Customize Sliders is disabled', async () => {
+  it('uses steppers for Offset, Twist, and Folds when Customize Sliders is disabled', async () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
     if (!animation) throw new Error('Expected a supported VTG animation')
     const pinia = createPinia()
@@ -300,6 +400,7 @@ describe('PatternPropertyControls', () => {
       props: {
         context: 'vtg',
         animation,
+        offsetValues: [90, -90],
         sliders: false,
         twistMode: 'advanced',
         foldMode: 'advanced',
@@ -308,10 +409,16 @@ describe('PatternPropertyControls', () => {
     })
 
     expect(wrapper.findAll('input[type="range"]')).toHaveLength(0)
+    wrapper.get('[data-role="vtg-offset-0-stepper"]')
+    wrapper.get('[data-role="vtg-offset-1-stepper"]')
     wrapper.get('[data-role="vtg-yaw-0-0-stepper"]')
     wrapper.get('[data-role="vtg-rotate-0-0-stepper"]')
     wrapper.get('[data-role="vtg-twist-0-0-stepper"]')
 
+    await wrapper.get('[data-role="vtg-offset-0-stepper-decrease"]').trigger('click')
+    expect(wrapper.emitted('offsetUpdate')?.at(-1)).toEqual([0, 0])
+    await wrapper.get('[data-role="vtg-offset-1-stepper-increase"]').trigger('click')
+    expect(wrapper.emitted('offsetUpdate')?.at(-1)).toEqual([1, 0])
     await wrapper.get('[data-role="vtg-yaw-0-0-stepper-decrease"]').trigger('click')
     expect(wrapper.emitted('foldUpdate')?.at(-1)).toEqual([0, 0, 'yaw', -90])
     await wrapper.get('[data-role="vtg-twist-0-0-stepper-decrease"]').trigger('click')

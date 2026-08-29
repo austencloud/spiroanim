@@ -1167,43 +1167,6 @@
         <p class="legend">Happy spinning.</p>
       </footer>
     </main>
-    <script>
-      ;(() => {
-        const returnLink = document.querySelector('#return-to-app')
-        if (!(returnLink instanceof HTMLAnchorElement)) return
-
-        const returnFlagKey = 'spiroanim:vtg-return-through-history'
-        let canReturnThroughHistory = false
-
-        try {
-          const referrer = document.referrer ? new URL(document.referrer) : null
-          const arrivedFromApp =
-            referrer?.origin === window.location.origin &&
-            ![
-              '/',
-              '/about',
-              '/tips',
-              '/reset',
-              '/reset/',
-              '/vtg-reference',
-              '/vtg-reference/',
-            ].includes(referrer.pathname)
-
-          if (arrivedFromApp) sessionStorage.setItem(returnFlagKey, 'true')
-          canReturnThroughHistory =
-            arrivedFromApp || sessionStorage.getItem(returnFlagKey) === 'true'
-        } catch {
-          canReturnThroughHistory = false
-        }
-
-        if (!canReturnThroughHistory) return
-
-        returnLink.addEventListener('click', (event) => {
-          event.preventDefault()
-          sessionStorage.removeItem(returnFlagKey)
-          history.back()
-        })
-      })()
-    </script>
+    <script src="/docs-return-to-app.js"></script>
   </body>
 </html>

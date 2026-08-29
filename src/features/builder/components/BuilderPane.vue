@@ -135,6 +135,7 @@
             store="main"
             minimal
             :dim="miniPlayerDimensions"
+            minimal-controls-end-clearance="calc(var(--size-pane-switch-button) + var(--space-2))"
           />
           <div
             v-if="PLAYBACK_PREVIEW_ACTIVE"
@@ -828,30 +829,55 @@ const exit = () => {
 
 .builder-pane__exit {
   position: absolute;
-  top: var(--space-2);
-  right: calc(var(--space-2) + var(--size-editor-scrollbar));
+  inset-block-start: var(--space-workspace-corner-control);
+  inset-inline-end: var(--space-workspace-corner-control);
   z-index: 3;
   min-width: 5rem;
   min-height: var(--size-pane-switch-button);
   padding: var(--space-2) var(--space-3);
-  color: var(--color-text);
+  color: var(--color-on-status-warning);
   font: inherit;
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   cursor: pointer;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: linear-gradient(135deg, var(--color-status-warning), var(--color-status-error));
+  border: 2px solid var(--color-status-error);
   border-radius: var(--radius-sm);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-status-warning) 35%, transparent),
+    var(--shadow-md);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.builder-pane__controls button:hover,
-.builder-pane__exit:hover {
+.builder-pane__controls button:hover {
   color: var(--color-action-primary);
 }
 
-.builder-pane__controls button:focus-visible,
-.builder-pane__exit:focus-visible {
+.builder-pane__exit:hover {
+  color: var(--color-on-status-warning);
+  background: linear-gradient(135deg, var(--color-status-error), var(--color-status-warning));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-status-warning) 48%, transparent),
+    var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.builder-pane__exit:active {
+  transform: translateY(1px);
+}
+
+.builder-pane__controls button:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 2px;
+}
+
+.builder-pane__exit:focus-visible {
+  outline: 3px solid var(--color-status-warning);
+  outline-offset: 3px;
 }
 </style>

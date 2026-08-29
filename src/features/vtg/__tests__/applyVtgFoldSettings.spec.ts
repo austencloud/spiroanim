@@ -212,20 +212,21 @@ describe('applyVtgFoldSettings', () => {
     expect(applied.props[1]?.anim[1]).toMatchObject({ yaw: -90, rotate: -180 })
   })
 
-  it('mirrors the inherited Direct default when Left has no authored Fold value', () => {
+  it('does not invent repeated Direct values when no Fold value is authored', () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
     if (!animation) throw new Error('Expected a supported VTG animation')
     const applied = applyVtgFoldSettings(animation, [{}, {}], {
       mode: 'simple',
       beat: [2, 2],
-      repeat: [false, false],
+      repeat: [true, true],
       every: [2, 2],
       alternate: [false, false],
       span: 'eighth',
       mirror: true,
     })
 
-    expect(applied.props[0]?.anim[4]?.yaw).toBe(90)
-    expect(applied.props[1]?.anim[4]?.yaw).toBe(-90)
+    expect(applied.props.flatMap(({ anim }) => anim).every(({ yaw }) => yaw === undefined)).toBe(
+      true,
+    )
   })
 })

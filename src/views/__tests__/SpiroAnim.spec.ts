@@ -21,6 +21,7 @@ import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/create
 describe('SpiroAnim view', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('sa-concepts', JSON.stringify({ vtgAdvanced: true }))
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
       callback(0)
       return 1
@@ -408,6 +409,9 @@ describe('SpiroAnim view', () => {
     useMainPaneStore().setViewInPane('concepts', 'left')
     await flushPromises()
     expect(wrapper.get('[data-role="left-pane"]').text()).toContain('VTG')
+    expect(wrapper.get('[data-role="concept-docs-anchor"]').classes()).toContain(
+      'concepts-pane__docs-anchor--below-navigation',
+    )
     await vi.waitFor(() => {
       expect(
         wrapper
@@ -451,7 +455,6 @@ describe('SpiroAnim view', () => {
         },
       ],
     })
-
     const expectedOneToThree = createVtgAnimation(playerRoot.value, {
       reference: '1-1',
       speedRatio: '1:3',

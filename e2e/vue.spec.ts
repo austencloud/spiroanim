@@ -57,6 +57,111 @@ test('hydrates a VTG selection through the lazy pattern-matching worker', async 
   expect(consoleErrors).toEqual([])
 })
 
+test('shares Free Camera with the interactive Builder Mini-Player', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.goto(
+    '/play-vtg?r=Ew08Yk11Y&p0=Q__.mBEQDk.5JE.......&x0=_s_&m0=_1_mxqv__&p1=N__.blERhw.5JEQpg.......&x1=_s_&c=_i_bhq&v=11',
+  )
+  const builderToggle = page
+    .locator('label.vtg-pattern-builder-button')
+    .filter({ hasText: 'Pattern Builder' })
+  await builderToggle.click()
+
+  const builder = page.locator('[data-role="builder-pane-view"]')
+  const miniPlayer = builder.locator('[data-role="builder-player"]')
+  const freeCamera = miniPlayer.getByRole('button', { name: 'Free camera' })
+  const progress = miniPlayer.locator('.slider--compact')
+  const swap = builder.getByRole('button', { name: 'Swap Builder Views' })
+  const exit = builder.getByRole('button', { name: 'Exit Pattern Builder' })
+  await expect(miniPlayer).toBeVisible()
+  await expect(freeCamera).toHaveAttribute('aria-pressed', 'false')
+  await expect(miniPlayer.locator('canvas')).toHaveCSS('touch-action', 'none')
+  await expect(exit).toHaveCSS('background-image', /linear-gradient/)
+  await expect(exit).toHaveCSS('border-top-width', '2px')
+
+  const [builderBox, progressBox, freeCameraBox, swapBox, exitBox] = await Promise.all([
+    builder.boundingBox(),
+    progress.boundingBox(),
+    freeCamera.boundingBox(),
+    swap.boundingBox(),
+    exit.boundingBox(),
+  ])
+  expect(builderBox).not.toBeNull()
+  expect(progressBox).not.toBeNull()
+  expect(freeCameraBox).not.toBeNull()
+  expect(swapBox).not.toBeNull()
+  expect(exitBox).not.toBeNull()
+  expect(progressBox!.x + progressBox!.width).toBeLessThanOrEqual(swapBox!.x)
+  expect(freeCameraBox!.x + freeCameraBox!.width).toBeLessThanOrEqual(swapBox!.x)
+  expect(exitBox!.y - builderBox!.y).toBeCloseTo(1, 0)
+  expect(builderBox!.x + builderBox!.width - exitBox!.x - exitBox!.width).toBeCloseTo(1, 0)
+
+  await freeCamera.click()
+  await expect(freeCamera).toHaveAttribute('aria-pressed', 'true')
+
+  await builderToggle.click()
+  await expect(page.locator('[data-role="player-view"]')).toBeVisible()
+  await expect(
+    page.locator('[data-role="player-view"]').getByRole('button', { name: 'Free camera' }),
+  ).toHaveAttribute('aria-pressed', 'true')
+  expect(pageErrors).toEqual([])
+})
+
+test('opens VTG documents and returns from the reference to the exact app URL', async ({
+  page,
+}) => {
+  await page.goto('/vulcan-tech-gospel?docsReturn=preserved#selected-pattern')
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/play-vtg')
+  const appUrl = page.url()
+  const appLocation = new URL(appUrl)
+  const appReturnPath = `${appLocation.pathname}${appLocation.search}${appLocation.hash}`
+  const docsButton = page.getByRole('button', { name: 'Docs' })
+  const docsMenu = page.locator('[data-role="concept-docs-menu"]')
+  const conceptsPane = page.locator('[data-concepts-pane]')
+
+  await page.getByRole('button', { name: 'Create four Quick Slots' }).click()
+  const [conceptsBox, conceptsClientWidth, docsBox, quickSlotsBox] = await Promise.all([
+    conceptsPane.boundingBox(),
+    conceptsPane.evaluate((element) => element.clientWidth),
+    docsButton.boundingBox(),
+    conceptsPane.locator('[data-role="quick-slots"]').boundingBox(),
+  ])
+  expect(conceptsBox).not.toBeNull()
+  expect(docsBox).not.toBeNull()
+  expect(quickSlotsBox).not.toBeNull()
+  expect(quickSlotsBox!.x - conceptsBox!.x).toBeCloseTo(docsBox!.width, 0)
+  expect(
+    conceptsBox!.x + conceptsClientWidth - quickSlotsBox!.x - quickSlotsBox!.width,
+  ).toBeCloseTo(docsBox!.width, 0)
+  await conceptsPane.evaluate((element) => {
+    element.scrollTop = 200
+  })
+  await expect.poll(async () => (await docsButton.boundingBox())?.y).toBeCloseTo(docsBox!.y, 0)
+
+  await docsButton.click()
+  await expect(docsMenu.locator('a', { hasText: "Noel's VTG3" })).toHaveAttribute(
+    'href',
+    /\/vtg3\/\?returnTo=/,
+  )
+  await docsMenu.locator('a', { hasText: 'VTG Reference' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Timing & Direction' })).toBeVisible()
+  expect(new URL(page.url()).searchParams.get('returnTo')).toBe(appReturnPath)
+  await page.getByRole('link', { name: 'Return to App' }).click()
+  await expect(page).toHaveURL(appUrl)
+  await expect(docsButton).toBeVisible()
+
+  await docsButton.click()
+  await docsMenu.locator('a', { hasText: "Noel's VTG3" }).click()
+
+  await expect(page.getByRole('heading', { name: 'Vulcan Tech Gospel 3' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'VTG Reference' })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Return to App' }).click()
+  await expect(page).toHaveURL(appUrl)
+})
+
 test('does not rewrite 45 Trans Quick Slots while their controls hydrate', async ({ page }) => {
   const quickSlotPaths = [
     '/play-vtg?r=Ew08Yk11Y&p0=Q__.biQ_____s.5JEs8......._ZEwm........_ZEs8........_ZEwm........_ZEs8&m0=_1_mxqv__&p1=N__.biQ_____s.5L_s8......._ZEwm........_ZEs8........_ZEwm........_ZEs8&c=_i_bhq&v=6',
@@ -76,9 +181,11 @@ test('does not rewrite 45 Trans Quick Slots while their controls hydrate', async
 
   for (const slot of [1, 2, 4, 3, 5]) {
     await page.locator(`[data-role="quick-slot-${slot}"] input`).click()
-    await expect.poll(() => {
-      const url = new URL(page.url())
-      return `${url.pathname}${url.search}`
-    }).toBe(quickSlotPaths[slot - 1])
+    await expect
+      .poll(() => {
+        const url = new URL(page.url())
+        return `${url.pathname}${url.search}`
+      })
+      .toBe(quickSlotPaths[slot - 1])
   }
 })

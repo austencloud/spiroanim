@@ -1,7 +1,11 @@
 <template>
   <div :style="containerStyle" data-role="player-container">
     <canvas ref="eCanvas" :style="canvasStyle" />
-    <PlayerMinimalControls v-if="minimal" :store="props.store" />
+    <PlayerMinimalControls
+      v-if="minimal"
+      :store="props.store"
+      :end-clearance="props.minimalControlsEndClearance"
+    />
     <Controls v-else :store="props.store" :editor-visible="props.editorVisible" />
     <span v-if="!minimal" class="fps">{{ fps }}</span>
     <AppTooltip v-if="!minimal" class="aspect-tooltip" placement="bottom">
@@ -67,11 +71,13 @@ const props = withDefaults(
     store?: string
     editorVisible?: boolean
     minimal?: boolean
+    minimalControlsEndClearance?: string
   }>(),
   {
     store: 'main',
     editorVisible: false,
     minimal: false,
+    minimalControlsEndClearance: '0px',
   },
 )
 
@@ -162,7 +168,7 @@ watchEffect(() => {
 
 onMounted(() => {
   // Shared orbit logic
-  useAnimWorkerCamera(msgChnl, canvasDim, props.store, eCanvas, !props.minimal)
+  useAnimWorkerCamera(msgChnl, canvasDim, props.store, eCanvas)
 
   const colorScheme = matchMedia('(prefers-color-scheme: dark)')
   const updateCameraGuides = () => {
@@ -382,9 +388,7 @@ const canvasClick = (e: MouseEvent | PointerEvent | TouchEvent) => {
 const touchTapMovementThreshold = 8
 
 const hasCanvasInteraction = () =>
-  PLAYBACK_COMPILED.value.props.some(
-    (prop) => typeof prop.click === 'number' && prop.click >= 0,
-  )
+  PLAYBACK_COMPILED.value.props.some((prop) => typeof prop.click === 'number' && prop.click >= 0)
 
 const registerTouchCanvasPlayback = () => {
   type TouchGesture = {
@@ -413,8 +417,7 @@ const registerTouchCanvasPlayback = () => {
     if (!gesture || event.pointerId !== gesture.pointerId || gesture.moved) return
     const horizontalMovement = event.clientX - gesture.startX
     const verticalMovement = event.clientY - gesture.startY
-    gesture.moved =
-      Math.hypot(horizontalMovement, verticalMovement) > touchTapMovementThreshold
+    gesture.moved = Math.hypot(horizontalMovement, verticalMovement) > touchTapMovementThreshold
   })
 
   useEventListener(eCanvas, 'pointercancel', (event: PointerEvent) => {

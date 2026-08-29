@@ -84,9 +84,10 @@
         v-model:elemental="elementalLayout"
         confirm-reset
         show-more
-        :show-classic="!compactBuilder"
+        :show-classic="vtgAdvanced && !compactBuilder"
         show-elemental
-        :show-swap="!compactBuilder"
+        :show-swap="vtgAdvanced && !compactBuilder"
+        :show-reverse="vtgAdvanced"
         :reverse-label="isQtr ? 'Flip' : '180°'"
         :reverse-description="
           isQtr ? 'Flip QTR orientation and direction' : 'Rotate floor plane by 180 degrees'
@@ -304,7 +305,7 @@
     <ConceptAnimationControls :animation="animation">
       <template #before-controls="{ beginSliderHistory, endSliderHistory }">
         <PatternPlaybackControls
-          v-if="!builderActive || builderFullCatalog"
+          v-if="vtgAdvanced && (!builderActive || builderFullCatalog)"
           v-model:beat="beat"
           v-model:qtr="isQtr"
           v-model:orientation="orientation"
@@ -317,7 +318,7 @@
         />
       </template>
       <template #between-controls>
-        <template v-if="!builderActive">
+        <template v-if="vtgAdvanced && !builderActive">
           <PatternTransitionControls
             v-model:transition="transition"
             v-model:after-beat="transitionAfterBeat"
@@ -337,15 +338,21 @@
           />
           <span>Full Grid</span>
         </label>
-        <label class="vtg-pattern-builder-button">
-          <input
-            type="checkbox"
-            :checked="builderActive"
-            data-role="vtg-pattern-builder"
-            @change="emit('builderOpen')"
-          />
-          <span>Pattern Builder</span>
-        </label>
+        <div class="vtg-pattern-builder-actions">
+          <label class="vtg-pattern-builder-button">
+            <input
+              type="checkbox"
+              :checked="builderActive"
+              data-role="vtg-pattern-builder"
+              @change="emit('builderOpen')"
+            />
+            <span>Pattern Builder</span>
+          </label>
+          <label class="vtg-pattern-builder-button vtg-pattern-builder-button--advanced">
+            <input v-model="vtgAdvanced" type="checkbox" data-role="vtg-advanced" />
+            <span>Advanced</span>
+          </label>
+        </div>
         <p
           v-if="!builderActive && quickSlotCreationError"
           class="vtg-transition-quick-slot-error"
@@ -363,11 +370,13 @@
           selection.
         </p>
       </template>
-      <template #after-customize>
+      <template #before-customize>
         <PatternPropertyControls
-          v-if="!builderActive && showVtgProperties"
+          v-if="vtgAdvanced && !builderActive"
           context="vtg"
+          :show-turns="showVtgTurns"
           :animation="animation"
+          :offset-values="propRotationOffsets"
           :twist-mode="vtgTwistMode"
           :twist-values="vtgTwistValues"
           :fold-values="vtgFoldValues"
@@ -379,9 +388,9 @@
           :fold-alternate="vtgFoldAlternate"
           :fold-span="vtgFoldSpan"
           :fold-mirror="vtgFoldMirror"
-          :properties-expanded="vtgPropertiesExpanded"
           :active-property="vtgActiveProperty"
           :sliders="sliders"
+          @offset-update="updatePropRotationOffset"
           @twist-update="updateTwistSetting"
           @fold-update="updateFoldSetting"
           @update:twist-mode="updateTwistMode"
@@ -392,7 +401,6 @@
           @update:fold-alternate="updateFoldAlternate"
           @update:fold-span="updateFoldSpan"
           @update:fold-mirror="updateFoldMirror"
-          @update:properties-expanded="vtgPropertiesExpanded = $event"
           @update:active-property="vtgActiveProperty = $event"
         />
       </template>
@@ -438,7 +446,6 @@ import {
   deriveVtgFoldSimpleSources,
   extractVtgFoldValues,
 } from '@/features/vtg/applyVtgFoldSettings'
-import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import {
   builderPatternPointerDropEvent,
   builderPatternPointerEndEvent,
@@ -508,6 +515,7 @@ import {
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import { toColor } from '@/utils/UtilFunc'
 import { isTouchDevice } from '@/utils/device'
 import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
@@ -563,14 +571,14 @@ const emit = defineEmits<{
   'update:builderFullGrid': [enabled: boolean]
 }>()
 
-const showVtgProperties = ref(false)
+const showVtgTurns = ref(false)
 
-const speedRatioRows = vtgSpeedRatioRows
-const standardSpeedRatios = new Set<VtgSpeedRatio>(speedRatioRows.flat())
+const basicHiddenSpeedRatios = new Set<VtgSpeedRatio>(['2:1', '1:2', '2:3', '1:4', '2:5'])
 const ratioPickerRatios = vtgRatioPickerRatios
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 const conceptsStore = useConceptsStore()
 const {
+  vtgAdvanced,
   speedRatio,
   swapProps,
   reversePlane,
@@ -598,7 +606,6 @@ const {
   vtgFoldAlternate,
   vtgFoldSpan,
   vtgFoldMirror,
-  vtgPropertiesExpanded,
   vtgActiveProperty,
   sliders,
   classicLayout,
@@ -606,6 +613,24 @@ const {
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
 const isAnti = ref(false)
+const speedRatioRows = computed(() =>
+  vtgAdvanced.value
+    ? vtgSpeedRatioRows
+    : vtgSpeedRatioRows
+        .map((ratios) => ratios.filter((ratio) => !basicHiddenSpeedRatios.has(ratio)))
+        .filter((ratios) => ratios.length > 0),
+)
+const visibleSpeedRatios = computed<ReadonlySet<VtgSpeedRatio>>(
+  () => new Set<VtgSpeedRatio>(speedRatioRows.value.flat()),
+)
+const updatePropRotationOffset = (propIndex: 0 | 1, value?: number) => {
+  const offsets: [number, number] = [
+    propRotationOffsets.value?.[0] ?? 0,
+    propRotationOffsets.value?.[1] ?? 0,
+  ]
+  offsets[propIndex] = value ?? 0
+  propRotationOffsets.value = offsets.every((offset) => offset === 0) ? undefined : offsets
+}
 const emitTwistAnimation = () => {
   if (!props.animation) return
   emit('animationUpdate', conceptsStore.applyVtgPropertyControls(props.animation))
@@ -719,7 +744,7 @@ const updateFoldMirror = (mirror: boolean) => {
 }
 const initialPropRatios = getVtgPropSpeedRatios(speedRatio.value)
 const moreRatios = ref(
-  initialPropRatios[0] !== initialPropRatios[1] || !standardSpeedRatios.has(speedRatio.value),
+  initialPropRatios[0] !== initialPropRatios[1] || !visibleSpeedRatios.value.has(speedRatio.value),
 )
 const firstPropRatio = ref<VtgIndividualSpeedRatio>(initialPropRatios[0])
 const secondPropRatio = ref<VtgIndividualSpeedRatio | ''>(
@@ -729,7 +754,7 @@ const syncMoreRatioControls = (value: VtgSpeedRatio) => {
   const [first, second] = getVtgPropSpeedRatios(value)
   firstPropRatio.value = first
   secondPropRatio.value = first === second ? '' : second
-  if (first !== second || !standardSpeedRatios.has(value)) moreRatios.value = true
+  if (first !== second || !visibleSpeedRatios.value.has(value)) moreRatios.value = true
 }
 const applyMoreRatios = () => {
   speedRatio.value =
@@ -744,19 +769,12 @@ watch(moreRatios, (enabled) => {
     speedRatio.value = firstPropRatio.value
   }
 })
+watch(vtgAdvanced, (enabled) => {
+  syncMoreRatioControls(speedRatio.value)
+  if (enabled && secondPropRatio.value === '') moreRatios.value = false
+})
 const beat = ref<VtgBeat>(1)
 const propRotationOffsets = ref<readonly [number, number]>()
-let matchedPropRotation:
-  | {
-      reference: VtgCellReference
-      speedRatio: VtgSpeedRatio
-      offsets: readonly [number, number]
-    }
-  | undefined
-const clearMatchedPropRotation = () => {
-  matchedPropRotation = undefined
-  propRotationOffsets.value = undefined
-}
 const initialTurnsOffset = ref<VtgTransitionInitialTurnsOffset>()
 const initialTurnsOffsetBeat = ref<VtgBeat>()
 const transition = ref(false)
@@ -772,7 +790,9 @@ const hasPopulatedQuickSlots = computed(
 )
 const showStaticPropsTransitionNote = computed(() => transition.value && speedRatio.value === '1:1')
 const compactBuilder = computed(() => props.builderActive && !props.builderFullCatalog)
-const usesClassicLayout = computed(() => classicLayout.value && !compactBuilder.value)
+const usesClassicLayout = computed(
+  () => (vtgAdvanced.value ? classicLayout.value : true) && !compactBuilder.value,
+)
 const usesPairedPreviewLayout = computed(
   () => compactBuilder.value || requiresPairedVtgPreviewLayout(speedRatio.value),
 )
@@ -1332,22 +1352,15 @@ const selectTile = (tile: VtgMatrixTile) => {
     return
   }
   const changesPattern = tile.reference !== selectedCellReference.value
-  const preservesMatchedPropRotation =
-    matchedPropRotation?.reference === tile.reference &&
-    matchedPropRotation.speedRatio === speedRatio.value
-  const clearsMatchedPropRotation = changesPattern || !preservesMatchedPropRotation
-  const suppressionOwner = clearsMatchedPropRotation ? beginPatternEmitSuppression() : undefined
   if (changesPattern) {
     initialTurnsOffset.value = undefined
     initialTurnsOffsetBeat.value = undefined
   }
-  if (clearsMatchedPropRotation) clearMatchedPropRotation()
   selectedCell.value = {
     column: tile.column,
     row: tile.row,
   }
   if (isReselectedSpinToggleCell) isAnti.value = !isAnti.value
-  if (suppressionOwner !== undefined) releasePatternEmitSuppression(suppressionOwner)
   emitPatternSelection(tile)
 }
 
@@ -1412,7 +1425,7 @@ const resetPatternControls = async () => {
   initialTurnsOffset.value = undefined
   initialTurnsOffsetBeat.value = undefined
   orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
-  clearMatchedPropRotation()
+  propRotationOffsets.value = undefined
   await nextTick()
   releasePatternEmitSuppression(suppressionOwner)
   if (props.builderActive) {
@@ -1505,11 +1518,6 @@ watch(
     syncMoreRatioControls(nextSpeedRatio)
     ratioOrientationChangeActive = true
     try {
-      propRotationOffsets.value =
-        matchedPropRotation?.speedRatio === nextSpeedRatio &&
-        matchedPropRotation.reference === matchedCellReference.value
-          ? matchedPropRotation.offsets
-          : undefined
       const nextBeats = getVtgBeats(nextSpeedRatio)
       if (!nextBeats.includes(beat.value)) beat.value = nextBeats.at(-1) ?? 1
       if (orientation.value === getDefaultVtgPatternOrientation(previousSpeedRatio)) {
@@ -1611,19 +1619,11 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     orientation.value = match.orientation ?? inferredOrientation ?? 0
     const relationshipSelection =
       inferredOrientation === undefined ? match : { ...match, orientation: inferredOrientation }
-    const detectedPropRotationOffsets =
+    propRotationOffsets.value =
       match.propRotationOffsets ??
       (exactPatternMatch
         ? undefined
         : inferPatternRelationshipPropRotationOffsets(patternAnimation, relationshipSelection))
-    propRotationOffsets.value = detectedPropRotationOffsets
-    matchedPropRotation = detectedPropRotationOffsets
-      ? {
-          reference: match.reference,
-          speedRatio: match.speedRatio,
-          offsets: detectedPropRotationOffsets,
-        }
-      : undefined
     bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
@@ -1655,7 +1655,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     initialTurnsOffset.value = undefined
     initialTurnsOffsetBeat.value = undefined
     orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
-    clearMatchedPropRotation()
+    propRotationOffsets.value = undefined
   }
 
   releasePatternEmitSuppression(suppressionOwner)
@@ -1678,7 +1678,7 @@ const selectInitialRandomPattern = () => {
   initialTurnsOffset.value = undefined
   initialTurnsOffsetBeat.value = undefined
   orientation.value = getDefaultVtgPatternOrientation(speedRatio.value)
-  clearMatchedPropRotation()
+  propRotationOffsets.value = undefined
   selectRandomTile()
 
   releasePatternEmitSuppression(suppressionOwner)
@@ -1729,7 +1729,7 @@ watch(
       selectedCell.value = undefined
       isQtr.value = false
       orientation.value = 0
-      clearMatchedPropRotation()
+      propRotationOffsets.value = undefined
       nextTick(() => releasePatternEmitSuppression(suppressionOwner))
       return
     }
@@ -2003,7 +2003,7 @@ watch(displayedPreviews, () => void nextTick(observeDisplayedPreviews))
 
 onMounted(() => {
   componentMounted = true
-  showVtgProperties.value = globalThis.location.hostname !== PRODUCTION_PWA_HOSTNAME
+  showVtgTurns.value = globalThis.location.hostname !== PRODUCTION_PWA_HOSTNAME
   syncPatternControls()
 
   if (typeof ResizeObserver === 'undefined') return
@@ -2216,6 +2216,30 @@ defineExpose({
   cursor: pointer;
 }
 
+.vtg-pattern-builder-actions {
+  display: flex;
+  width: max-content;
+  max-width: calc(100% - var(--space-2));
+  margin: var(--space-2) auto;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.vtg-pattern-builder-actions .vtg-pattern-builder-button {
+  width: max-content;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.vtg-pattern-builder-actions .vtg-pattern-builder-button span {
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 0;
+  padding-inline: clamp(var(--space-2), 4cqi, var(--space-4));
+  white-space: nowrap;
+}
+
 .vtg-pattern-builder-button input {
   position: absolute;
   opacity: 0;
@@ -2252,7 +2276,19 @@ defineExpose({
   text-transform: uppercase;
 }
 
+.vtg-pattern-builder-button--advanced span {
+  padding-inline: var(--space-3);
+  background:
+    linear-gradient(
+      245deg,
+      color-mix(in srgb, var(--color-action-primary) 16%, transparent),
+      transparent 42%
+    ),
+    var(--color-surface);
+}
+
 .vtg-pattern-builder-button span::before {
+  flex: 0 0 0.75rem;
   width: 0.75rem;
   height: 0.75rem;
   content: '';

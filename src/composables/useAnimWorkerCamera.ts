@@ -12,7 +12,6 @@ export function useAnimWorkerCamera(
   dim: { width: number; height: number },
   store = 'main',
   eCanvas: Ref<HTMLElement | null | undefined>,
-  interactive = true,
 ) {
   const { pixelRatio } = storeToRefs(useViewportStore())
   const playerStore = usePlayerStore(store)
@@ -27,10 +26,6 @@ export function useAnimWorkerCamera(
     PROJECTION.value.far,
   )
   const controls = new OrbitControls(camera, eCanvas.value)
-  controls.enabled = interactive
-  // OrbitControls claims all touch gestures when constructed, even while disabled. Minimal players
-  // are non-interactive surfaces, so allow their scroll container to own vertical touch movement.
-  if (!interactive && eCanvas.value) eCanvas.value.style.touchAction = 'pan-y'
   let interacting = false
   let acquired = false
   let acquisition = 0
@@ -115,10 +110,6 @@ export function useAnimWorkerCamera(
   })
 
   watchImmediate(freeCamera, (enabled) => {
-    if (!interactive) {
-      release()
-      return
-    }
     const restoringPersistedMode = !freeCameraInitialized
     freeCameraInitialized = true
     if (enabled) {

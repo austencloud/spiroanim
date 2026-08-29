@@ -53,7 +53,7 @@
         </label>
       </template>
     </AppTooltip>
-    <AppTooltip :text="reverseDescription">
+    <AppTooltip v-if="showReverse" :text="reverseDescription">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps">
           <input
@@ -115,6 +115,7 @@ const props = withDefaults(
     showMore?: boolean
     showClassic?: boolean
     showElemental?: boolean
+    showReverse?: boolean
   }>(),
   {
     rolePrefix: 'vtg',
@@ -125,6 +126,7 @@ const props = withDefaults(
     showMore: false,
     showClassic: false,
     showElemental: false,
+    showReverse: true,
   },
 )
 

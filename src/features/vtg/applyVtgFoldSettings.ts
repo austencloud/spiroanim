@@ -148,8 +148,7 @@ const resolveFold = (
       ? 1 - propIndex
       : propIndex
   const sourceBeat = options.beat[sourceIndex]
-  const source =
-    values[sourceIndex]?.[String(sourceBeat)] ?? (options.mirror ? { yaw: 90 } : undefined)
+  const source = values[sourceIndex]?.[String(sourceBeat)]
   if (!source) return
   const alternatesMirror = options.mirror && options.repeat[0] && options.alternate[0]
   const mirrorSign =

@@ -141,6 +141,7 @@ describe('VtgPane', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     const conceptsStore = useConceptsStore()
+    conceptsStore.vtgAdvanced = true
     conceptsStore.qtrEnabled = false
     conceptsStore.classicLayout = false
     conceptsStore.prop = 0
@@ -166,7 +167,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
     expect(wrapper.findAll('[data-role="vtg-rule-card"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
-    expect(wrapper.findAll('button')).toHaveLength(54)
+    expect(wrapper.findAll('button')).toHaveLength(59)
     expect(wrapper.findAll('[data-role="vtg-divider"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--large')).toHaveLength(24)
@@ -309,6 +310,87 @@ describe('VtgPane', () => {
     ).toEqual([['1:1', '2:1', '1:2', '1:3', '2:3', '1:4', '1:5', '2:5']])
     expect(options[3]?.element.checked).toBe(true)
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:3')
+  })
+
+  it('defaults to basic VTG3 controls and restores the saved layout in Advanced mode', async () => {
+    const store = useConceptsStore()
+    store.vtgAdvanced = false
+    store.classicLayout = false
+    const wrapper = mount(VtgPane)
+    const advanced = wrapper.get<HTMLInputElement>('[data-role="vtg-advanced"]')
+    const builder = wrapper.get<HTMLInputElement>('[data-role="vtg-pattern-builder"]')
+
+    expect(advanced.element.checked).toBe(false)
+    expect(builder.element.nextElementSibling?.textContent).toBe('Pattern Builder')
+    expect(builder.element.parentElement?.nextElementSibling).toBe(advanced.element.parentElement)
+    expect(
+      wrapper
+        .findAll<HTMLInputElement>('fieldset.vtg-speed-ratio input[type="radio"]')
+        .map((option) => option.element.value),
+    ).toEqual(['1:1', '1:3', '1:5'])
+    expect(wrapper.find('[data-role="vtg-more"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-classic"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-swap"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-reverse"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-properties"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="vtg-pane"]').classes()).toContain('vtg-pane--classic')
+    expect(store.classicLayout).toBe(false)
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-more"]').setValue(true)
+    expect(wrapper.find('select[aria-label="Left prop timing ratio"]').exists()).toBe(true)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-more"]').setValue(false)
+    await advanced.setValue(true)
+
+    expect(store.vtgAdvanced).toBe(true)
+    expect(
+      wrapper
+        .findAll<HTMLInputElement>('fieldset.vtg-speed-ratio input[type="radio"]')
+        .map((option) => option.element.value),
+    ).toEqual(['1:1', '2:1', '1:2', '1:3', '2:3', '1:4', '1:5', '2:5'])
+    expect(wrapper.find('[data-role="vtg-more"]').exists()).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]').element.checked).toBe(false)
+    expect(wrapper.find('[data-role="vtg-swap"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-reverse"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-transition-controls"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-properties"]').exists()).toBe(true)
+    expect(wrapper.get('[data-role="vtg-pane"]').classes()).not.toContain('vtg-pane--classic')
+    expect(store.classicLayout).toBe(false)
+  })
+
+  it('opens More for hidden ratios and keeps it in Advanced only for hybrids', async () => {
+    const store = useConceptsStore()
+    store.speedRatio = '1:2'
+    const wrapper = mount(VtgPane)
+    const more = wrapper.get<HTMLInputElement>('[data-role="vtg-more"]')
+    const advanced = wrapper.get<HTMLInputElement>('[data-role="vtg-advanced"]')
+
+    expect(more.element.checked).toBe(false)
+    expect(wrapper.get<HTMLInputElement>('input[value="1:2"]').element.checked).toBe(true)
+
+    await advanced.setValue(false)
+
+    expect(more.element.checked).toBe(true)
+    expect(wrapper.find('input[value="1:2"]').exists()).toBe(false)
+    expect(
+      wrapper.get<HTMLSelectElement>('select[aria-label="Left prop timing ratio"]').element.value,
+    ).toBe('1:2')
+
+    await advanced.setValue(true)
+    expect(more.element.checked).toBe(false)
+    expect(wrapper.get<HTMLInputElement>('input[value="1:2"]').element.checked).toBe(true)
+
+    await advanced.setValue(false)
+    await wrapper
+      .get<HTMLSelectElement>('select[aria-label="Right prop timing ratio"]')
+      .setValue('1:5')
+    await advanced.setValue(true)
+    expect(more.element.checked).toBe(true)
+    expect(
+      wrapper.get<HTMLSelectElement>('select[aria-label="Right prop timing ratio"]').element.value,
+    ).toBe('1:5')
   })
 
   it('uses More to assign an optional ratio to the second prop', async () => {
@@ -951,7 +1033,7 @@ describe('VtgPane', () => {
     ])
   })
 
-  it('keeps a matched prop offset on its cell while every cell follows Start', async () => {
+  it('keeps a matched prop offset across cells while every cell follows Start', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -995,11 +1077,12 @@ describe('VtgPane', () => {
       beat: 2,
       quarters: 1,
       reversePlane: true,
+      propRotationOffsets: [90, 0],
       scale: 0.7,
     })
   })
 
-  it('clears a supplied match prop rotation offset when changing ratios and resetting', async () => {
+  it('keeps a supplied match prop rotation offset across ratios and clears it when resetting', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -1009,51 +1092,71 @@ describe('VtgPane', () => {
     const animation = codec.decodeQS(
       Object.fromEntries(
         new URLSearchParams(
-          'r=Ew08Yk11Y&p0=Q__.myQR3s.5JEQpg.......&x0=_r_&m0=_1_mxqv__&p1=N__.biQ.5L_Qpg.......&x1=_r_&c=_g_bhq&v=11',
+          'r=Ew08Yk11Y&p0=Q__.mBEQDk.5JE.......&x0=_s_&m0=_1_mxqv__&p1=N__.blERhw.5JEQpg.......&x1=_s_&c=_i_bhq&v=11',
         ),
       ),
     )
     const wrapper = mount(VtgPane, { props: { animation } })
     await vi.waitFor(() => {
-      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-2')
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-5')
     })
+    const leftRatio = wrapper.get<HTMLSelectElement>('[aria-label="Left prop timing ratio"]')
+    const rightRatio = wrapper.get<HTMLSelectElement>('[aria-label="Right prop timing ratio"]')
+    await wrapper.get('[data-role="vtg-property-offset-toggle"]').trigger('click')
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-offset-0-input"]').element.value).toBe(
+      '-90',
+    )
+    expect(
+      wrapper.get<HTMLButtonElement>('button[aria-label="Clear Left offset"]').element.disabled,
+    ).toBe(false)
+    expect(
+      wrapper.get<HTMLButtonElement>('button[aria-label="Clear Right offset"]').element.disabled,
+    ).toBe(true)
 
-    await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
+    await wrapper.get('[data-cell-reference="5-5"]').trigger('click')
     expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
-      reference: '1-2',
-      speedRatio: '1:3',
+      reference: '5-5',
+      speedRatio: '1:1v3',
       quarters: 1,
-      propRotationOffsets: [90, 0],
+      propRotationOffsets: [-90, 0],
     })
 
-    await selectSpeedRatio(wrapper, '1:1')
+    await rightRatio.setValue('')
+    await flushPromises()
     expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
-      reference: '1-2',
+      reference: '5-5',
       speedRatio: '1:1',
       quarters: 1,
+      propRotationOffsets: [-90, 0],
     })
-    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
 
-    await selectSpeedRatio(wrapper, '1:3')
-    await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
+    await leftRatio.setValue('1:3')
+    await flushPromises()
+    await wrapper.get('[data-cell-reference="5-5"]').trigger('click')
     expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
-      reference: '1-2',
+      reference: '5-5',
       speedRatio: '1:3',
       quarters: 1,
-      propRotationOffsets: [90, 0],
+      propRotationOffsets: [-90, 0],
     })
 
-    await selectSpeedRatio(wrapper, '1:1')
+    await leftRatio.setValue('1:1')
+    await flushPromises()
     await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
-    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
-    await selectSpeedRatio(wrapper, '1:3')
-    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      propRotationOffsets: [-90, 0],
+    })
+    await leftRatio.setValue('1:3')
+    await flushPromises()
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      propRotationOffsets: [-90, 0],
+    })
 
     wrapper.unmount()
     const resetWrapper = mount(VtgPane, { props: { animation: structuredClone(animation) } })
     await vi.waitFor(() => {
       expect(resetWrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe(
-        '1-2',
+        '5-5',
       )
     })
 
@@ -1063,7 +1166,7 @@ describe('VtgPane', () => {
     if (confirmReset.exists()) await confirmReset.trigger('click')
     await vi.waitFor(() => expect(resetWrapper.emitted('patternSelect')).toBeDefined())
     expect(resetWrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
-      reference: '1-2',
+      reference: '5-5',
       speedRatio: '1:3',
     })
     expect(resetWrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty(
@@ -1803,15 +1906,16 @@ describe('VtgPane', () => {
     }
   })
 
-  it('places VTG Properties below Customize and omits them from production and Builder', async () => {
+  it('shows development-only Turns in Properties and omits Properties from Builder', async () => {
     vi.stubGlobal('location', new URL('http://localhost:8080'))
     const wrapper = mount(VtgPane)
     await nextTick()
     const properties = wrapper.get('[data-role="vtg-properties"]').element
     const customize = wrapper.get('[data-role="vtg-customize"]').element
+    expect(wrapper.find('[data-role="vtg-property-turns-toggle"]').exists()).toBe(true)
 
     expect(
-      customize.compareDocumentPosition(properties) & Node.DOCUMENT_POSITION_FOLLOWING,
+      properties.compareDocumentPosition(customize) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
     wrapper.unmount()
@@ -1826,7 +1930,8 @@ describe('VtgPane', () => {
 
     const productionWrapper = mount(VtgPane)
     await nextTick()
-    expect(productionWrapper.find('[data-role="vtg-properties"]').exists()).toBe(false)
+    expect(productionWrapper.find('[data-role="vtg-properties"]').exists()).toBe(true)
+    expect(productionWrapper.find('[data-role="vtg-property-turns-toggle"]').exists()).toBe(false)
   })
 
   it('replaces every Concepts slider with the compact step controls when Sliders is off', async () => {
@@ -2171,7 +2276,7 @@ describe('VtgPane', () => {
     },
   )
 
-  it('keeps detected prop phase alignment on the matched cell and clears it on another cell', async () => {
+  it('carries detected prop phase alignment into subsequently selected cells', async () => {
     const animation = createDefaultVtgAnimation({ reference: '3-5', speedRatio: '1:3', beat: 4 })
     if (!animation) throw new Error('Expected a supported VTG animation')
     const patternMatcher: PatternMatchingClient = {
@@ -2209,10 +2314,74 @@ describe('VtgPane', () => {
     ])
 
     await wrapper.get('[data-cell-reference="5-4"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      {
+        reference: '5-4',
+        speedRatio: '1:3',
+        beat: 2,
+        propRotationOffsets: [180, 0],
+      },
+    ])
+  })
+
+  it('applies and clears each prop offset through pattern selections', async () => {
+    const animation = createDefaultVtgAnimation({ reference: '3-5', speedRatio: '1:3', beat: 4 })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const patternMatcher: PatternMatchingClient = {
+      matchVtg: async () => ({
+        status: 'matched',
+        source: 'vtg',
+        match: {
+          reference: '5-3',
+          speedRatio: '1:3',
+          isAnti: false,
+          swapProps: false,
+          reversePlane: false,
+          beat: 2,
+          propRotationOffsets: [90, 0],
+          bpm: 40,
+          scale: 0.8,
+        },
+      }),
+      matchEightStep: async () => ({ status: 'unmatched' }),
+      matchQst: async () => ({ status: 'unmatched' }),
+    }
+    const wrapper = mount(VtgPane, { props: { animation, patternMatcher } })
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-3')
+    })
+
+    await wrapper.get('[data-role="vtg-property-offset-toggle"]').trigger('click')
+    const leftInput = wrapper.get<HTMLInputElement>('[data-role="vtg-offset-0-input"]')
+    const rightInput = wrapper.get<HTMLInputElement>('[data-role="vtg-offset-1-input"]')
+    expect([leftInput.element.value, rightInput.element.value]).toEqual(['90', '0'])
+
+    await rightInput.setValue('37')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      propRotationOffsets: [90, 37],
+    })
+
+    await wrapper.get('button[aria-label="Clear Left offset"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      propRotationOffsets: [0, 37],
+    })
+
+    await wrapper.get('button[aria-label="Clear Right offset"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
+
+    const leftSlider = wrapper.get<HTMLInputElement>('[data-role="vtg-offset-0"]')
+    leftSlider.element.value = '-90'
+    await leftSlider.trigger('input')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      propRotationOffsets: [-90, 0],
+    })
+
+    leftSlider.element.value = '0'
+    await leftSlider.trigger('input')
     expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
   })
 
-  it('rehydrates arbitrary QTR prop rotations only for the matched cell', async () => {
+  it('rehydrates and carries arbitrary QTR prop rotations between cells', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
       version.VDEF,
@@ -2242,7 +2411,10 @@ describe('VtgPane', () => {
       propRotationOffsets: [45, 0],
     })
     await wrapper.get('[data-cell-reference="2-3"]').trigger('click')
-    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      reference: '2-3',
+      propRotationOffsets: [45, 0],
+    })
 
     await wrapper.setProps({ animation: negativeAnimation, animationRevision: 1 })
     await flushPromises()
@@ -2255,7 +2427,10 @@ describe('VtgPane', () => {
       propRotationOffsets: [-45, 0],
     })
     await wrapper.get('[data-cell-reference="2-3"]').trigger('click')
-    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty('propRotationOffsets')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      reference: '2-3',
+      propRotationOffsets: [-45, 0],
+    })
   })
 
   it('marks beat-varying hybrid timing indeterminate in text and Elemental layouts', async () => {
@@ -3019,6 +3194,10 @@ describe('VtgPane', () => {
     )
     await expectNineMorePreviews(() =>
       wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(1.1),
+    )
+    await wrapper.get('[data-role="vtg-property-offset-toggle"]').trigger('click')
+    await expectNineMorePreviews(() =>
+      wrapper.get<HTMLInputElement>('[data-role="vtg-offset-0-input"]').setValue(45),
     )
 
     const beforeRenderingControls = countWorkerMessages('data')
