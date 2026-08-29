@@ -451,7 +451,6 @@ const leftStyle = computed<CSSProperties>(() => ({
   'min-width': '0',
   'min-height': '0',
   overflow: 'clip',
-  'overflow-anchor': 'none',
 }))
 
 const rightStyle = computed<CSSProperties>(() => ({
@@ -460,7 +459,6 @@ const rightStyle = computed<CSSProperties>(() => ({
   'min-width': '0',
   'min-height': '0',
   overflow: 'clip',
-  'overflow-anchor': 'none',
 }))
 </script>
 

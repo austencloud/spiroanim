@@ -104,10 +104,11 @@
   detects modern iPads that report a desktop-class Macintosh user agent.
 - Android Chromium may scroll an `overflow: hidden` workspace pane when a focused control adds or
   removes content around itself, even though that pane has no visible scrollbar. The outer
-  workspace panes in `src/views/SpiroAnim.vue` must remain non-scroll containers using
-  `overflow: clip`; nested views such as Concepts own their legitimate scrolling. Do not change the
-  outer panes back to `hidden` or `auto`, or add JavaScript scroll-position corrections, without
-  testing focused layout changes on mobile and updating the layout regression tests.
+  workspace panes and non-scrolling Builder and Timeline shells must remain non-scroll containers
+  using `overflow: clip` with explicit zero minimum sizing; nested views own their legitimate
+  scrolling. Do not change structural shells back to `hidden` or `auto`, or add JavaScript
+  scroll-position corrections, without testing focused layout changes on mobile and updating the
+  layout regression tests.
 
 - Reusable components belong in `src/components`. Place low-level controlled UI primitives in `src/components/ui`, layout and application-shell components in `src/components/layout`, and feature-owned components under their feature.
 - Keep UI components focused, reusable, and presentational where practical. Prefer controlled components using props and emitted events.

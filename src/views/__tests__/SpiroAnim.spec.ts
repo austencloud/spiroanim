@@ -99,9 +99,6 @@ describe('SpiroAnim view', () => {
     expect(containerStyle.width).toBe('412px')
     expect(containerStyle.height).toBe('760px')
     expect(wrapper.get('[data-role="left-pane"]').text()).toContain('Player')
-    expect(
-      (wrapper.get('[data-role="left-pane"]').element as HTMLElement).style.overflowAnchor,
-    ).toBe('none')
     expect((wrapper.get('[data-role="left-pane"]').element as HTMLElement).style.overflow).toBe(
       'clip',
     )
@@ -112,7 +109,6 @@ describe('SpiroAnim view', () => {
     expect(rightPane.text()).toContain('Timeline')
     expect((rightPane.element as HTMLElement).style.overflow).toBe('clip')
     expect((rightPane.element as HTMLElement).style.minWidth).toBe('0px')
-    expect((rightPane.element as HTMLElement).style.overflowAnchor).toBe('none')
     expect(wrapper.text()).not.toContain('Editor')
     expect(wrapper.findAll('button[aria-label="Swap Views"]')).toHaveLength(2)
     const showAllTimelineProps = wrapper.get('button[aria-label="Show Full Timeline"]')

@@ -580,7 +580,9 @@ const exit = () => {
   z-index: 1009;
   inset: 0;
   container-type: inline-size;
-  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  overflow: clip;
   color: var(--color-text);
   background: transparent;
   display: flex;
@@ -590,8 +592,9 @@ const exit = () => {
 .builder-pane__pane {
   position: relative;
   box-sizing: border-box;
+  min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .builder-pane__pane--divided {
@@ -677,7 +680,9 @@ const exit = () => {
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  overflow: clip;
   background: transparent;
   border: 0;
   border-radius: 0;

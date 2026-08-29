@@ -766,7 +766,9 @@ const cursorStyle = computed<CSSProperties>(() => ({
 <style scoped>
 .timeline {
   position: relative;
-  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  overflow: clip;
 }
 .timeline-quick-slots {
   max-inline-size: calc(100% - 2 * var(--space-2));
