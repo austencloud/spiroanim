@@ -25,8 +25,8 @@ withDefaults(
   box-sizing: border-box;
   position: relative;
   display: grid;
-  min-width: 2rem;
-  min-height: 2rem;
+  min-width: var(--size-quick-slot-control);
+  min-height: var(--size-quick-slot-control);
   padding: var(--space-1);
   font: inherit;
   color: var(--quick-slot-accent);

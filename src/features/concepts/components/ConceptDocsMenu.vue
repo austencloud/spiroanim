@@ -76,6 +76,8 @@ const vtg3Href = computed(() => `/vtg3/?${returnQuery.value}`)
 }
 
 .concept-docs-menu :deep(.base-popup-menu__panel) {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
   background:
     linear-gradient(
       145deg,

@@ -34,15 +34,15 @@ describe('ConceptsPane', () => {
     expect(wrapper.get<HTMLInputElement>('input[value="3"]').element.checked).toBe(true)
   })
 
-  it('keeps Docs pinned below the app menu only in the left pane', async () => {
+  it('keeps Docs outside the empty Quick Slots flow and places the identity on the left', () => {
     const wrapper = mount(ConceptsPane, { props: { pane: 'left' } })
+    const pane = wrapper.get('[data-concepts-pane]')
+    const identity = wrapper.get('[data-role="concepts-identity"]')
     const docsAnchor = wrapper.get('[data-role="concept-docs-anchor"]')
 
-    expect(docsAnchor.classes()).toContain('concepts-pane__docs-anchor--below-navigation')
-
-    await wrapper.setProps({ pane: 'right' })
-
-    expect(docsAnchor.classes()).not.toContain('concepts-pane__docs-anchor--below-navigation')
+    expect(identity.text()).toBe('SpiroAnim.comConcepts')
+    expect(pane.element.children[0]).toBe(docsAnchor.element)
+    expect(pane.element.children[1]?.contains(identity.element)).toBe(true)
   })
 
   it('shows Docs only for VTG', async () => {
@@ -75,6 +75,7 @@ describe('ConceptsPane', () => {
     const store = useConceptsStore()
 
     expect(wrapper.find('[data-role="quick-slots"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="concepts-identity"]').text()).toBe('SpiroAnim.comConcepts')
     const createButton = wrapper.get('[data-role="quick-slots-create"]')
     expect(createButton.attributes('aria-label')).toBe('Create four Quick Slots')
 
@@ -85,6 +86,7 @@ describe('ConceptsPane', () => {
     expect(wrapper.findAll('input[name="quick-slot"]')).toHaveLength(4)
     expect(wrapper.get<HTMLInputElement>('input[value="1"]').element.checked).toBe(true)
     expect(wrapper.find('[data-role="quick-slots-create"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="concepts-identity"]').exists()).toBe(false)
   })
 
   afterEach(() => {

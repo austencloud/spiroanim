@@ -405,9 +405,7 @@ describe('SpiroAnim view', () => {
     useMainPaneStore().setViewInPane('concepts', 'left')
     await flushPromises()
     expect(wrapper.get('[data-role="left-pane"]').text()).toContain('VTG')
-    expect(wrapper.get('[data-role="concept-docs-anchor"]').classes()).toContain(
-      'concepts-pane__docs-anchor--below-navigation',
-    )
+    expect(wrapper.find('[data-role="concept-docs-anchor"]').exists()).toBe(true)
     await vi.waitFor(() => {
       expect(
         wrapper

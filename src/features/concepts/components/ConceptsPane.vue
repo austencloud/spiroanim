@@ -3,10 +3,16 @@
     <div
       v-if="selectedConcept === 'vtg'"
       class="concepts-pane__docs-anchor"
-      :class="{ 'concepts-pane__docs-anchor--below-navigation': pane === 'left' }"
       data-role="concept-docs-anchor"
     >
       <ConceptDocsMenu :return-path="docsReturnPath" />
+    </div>
+
+    <div v-if="quickSlotCount === 0" class="concepts-pane__empty-quick-slots">
+      <div class="concepts-pane__identity" data-role="concepts-identity">
+        <span class="concepts-pane__identity-brand">SpiroAnim.com</span>
+        <span class="concepts-pane__identity-label">Concepts</span>
+      </div>
     </div>
 
     <QuickSlotsControl
@@ -161,17 +167,141 @@ const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 .concepts-pane__docs-anchor {
   position: sticky;
   inset-block-start: 1px;
-  inset-inline-start: 1px;
+  inset-inline-end: 1px;
   z-index: 2900;
-  width: 0;
+  width: var(--size-concepts-docs-trigger);
   height: calc(var(--size-editor-toolbar-height) - 1px);
+  margin-inline-start: auto;
   margin-block-end: calc(1px - var(--size-editor-toolbar-height));
   overflow: visible;
   pointer-events: none;
 }
 
-.concepts-pane__docs-anchor--below-navigation {
-  inset-block-start: calc(var(--size-editor-toolbar-height) + var(--space-2));
+.concepts-pane__identity {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  width: min(15.5rem, calc(100% - var(--size-concepts-docs-trigger) - var(--space-1)));
+  height: var(--size-quick-slot-control);
+  padding: 0.28rem var(--space-3);
+  overflow: clip;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      110deg,
+      color-mix(in srgb, var(--color-action-primary) 15%, transparent),
+      transparent 46%
+    ),
+    linear-gradient(
+      290deg,
+      color-mix(in srgb, var(--color-element-water) 11%, transparent),
+      transparent 55%
+    ),
+    color-mix(in srgb, var(--color-surface) 82%, transparent);
+  background-size:
+    180% 180%,
+    180% 180%,
+    auto;
+  border: 1px solid color-mix(in srgb, var(--color-action-primary) 55%, var(--color-border));
+  border-inline-start: 3px solid var(--color-action-primary);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 10%, transparent),
+    0 0 0.3rem color-mix(in srgb, var(--color-action-primary) 5%, transparent);
+  align-items: center;
+  gap: 0.45rem;
+  line-height: 1.1;
+  animation: concepts-identity-aurora 6s ease-in-out infinite alternate;
+}
+
+.concepts-pane__empty-quick-slots {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-height: calc(var(--size-quick-slot-control) + (2 * var(--space-1)));
+  padding-block: var(--space-1);
+  align-items: center;
+}
+
+.concepts-pane__identity::after {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: 0;
+  width: 35%;
+  height: 2px;
+  content: '';
+  background: linear-gradient(
+    90deg,
+    var(--color-action-primary),
+    var(--color-element-water),
+    transparent
+  );
+  transform: translateX(-110%);
+  animation: concepts-identity-energy 3.6s ease-in-out infinite;
+}
+
+.concepts-pane__identity-brand,
+.concepts-pane__identity-label {
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.concepts-pane__identity-brand {
+  color: var(--color-text);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.055em;
+}
+
+.concepts-pane__identity-label {
+  color: color-mix(in srgb, var(--color-action-primary) 72%, var(--color-text));
+  font-size: 0.79rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-shadow: 0 0 0.4rem color-mix(in srgb, var(--color-action-primary) 24%, transparent);
+}
+
+@keyframes concepts-identity-aurora {
+  from {
+    background-position:
+      0% 50%,
+      100% 50%,
+      0 0;
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--color-text) 9%, transparent),
+      0 0 0.25rem color-mix(in srgb, var(--color-action-primary) 4%, transparent);
+  }
+
+  to {
+    background-position:
+      100% 50%,
+      0% 50%,
+      0 0;
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent),
+      0 0 0.45rem color-mix(in srgb, var(--color-action-primary) 8%, transparent);
+  }
+}
+
+@keyframes concepts-identity-energy {
+  0%,
+  18% {
+    opacity: 0.3;
+    transform: translateX(-110%);
+  }
+
+  58% {
+    opacity: 0.72;
+    transform: translateX(285%);
+  }
+
+  82%,
+  100% {
+    opacity: 0.24;
+    transform: translateX(285%);
+  }
 }
 
 .concepts-pane__selector-row {
@@ -206,5 +336,12 @@ const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 .concepts-pane__selector:focus-visible {
   outline: 2px solid var(--color-action-primary);
   outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .concepts-pane__identity,
+  .concepts-pane__identity::after {
+    animation: none;
+  }
 }
 </style>
