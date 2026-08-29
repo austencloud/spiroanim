@@ -102,9 +102,16 @@ describe('SpiroAnim view', () => {
     expect(
       (wrapper.get('[data-role="left-pane"]').element as HTMLElement).style.overflowAnchor,
     ).toBe('none')
+    expect((wrapper.get('[data-role="left-pane"]').element as HTMLElement).style.overflow).toBe(
+      'clip',
+    )
+    expect((wrapper.get('[data-role="left-pane"]').element as HTMLElement).style.minWidth).toBe(
+      '0px',
+    )
     const rightPane = wrapper.get('[data-role="right-pane"]')
     expect(rightPane.text()).toContain('Timeline')
-    expect((rightPane.element as HTMLElement).style.overflowY).toBe('hidden')
+    expect((rightPane.element as HTMLElement).style.overflow).toBe('clip')
+    expect((rightPane.element as HTMLElement).style.minWidth).toBe('0px')
     expect((rightPane.element as HTMLElement).style.overflowAnchor).toBe('none')
     expect(wrapper.text()).not.toContain('Editor')
     expect(wrapper.findAll('button[aria-label="Swap Views"]')).toHaveLength(2)
@@ -124,30 +131,14 @@ describe('SpiroAnim view', () => {
     const pathBeforeHijack = router.currentRoute.value.path
     expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
     await flushPromises()
-    rightPane.element.scrollTop = 63
     paneStore.exitPaneHijack()
     await flushPromises()
-    expect(rightPane.element.scrollTop).toBe(0)
     expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
     await flushPromises()
-    const conceptsPane = wrapper.get<HTMLElement>('[data-concepts-pane]')
-    rightPane.element.scrollTop = 47
-    conceptsPane.element.scrollTop = 91
     await wrapper.get<HTMLInputElement>('[data-role="vtg-builder-full-grid"]').setValue(true)
     await flushPromises()
-    expect(rightPane.element.scrollTop).toBe(0)
-    expect(conceptsPane.element.scrollTop).toBe(0)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-builder-full-grid"]').setValue(false)
     await flushPromises()
-    const advanced = wrapper.get<HTMLInputElement>('[data-role="vtg-advanced"]')
-    await advanced.setValue(false)
-    await flushPromises()
-    rightPane.element.scrollTop = 53
-    conceptsPane.element.scrollTop = 97
-    await advanced.setValue(true)
-    await flushPromises()
-    expect(rightPane.element.scrollTop).toBe(0)
-    expect(conceptsPane.element.scrollTop).toBe(0)
     expect(wrapper.find('[data-role="player-view"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-transition-support-error"]').exists()).toBe(false)
     wrapper.get('[data-role="builder-player"]')

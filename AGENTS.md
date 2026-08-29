@@ -102,12 +102,12 @@
 - For mobile- or touch-specific behavior, always use the shared `isTouchDevice` helper from
   `src/utils/device.ts` instead of adding local user-agent or pointer heuristics. It intentionally
   detects modern iPads that report a desktop-class Macintosh user agent.
-- Android Chromium may scroll both an overflow-hidden workspace pane and the nested Concepts
-  scroller when a focused control adds or removes content around itself. Keep the correction
-  centralized in the layout-mode watcher in `src/views/SpiroAnim.vue`. Any new Concepts or Pattern
-  Builder mode that materially changes the controls around a focused toggle must be added to that
-  watcher and covered by the corresponding regression test in
-  `src/views/__tests__/SpiroAnim.spec.ts`; do not add a component-local scroll workaround.
+- Android Chromium may scroll an `overflow: hidden` workspace pane when a focused control adds or
+  removes content around itself, even though that pane has no visible scrollbar. The outer
+  workspace panes in `src/views/SpiroAnim.vue` must remain non-scroll containers using
+  `overflow: clip`; nested views such as Concepts own their legitimate scrolling. Do not change the
+  outer panes back to `hidden` or `auto`, or add JavaScript scroll-position corrections, without
+  testing focused layout changes on mobile and updating the layout regression tests.
 
 - Reusable components belong in `src/components`. Place low-level controlled UI primitives in `src/components/ui`, layout and application-shell components in `src/components/layout`, and feature-owned components under their feature.
 - Keep UI components focused, reusable, and presentational where practical. Prefer controlled components using props and emitted events.

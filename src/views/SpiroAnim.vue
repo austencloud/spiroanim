@@ -149,7 +149,6 @@ const currentRoute = useRoute()
 useEditorPaneAvailability()
 const playerStore = usePlayerStore('main')
 const conceptsStore = useConceptsStore()
-const { vtgAdvanced } = storeToRefs(conceptsStore)
 const qsStore = useQSMainStore()
 const queryVersionStore = useQueryVersionStore()
 const { ROOT } = playerStore.raw()
@@ -287,32 +286,6 @@ const toggleBuilder = () => {
   if (paneStore.isPaneHijacked) paneStore.exitPaneHijack()
   else paneStore.hijackOppositePane('builder', 'concepts')
 }
-
-watch(
-  [() => paneStore.isPaneHijacked, builderFullGrid, builderFullCatalogForced, vtgAdvanced],
-  async () => {
-    await nextTick()
-    const conceptsPane = parents.value.concepts
-    const pane =
-      conceptsPane === 'left' ? eLeft.value : conceptsPane === 'right' ? eRight.value : undefined
-    const concepts = eConcepts.value
-    if (!pane || !concepts) return
-
-    // Android Chromium can scroll both the visible pane and the nested Concepts scroller when
-    // controls above a focused toggle are added or removed. Keep this protection at the workspace
-    // boundary so Advanced and every Pattern Builder layout mode follow the same invariant.
-    const resetConceptsScroll = () => {
-      pane.scrollTop = 0
-      concepts.scrollTop = 0
-    }
-    resetConceptsScroll()
-    requestAnimationFrame(() => {
-      resetConceptsScroll()
-      requestAnimationFrame(resetConceptsScroll)
-    })
-  },
-  { flush: 'post' },
-)
 
 const applyQuickSlot = async (path: string): Promise<boolean> => {
   const conceptRoute = findConceptForPath(path)
@@ -475,15 +448,18 @@ const containerStyle = computed<CSSProperties>(() => ({
 const leftStyle = computed<CSSProperties>(() => ({
   flex: flexLeft.value,
   position: 'relative',
-  overflow: 'hidden',
+  'min-width': '0',
+  'min-height': '0',
+  overflow: 'clip',
   'overflow-anchor': 'none',
 }))
 
 const rightStyle = computed<CSSProperties>(() => ({
   flex: flexRight.value,
   position: 'relative',
-  'overflow-x': 'auto',
-  'overflow-y': 'hidden',
+  'min-width': '0',
+  'min-height': '0',
+  overflow: 'clip',
   'overflow-anchor': 'none',
 }))
 </script>
