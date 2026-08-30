@@ -30,6 +30,7 @@ describe('KineticAlphabetPane', () => {
       speedRatio: '1:5',
       shape: 'diamond',
       isAnti: true,
+      orientation: 45,
     }
 
     const wrapper = mount(KineticAlphabetPane, { props: { composerCell } })
@@ -37,7 +38,7 @@ describe('KineticAlphabetPane', () => {
 
     expect(composerLink.text()).toBe('Open QTR 5-6 in Flow Arts Composer')
     expect(composerLink.attributes('href')).toBe(
-      'https://tkaflowarts.com/from/spiroanim/qtr.5-6.1x5.diamond.anti',
+      'https://tkaflowarts.com/from/spiroanim/qtr.5-6.1x5.diamond.anti.o45',
     )
     expect(composerLink.attributes('target')).toBe('_blank')
     expect(composerLink.attributes('rel')).toBe('noopener')

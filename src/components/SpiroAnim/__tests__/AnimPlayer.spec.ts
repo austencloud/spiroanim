@@ -17,6 +17,7 @@ const composerCell: ComposerCell = {
   speedRatio: '1:3',
   shape: 'diamond',
   isAnti: false,
+  orientation: 0,
 }
 
 const mountPlayer = (props: Record<string, unknown>) =>
@@ -58,7 +59,7 @@ describe('AnimPlayer', () => {
 
     expect(chip.text()).toBe('TKA')
     expect(chip.attributes('href')).toBe(
-      'https://tkaflowarts.com/from/spiroanim/vtg.1-1.1x3.diamond.base',
+      'https://tkaflowarts.com/from/spiroanim/vtg.1-1.1x3.diamond.base.o0',
     )
     expect(chip.attributes('target')).toBe('_blank')
     expect(chip.attributes('rel')).toBe('noopener')

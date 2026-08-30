@@ -436,7 +436,11 @@ import {
   type ElementalRelationship,
 } from '@/features/concepts/elementalRelationships'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
-import { isComposerSpeedRatio, type ComposerCell } from '@/features/kinetic-alphabet/composerBridge'
+import {
+  isComposerPatternOrientation,
+  isComposerSpeedRatio,
+  type ComposerCell,
+} from '@/features/kinetic-alphabet/composerBridge'
 import {
   builderPatternPointerDropEvent,
   builderPatternPointerEndEvent,
@@ -1005,13 +1009,17 @@ const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(re
  *
  * Anti is only part of a cell's identity on the spin-toggle cells, matching
  * `createPatternSelection`. Ratios outside the Composer's transcription have no bridge entry, so
- * they report no cell rather than a link that would resolve to nothing.
+ * they report no cell rather than a link that would resolve to nothing. The displayed pattern
+ * orientation travels with the cell so the Composer renders the flower the viewer is looking at;
+ * an orientation outside the Composer's grammar (a hydration-inferred in-between angle) means the
+ * view matches no catalog cell, so no cell is reported.
  */
 const composerCell = computed<ComposerCell | null>(() => {
   const reference = selectedCellReference.value
   if (reference === undefined) return null
   const ratio = speedRatio.value
   if (!isComposerSpeedRatio(ratio)) return null
+  if (!isComposerPatternOrientation(orientation.value)) return null
 
   return {
     concept: isQtr.value ? 'qtr' : 'vtg',
@@ -1019,6 +1027,7 @@ const composerCell = computed<ComposerCell | null>(() => {
     speedRatio: ratio,
     shape: 'diamond',
     isAnti: isSpinToggleCell(reference) && isAnti.value,
+    orientation: orientation.value,
   }
 })
 

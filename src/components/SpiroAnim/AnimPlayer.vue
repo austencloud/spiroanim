@@ -577,14 +577,17 @@ const containerStyle = computed<CSSProperties>(() => ({
 /* Only rendered once a catalog cell is matched, so the chip has no unlit state. */
 .tka-chip {
   display: inline-block;
-  padding: 1px 6px;
+  padding: 6px 14px;
   border: 1px solid var(--color-pattern-mode-active-border);
   border-radius: var(--radius-sm);
   background: var(--color-pattern-mode-active);
   color: var(--color-on-action-primary);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: bold;
+  letter-spacing: 0.04em;
   text-decoration: none;
+  /* Lifts the chip off whatever the canvas is drawing behind it. */
+  box-shadow: 0 2px 6px rgb(0 0 0 / 35%);
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast);

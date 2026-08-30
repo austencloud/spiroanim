@@ -398,7 +398,7 @@ describe('ConceptsPane', () => {
     await selector.setValue('tka')
 
     expect(wrapper.get('[data-role="tka-composer-link"]').attributes('href')).toBe(
-      'https://tkaflowarts.com/from/spiroanim/vtg.1-1.1x3.diamond.base',
+      'https://tkaflowarts.com/from/spiroanim/vtg.1-1.1x3.diamond.base.o0',
     )
   })
 
@@ -699,13 +699,27 @@ describe('ConceptsPane', () => {
     await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
 
     expect(wrapper.emitted('composerCellChange')?.at(-1)).toEqual([
-      { concept: 'vtg', reference: '1-1', speedRatio: '1:3', shape: 'diamond', isAnti: false },
+      {
+        concept: 'vtg',
+        reference: '1-1',
+        speedRatio: '1:3',
+        shape: 'diamond',
+        isAnti: false,
+        orientation: 0,
+      },
     ])
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(true)
 
     expect(wrapper.emitted('composerCellChange')?.at(-1)).toEqual([
-      { concept: 'qtr', reference: '1-1', speedRatio: '1:3', shape: 'diamond', isAnti: false },
+      {
+        concept: 'qtr',
+        reference: '1-1',
+        speedRatio: '1:3',
+        shape: 'diamond',
+        isAnti: false,
+        orientation: 0,
+      },
     ])
   })
 

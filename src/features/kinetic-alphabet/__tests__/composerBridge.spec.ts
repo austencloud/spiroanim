@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildComposerUrl,
+  composerPatternOrientations,
   composerSpeedRatios,
+  isComposerPatternOrientation,
   isComposerSpeedRatio,
   type ComposerCell,
   type ComposerSpeedRatio,
@@ -120,6 +122,48 @@ describe('buildComposerUrl', () => {
     expect(buildComposerUrl({ concept: '8stp', reference: '1-AA', speedRatio: '1:5' })).toBe(
       expectedUrl('8stp.1-aa.1x1.diamond.base'),
     )
+  })
+
+  it('appends the displayed pattern orientation for vtg and qtr', () => {
+    for (const orientation of composerPatternOrientations) {
+      expect(
+        buildComposerUrl({ concept: 'vtg', reference: '3-4', speedRatio: '1:3', orientation }),
+      ).toBe(expectedUrl(`vtg.3-4.1x3.diamond.base.o${orientation}`))
+    }
+
+    expect(
+      buildComposerUrl({
+        concept: 'qtr',
+        reference: '1-1',
+        speedRatio: '1:1',
+        isAnti: true,
+        orientation: -90,
+      }),
+    ).toBe(expectedUrl('qtr.1-1.1x1.diamond.anti.o-90'))
+  })
+
+  it('omits the orientation field when none is supplied', () => {
+    expect(buildComposerUrl({ concept: 'vtg', reference: '3-4', speedRatio: '1:3' })).toBe(
+      expectedUrl('vtg.3-4.1x3.diamond.base'),
+    )
+  })
+
+  it('never emits an orientation for Eight Step, which has no orientation axis', () => {
+    expect(
+      buildComposerUrl({ concept: '8stp', reference: '1-AA', orientation: 90 }),
+    ).toBe(expectedUrl('8stp.1-aa.1x1.diamond.base'))
+  })
+})
+
+describe('isComposerPatternOrientation', () => {
+  it('accepts only the orientations the Composer key grammar carries', () => {
+    for (const orientation of composerPatternOrientations) {
+      expect(isComposerPatternOrientation(orientation)).toBe(true)
+    }
+
+    // An off-axis orientation (a hydration-inferred in-between angle) matches no catalog view,
+    // so callers report no cell rather than emit a token the Composer would reject.
+    expect([30, -180, 360, 135, 22.5].filter(isComposerPatternOrientation)).toEqual([])
   })
 })
 
