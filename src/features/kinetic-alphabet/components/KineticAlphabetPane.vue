@@ -12,16 +12,73 @@
       </div>
 
       <div class="kinetic-alphabet-pane__copy">
-        <span class="kinetic-alphabet-pane__eyebrow">Concept in development</span>
+        <span class="kinetic-alphabet-pane__eyebrow">Notation bridge</span>
         <h1 id="kinetic-alphabet-title">The Kinetic Alphabet</h1>
-        <p class="kinetic-alphabet-pane__lede">Possibly coming soon</p>
-        <p class="kinetic-alphabet-pane__note" data-role="tka-development-note">
-          Austin might be working on something for us...
+        <p class="kinetic-alphabet-pane__lede">
+          TKA writes prop motion as letters. Every pattern in this app's concept catalogs
+          corresponds to a TKA letter sequence.
         </p>
+        <p class="kinetic-alphabet-pane__body">
+          VTG patterns land in letters A–L, quarter patterns in M–V. Hands at opposite points is
+          alpha, hands at the same point is beta, and a right angle between them is gamma.
+        </p>
+        <div class="kinetic-alphabet-pane__actions">
+          <a
+            v-if="composerUrl"
+            class="kinetic-alphabet-pane__action kinetic-alphabet-pane__action--primary"
+            :href="composerUrl"
+            target="_blank"
+            rel="noopener"
+            data-role="tka-composer-link"
+          >
+            Open {{ cellLabel }} in Flow Arts Composer
+          </a>
+          <a
+            class="kinetic-alphabet-pane__action"
+            href="https://tkaflowarts.com/guide"
+            target="_blank"
+            rel="noopener"
+            data-role="tka-guide-link"
+          >
+            About TKA
+          </a>
+        </div>
       </div>
     </div>
   </section>
 </template>
+
+<script setup lang="ts">
+import {
+  buildComposerUrl,
+  type ComposerCell,
+  type ComposerConcept,
+} from '@/features/kinetic-alphabet/composerBridge'
+
+const props = withDefaults(
+  defineProps<{
+    /** The catalog cell the concept panes recognized, or null when the animation matches none. */
+    composerCell?: ComposerCell | null
+  }>(),
+  { composerCell: null },
+)
+
+/** The names the concept selector and the QTR control already use for these catalogs. */
+const conceptLabels = {
+  vtg: 'VTG',
+  qtr: 'QTR',
+  '8stp': 'Eight Step',
+} as const satisfies Record<ComposerConcept, string>
+
+const composerUrl = computed(() =>
+  props.composerCell ? buildComposerUrl(props.composerCell) : undefined,
+)
+
+const cellLabel = computed(() => {
+  const cell = props.composerCell
+  return cell ? `${conceptLabels[cell.concept]} ${cell.reference}` : ''
+})
+</script>
 
 <style scoped>
 .kinetic-alphabet-pane {
@@ -100,15 +157,47 @@
   color: var(--color-text-muted);
 }
 
-p.kinetic-alphabet-pane__note {
+p.kinetic-alphabet-pane__body {
   margin-block-start: var(--space-3);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+}
+
+.kinetic-alphabet-pane__actions {
+  display: flex;
+  margin-block-start: var(--space-4);
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.kinetic-alphabet-pane__action {
   padding: var(--space-2) var(--space-3);
   color: var(--color-text);
   font-size: 0.8125rem;
   font-weight: 700;
-  background: color-mix(in srgb, var(--color-action-primary) 9%, var(--color-surface));
-  border-inline-start: 3px solid var(--color-action-primary);
+  text-decoration: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.kinetic-alphabet-pane__action--primary {
+  color: var(--color-on-action-primary);
+  background: var(--color-pattern-mode-active);
+  border-color: var(--color-pattern-mode-active-border);
+}
+
+.kinetic-alphabet-pane__action:hover,
+.kinetic-alphabet-pane__action:focus-visible {
+  border-color: var(--color-action-primary);
+}
+
+.kinetic-alphabet-pane__action--primary:hover,
+.kinetic-alphabet-pane__action--primary:focus-visible {
+  background: var(--color-action-primary);
 }
 
 @container (width < 24rem) {
@@ -118,8 +207,8 @@ p.kinetic-alphabet-pane__note {
     justify-items: center;
   }
 
-  .kinetic-alphabet-pane__note {
-    text-align: start;
+  .kinetic-alphabet-pane__actions {
+    justify-content: center;
   }
 }
 </style>
