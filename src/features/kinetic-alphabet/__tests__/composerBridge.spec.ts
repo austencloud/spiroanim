@@ -129,9 +129,8 @@ describe('isComposerSpeedRatio', () => {
       expect(isComposerSpeedRatio(ratio)).toBe(true)
     }
 
-    for (const ratio of ['1:2', '1:4', '2:1', '2:3', '2:5', '1:3v5', '']) {
-      expect(isComposerSpeedRatio(ratio), ratio).toBe(false)
-    }
+    const unbridgeable = ['1:2', '1:4', '2:1', '2:3', '2:5', '1:3v5', '']
+    expect(unbridgeable.filter(isComposerSpeedRatio)).toEqual([])
   })
 
   it('narrows a checked string to the Composer ratio union', () => {

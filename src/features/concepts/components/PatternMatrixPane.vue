@@ -436,6 +436,7 @@ import {
   type ElementalRelationship,
 } from '@/features/concepts/elementalRelationships'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
+import { isComposerSpeedRatio, type ComposerCell } from '@/features/kinetic-alphabet/composerBridge'
 import {
   builderPatternPointerDropEvent,
   builderPatternPointerEndEvent,
@@ -564,6 +565,7 @@ const emit = defineEmits<{
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
   animationUpdate: [animation: RootDataFinal]
   builderOpen: [source: 'manual' | 'automatic']
+  composerCellChange: [cell: ComposerCell | null]
   'update:builderFullGrid': [enabled: boolean]
 }>()
 
@@ -995,6 +997,36 @@ const isTileHighlighted = (tile: VtgMatrixTile) =>
   (tile.column === selectedCell.value.column || tile.row === selectedCell.value.row)
 
 const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(reference)
+
+/**
+ * Cell identity for the Flow Arts Composer bridge. This describes which catalog cell the loaded
+ * animation is, so it is reported for hydration-driven matches too and is deliberately outside
+ * `suppressPatternEmit`, which exists to stop hydration from re-applying a pattern.
+ *
+ * Anti is only part of a cell's identity on the spin-toggle cells, matching
+ * `createPatternSelection`. Ratios outside the Composer's transcription have no bridge entry, so
+ * they report no cell rather than a link that would resolve to nothing.
+ */
+const composerCell = computed<ComposerCell | null>(() => {
+  const reference = selectedCellReference.value
+  if (reference === undefined) return null
+  const ratio = speedRatio.value
+  if (!isComposerSpeedRatio(ratio)) return null
+
+  return {
+    concept: isQtr.value ? 'qtr' : 'vtg',
+    reference,
+    speedRatio: ratio,
+    shape: 'diamond',
+    isAnti: isSpinToggleCell(reference) && isAnti.value,
+  }
+})
+
+watch(
+  () => JSON.stringify(composerCell.value),
+  () => emit('composerCellChange', composerCell.value),
+  { immediate: true },
+)
 
 const createPatternSelection = (tile: VtgMatrixTile): VtgPatternSelection | QtrPatternSelection => {
   if (!suppressPatternEmit) hydrationVersion++
