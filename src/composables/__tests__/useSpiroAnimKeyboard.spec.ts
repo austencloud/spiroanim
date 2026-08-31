@@ -53,6 +53,7 @@ describe('useSpiroAnimKeyboard', () => {
     vtgTile.dispatchEvent(undoEvent)
     expect(undoEvent.defaultPrevented).toBe(true)
     expect(ROOT.value.bpm).toBe(60)
+    expect(history.historyApplied?.action).toBe('undo')
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
@@ -63,6 +64,7 @@ describe('useSpiroAnimKeyboard', () => {
       }),
     )
     expect(ROOT.value.bpm).toBe(90)
+    expect(history.historyApplied?.action).toBe('redo')
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', { code: 'KeyZ', metaKey: true, cancelable: true }),

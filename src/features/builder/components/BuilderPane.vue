@@ -5,26 +5,6 @@
     data-role="builder-view"
     aria-labelledby="builder-pane-title"
   >
-    <button
-      class="builder-pane__exit"
-      type="button"
-      aria-label="Exit Pattern Builder"
-      data-role="builder-exit"
-      @click="exit"
-    >
-      Exit
-    </button>
-
-    <div class="builder-pane__controls">
-      <AppTooltip v-if="canUndo" text="Undo">
-        <template #activator="{ props: tooltipProps }">
-          <button v-bind="tooltipProps" type="button" aria-label="Undo" @click="undo">
-            <BaseIcon :path="mdiUndoVariant" size="30" />
-          </button>
-        </template>
-      </AppTooltip>
-    </div>
-
     <div
       v-show="paneVisible.top"
       ref="eTop"
@@ -45,13 +25,26 @@
       <div
         ref="eThumbnails"
         class="builder-pane__thumbnails"
+        :class="{ 'builder-pane__thumbnails--menu-offset': exitAccountsForMainMenu }"
         data-type="thumbnails"
         data-role="builder-thumbnails"
       >
+        <button
+          class="builder-pane__exit"
+          type="button"
+          aria-label="Exit Pattern Builder"
+          data-role="builder-exit"
+          @click="exit"
+        >
+          Exit
+        </button>
+
         <div class="builder-pane__scroll scrollbar">
-          <header class="builder-pane__header">
-            <h1 id="builder-pane-title">Pattern Builder</h1>
-          </header>
+          <div class="builder-pane__header-region">
+            <header class="builder-pane__header">
+              <h1 id="builder-pane-title">Pattern Builder</h1>
+            </header>
+          </div>
 
           <p
             v-if="!isEmptyPattern && !preparedPattern.supported"
@@ -128,14 +121,22 @@
         </div>
       </div>
 
-      <div ref="ePlayer" class="builder-pane__player" data-type="player" data-role="builder-player">
-        <div ref="miniPlayerHost" class="builder-pane__mini-player">
+      <div
+        ref="ePlayer"
+        class="builder-pane__player"
+        data-type="player"
+        data-role="builder-player"
+        :style="playerHostStyle"
+      >
+        <div ref="playerHost" class="builder-pane__player-host">
           <AnimPlayer
-            v-if="miniPlayerDimensions.width > 0 && miniPlayerDimensions.height > 0"
             store="main"
-            minimal
-            :dim="miniPlayerDimensions"
-            minimal-controls-end-clearance="calc(var(--size-pane-switch-button) + var(--space-2))"
+            data-role="player-view"
+            :dim="playerDimensions"
+            :controls-start-clearance="playerControlsStartClearance"
+            :controls-end-clearance="playerControlsEndClearance"
+            :selection-enabled="false"
+            :concepts-visible="props.conceptsVisible"
           />
           <div
             v-if="PLAYBACK_PREVIEW_ACTIVE"
@@ -192,7 +193,7 @@
 </template>
 
 <script setup lang="ts">
-import { mdiExitToApp, mdiMinus, mdiPlus, mdiSwapVerticalBold, mdiUndoVariant } from '@mdi/js'
+import { mdiExitToApp, mdiMinus, mdiPlus, mdiSwapVerticalBold } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
@@ -221,7 +222,6 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { BuilderPatternDrop } from '@/features/builder/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
-import AnimPlayer from '@/components/SpiroAnim/AnimPlayer.vue'
 import {
   appendVtgBuilderPattern,
   insertVtgBuilderPattern,
@@ -238,8 +238,20 @@ import { useSplitterStore } from '@/stores/useSplitterStore'
 import { usePatternMatchingClient } from '@/features/concepts/composables/usePatternMatchingWorker'
 import { createBuilderQuickSlotCandidates } from '@/features/builder/createBuilderQuickSlotCandidates'
 import { preserveVtgBuilderScale } from '@/features/builder/preserveVtgBuilderScale'
+import AnimPlayer from '@/components/SpiroAnim/AnimPlayer.vue'
+import {
+  PANE_CORNER_CONTROL_CLEARANCE,
+  PANE_CYCLE_CONTROL_START_CLEARANCE,
+} from '@/components/layout/paneControlLayout'
 
-const props = withDefaults(defineProps<{ allowFirstDrop?: boolean }>(), { allowFirstDrop: false })
+const props = withDefaults(
+  defineProps<{
+    allowFirstDrop?: boolean
+    paneCycleControlsVisible?: boolean
+    conceptsVisible?: boolean
+  }>(),
+  { allowFirstDrop: false, paneCycleControlsVisible: true, conceptsVisible: false },
+)
 
 const emit = defineEmits<{
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
@@ -289,6 +301,39 @@ const setTopPercentage = (percentage: number) => {
 const swapViews = () => {
   setViewInPane('player', parents.value.player === 'top' ? 'bottom' : 'top')
 }
+const playerOwnsBottomEdge = computed(
+  () =>
+    parents.value.player === 'bottom' ||
+    (parents.value.player === 'top' && !paneVisible.value.bottom),
+)
+const playerControlsStartClearance = computed(() =>
+  props.paneCycleControlsVisible && playerOwnsBottomEdge.value
+    ? PANE_CYCLE_CONTROL_START_CLEARANCE
+    : '0px',
+)
+const playerControlsEndClearance = computed(() =>
+  playerOwnsBottomEdge.value ? PANE_CORNER_CONTROL_CLEARANCE : '0px',
+)
+const builderOwnsTopEdge = computed(
+  () =>
+    parents.value.thumbnails === 'top' ||
+    (parents.value.thumbnails === 'bottom' && !paneVisible.value.top),
+)
+const exitAccountsForMainMenu = computed(
+  () => hijackedPane.value === 'left' && builderOwnsTopEdge.value,
+)
+const playerHostStyle = computed<CSSProperties>(() => ({
+  '--space-pane-bottom-offset': playerOwnsBottomEdge.value
+    ? 'var(--space-workspace-bottom-offset)'
+    : 'var(--space-pane-switch-bottom)',
+}))
+const playerHost = ref<HTMLElement>()
+const { width: playerWidth, height: playerHeight } = useElementSize(playerHost)
+const playerDimensions = computed(() => ({
+  width: playerWidth.value,
+  height: playerHeight.value,
+  perc: 1,
+}))
 const playerStore = usePlayerStore('main')
 const qsStore = useQSMainStore()
 const { ROOT, CURRENT } = playerStore.raw()
@@ -296,14 +341,7 @@ const { PLAYBACK_MAX, PREVIEW_PLAYING, PLAYBACK_PREVIEW_ACTIVE } = storeToRefs(p
 const remainingSeconds = computed(() =>
   Math.max(0, Math.ceil((PLAYBACK_MAX.value - CURRENT.value) / 1000)),
 )
-const miniPlayerHost = ref<HTMLElement>()
-const { width: miniPlayerWidth, height: miniPlayerHeight } = useElementSize(miniPlayerHost)
-const miniPlayerDimensions = computed(() => ({
-  width: miniPlayerWidth.value,
-  height: miniPlayerHeight.value,
-  perc: 1,
-}))
-const { qsHistory } = storeToRefs(qsStore)
+const { historyApplied } = storeToRefs(qsStore)
 const builderSettingsStore = useBuilderSettingsStore()
 const { columns } = storeToRefs(builderSettingsStore)
 const { decreaseColumns, increaseColumns } = builderSettingsStore
@@ -322,7 +360,6 @@ const {
   rightPropColor,
   prop,
 } = storeToRefs(conceptsStore)
-const canUndo = computed(() => qsHistory.value.length > 1)
 const hasPopulatedQuickSlots = computed(
   () =>
     conceptsStore.quickSlotCount > 0 &&
@@ -473,6 +510,13 @@ const applyBuilderPatternUpdate = (
   if (current !== undefined) CURRENT.value = current
 }
 
+watch(historyApplied, (applied) => {
+  if (applied === undefined) return
+  if (PLAYBACK_PREVIEW_ACTIVE.value) playerStore.endPlaybackPreview()
+  selectPreview(undefined)
+  previewRevision.value += 1
+})
+
 const acceptPatternDrop = (drop: BuilderPatternDrop) => {
   const previewCount = resizedPreviewAnimations.value?.length
   if (previewCount === undefined || !isVtgPatternSelection(drop.selection)) return
@@ -542,11 +586,6 @@ const previewRefreshKey = computed(() =>
     previewRevision.value,
   ].join('|'),
 )
-
-const undo = () => {
-  const previous = qsStore.undoQS()
-  if (previous !== undefined) applyBuilderPatternUpdate(previous)
-}
 
 const { beginHistoryGroup, endHistoryGroup } = qsStore
 let sliderHistoryActive = false
@@ -622,17 +661,34 @@ const exit = () => {
   overflow-x: hidden;
 }
 
+.builder-pane__header-region {
+  --builder-exit-clearance: calc(5rem + var(--space-2));
+  --builder-menu-clearance: 0px;
+
+  box-sizing: border-box;
+  width: 100%;
+  padding-inline-start: var(--builder-menu-clearance);
+  padding-inline-end: var(--builder-exit-clearance);
+}
+
 .builder-pane__header {
   display: flex;
   align-items: center;
-  width: min(calc(100% - 8rem), 28rem);
+  justify-content: center;
+  width: min(100%, 28rem);
   padding-block: var(--space-3) var(--space-2);
   margin-inline: auto;
   gap: var(--space-2);
+  overflow: hidden;
+}
+
+.builder-pane__thumbnails--menu-offset .builder-pane__header-region {
+  --builder-menu-clearance: calc(var(--size-editor-toolbar-height) + var(--space-2));
 }
 
 .builder-pane__header::before,
 .builder-pane__header::after {
+  min-width: 0;
   height: 2px;
   content: '';
   background: linear-gradient(to right, transparent, var(--color-action-primary), transparent);
@@ -640,6 +696,7 @@ const exit = () => {
 }
 
 .builder-pane__header h1 {
+  min-width: 0;
   padding: var(--space-1) var(--space-2);
   margin: 0;
   color: transparent;
@@ -660,6 +717,26 @@ const exit = () => {
   filter: drop-shadow(0 1px 3px color-mix(in srgb, var(--color-action-primary) 28%, transparent));
 }
 
+@container (max-width: 20rem) {
+  .builder-pane__header {
+    gap: 0;
+  }
+
+  .builder-pane__header::before,
+  .builder-pane__header::after {
+    display: none;
+  }
+
+  .builder-pane__header h1 {
+    max-width: 100%;
+    padding-inline: 0;
+    overflow: hidden;
+    font-size: clamp(0.7rem, 4cqi, 1.05rem);
+    letter-spacing: 0.05em;
+    text-overflow: clip;
+  }
+}
+
 .builder-pane__support-error {
   box-sizing: border-box;
   width: min(calc(100% - var(--space-4)), 45rem);
@@ -675,7 +752,7 @@ const exit = () => {
   border-radius: var(--radius-sm);
 }
 
-.builder-pane__mini-player {
+.builder-pane__player-host {
   position: relative;
   box-sizing: border-box;
   width: 100%;
@@ -746,17 +823,6 @@ const exit = () => {
   text-align: center;
 }
 
-.builder-pane__controls {
-  position: absolute;
-  z-index: 3;
-  top: calc(var(--space-2) + var(--size-pane-switch-button) + var(--space-2));
-  right: calc(var(--space-2) + var(--size-editor-scrollbar));
-  display: flex;
-  width: max-content;
-  gap: var(--space-1);
-  align-items: flex-start;
-}
-
 .builder-pane__column-control {
   position: absolute;
   bottom: var(--space-workspace-bottom-offset);
@@ -820,19 +886,8 @@ const exit = () => {
   place-items: center;
 }
 
-.builder-pane__controls button:not(.builder-pane__exit) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-sm);
-}
-
 .builder-pane__exit {
+  box-sizing: border-box;
   position: absolute;
   inset-block-start: var(--space-workspace-corner-control);
   inset-inline-end: var(--space-workspace-corner-control);
@@ -859,10 +914,6 @@ const exit = () => {
     transform var(--transition-fast);
 }
 
-.builder-pane__controls button:hover {
-  color: var(--color-action-primary);
-}
-
 .builder-pane__exit:hover {
   color: var(--color-on-status-warning);
   background: linear-gradient(135deg, var(--color-status-error), var(--color-status-warning));
@@ -874,11 +925,6 @@ const exit = () => {
 
 .builder-pane__exit:active {
   transform: translateY(1px);
-}
-
-.builder-pane__controls button:focus-visible {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: 2px;
 }
 
 .builder-pane__exit:focus-visible {

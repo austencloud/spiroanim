@@ -1,10 +1,10 @@
 <template>
   <div class="spiro-workspace" data-role="main-container" :style="containerStyle">
     <div v-show="paneVisible.left" ref="eLeft" data-role="left-pane" :style="leftStyle">
-      <PaneRotate pane="left" />
+      <PaneRotate v-if="paneCycleControlsVisible" pane="left" />
     </div>
     <div v-show="paneVisible.right" ref="eRight" data-role="right-pane" :style="rightStyle">
-      <PaneRotate pane="right" />
+      <PaneRotate v-if="paneCycleControlsVisible" pane="right" />
     </div>
     <div v-show="false" ref="eHidden" data-role="hidden-pane">
       <Player
@@ -15,6 +15,7 @@
         data-role="player-view"
         :dim="dPlayer"
         :editor-visible="viewVisible.editor"
+        :concepts-visible="viewVisible.concepts"
       />
       <Editor
         v-if="viewVisible.editor"
@@ -35,7 +36,10 @@
         data-type="timeline"
         data-role="timeline-view"
         :dim="dTimeline"
+        :editor-visible="viewVisible.editor"
         :player-visible="viewVisible.player"
+        :pane-cycle-controls-visible="paneCycleControlsVisible"
+        :concepts-visible="viewVisible.concepts"
         @quick-slot-apply="applyQuickSlotFromView($event, 'timeline')"
         @quick-slot-save="saveCurrentPatternToQuickSlot"
       />
@@ -69,6 +73,8 @@
         data-type="builder"
         data-role="builder-pane-view"
         :allow-first-drop="builderFullGrid"
+        :pane-cycle-controls-visible="paneCycleControlsVisible"
+        :concepts-visible="viewVisible.concepts"
         @quick-slots-create="saveAnimationsToQuickSlots"
         @preview-selection-change="selectedBuilderPreviewIndex = $event"
       />
@@ -162,6 +168,7 @@ const builderFullCatalogForced = computed(
     (ROOT.value.props.length === 0 || selectedBuilderPreviewIndex.value === 0),
 )
 const builderFullCatalog = computed(() => builderFullCatalogForced.value || builderFullGrid.value)
+const paneCycleControlsVisible = computed(() => !paneStore.isPaneHijacked)
 const { showFullTimeline } = storeToRefs(usePropertiesStore('main'))
 const { registerComponentEl } = paneStore
 
@@ -240,6 +247,15 @@ const toggleBuilder = () => {
   if (paneStore.isPaneHijacked) paneStore.exitPaneHijack()
   else paneStore.hijackOppositePane('builder', 'concepts')
 }
+
+watch(
+  () => conceptsStore.selectedConcept,
+  () => {
+    if (!paneStore.isPaneHijacked) return
+    builderFullGrid.value = false
+    paneStore.exitPaneHijack()
+  },
+)
 
 const applyQuickSlot = async (path: string): Promise<boolean> => {
   const conceptRoute = findConceptForPath(path)

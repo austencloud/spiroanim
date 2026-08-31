@@ -1,5 +1,10 @@
 <template>
-  <Progress :store="props.store">
+  <Progress
+    :store="props.store"
+    :start-clearance="props.startClearance"
+    :end-clearance="props.endClearance"
+    :selection-enabled="props.selectionEnabled"
+  >
     <template #play>
       <AppTooltip text="Play / Pause">
         <template #activator="{ props: tooltipProps }">
@@ -7,7 +12,7 @@
             v-bind="tooltipProps"
             class="icon-button icon-button--primary"
             type="button"
-            :aria-label="PLAYING ? 'Pause' : 'Play'"
+            :aria-label="rendererPlaying ? 'Pause' : 'Play'"
             @click="clickPlay"
           >
             <BaseIcon :path="playIcon" size="30" />
@@ -15,7 +20,7 @@
         </template>
       </AppTooltip>
     </template>
-    <template #mode>
+    <template v-if="props.selectionEnabled" #mode>
       <AppTooltip text="Select Mode">
         <template #activator="{ props: tooltipProps }">
           <button
@@ -77,46 +82,75 @@ import PlayerFreeCameraControl from './PlayerFreeCameraControl.vue'
 
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useQSMainStore } from '@/stores/useQSMainStore'
+import { PANE_CYCLE_CONTROL_START_CLEARANCE } from '@/components/layout/paneControlLayout'
 
 const props = withDefaults(
   defineProps<{
     store: string
     editorVisible?: boolean
+    startClearance?: string
+    endClearance?: string
+    selectionEnabled?: boolean
   }>(),
   {
     editorVisible: false,
+    startClearance: PANE_CYCLE_CONTROL_START_CLEARANCE,
+    endClearance: '0px',
+    selectionEnabled: true,
   },
 )
 
 const playerStore = usePlayerStore(props.store)
-const { ROOT, CURRENT } = playerStore.raw()
-const { PLAYING, SELECTION, EINDEX, ETIMES, UPDATE, SELECTED } = storeToRefs(playerStore)
+const { ROOT, PLAYBACK_OVERRIDE, CURRENT } = playerStore.raw()
+const {
+  PLAYING,
+  PREVIEW_PLAYING,
+  PLAYBACK_TEMPORARY_ACTIVE,
+  SELECTION,
+  CONTROL_INDEX,
+  CONTROL_TIMES,
+  UPDATE,
+  SELECTED,
+} = storeToRefs(playerStore)
+const rendererPlaying = computed({
+  get: () => (PLAYBACK_TEMPORARY_ACTIVE.value ? PREVIEW_PLAYING.value : PLAYING.value),
+  set: (playing: boolean) => {
+    if (PLAYBACK_TEMPORARY_ACTIVE.value) PREVIEW_PLAYING.value = playing
+    else PLAYING.value = playing
+  },
+})
 
 const qsStore = useQSMainStore()
 const { qsHistory } = storeToRefs(qsStore)
-const { undoQS } = qsStore
+const { undoQS, notifyHistoryApplied } = qsStore
 const canUndo = computed(() => qsHistory.value.length > 1)
 
 const speedOptions = [4, 3, 2, 1, 0.5, 0.25, 0.1] as const
-const speed = ref(ROOT.value.speed)
-
-// Trigger shallow watchers
-watch(speed, (val) => {
-  ROOT.value.speed = val
-  triggerRef(ROOT)
+const speed = computed({
+  get: () => (PLAYBACK_OVERRIDE.value ?? ROOT.value).speed,
+  set: (value: number) => {
+    const override = PLAYBACK_OVERRIDE.value
+    if (override) {
+      override.speed = value
+      triggerRef(PLAYBACK_OVERRIDE)
+    } else {
+      ROOT.value.speed = value
+      triggerRef(ROOT)
+    }
+  },
 })
 
 const clickPlay = () => {
-  PLAYING.value = !PLAYING.value
+  rendererPlaying.value = !rendererPlaying.value
 }
 
 const clickMode = () => {
-  const index = EINDEX.value
-  const max = ETIMES.value.length - 1
+  const index = CONTROL_INDEX.value
+  const max = CONTROL_TIMES.value.length - 1
   UPDATE.value = Symbol()
 
   if ((SELECTION.value = !SELECTION.value)) {
-    CURRENT.value = ETIMES.value[index] ?? 0
+    CURRENT.value = CONTROL_TIMES.value[index] ?? 0
     SELECTED.value[0] = index
     SELECTED.value[1] = Math.min(index + 1, max) // index + 1 > max ? index : index + 1
   }
@@ -124,10 +158,15 @@ const clickMode = () => {
 
 const clickUndo = () => {
   const previous = undoQS()
-  if (previous !== undefined) ROOT.value = previous
+  if (previous !== undefined) {
+    ROOT.value = previous
+    notifyHistoryApplied('undo')
+  }
 }
 
-const playIcon = computed(() => (PLAYING.value ? mdiPauseCircleOutline : mdiPlayCircleOutline))
+const playIcon = computed(() =>
+  rendererPlaying.value ? mdiPauseCircleOutline : mdiPlayCircleOutline,
+)
 const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelectionMultiple))
 </script>
 
@@ -135,7 +174,7 @@ const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelec
 .btnCenter {
   position: absolute;
   right: 2px;
-  bottom: calc(var(--space-workspace-bottom-offset) + 35px);
+  bottom: calc(var(--space-pane-bottom-offset) + 35px);
 }
 
 .btnUndo {
@@ -168,7 +207,7 @@ const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelec
 
 .speed {
   position: absolute;
-  bottom: calc(var(--space-workspace-bottom-offset) + 34px);
+  bottom: calc(var(--space-pane-bottom-offset) + 34px);
   left: 10px;
   display: grid;
   width: 48px;

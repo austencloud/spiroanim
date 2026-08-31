@@ -57,7 +57,9 @@ test('hydrates a VTG selection through the lazy pattern-matching worker', async 
   expect(consoleErrors).toEqual([])
 })
 
-test('shares Free Camera with the interactive Builder Mini-Player', async ({ page }) => {
+test('mounts the full Player in Builder with live override playback and collision-safe controls', async ({
+  page,
+}) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
 
@@ -70,39 +72,77 @@ test('shares Free Camera with the interactive Builder Mini-Player', async ({ pag
   await builderToggle.click()
 
   const builder = page.locator('[data-role="builder-pane-view"]')
-  const miniPlayer = builder.locator('[data-role="builder-player"]')
-  const freeCamera = miniPlayer.getByRole('button', { name: 'Free camera' })
-  const progress = miniPlayer.locator('.slider--compact')
+  const builderPlayer = builder.locator('[data-role="builder-player"]')
+  const sharedPlayer = builderPlayer.locator('[data-role="player-view"]')
+  const freeCamera = sharedPlayer.getByRole('button', { name: 'Free camera' })
   const swap = builder.getByRole('button', { name: 'Swap Builder Views' })
   const exit = builder.getByRole('button', { name: 'Exit Pattern Builder' })
-  await expect(miniPlayer).toBeVisible()
+  const menu = page.getByRole('button', { name: 'Open SpiroAnim menu' })
+  await expect(builderPlayer).toBeVisible()
+  await expect(sharedPlayer).toBeVisible()
+  const position = sharedPlayer.getByRole('slider', { name: 'Animation position' })
+  const initialPosition = Number(await position.inputValue())
+  await expect.poll(async () => Number(await position.inputValue())).not.toBe(initialPosition)
+  const [playerViewBox, initialProgressBox] = await Promise.all([
+    sharedPlayer.boundingBox(),
+    sharedPlayer.locator('.slider').boundingBox(),
+  ])
+  expect(playerViewBox).not.toBeNull()
+  expect(initialProgressBox).not.toBeNull()
+  expect(initialProgressBox!.x).toBeCloseTo(playerViewBox!.x, 0)
+  await page.locator('[data-cell-reference="1-2"]').click()
+  await expect(builder.locator('[data-role="builder-preview-countdown"]')).toBeVisible()
+  const previewInitialPosition = Number(await position.inputValue())
+  await expect
+    .poll(async () => Number(await position.inputValue()))
+    .not.toBe(previewInitialPosition)
+  await expect(sharedPlayer.locator('.slider')).not.toHaveClass(/slider--compact/)
+  await expect(page.locator('[data-role="player-view"]')).toHaveCount(1)
   await expect(freeCamera).toHaveAttribute('aria-pressed', 'false')
-  await expect(miniPlayer.locator('canvas')).toHaveCSS('touch-action', 'none')
+  await expect(sharedPlayer.locator('canvas')).toHaveCSS('touch-action', 'none')
   await expect(exit).toHaveCSS('background-image', /linear-gradient/)
   await expect(exit).toHaveCSS('border-top-width', '2px')
 
-  const [builderBox, progressBox, freeCameraBox, swapBox, exitBox] = await Promise.all([
+  const [builderBox, menuBox, exitBox] = await Promise.all([
     builder.boundingBox(),
-    progress.boundingBox(),
-    freeCamera.boundingBox(),
-    swap.boundingBox(),
+    menu.boundingBox(),
     exit.boundingBox(),
   ])
   expect(builderBox).not.toBeNull()
-  expect(progressBox).not.toBeNull()
-  expect(freeCameraBox).not.toBeNull()
-  expect(swapBox).not.toBeNull()
+  expect(menuBox).not.toBeNull()
   expect(exitBox).not.toBeNull()
-  expect(progressBox!.x + progressBox!.width).toBeLessThanOrEqual(swapBox!.x)
-  expect(freeCameraBox!.x + freeCameraBox!.width).toBeLessThanOrEqual(swapBox!.x)
   expect(exitBox!.y - builderBox!.y).toBeCloseTo(1, 0)
-  expect(builderBox!.x + builderBox!.width - exitBox!.x - exitBox!.width).toBeCloseTo(1, 0)
+  expect(exitBox!.x).toBeGreaterThanOrEqual(menuBox!.x + menuBox!.width + 8)
+
+  // The Vite devtools iframe overlaps this bottom-right control in the test server.
+  await swap.dispatchEvent('click')
+  await expect(builder.locator('[data-role="bottom-pane"] [data-role="player-view"]')).toBeVisible()
+  await expect(sharedPlayer.locator('.slider')).toHaveCSS('right', '40px')
+  const swappedInitialPosition = Number(await position.inputValue())
+  await expect
+    .poll(async () => Number(await position.inputValue()))
+    .not.toBe(swappedInitialPosition)
+  const [progressBox, swapBox] = await Promise.all([
+    sharedPlayer.locator('.slider').boundingBox(),
+    swap.boundingBox(),
+  ])
+  expect(progressBox).not.toBeNull()
+  expect(swapBox).not.toBeNull()
+  expect(progressBox!.x).toBeCloseTo(playerViewBox!.x, 0)
+  expect(progressBox!.x + progressBox!.width).toBeLessThanOrEqual(swapBox!.x)
 
   await freeCamera.click()
   await expect(freeCamera).toHaveAttribute('aria-pressed', 'true')
 
   await builderToggle.click()
   await expect(page.locator('[data-role="player-view"]')).toBeVisible()
+  const restoredPosition = page
+    .locator('[data-role="player-view"]')
+    .getByRole('slider', { name: 'Animation position' })
+  const restoredInitialPosition = Number(await restoredPosition.inputValue())
+  await expect
+    .poll(async () => Number(await restoredPosition.inputValue()))
+    .not.toBe(restoredInitialPosition)
   await expect(
     page.locator('[data-role="player-view"]').getByRole('button', { name: 'Free camera' }),
   ).toHaveAttribute('aria-pressed', 'true')

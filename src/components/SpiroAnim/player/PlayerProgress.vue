@@ -1,8 +1,15 @@
 <template>
-  <div class="slider" :class="{ 'slider--compact': compact }" :style="sliderStyle">
+  <div
+    class="slider"
+    :class="{
+      'slider--compact': compact,
+      'slider--selection-disabled': !compact && !props.selectionEnabled,
+    }"
+    :style="sliderStyle"
+  >
     <div class="slider-control"><slot name="play" /></div>
     <div class="slider-track">
-      <template v-if="SELECTION">
+      <template v-if="effectiveSelection">
         <div class="selection-track" aria-hidden="true">
           <div class="selection-fill" :style="selectionFillStyle" />
         </div>
@@ -61,7 +68,7 @@
         />
       </template>
     </div>
-    <div class="slider-control">
+    <div v-if="compact || props.selectionEnabled" class="slider-control">
       <slot v-if="compact" name="end" />
       <slot v-else name="mode" />
     </div>
@@ -70,16 +77,21 @@
 
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { PANE_CYCLE_CONTROL_START_CLEARANCE } from '@/components/layout/paneControlLayout'
 
 const props = withDefaults(
   defineProps<{
     store: string
     compact?: boolean
-    compactEndClearance?: string
+    startClearance?: string
+    endClearance?: string
+    selectionEnabled?: boolean
   }>(),
   {
     compact: false,
-    compactEndClearance: '0px',
+    startClearance: PANE_CYCLE_CONTROL_START_CLEARANCE,
+    endClearance: '0px',
+    selectionEnabled: true,
   },
 )
 
@@ -92,11 +104,10 @@ const {
   UPDATE,
   SELECTION,
   SELECTED,
-  COUNT,
   MAX,
   PLAYBACK_MAX,
   PLAYBACK_OVERRIDE_ACTIVE,
-  ETIMES,
+  CONTROL_TIMES,
 } = storeToRefs(playerStore)
 const rendererPlaying = computed({
   get: () => (PLAYBACK_TEMPORARY_ACTIVE.value ? PREVIEW_PLAYING.value : PLAYING.value),
@@ -118,7 +129,9 @@ let previousSelection: [number, number] = [...selectionHandles.value]
 const playbackMax = computed(() =>
   PLAYBACK_OVERRIDE_ACTIVE.value ? PLAYBACK_MAX.value : MAX.value,
 )
-const max = computed(() => (SELECTION.value ? COUNT.value : playbackMax.value))
+const selectionCount = computed(() => Math.max(CONTROL_TIMES.value.length - 1, 0))
+const effectiveSelection = computed(() => props.selectionEnabled && SELECTION.value)
+const max = computed(() => (effectiveSelection.value ? selectionCount.value : playbackMax.value))
 
 // Informs the PLAYER we've made modifications
 const update = (/*val: number | [number, number]*/) => {
@@ -180,10 +193,10 @@ watch(
       // - Normally set CURRENT to the displayed frame set's end time
       // - But if moving forward (end > start), we adjust CURRENT to just before end
       //   so playback logic doesn't overshoot or duplicate the final frame
-      CURRENT.value = (ETIMES.value[end] ?? 0) + (end > start ? -1 : 0)
+      CURRENT.value = (CONTROL_TIMES.value[end] ?? 0) + (end > start ? -1 : 0)
     } else if (start !== oldStart) {
       // If only the start changed, set CURRENT to that new start frame
-      CURRENT.value = ETIMES.value[start] ?? 0
+      CURRENT.value = CONTROL_TIMES.value[start] ?? 0
     }
 
     previousSelection = [start, end]
@@ -193,16 +206,18 @@ watch(
 )
 
 watch(
-  SELECTION,
-  (selection) => {
+  [SELECTION, CONTROL_TIMES],
+  ([selection]) => {
     if (selection && !interacting)
-      selectionHandles.value = [SELECTED.value[0] ?? 0, SELECTED.value[1] ?? 0]
+      selectionHandles.value = [SELECTED.value[0] ?? 0, SELECTED.value[1] ?? 0].map((index) =>
+        Math.min(index, selectionCount.value),
+      ) as [number, number]
   },
-  { flush: 'post' },
+  { flush: 'post', deep: true, immediate: true },
 )
 
 const selectionFillStyle = computed<CSSProperties>(() => {
-  const count = Math.max(COUNT.value, 0)
+  const count = selectionCount.value
   const start = Math.min(Math.max(SELECTED.value[0] ?? 0, 0), count)
   const end = Math.min(Math.max(SELECTED.value[1] ?? 0, start), count)
   const startPercent = count === 0 ? 0 : (start / count) * 100
@@ -226,16 +241,22 @@ const positionFillStyle = computed<CSSProperties>(() => {
 })
 
 const sliderStyle = computed<CSSProperties>(() => {
-  const width = Math.max((dim?.width ?? 0) - (props.compact ? 0 : 34), 0)
-  const hasCompactClearance = props.compact && props.compactEndClearance !== '0px'
+  const width = Math.max(dim?.width ?? 0, 0)
+  const startClearance = props.compact ? '0px' : props.startClearance
+  const hasEndClearance = props.endClearance !== '0px'
+  const clearances = [startClearance, hasEndClearance ? props.endClearance : undefined].filter(
+    (clearance): clearance is string => clearance !== undefined && clearance !== '0px',
+  )
 
   return {
-    width: hasCompactClearance
-      ? `max(0px, calc(${width}px - ${props.compactEndClearance}))`
-      : `${width}px`,
+    width:
+      clearances.length === 0
+        ? `${width}px`
+        : `max(0px, calc(${width}px - ${clearances.join(' - ')}))`,
     position: 'absolute',
-    bottom: props.compact ? 'var(--space-2)' : 'var(--space-workspace-bottom-offset)',
-    right: hasCompactClearance ? props.compactEndClearance : '0px',
+    bottom: props.compact ? 'var(--space-2)' : 'var(--space-pane-bottom-offset)',
+    left: startClearance,
+    right: hasEndClearance ? props.endClearance : '0px',
   }
 })
 </script>
@@ -252,6 +273,10 @@ const sliderStyle = computed<CSSProperties>(() => {
 .slider--compact {
   box-sizing: border-box;
   padding-inline: var(--space-2);
+}
+
+.slider--selection-disabled {
+  grid-template-columns: 2.25rem minmax(0, 1fr);
 }
 
 .slider-control {

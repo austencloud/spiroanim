@@ -264,7 +264,9 @@ const {
   videoExportError,
 } = storeToRefs(playerStore)
 const { viewVisible } = storeToRefs(useMainPaneStore())
-const playerVisible = computed(() => viewVisible.value.player)
+const playerVisible = computed(
+  () => viewVisible.value.player || viewVisible.value.timeline || viewVisible.value.builder,
+)
 const videoExportAvailable = ref(false)
 const tracerIcon = computed(() => (TRACER.value ? mdiFirework : mdiFireworkOff))
 const tracerLabel = computed(() => (TRACER.value ? 'Tracer: On' : 'Tracer: Off'))

@@ -54,9 +54,15 @@ describe('AnimEditor', () => {
     expect(useEditorAccessStore().editorLoaded).toBe(true)
     expect(paneStore.parents).toEqual({ properties: 'top', timeline: 'bottom' })
     expect(wrapper.get('[data-type="timeline"]').attributes('data-cols')).toBe('4')
+    expect(wrapper.get('[data-type="timeline"]').attributes('style')).toContain(
+      '--space-pane-bottom-offset: var(--space-workspace-bottom-offset)',
+    )
 
     await wrapper.get('button[aria-label="Swap Editor Views"]').trigger('click')
     expect(paneStore.parents).toEqual({ properties: 'bottom', timeline: 'top' })
+    expect(wrapper.get('[data-type="timeline"]').attributes('style')).toContain(
+      '--space-pane-bottom-offset: var(--space-pane-switch-bottom)',
+    )
 
     await wrapper.setProps({ vtl: true })
     expect(wrapper.find('button[aria-label="Swap Editor Views"]').exists()).toBe(false)

@@ -61,4 +61,27 @@ describe('usePlayerFrameNavigation', () => {
     expect(playerStore.SELECTED).toEqual([0, 3])
     expect(CURRENT.value).toBe(29)
   })
+
+  it('navigates with override timings while preview playback owns the Player', async () => {
+    const playerStore = usePlayerStore('preview-frame-navigation')
+    const { ROOT, CURRENT } = playerStore.raw()
+    playerStore.ETIMES = [0, 10, 20]
+    playerStore.setPlaybackOverride(
+      {
+        ...ROOT.value,
+        bpm: 60,
+        props: [{ anim: [{ beats: 2 }, { beats: 2 }, { beats: 2 }], motion: [] }],
+      },
+      true,
+    )
+    await nextTick()
+    const { rewind, forward } = usePlayerFrameNavigation('preview-frame-navigation')
+    CURRENT.value = 2500
+
+    rewind()
+    expect(CURRENT.value).toBe(2000)
+
+    forward()
+    expect(CURRENT.value).toBe(3999)
+  })
 })

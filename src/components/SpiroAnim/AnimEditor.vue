@@ -21,6 +21,7 @@
         :dim="dTimeline"
         :landscape="false"
         :cols="timelineColumns"
+        :style="timelinePaneStyle"
         @quick-slot-apply="emit('quickSlotApply', $event)"
         @quick-slot-save="emit('quickSlotSave', $event)"
       />
@@ -134,6 +135,16 @@ const enabled = computed(
     dim.height > minTimeHeight,
 )
 const timelineColumns = computed(() => resolveEmbeddedTimelineColumns(viewVisible.value.timeline))
+const timelineOwnsBottomEdge = computed(
+  () =>
+    parents.value.timeline === 'bottom' ||
+    (parents.value.timeline === 'top' && !paneVisible.value.bottom),
+)
+const timelinePaneStyle = computed<CSSProperties>(() => ({
+  '--space-pane-bottom-offset': timelineOwnsBottomEdge.value
+    ? 'var(--space-workspace-bottom-offset)'
+    : 'var(--space-pane-switch-bottom)',
+}))
 
 // Calculate the properties column count
 watchImmediate(dim, () => {

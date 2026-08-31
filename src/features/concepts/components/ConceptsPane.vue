@@ -27,7 +27,6 @@
     >
       <select
         v-model="selectedConcept"
-        :disabled="builderActive"
         class="concepts-pane__selector"
         aria-label="Concept"
         data-role="concept-selector"

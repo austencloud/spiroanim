@@ -41,6 +41,7 @@
     var(--space-pane-switch-bottom),
     var(--safe-area-inset-bottom)
   );
+  --space-pane-bottom-offset: var(--space-workspace-bottom-offset);
   --size-pane-switch-bottom-clearance: calc(
     var(--size-pane-switch-button) + var(--space-workspace-bottom-offset)
   );

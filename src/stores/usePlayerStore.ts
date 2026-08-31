@@ -64,6 +64,19 @@ export const usePlayerStore = (id: string) => {
       const playbackTemporaryActive = ref(false)
       const playing = ref(true)
       const previewPlaying = ref(true)
+      const displayedTimes = ref<number[]>([])
+      const playbackTimes = ref<number[]>([])
+      const controlTimes = computed(() =>
+        r.PLAYBACK_OVERRIDE.value === undefined ? displayedTimes.value : playbackTimes.value,
+      )
+      const controlIndex = computed(() => {
+        let active = 0
+        for (let index = 0; index < controlTimes.value.length; index++) {
+          if (controlTimes.value[index]! > r.CURRENT.value) break
+          active = index
+        }
+        return active
+      })
 
       const v = {
         raw: () => r,
@@ -72,6 +85,9 @@ export const usePlayerStore = (id: string) => {
         PLAYBACK_OVERRIDE_ACTIVE: computed(() => r.PLAYBACK_OVERRIDE.value !== undefined),
         PLAYBACK_PREVIEW_ACTIVE: computed(() => playbackPreviewActive.value),
         PLAYBACK_TEMPORARY_ACTIVE: computed(() => playbackTemporaryActive.value),
+        PLAYBACK_TIMES: playbackTimes,
+        CONTROL_TIMES: controlTimes,
+        CONTROL_INDEX: controlIndex,
 
         // Preview playback is session-only and intentionally independent from loaded ROOT playback.
         PREVIEW_PLAYING: previewPlaying,
@@ -124,7 +140,7 @@ export const usePlayerStore = (id: string) => {
         MTIMES: ref<number[][]>([[]]), // Individual Motion times for each prop
         CTIMES: ref<number[]>([0]), // Camera frame times
         UTIMES: ref<number[]>([]), //     Unique times derived from every track
-        ETIMES: ref<number[]>([]), //     Times displayed by the active editor frame set
+        ETIMES: displayedTimes, //       Times displayed by the active editor frame set
 
         PROJECTION: ref({
           fov: 45,
@@ -189,6 +205,7 @@ export const usePlayerStore = (id: string) => {
         const motionTimes = MOTIONTIMES(compiled)
         const cameraTimes = CAMERATIMES(compiled)
         const times = UNQTIMES([...propTimes, ...motionTimes, cameraTimes])
+        playbackTimes.value = times
         v.PLAYBACK_MAX.value = Math.max(times.at(-1) ?? 0, 0)
         if (v.PLAYBACK_MAX.value < r.CURRENT.value) r.CURRENT.value = v.PLAYBACK_MAX.value
 
@@ -206,9 +223,11 @@ export const usePlayerStore = (id: string) => {
       })
 
       // Override transitions change playback ownership. Clearing one recompiles the latest ROOT.
-      watch(r.PLAYBACK_OVERRIDE, (override) => compilePlayback(override ?? r.ROOT.value))
+      watch(r.PLAYBACK_OVERRIDE, (override) => compilePlayback(override ?? r.ROOT.value), {
+        flush: 'sync',
+      })
 
-      watchImmediate(v.ETIMES, (times) => {
+      watchImmediate(controlTimes, (times) => {
         v.COUNT.value = Math.max(times.length - 1, 0)
         const maxIndex = v.COUNT.value
         const selected: [number, number] = [

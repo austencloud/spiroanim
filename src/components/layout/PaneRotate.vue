@@ -1,6 +1,5 @@
 <template>
   <PaneSwapButton
-    v-if="!isPaneHijacked"
     class="pane-rotate-icon"
     label="Swap Views"
     :icon="mdiSwapHorizontalBold"
@@ -21,8 +20,6 @@ const props = defineProps<{
 }>()
 
 const paneStore = useMainPaneStore()
-const { isPaneHijacked } = storeToRefs(paneStore)
-
 const onClick = () => {
   paneStore.rotatePane(props.pane)
 }

@@ -6,9 +6,18 @@
       :store="props.store"
       :end-clearance="props.minimalControlsEndClearance"
     />
-    <Controls v-else :store="props.store" :editor-visible="props.editorVisible" />
-    <span v-if="!minimal" class="fps">{{ fps }}</span>
-    <AppTooltip v-if="!minimal" class="aspect-tooltip" placement="bottom">
+    <Controls
+      v-else
+      :store="props.store"
+      :editor-visible="props.editorVisible"
+      :selection-enabled="props.selectionEnabled"
+      :start-clearance="props.controlsStartClearance"
+      :end-clearance="props.controlsEndClearance"
+    />
+    <span v-if="!minimal" class="fps" :class="{ 'fps--without-aspect': props.conceptsVisible }">{{
+      fps
+    }}</span>
+    <AppTooltip v-if="!minimal && !props.conceptsVisible" class="aspect-tooltip" placement="bottom">
       <template #activator="{ props: tooltipProps }">
         <span v-bind="tooltipProps" class="aspect">
           <span :style="{ color: aspect.color.value }">{{ aspectLabel.ratioText }}</span>
@@ -62,6 +71,7 @@ import { getPointerClientPosition } from '@/utils/pointerEvent'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
+import { PANE_CYCLE_CONTROL_START_CLEARANCE } from '@/components/layout/paneControlLayout'
 import { Color } from 'three'
 
 const props = withDefaults(
@@ -71,12 +81,20 @@ const props = withDefaults(
     editorVisible?: boolean
     minimal?: boolean
     minimalControlsEndClearance?: string
+    controlsStartClearance?: string
+    controlsEndClearance?: string
+    selectionEnabled?: boolean
+    conceptsVisible?: boolean
   }>(),
   {
     store: 'main',
     editorVisible: false,
     minimal: false,
     minimalControlsEndClearance: '0px',
+    controlsStartClearance: PANE_CYCLE_CONTROL_START_CLEARANCE,
+    controlsEndClearance: '0px',
+    selectionEnabled: true,
+    conceptsVisible: false,
   },
 )
 
@@ -108,7 +126,7 @@ const {
   TRACER,
   PROGRESSIVE_PATHS,
   ALL_HEAD_PATHS,
-  ETIMES,
+  CONTROL_TIMES,
   PLAYBACK_ASPECT,
   CANVAS_DIM,
   imageExportRequest,
@@ -119,6 +137,7 @@ const {
   videoExportError,
   trackClicks,
 } = storeToRefs(playerStore)
+const effectiveSelection = computed(() => props.selectionEnabled && SELECTION.value)
 const rendererPlaying = computed({
   get: () => (PLAYBACK_TEMPORARY_ACTIVE.value ? PREVIEW_PLAYING.value : PLAYING.value),
   set: (playing: boolean) => {
@@ -225,17 +244,17 @@ onMounted(() => {
   })
 
   // Progress bar selection range change
-  watch(UPDATE, () => {
-    if (SELECTION.value)
+  watch([UPDATE, CONTROL_TIMES], () => {
+    if (effectiveSelection.value)
       send('range', {
-        min: ETIMES.value[SELECTED.value[0] ?? 0] ?? 0,
-        max: ETIMES.value[SELECTED.value[1] ?? 0] ?? 0,
+        min: CONTROL_TIMES.value[SELECTED.value[0] ?? 0] ?? 0,
+        max: CONTROL_TIMES.value[SELECTED.value[1] ?? 0] ?? 0,
       })
     send('jump', CURRENT.value)
   })
 
   // Progress bar selection change
-  watchImmediate(SELECTION, (val) => send('selection', val))
+  watchImmediate(effectiveSelection, (val) => send('selection', val))
 
   // Send "Tracer" toggles
   watchImmediate(
@@ -246,7 +265,7 @@ onMounted(() => {
   // Path Tracing includes mini players such as Builder, unlike Tracer. Editor, selection, and the
   // separate timeline renderer retain their full paths.
   watchImmediate(
-    computed(() => PROGRESSIVE_PATHS.value && !props.editorVisible && !SELECTION.value),
+    computed(() => PROGRESSIVE_PATHS.value && !props.editorVisible && !effectiveSelection.value),
     (val) => send('progressivePaths', val),
   )
 
@@ -510,6 +529,9 @@ const containerStyle = computed<CSSProperties>(() => ({
   font-weight: bold;
   position: absolute;
   top: 26px;
+}
+.fps--without-aspect {
+  top: 6px;
 }
 .aspect-tooltip {
   position: absolute;

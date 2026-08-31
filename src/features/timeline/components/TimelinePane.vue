@@ -17,37 +17,52 @@
     />
 
     <div v-show="false" ref="eHidden" data-role="timeline-hidden-pane">
-      <Player
+      <div
         v-if="viewVisible.player"
-        ref="cPlayer"
-        :store="props.store"
+        ref="ePlayer"
+        class="timeline-pane__player"
         data-type="player"
-        data-role="timeline-mini-player"
-        minimal
-        :dim="dPlayer"
-        minimal-controls-end-clearance="calc(var(--size-pane-switch-button) + var(--space-2))"
-      />
-      <Timeline
+        data-role="timeline-player-host"
+        :style="playerHostStyle"
+      >
+        <Player
+          :store="props.store"
+          data-role="player-view"
+          :dim="dPlayer"
+          :editor-visible="props.editorVisible"
+          :concepts-visible="props.conceptsVisible"
+          :controls-start-clearance="playerControlsStartClearance"
+          :controls-end-clearance="playerControlsEndClearance"
+        />
+      </div>
+      <div
         v-if="viewVisible.timeline"
-        ref="cTimeline"
-        :store="props.store"
+        ref="eTimeline"
+        class="timeline-pane__timeline"
         data-type="timeline"
-        data-role="timeline-content"
-        :dim="dTimeline"
-        :landscape="false"
-        :cols="timelineColumns"
-        @quick-slot-apply="emit('quickSlotApply', $event)"
-        @quick-slot-save="emit('quickSlotSave', $event)"
-      />
+        data-role="timeline-content-host"
+        :style="timelineHostStyle"
+      >
+        <Timeline
+          :store="props.store"
+          data-role="timeline-content"
+          :dim="dTimeline"
+          :landscape="false"
+          :cols="timelineColumns"
+          @quick-slot-apply="emit('quickSlotApply', $event)"
+          @quick-slot-save="emit('quickSlotSave', $event)"
+        />
+        <PaneSwapButton
+          v-if="canShowAllTimelineProps"
+          class="timeline-pane__show-all"
+          label="Show Full Timeline"
+          :icon="mdiFilterOff"
+          :style="showAllTimelineStyle"
+          @click="showAllTimelineFrames"
+        />
+      </div>
     </div>
 
-    <PaneSwapButton
-      v-if="canShowAllTimelineProps"
-      class="timeline-pane__show-all"
-      label="Show Full Timeline"
-      :icon="mdiFilterOff"
-      @click="showAllTimelineFrames"
-    />
     <PaneSwapButton
       v-if="splitEnabled"
       class="timeline-pane__swap"
@@ -82,6 +97,12 @@ import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessSt
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
+import {
+  PANE_ADJACENT_CONTROL_START_INSET,
+  PANE_CORNER_CONTROL_CLEARANCE,
+  PANE_CORNER_CONTROL_START_INSET,
+  PANE_CYCLE_CONTROL_START_CLEARANCE,
+} from '@/components/layout/paneControlLayout'
 
 const emit = defineEmits<{
   quickSlotApply: [path: string]
@@ -91,11 +112,17 @@ const emit = defineEmits<{
 const props = withDefaults(
   defineProps<{
     dim: { width: number; height: number; perc: number }
+    editorVisible?: boolean
     playerVisible?: boolean
+    paneCycleControlsVisible?: boolean
+    conceptsVisible?: boolean
     store?: string
   }>(),
   {
+    editorVisible: false,
     playerVisible: false,
+    paneCycleControlsVisible: true,
+    conceptsVisible: false,
     store: 'main',
   },
 )
@@ -109,16 +136,11 @@ const { ETIMES, PTIMES, UTIMES } = storeToRefs(playerStore)
 const { pSELECTED, showFullTimeline } = storeToRefs(usePropertiesStore(props.store))
 const { editorLoaded } = storeToRefs(useEditorAccessStore())
 const paneStore = useTimelinePaneStore()
-const { setViewInPane, registerComponentEl } = paneStore
+const { setViewInPane } = paneStore
 const { parents, paneVisible, viewVisible, ePlayer, eTimeline, eTop, eBottom, eHidden } =
   storeToRefs(paneStore)
 const splitterStore = useSplitterStore('timeline', 'top', 'bottom')
 const { topWidth, topHeight, bottomWidth, bottomHeight, topPerc } = storeToRefs(splitterStore)
-
-const cPlayer = ref<ComponentPublicInstance>()
-const cTimeline = ref<ComponentPublicInstance>()
-registerComponentEl(cPlayer, ePlayer)
-registerComponentEl(cTimeline, eTimeline)
 
 const topDim = computed(() => ({
   width: topWidth.value,
@@ -163,6 +185,38 @@ const showAllTimelineFrames = () => {
 
 const splitEnabled = computed(() => !props.playerVisible)
 const timelineColumns = computed(() => resolveEmbeddedTimelineColumns(viewVisible.value.player))
+const playerOwnsBottomEdge = computed(
+  () =>
+    parents.value.player === 'bottom' ||
+    (parents.value.player === 'top' && !paneVisible.value.bottom),
+)
+const playerControlsStartClearance = computed(() =>
+  props.paneCycleControlsVisible && playerOwnsBottomEdge.value
+    ? PANE_CYCLE_CONTROL_START_CLEARANCE
+    : '0px',
+)
+const playerControlsEndClearance = computed(() =>
+  splitEnabled.value && playerOwnsBottomEdge.value ? PANE_CORNER_CONTROL_CLEARANCE : '0px',
+)
+const timelineOwnsBottomEdge = computed(
+  () =>
+    parents.value.timeline === 'bottom' ||
+    (parents.value.timeline === 'top' && !paneVisible.value.bottom),
+)
+const showAllTimelineStyle = computed<CSSProperties>(() => ({
+  left:
+    props.paneCycleControlsVisible && timelineOwnsBottomEdge.value
+      ? PANE_ADJACENT_CONTROL_START_INSET
+      : PANE_CORNER_CONTROL_START_INSET,
+}))
+const paneBottomOffset = (ownsBottomEdge: boolean): string =>
+  ownsBottomEdge ? 'var(--space-workspace-bottom-offset)' : 'var(--space-pane-switch-bottom)'
+const playerHostStyle = computed<CSSProperties>(() => ({
+  '--space-pane-bottom-offset': paneBottomOffset(playerOwnsBottomEdge.value),
+}))
+const timelineHostStyle = computed<CSSProperties>(() => ({
+  '--space-pane-bottom-offset': paneBottomOffset(timelineOwnsBottomEdge.value),
+}))
 const primaryPane = computed<'top' | 'bottom'>(() =>
   parents.value.timeline === 'top' ? 'top' : 'bottom',
 )
@@ -209,6 +263,22 @@ const swapViews = () => {
   border-block-start: 1px solid var(--color-border);
 }
 
+.timeline-pane__player {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: clip;
+}
+
+.timeline-pane__timeline {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: clip;
+}
+
 .timeline-pane__swap {
   position: absolute;
   right: var(--space-2);
@@ -218,8 +288,7 @@ const swapViews = () => {
 
 .timeline-pane__show-all {
   position: absolute;
-  bottom: var(--space-workspace-bottom-offset);
-  left: calc(1px + var(--size-pane-switch-button) + var(--space-2));
+  bottom: var(--space-pane-bottom-offset);
   z-index: 1010;
 }
 

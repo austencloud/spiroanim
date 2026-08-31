@@ -68,6 +68,53 @@ describe('PlayerControls', () => {
     wrapper.unmount()
   })
 
+  it('hides and disables Selection when the Player does not support it', () => {
+    const wrapper = mount(PlayerControls, {
+      props: { store: 'selection-disabled', selectionEnabled: false },
+      global: {
+        stubs: {
+          BaseIcon: true,
+          Progress: {
+            props: ['selectionEnabled'],
+            template:
+              '<div :data-selection-enabled="selectionEnabled"><slot name="play" /><slot name="mode" /></div>',
+          },
+        },
+      },
+    })
+
+    expect(wrapper.find('button[aria-label="Select mode"]').exists()).toBe(false)
+    expect(wrapper.get('[data-selection-enabled="false"]')).toBeDefined()
+  })
+
+  it('controls temporary preview playback and speed without changing loaded playback', async () => {
+    const store = usePlayerStore('preview-safe-controls')
+    const runtime = store.raw()
+    const loadedSpeed = runtime.ROOT.value.speed
+    store.PLAYING = false
+    store.PREVIEW_PLAYING = false
+    store.setPlaybackOverride({ ...runtime.ROOT.value, speed: 1 }, true)
+    const wrapper = mount(PlayerControls, {
+      props: { store: 'preview-safe-controls' },
+      global: {
+        stubs: {
+          BaseIcon: true,
+          Progress: {
+            template: '<div><slot name="play" /><slot name="mode" /></div>',
+          },
+        },
+      },
+    })
+
+    await wrapper.get('button[aria-label="Play"]').trigger('click')
+    expect(store.PREVIEW_PLAYING).toBe(true)
+    expect(store.PLAYING).toBe(false)
+
+    await wrapper.get<HTMLSelectElement>('select[aria-label="Playback speed"]').setValue('0.5')
+    expect(runtime.PLAYBACK_OVERRIDE.value?.speed).toBe(0.5)
+    expect(runtime.ROOT.value.speed).toBe(loadedSpeed)
+  })
+
   it('offers undo at the top right only while history exists and the Editor is hidden', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -107,6 +154,7 @@ describe('PlayerControls', () => {
     await wrapper.get('button[aria-label="Undo"]').trigger('click')
 
     expect(ROOT.value.bpm).toBe(originalBpm)
+    expect(historyStore.historyApplied?.action).toBe('undo')
     expect(wrapper.find('button[aria-label="Undo"]').exists()).toBe(false)
 
     wrapper.unmount()

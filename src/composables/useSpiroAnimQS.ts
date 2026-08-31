@@ -10,6 +10,8 @@ import type { ConfigData, ConfigItem, ConfigThird } from '@/services/query/types
 import type { AllVars, RootData, RootDataFinal, PropData, MotionData } from '@/types/AnimTypes'
 import type { LocationQuery } from 'vue-router'
 
+export type HistoryAction = 'undo' | 'redo'
+
 /**
  * Encapsulates all logic related to encoding and decoding a RootDataFinal object
  * to/from a query string. Dynamically loads config based on version.
@@ -62,6 +64,7 @@ export async function useSpiroAnimQS(
   const qsFuture = ref<string[]>([])
   const qsPause = ref(false)
   const qsSkip = ref(false)
+  const historyApplied = shallowRef<{ id: symbol; action: HistoryAction }>()
   let historyGroupActive = false
   let historyGroupIndex = -1
 
@@ -199,6 +202,10 @@ export async function useSpiroAnimQS(
     qsSkip.value = true
     qsHistory.value.push(entry)
     return decodeHistoryEntry(entry)
+  }
+
+  const notifyHistoryApplied = (action: HistoryAction) => {
+    historyApplied.value = { id: Symbol(), action }
   }
 
   /**
@@ -411,10 +418,12 @@ export async function useSpiroAnimQS(
     qsFuture,
     qsPause,
     qsSkip,
+    historyApplied,
     beginHistoryGroup,
     endHistoryGroup,
     undoQS,
     redoQS,
+    notifyHistoryApplied,
     encodeQS,
     decodeQS,
     decodeVer,

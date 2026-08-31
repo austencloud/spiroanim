@@ -60,6 +60,18 @@ describe('ConceptsPane', () => {
     expect(wrapper.find('[data-role="concept-docs-anchor"]').exists()).toBe(true)
   })
 
+  it('keeps the concept selector enabled while Builder has hijacked the opposing pane', async () => {
+    const wrapper = mount(ConceptsPane, { props: { builderActive: true } })
+    const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
+
+    expect(selector.attributes('disabled')).toBeUndefined()
+
+    await selector.setValue('8stp')
+
+    expect(useConceptsStore().selectedConcept).toBe('8stp')
+    expect(wrapper.find('[data-role="eight-step-pane"]').exists()).toBe(true)
+  })
+
   it('requests the current pattern when an empty Quick Slot is selected', async () => {
     const store = useConceptsStore()
     store.restoreQuickSlots()

@@ -3,6 +3,10 @@ import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import PlayerProgress from '@/components/SpiroAnim/player/PlayerProgress.vue'
+import {
+  PANE_CORNER_CONTROL_CLEARANCE,
+  PANE_CYCLE_CONTROL_START_CLEARANCE,
+} from '@/components/layout/paneControlLayout'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 describe('PlayerProgress', () => {
@@ -23,6 +27,7 @@ describe('PlayerProgress', () => {
     expect(wrapper.text()).not.toContain('Mode')
     expect(wrapper.text()).toContain('Free Camera')
     expect((wrapper.get('.slider').element as HTMLElement).style.width).toBe('320px')
+    expect((wrapper.get('.slider').element as HTMLElement).style.left).toBe('0px')
     expect(wrapper.findAll('.slider-control')).toHaveLength(2)
 
     dimensions.width = 480
@@ -36,7 +41,7 @@ describe('PlayerProgress', () => {
       props: {
         store: 'progress-compact-clearance',
         compact: true,
-        compactEndClearance: 'calc(var(--size-pane-switch-button) + var(--space-2))',
+        endClearance: 'calc(var(--size-pane-switch-button) + var(--space-2))',
       },
       global: { provide: { dim: { width: 320, height: 180 } } },
     })
@@ -45,6 +50,49 @@ describe('PlayerProgress', () => {
     expect(style.width).toContain('320px')
     expect(style.width).toContain('var(--size-pane-switch-button)')
     expect(style.right).toBe('calc(var(--size-pane-switch-button) + var(--space-2))')
+  })
+
+  it('reserves full-control end space for a bottom-pane swap control', () => {
+    const endClearance = PANE_CORNER_CONTROL_CLEARANCE
+    const wrapper = mount(PlayerProgress, {
+      props: { store: 'progress-full-clearance', endClearance },
+      global: { provide: { dim: { width: 600, height: 400 } } },
+    })
+    const style = (wrapper.get('.slider').element as HTMLElement).style
+
+    expect(style.width).toContain('600px')
+    expect(style.width).toContain(PANE_CYCLE_CONTROL_START_CLEARANCE)
+    expect(style.left).toBe(PANE_CYCLE_CONTROL_START_CLEARANCE)
+    expect(style.right).toBe(endClearance)
+  })
+
+  it('reclaims the full start edge when no pane-cycle control is present', () => {
+    const wrapper = mount(PlayerProgress, {
+      props: { store: 'progress-no-start-clearance', startClearance: '0px' },
+      global: { provide: { dim: { width: 600, height: 400 } } },
+    })
+    const style = (wrapper.get('.slider').element as HTMLElement).style
+
+    expect(style.width).toBe('600px')
+    expect(style.left).toBe('0px')
+    expect(style.right).toBe('0px')
+  })
+
+  it('ignores active Selection and extends the track when Selection is disabled', () => {
+    const store = usePlayerStore('progress-selection-disabled')
+    store.SELECTION = true
+    store.MAX = 2000
+    const wrapper = mount(PlayerProgress, {
+      props: { store: 'progress-selection-disabled', selectionEnabled: false },
+      slots: { play: '<button>Play</button>', mode: '<button>Select</button>' },
+      global: { provide: { dim: { width: 600, height: 400 } } },
+    })
+
+    expect(wrapper.get('.slider').classes()).toContain('slider--selection-disabled')
+    expect(wrapper.find('input[aria-label="Animation position"]').exists()).toBe(true)
+    expect(wrapper.find('input[aria-label="Selection start"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Select')
+    expect(store.SELECTION).toBe(true)
   })
 
   beforeEach(() => {
@@ -67,9 +115,9 @@ describe('PlayerProgress', () => {
     const wrapper = mountProgress('progress-safe-area')
 
     expect(wrapper.get('.slider').attributes('style')).toContain(
-      'bottom: var(--space-workspace-bottom-offset)',
+      'bottom: var(--space-pane-bottom-offset)',
     )
-    expect(wrapper.get('.slider').attributes('style')).toContain('width: 566px')
+    expect(wrapper.get('.slider').attributes('style')).toContain(PANE_CYCLE_CONTROL_START_CLEARANCE)
   })
 
   it('updates the current position and reports the modification', async () => {
@@ -163,6 +211,34 @@ describe('PlayerProgress', () => {
     await start.setValue(1)
     expect(store.SELECTED).toEqual([1, 2])
     expect(store.raw().CURRENT.value).toBe(1000)
+  })
+
+  it('uses override frame timings while selection mode controls preview playback', async () => {
+    const store = usePlayerStore('progress-preview-selection')
+    const runtime = store.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      bpm: 60,
+      props: [{ anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }], motion: [] }],
+    }
+    store.ETIMES = [0, 1000, 2000]
+    store.setPlaybackOverride(
+      {
+        ...runtime.ROOT.value,
+        props: [{ anim: [{ beats: 2 }, { beats: 2 }], motion: [] }],
+      },
+      true,
+    )
+    store.SELECTED = [0, 0]
+    store.SELECTION = true
+    await nextTick()
+
+    const wrapper = mountProgress('progress-preview-selection')
+    const end = wrapper.get<HTMLInputElement>('input[aria-label="Selection end"]')
+
+    expect(end.attributes('max')).toBe('1')
+    await end.setValue(1)
+    expect(runtime.CURRENT.value).toBe(1999)
   })
 
   it('fills only the selected range and allows the handles to cross', async () => {

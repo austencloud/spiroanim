@@ -34,7 +34,7 @@ export function useSpiroAnimKeyboard(): () => void {
   const playerStore = usePlayerStore('main')
   const { ROOT } = playerStore.raw()
   const { rewind, forward } = usePlayerFrameNavigation('main')
-  const { undoQS, redoQS } = useQSMainStore()
+  const { undoQS, redoQS, notifyHistoryApplied } = useQSMainStore()
   let pointerFocusedElement: Element | undefined
 
   const rememberPointerFocus = (target: EventTarget | null) => {
@@ -90,17 +90,20 @@ export function useSpiroAnimKeyboard(): () => void {
       if (event.ctrlKey || event.metaKey) {
         if (isTextEditingTarget(event.target)) return
 
-        const historyState =
+        const historyAction =
           event.code === 'KeyZ'
             ? event.shiftKey
-              ? redoQS()
-              : undoQS()
+              ? 'redo'
+              : 'undo'
             : event.code === 'KeyY' && event.ctrlKey
-              ? redoQS()
+              ? 'redo'
               : undefined
+        const historyState =
+          historyAction === 'undo' ? undoQS() : historyAction === 'redo' ? redoQS() : undefined
 
-        if (historyState === undefined) return
+        if (historyState === undefined || historyAction === undefined) return
         ROOT.value = historyState
+        notifyHistoryApplied(historyAction)
         event.preventDefault()
         return
       }

@@ -1,5 +1,5 @@
 <template>
-  <PlayerProgress :store="store" compact :compact-end-clearance="endClearance">
+  <PlayerProgress :store="store" compact :end-clearance="endClearance">
     <template #play>
       <AppTooltip text="Play / Pause">
         <template #activator="{ props: tooltipProps }">

@@ -128,6 +128,8 @@ describe('usePlayerStore', () => {
     expect(runtime.ROOT.value).toBe(initialRoot)
     expect(runtime.COMPILED.value.props).toEqual([])
     expect(runtime.PLAYBACK_COMPILED.value.props).toHaveLength(1)
+    expect(store.PLAYBACK_TIMES).toEqual([0, 1000, 2000])
+    expect(store.CONTROL_TIMES).toEqual([0, 1000, 2000])
     expect(store.PLAYBACK_MAX).toBe(2000)
     expect(store.PLAYBACK_ASPECT).toEqual([4, 3])
 
@@ -141,6 +143,7 @@ describe('usePlayerStore', () => {
 
     expect(store.PLAYBACK_OVERRIDE_ACTIVE).toBe(false)
     expect(store.PLAYBACK_ROOT).toBe(latestRoot)
+    expect(store.CONTROL_TIMES).toBe(store.ETIMES)
     expect(runtime.PLAYBACK_COMPILED.value.bpm).toBe(90)
   })
 
@@ -174,6 +177,24 @@ describe('usePlayerStore', () => {
     expect(store.PLAYING).toBe(true)
     expect(store.PREVIEW_PLAYING).toBe(false)
     expect(runtime.CURRENT.value).toBe(0)
+  })
+
+  it('keeps selection bounds valid for the animation that owns the Player controls', async () => {
+    const store = usePlayerStore('test-playback-selection-bounds')
+    const runtime = store.raw()
+    store.ETIMES = [0, 500, 1000, 1500]
+    store.SELECTED = [1, 3]
+
+    store.setPlaybackOverride({
+      ...runtime.ROOT.value,
+      bpm: 60,
+      props: [{ anim: [{ beats: 1 }, { beats: 1 }], motion: [] }],
+    })
+    await nextTick()
+
+    expect(store.CONTROL_TIMES).toEqual([0, 1000])
+    expect(store.COUNT).toBe(1)
+    expect(store.SELECTED).toEqual([1, 1])
   })
 
   it('loads the original settings key without restoring legacy ORBIT data', () => {

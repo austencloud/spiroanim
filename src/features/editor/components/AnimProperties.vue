@@ -272,7 +272,10 @@ function onSelectedChange() {
 
 function clickUndo() {
   const previous = undoQS()
-  if (previous !== undefined) ROOT.value = previous
+  if (previous !== undefined) {
+    ROOT.value = previous
+    qsStore.notifyHistoryApplied('undo')
+  }
 }
 
 function circleColor(index: number) {

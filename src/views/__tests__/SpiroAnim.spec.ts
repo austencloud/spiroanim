@@ -18,6 +18,12 @@ import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 
+const AnimPlayerStub = {
+  props: ['controlsStartClearance', 'controlsEndClearance', 'selectionEnabled', 'conceptsVisible'],
+  template:
+    '<div data-role="player-view" :controls-start-clearance="controlsStartClearance" :controls-end-clearance="controlsEndClearance" :selection-enabled="selectionEnabled" :concepts-visible="conceptsVisible">Player</div>',
+}
+
 describe('SpiroAnim view', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -84,6 +90,7 @@ describe('SpiroAnim view', () => {
         plugins: [pinia, router],
         stubs: {
           Player: { template: '<div>Player</div>' },
+          AnimPlayer: AnimPlayerStub,
           Timeline: {
             template: '<div>Timeline<button type="button" aria-label="Show Full Timeline" /></div>',
           },
@@ -133,9 +140,25 @@ describe('SpiroAnim view', () => {
     await flushPromises()
     await wrapper.get<HTMLInputElement>('[data-role="vtg-builder-full-grid"]').setValue(false)
     await flushPromises()
-    expect(wrapper.find('[data-role="player-view"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="player-view"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="vtg-transition-support-error"]').exists()).toBe(false)
-    wrapper.get('[data-role="builder-player"]')
+    expect(
+      wrapper.get('[data-role="player-view"]').element.closest('.builder-pane__player-host'),
+    ).toBe(wrapper.get('.builder-pane__player-host').element)
+    expect(wrapper.findAll('[data-role="player-view"]')).toHaveLength(1)
+    expect(wrapper.get('[data-role="player-view"]').attributes('controls-end-clearance')).toBe(
+      '0px',
+    )
+    expect(wrapper.get('[data-role="player-view"]').attributes('controls-start-clearance')).toBe(
+      '0px',
+    )
+    expect(wrapper.get('[data-role="player-view"]').attributes('concepts-visible')).toBe('true')
+    expect(wrapper.get('[data-role="builder-thumbnails"]').classes()).not.toContain(
+      'builder-pane__thumbnails--menu-offset',
+    )
+    expect(
+      wrapper.get('[data-role="builder-exit"]').element.closest('[data-role="builder-thumbnails"]'),
+    ).toBe(wrapper.get('[data-role="builder-thumbnails"]').element)
     playerStore.PLAYING = false
     await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
     await flushPromises()
@@ -261,6 +284,10 @@ describe('SpiroAnim view', () => {
     expect(
       wrapper.get('[data-role="builder-player"]').element.closest('[data-role="top-pane"]'),
     ).toBe(builderTopPane.element)
+    expect(wrapper.get('[data-role="builder-player"]').attributes('style')).toContain(
+      '--space-pane-bottom-offset: var(--space-pane-switch-bottom)',
+    )
+    expect(wrapper.get('[data-role="player-view"]').attributes('selection-enabled')).toBe('false')
     expect(
       wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="bottom-pane"]'),
     ).toBe(builderBottomPane.element)
@@ -271,12 +298,21 @@ describe('SpiroAnim view', () => {
     ).toBe(wrapper.get('[data-role="builder-thumbnails"]').element)
     await wrapper.get('button[aria-label="Swap Builder Views"]').trigger('click')
     await flushPromises()
+    expect(wrapper.get('[data-role="player-view"]').attributes('controls-end-clearance')).toBe(
+      'calc(var(--size-pane-switch-button) + var(--space-2))',
+    )
     expect(
       wrapper.get('[data-role="builder-player"]').element.closest('[data-role="bottom-pane"]'),
     ).toBe(builderBottomPane.element)
+    expect(wrapper.get('[data-role="builder-player"]').attributes('style')).toContain(
+      '--space-pane-bottom-offset: var(--space-workspace-bottom-offset)',
+    )
     expect(
       wrapper.get('[data-role="builder-thumbnails"]').element.closest('[data-role="top-pane"]'),
     ).toBe(builderTopPane.element)
+    expect(wrapper.get('[data-role="builder-thumbnails"]').classes()).toContain(
+      'builder-pane__thumbnails--menu-offset',
+    )
     await wrapper.get('button[aria-label="Increase Builder Columns"]').trigger('click')
     expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('5')
     expect(
@@ -321,7 +357,7 @@ describe('SpiroAnim view', () => {
     ).toBe(wrapper.get('[data-role="left-pane"]').element)
     expect(wrapper.findAll('button[aria-label="Swap Views"]')).toHaveLength(0)
     expect(wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').element.disabled).toBe(
-      true,
+      false,
     )
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-pattern-builder"]').element.checked).toBe(
       true,
@@ -350,13 +386,27 @@ describe('SpiroAnim view', () => {
     )
     expect(router.currentRoute.value.fullPath).toBe(routeAfterBuilderEdit)
 
+    paneStore.setViewInPane('concepts', 'left')
+    paneStore.setViewInPane('player', 'right')
     expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
     await flushPromises()
-    await wrapper.get('button[aria-label="Exit Pattern Builder"]').trigger('click')
+    expect(wrapper.get('[data-role="builder-thumbnails"]').classes()).not.toContain(
+      'builder-pane__thumbnails--menu-offset',
+    )
+    await wrapper.get('button[aria-label="Swap Builder Views"]').trigger('click')
     await flushPromises()
+    expect(wrapper.get('[data-role="builder-thumbnails"]').classes()).not.toContain(
+      'builder-pane__thumbnails--menu-offset',
+    )
+    await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('8stp')
+    await flushPromises()
+    expect(paneStore.isPaneHijacked).toBe(false)
     expect(wrapper.find('[data-role="builder-pane-view"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="player-view"]').exists()).toBe(true)
+    expect(useConceptsStore().selectedConcept).toBe('8stp')
     expect(router.currentRoute.value.fullPath).toBe(routeAfterBuilderEdit)
+    useConceptsStore().selectedConcept = 'vtg'
+    await flushPromises()
 
     paneStore.setViewInPane('editor', 'right')
     await flushPromises()
@@ -522,6 +572,7 @@ describe('SpiroAnim view', () => {
         plugins: [pinia, router],
         stubs: {
           Player: { template: '<div>Player</div>' },
+          AnimPlayer: AnimPlayerStub,
         },
       },
     })
@@ -558,6 +609,7 @@ describe('SpiroAnim view', () => {
         plugins: [pinia, router],
         stubs: {
           Player: { template: '<div>Player</div>' },
+          AnimPlayer: AnimPlayerStub,
         },
       },
     })
@@ -610,6 +662,7 @@ describe('SpiroAnim view', () => {
         plugins: [pinia, router],
         stubs: {
           Player: { template: '<div>Player</div>' },
+          AnimPlayer: AnimPlayerStub,
         },
       },
     })
@@ -658,7 +711,11 @@ describe('SpiroAnim view', () => {
     const wrapper = mount(SpiroAnim, {
       global: {
         plugins: [pinia, router],
-        stubs: { Player: { template: '<div />' }, Timeline: { template: '<div />' } },
+        stubs: {
+          Player: { template: '<div />' },
+          AnimPlayer: AnimPlayerStub,
+          Timeline: { template: '<div />' },
+        },
       },
     })
     await flushPromises()
@@ -712,7 +769,11 @@ describe('SpiroAnim view', () => {
     const wrapper = mount(SpiroAnim, {
       global: {
         plugins: [pinia, router],
-        stubs: { Player: { template: '<div />' }, Timeline: TimelineStub },
+        stubs: {
+          Player: { template: '<div />' },
+          AnimPlayer: AnimPlayerStub,
+          Timeline: TimelineStub,
+        },
       },
     })
     await flushPromises()
@@ -755,7 +816,7 @@ describe('SpiroAnim view', () => {
     const wrapper = mount(SpiroAnim, {
       global: {
         plugins: [pinia, router],
-        stubs: { Player: { template: '<div />' }, Editor: EditorStub },
+        stubs: { Player: { template: '<div />' }, AnimPlayer: AnimPlayerStub, Editor: EditorStub },
       },
     })
     await flushPromises()
@@ -786,6 +847,7 @@ describe('SpiroAnim view', () => {
         plugins: [pinia, router],
         stubs: {
           Player: { template: '<div>Player</div>' },
+          AnimPlayer: AnimPlayerStub,
         },
       },
     })

@@ -807,7 +807,7 @@ const cursorStyle = computed<CSSProperties>(() => ({
 }
 .timeline-value-control {
   position: absolute;
-  bottom: var(--space-workspace-bottom-offset);
+  bottom: var(--space-pane-bottom-offset);
   left: 50%;
   z-index: 1010;
   display: flex;
