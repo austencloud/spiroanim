@@ -16,10 +16,6 @@ describe('AnimEditor', () => {
 
   const globalStubs = {
     Properties: { template: '<div data-type="properties" />' },
-    Timeline: {
-      props: ['cols'],
-      template: '<div data-type="timeline" :data-cols="cols" />',
-    },
     PaneSplitter: { template: '<div data-role="editor-splitter" />' },
   }
 
@@ -53,14 +49,13 @@ describe('AnimEditor', () => {
     const paneStore = useEditorPaneStore()
     expect(useEditorAccessStore().editorLoaded).toBe(true)
     expect(paneStore.parents).toEqual({ properties: 'top', timeline: 'bottom' })
-    expect(wrapper.get('[data-type="timeline"]').attributes('data-cols')).toBe('4')
-    expect(wrapper.get('[data-type="timeline"]').attributes('style')).toContain(
+    expect(wrapper.get('[data-role="editor-timeline-host"]').attributes('style')).toContain(
       '--space-pane-bottom-offset: var(--space-workspace-bottom-offset)',
     )
 
     await wrapper.get('button[aria-label="Swap Editor Views"]').trigger('click')
     expect(paneStore.parents).toEqual({ properties: 'bottom', timeline: 'top' })
-    expect(wrapper.get('[data-type="timeline"]').attributes('style')).toContain(
+    expect(wrapper.get('[data-role="editor-timeline-host"]').attributes('style')).toContain(
       '--space-pane-bottom-offset: var(--space-pane-switch-bottom)',
     )
 
@@ -86,7 +81,7 @@ describe('AnimEditor', () => {
     })
     await nextTick()
 
-    expect(firstMount.find('[data-type="timeline"]').exists()).toBe(false)
+    expect(firstMount.find('[data-role="editor-timeline-host"]').exists()).toBe(false)
     firstMount.unmount()
 
     const secondMount = mount(AnimEditor, {
@@ -103,7 +98,7 @@ describe('AnimEditor', () => {
     await nextTick()
 
     expect(secondMount.find('[data-type="properties"]').exists()).toBe(true)
-    expect(secondMount.find('[data-type="timeline"]').exists()).toBe(true)
+    expect(secondMount.find('[data-role="editor-timeline-host"]').exists()).toBe(true)
     expect(secondMount.find('button[aria-label="Swap Editor Views"]').exists()).toBe(true)
     secondMount.unmount()
   })

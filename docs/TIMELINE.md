@@ -24,3 +24,18 @@ tooltip behavior; touch devices follow the tooltip component's existing mobile h
 
 The authoritative state is `src/stores/useTimelineSettingsStore.ts`, and the layout consumer is
 `src/components/SpiroAnim/AnimTimeline.vue`.
+
+## Embedded surface lifetime
+
+`src/views/SpiroAnim.vue` owns the single live Player used by the main Player view, Timeline, and
+Builder. The pane components expose lightweight placement markers; the workspace keeps the
+initialized Player in a stable layer and sizes that layer to the active marker. This preserves the
+canvas, renderer worker, playback state, and camera state while the Player moves between those
+contexts. Timeline and Builder continue to own their local pane controls and supply the placement
+state used for Player control clearances.
+
+The shared Player unmounts when none of those three contexts needs it. The same workspace surface
+pattern keeps one Timeline instance alive while it moves between Editor and the main Timeline pane,
+preserving its worker and scroll state. A pane hijack is different: its displaced view is unused and
+fully unmounts, including Timeline's worker. Exiting the hijack mounts a fresh instance of the
+restored view.

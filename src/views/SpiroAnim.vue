@@ -7,15 +7,12 @@
       <PaneRotate v-if="paneCycleControlsVisible" pane="right" />
     </div>
     <div v-show="false" ref="eHidden" data-role="hidden-pane">
-      <Player
+      <div
         v-if="viewVisible.player"
-        ref="cPlayer"
-        store="main"
+        ref="ePlayer"
+        class="spiro-workspace__player-marker"
         data-type="player"
-        data-role="player-view"
-        :dim="dPlayer"
-        :editor-visible="viewVisible.editor"
-        :concepts-visible="viewVisible.concepts"
+        data-role="main-player-host"
       />
       <Editor
         v-if="viewVisible.editor"
@@ -26,8 +23,6 @@
         :dim="dEditor"
         :landscape="isLandscape"
         :vtl="viewVisible.timeline"
-        @quick-slot-apply="applyQuickSlotFromView($event, 'editor')"
-        @quick-slot-save="saveCurrentPatternToQuickSlot"
       />
       <Timeline
         v-if="viewVisible.timeline"
@@ -36,12 +31,8 @@
         data-type="timeline"
         data-role="timeline-view"
         :dim="dTimeline"
-        :editor-visible="viewVisible.editor"
         :player-visible="viewVisible.player"
         :pane-cycle-controls-visible="paneCycleControlsVisible"
-        :concepts-visible="viewVisible.concepts"
-        @quick-slot-apply="applyQuickSlotFromView($event, 'timeline')"
-        @quick-slot-save="saveCurrentPatternToQuickSlot"
       />
       <ConceptsPane
         v-if="viewVisible.concepts"
@@ -73,10 +64,43 @@
         data-type="builder"
         data-role="builder-pane-view"
         :allow-first-drop="builderFullGrid"
-        :pane-cycle-controls-visible="paneCycleControlsVisible"
-        :concepts-visible="viewVisible.concepts"
         @quick-slots-create="saveAnimationsToQuickSlots"
         @preview-selection-change="selectedBuilderPreviewIndex = $event"
+      />
+    </div>
+    <div
+      v-if="playerRequired"
+      class="spiro-workspace__player-surface"
+      data-role="stable-player-surface"
+      :data-player-placement="playerPlacement"
+      :style="playerSurfaceStyle"
+    >
+      <Player
+        store="main"
+        data-role="player-view"
+        :dim="playerSurfaceDimensions"
+        :editor-visible="viewVisible.editor"
+        :concepts-visible="viewVisible.concepts"
+        :selection-enabled="playerSelectionEnabled"
+        :controls-start-clearance="playerControlsStartClearance"
+        :controls-end-clearance="playerControlsEndClearance"
+      />
+    </div>
+    <div
+      v-if="timelineContentRequired"
+      class="spiro-workspace__timeline-surface"
+      data-role="stable-timeline-surface"
+      :data-timeline-placement="timelineSurfacePlacement"
+      :style="timelineSurfaceStyle"
+    >
+      <AnimTimeline
+        store="main"
+        data-role="timeline-content"
+        :dim="timelineSurfaceDimensions"
+        :landscape="false"
+        :cols="timelineSurfaceColumns"
+        @quick-slot-apply="applyQuickSlotFromTimeline"
+        @quick-slot-save="saveCurrentPatternToQuickSlot"
       />
     </div>
     <AppNavigationMenu />
@@ -98,6 +122,7 @@ import PaneRotate from '@/components/layout/PaneRotate.vue'
 import AppNavigationMenu from '@/components/layout/AppNavigationMenu.vue'
 
 import Player from '@/components/SpiroAnim/AnimPlayer.vue'
+import AnimTimeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import Editor from '@/components/SpiroAnim/AnimEditor.vue'
 import Timeline from '@/features/timeline/components/TimelinePane.vue'
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
@@ -108,6 +133,7 @@ import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDis
 import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
+import { usePaneSurface } from '@/composables/usePaneSurface'
 import { useScrollSelectScale } from '@/composables/useScrollSelectScale'
 import { useMainRoute } from '@/composables/useMainRoute'
 import { useSpiroAnimKeyboard } from '@/composables/useSpiroAnimKeyboard'
@@ -123,6 +149,14 @@ import { useQueryVersionStore } from '@/stores/useQueryVersionStore'
 import { UnsupportedSpiroAnimQSVersionError } from '@/services/query/versions'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { useEditorPaneAvailability } from '@/features/editor/composables/useEditorPaneAvailability'
+import { useTimelinePaneStore } from '@/features/timeline/stores/useTimelinePaneStore'
+import { useBuilderPaneStore } from '@/features/builder/stores/useBuilderPaneStore'
+import { useEditorPaneStore } from '@/features/editor/stores/useEditorPaneStore'
+import { resolveEmbeddedTimelineColumns } from '@/features/timeline/resolveEmbeddedTimelineColumns'
+import {
+  PANE_CORNER_CONTROL_CLEARANCE,
+  PANE_CYCLE_CONTROL_START_CLEARANCE,
+} from '@/components/layout/paneControlLayout'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 useScrollSelectScale()
@@ -171,6 +205,27 @@ const builderFullCatalog = computed(() => builderFullCatalogForced.value || buil
 const paneCycleControlsVisible = computed(() => !paneStore.isPaneHijacked)
 const { showFullTimeline } = storeToRefs(usePropertiesStore('main'))
 const { registerComponentEl } = paneStore
+const timelinePaneStore = useTimelinePaneStore()
+const {
+  ePlayer: eTimelinePlayer,
+  eTimeline: eMainTimelineContent,
+  parents: timelineParents,
+  paneVisible: timelinePaneVisible,
+  viewVisible: timelineViewVisible,
+} = storeToRefs(timelinePaneStore)
+const builderPaneStore = useBuilderPaneStore()
+const {
+  ePlayer: eBuilderPlayer,
+  parents: builderParents,
+  paneVisible: builderPaneVisible,
+} = storeToRefs(builderPaneStore)
+const editorPaneStore = useEditorPaneStore()
+const {
+  eTimeline: eEditorTimelineContent,
+  parents: editorParents,
+  paneVisible: editorPaneVisible,
+  viewVisible: editorViewVisible,
+} = storeToRefs(editorPaneStore)
 
 const {
   parents,
@@ -185,7 +240,6 @@ const {
   eRight,
   eHidden,
 } = storeToRefs(paneStore)
-
 watch(
   () => parents.value.editor,
   (editorPane) => {
@@ -194,18 +248,107 @@ watch(
 )
 
 // Component references
-const cPlayer = ref<ComponentPublicInstance>()
 const cEditor = ref<ComponentPublicInstance>()
 const cTimeline = ref<ComponentPublicInstance>()
 const cConcepts = ref<ComponentPublicInstance>()
 const cBuilder = ref<ComponentPublicInstance>()
 
 // Supply root elements from components to Pane Store
-registerComponentEl(cPlayer, ePlayer)
 registerComponentEl(cEditor, eEditor)
 registerComponentEl(cTimeline, eTimeline)
 registerComponentEl(cConcepts, eConcepts)
 registerComponentEl(cBuilder, eBuilder)
+
+type PlayerPlacement = 'main' | 'timeline' | 'builder'
+
+const playerPlacement = computed<PlayerPlacement | undefined>(() => {
+  if (viewVisible.value.builder) return 'builder'
+  if (viewVisible.value.player) return 'main'
+  if (viewVisible.value.timeline) return 'timeline'
+  return undefined
+})
+const playerRequired = computed(() => playerPlacement.value !== undefined)
+const playerPlacementTarget = computed(() => {
+  switch (playerPlacement.value) {
+    case 'main':
+      return ePlayer.value
+    case 'timeline':
+      return eTimelinePlayer.value
+    case 'builder':
+      return eBuilderPlayer.value
+    default:
+      return undefined
+  }
+})
+const {
+  width: playerTargetWidth,
+  height: playerTargetHeight,
+  positionStyle: playerPositionStyle,
+} = usePaneSurface(playerPlacementTarget, viewLeft, viewTop, [
+  playerPlacement,
+  () => parents.value.player,
+  () => paneVisible.value.left,
+  () => paneVisible.value.right,
+  () => timelineParents.value.player,
+  () => timelinePaneVisible.value.top,
+  () => timelinePaneVisible.value.bottom,
+  () => builderParents.value.player,
+  () => builderPaneVisible.value.top,
+  () => builderPaneVisible.value.bottom,
+  leftWidth,
+  leftHeight,
+  rightWidth,
+  rightHeight,
+])
+
+const timelinePlayerOwnsBottomEdge = computed(
+  () =>
+    timelineParents.value.player === 'bottom' ||
+    (timelineParents.value.player === 'top' && !timelinePaneVisible.value.bottom),
+)
+const builderPlayerOwnsBottomEdge = computed(
+  () =>
+    builderParents.value.player === 'bottom' ||
+    (builderParents.value.player === 'top' && !builderPaneVisible.value.bottom),
+)
+const embeddedPlayerOwnsBottomEdge = computed(() => {
+  if (playerPlacement.value === 'timeline') return timelinePlayerOwnsBottomEdge.value
+  if (playerPlacement.value === 'builder') return builderPlayerOwnsBottomEdge.value
+  return true
+})
+const playerSelectionEnabled = computed(() => playerPlacement.value !== 'builder')
+const playerControlsStartClearance = computed(() => {
+  if (playerPlacement.value === 'main') {
+    return paneCycleControlsVisible.value ? PANE_CYCLE_CONTROL_START_CLEARANCE : '0px'
+  }
+  if (
+    playerPlacement.value === 'timeline' &&
+    paneCycleControlsVisible.value &&
+    embeddedPlayerOwnsBottomEdge.value
+  ) {
+    return PANE_CYCLE_CONTROL_START_CLEARANCE
+  }
+  return '0px'
+})
+const playerControlsEndClearance = computed(() =>
+  playerPlacement.value !== 'main' && embeddedPlayerOwnsBottomEdge.value
+    ? PANE_CORNER_CONTROL_CLEARANCE
+    : '0px',
+)
+const playerBottomOffset = computed(() =>
+  playerPlacement.value === 'main' || embeddedPlayerOwnsBottomEdge.value
+    ? 'var(--space-workspace-bottom-offset)'
+    : 'var(--space-pane-switch-bottom)',
+)
+const playerSurfaceDimensions = computed(() => ({
+  width: playerTargetWidth.value,
+  height: playerTargetHeight.value,
+  perc: 1,
+}))
+const playerSurfaceStyle = computed<CSSProperties>(() => ({
+  ...playerPositionStyle.value,
+  '--space-pane-bottom-offset': playerBottomOffset.value,
+}))
 
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
   const createdAnimation = createConceptPattern(ROOT.value, selection)
@@ -362,9 +505,92 @@ const dimComputeds = {
 }
 
 // Dimensions of the current pane a view is mounted in, to pass into each component
-const dPlayer = useViewDimensions('player', parents, dimComputeds)
 const dEditor = useViewDimensions('editor', parents, dimComputeds)
 const dTimeline = useViewDimensions('timeline', parents, dimComputeds)
+
+type TimelinePlacement = 'main' | 'editor'
+
+const timelinePlacement = computed<TimelinePlacement | undefined>(() => {
+  if (viewVisible.value.timeline) return 'main'
+  if (viewVisible.value.editor && editorViewVisible.value.timeline) return 'editor'
+  return undefined
+})
+const timelineSurfacePlacement = computed<TimelinePlacement | undefined>(() => {
+  if (timelinePlacement.value !== undefined) return timelinePlacement.value
+  if (eMainTimelineContent.value) return 'main'
+  if (eEditorTimelineContent.value) return 'editor'
+  return undefined
+})
+const timelinePlacementTarget = computed(() => {
+  if (timelineSurfacePlacement.value === 'main') {
+    return eMainTimelineContent.value ?? eEditorTimelineContent.value
+  }
+  if (timelineSurfacePlacement.value === 'editor') {
+    return eEditorTimelineContent.value ?? eMainTimelineContent.value
+  }
+  return undefined
+})
+const timelineContentRequired = computed(
+  () => timelinePlacement.value !== undefined || timelinePlacementTarget.value !== undefined,
+)
+const {
+  width: timelineTargetWidth,
+  height: timelineTargetHeight,
+  positionStyle: timelinePositionStyle,
+} = usePaneSurface(timelinePlacementTarget, viewLeft, viewTop, [
+  timelineSurfacePlacement,
+  () => parents.value.timeline,
+  () => parents.value.editor,
+  () => paneVisible.value.left,
+  () => paneVisible.value.right,
+  () => timelineParents.value.timeline,
+  () => timelinePaneVisible.value.top,
+  () => timelinePaneVisible.value.bottom,
+  () => editorParents.value.timeline,
+  () => editorPaneVisible.value.top,
+  () => editorPaneVisible.value.bottom,
+  leftWidth,
+  leftHeight,
+  rightWidth,
+  rightHeight,
+])
+const timelineSurfaceDimensions = computed(() => ({
+  width: timelineTargetWidth.value,
+  height: timelineTargetHeight.value,
+  perc: timelineSurfacePlacement.value === 'editor' ? dEditor.perc : dTimeline.perc,
+}))
+const timelineSurfaceColumns = computed(() => {
+  if (timelineSurfacePlacement.value === 'main') {
+    return resolveEmbeddedTimelineColumns(timelineViewVisible.value.player)
+  }
+  if (timelineSurfacePlacement.value === 'editor') {
+    return resolveEmbeddedTimelineColumns(editorViewVisible.value.timeline)
+  }
+  return undefined
+})
+const mainTimelineOwnsBottomEdge = computed(
+  () =>
+    timelineParents.value.timeline === 'bottom' ||
+    (timelineParents.value.timeline === 'top' && !timelinePaneVisible.value.bottom),
+)
+const editorTimelineOwnsBottomEdge = computed(
+  () =>
+    editorParents.value.timeline === 'bottom' ||
+    (editorParents.value.timeline === 'top' && !editorPaneVisible.value.bottom),
+)
+const timelineOwnsBottomEdge = computed(() =>
+  timelineSurfacePlacement.value === 'editor'
+    ? editorTimelineOwnsBottomEdge.value
+    : mainTimelineOwnsBottomEdge.value,
+)
+const timelineSurfaceStyle = computed<CSSProperties>(() => ({
+  ...timelinePositionStyle.value,
+  '--space-pane-bottom-offset': timelineOwnsBottomEdge.value
+    ? 'var(--space-workspace-bottom-offset)'
+    : 'var(--space-pane-switch-bottom)',
+}))
+const applyQuickSlotFromTimeline = (path: string) =>
+  applyQuickSlotFromView(path, timelineSurfacePlacement.value === 'editor' ? 'editor' : 'timeline')
 
 const flexDirection = ref<CSSProperties['flex-direction']>('row')
 const flexLeft = ref<CSSProperties['flex']>('0 0 0')
@@ -460,6 +686,23 @@ const rightStyle = computed<CSSProperties>(() => ({
       transparent 5.08rem 10rem
     ),
     var(--color-canvas);
+}
+
+.spiro-workspace__player-marker {
+  position: absolute;
+  inset: 0;
+  min-inline-size: 0;
+  min-block-size: 0;
+  pointer-events: none;
+}
+
+.spiro-workspace__player-surface,
+.spiro-workspace__timeline-surface {
+  position: absolute;
+  z-index: 1008;
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: clip;
 }
 
 /* Keep keyboard focus visible without the heavy outlines used outside the workspace. */

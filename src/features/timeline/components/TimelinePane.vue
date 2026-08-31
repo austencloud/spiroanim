@@ -23,18 +23,7 @@
         class="timeline-pane__player"
         data-type="player"
         data-role="timeline-player-host"
-        :style="playerHostStyle"
-      >
-        <Player
-          :store="props.store"
-          data-role="player-view"
-          :dim="dPlayer"
-          :editor-visible="props.editorVisible"
-          :concepts-visible="props.conceptsVisible"
-          :controls-start-clearance="playerControlsStartClearance"
-          :controls-end-clearance="playerControlsEndClearance"
-        />
-      </div>
+      />
       <div
         v-if="viewVisible.timeline"
         ref="eTimeline"
@@ -43,15 +32,6 @@
         data-role="timeline-content-host"
         :style="timelineHostStyle"
       >
-        <Timeline
-          :store="props.store"
-          data-role="timeline-content"
-          :dim="dTimeline"
-          :landscape="false"
-          :cols="timelineColumns"
-          @quick-slot-apply="emit('quickSlotApply', $event)"
-          @quick-slot-save="emit('quickSlotSave', $event)"
-        />
         <PaneSwapButton
           v-if="canShowAllTimelineProps"
           class="timeline-pane__show-all"
@@ -84,14 +64,10 @@
 <script setup lang="ts">
 import { mdiFilterOff, mdiSwapVerticalBold } from '@mdi/js'
 
-import Player from '@/components/SpiroAnim/AnimPlayer.vue'
-import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import PaneSplitter from '@/components/layout/PaneSplitter.vue'
 import PaneSwapButton from '@/components/layout/PaneSwapButton.vue'
 import { useCollapsibleVerticalPanes } from '@/composables/useCollapsibleVerticalPanes'
-import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useTimelinePaneStore } from '@/features/timeline/stores/useTimelinePaneStore'
-import { resolveEmbeddedTimelineColumns } from '@/features/timeline/resolveEmbeddedTimelineColumns'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
@@ -99,12 +75,10 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import {
   PANE_ADJACENT_CONTROL_START_INSET,
-  PANE_CORNER_CONTROL_CLEARANCE,
   PANE_CORNER_CONTROL_START_INSET,
-  PANE_CYCLE_CONTROL_START_CLEARANCE,
 } from '@/components/layout/paneControlLayout'
 
-const emit = defineEmits<{
+defineEmits<{
   quickSlotApply: [path: string]
   quickSlotSave: [slot: number]
 }>()
@@ -140,22 +114,13 @@ const { setViewInPane } = paneStore
 const { parents, paneVisible, viewVisible, ePlayer, eTimeline, eTop, eBottom, eHidden } =
   storeToRefs(paneStore)
 const splitterStore = useSplitterStore('timeline', 'top', 'bottom')
-const { topWidth, topHeight, bottomWidth, bottomHeight, topPerc } = storeToRefs(splitterStore)
+const { topWidth, topHeight, topPerc } = storeToRefs(splitterStore)
 
 const topDim = computed(() => ({
   width: topWidth.value,
   height: topHeight.value,
   perc: dim.perc,
 }))
-const bottomDim = computed(() => ({
-  width: bottomWidth.value,
-  height: bottomHeight.value,
-  perc: dim.perc,
-}))
-const paneDimensions = { top: topDim, bottom: bottomDim }
-const dPlayer = useViewDimensions('player', parents, paneDimensions)
-const dTimeline = useViewDimensions('timeline', parents, paneDimensions)
-
 const fullAnimationTimes = computed(() => {
   const times = [...new Set(PTIMES.value.flat())].sort((first, second) => first - second)
   const overallEnd = UTIMES.value.at(-1) ?? 0
@@ -184,20 +149,6 @@ const showAllTimelineFrames = () => {
 }
 
 const splitEnabled = computed(() => !props.playerVisible)
-const timelineColumns = computed(() => resolveEmbeddedTimelineColumns(viewVisible.value.player))
-const playerOwnsBottomEdge = computed(
-  () =>
-    parents.value.player === 'bottom' ||
-    (parents.value.player === 'top' && !paneVisible.value.bottom),
-)
-const playerControlsStartClearance = computed(() =>
-  props.paneCycleControlsVisible && playerOwnsBottomEdge.value
-    ? PANE_CYCLE_CONTROL_START_CLEARANCE
-    : '0px',
-)
-const playerControlsEndClearance = computed(() =>
-  splitEnabled.value && playerOwnsBottomEdge.value ? PANE_CORNER_CONTROL_CLEARANCE : '0px',
-)
 const timelineOwnsBottomEdge = computed(
   () =>
     parents.value.timeline === 'bottom' ||
@@ -211,9 +162,6 @@ const showAllTimelineStyle = computed<CSSProperties>(() => ({
 }))
 const paneBottomOffset = (ownsBottomEdge: boolean): string =>
   ownsBottomEdge ? 'var(--space-workspace-bottom-offset)' : 'var(--space-pane-switch-bottom)'
-const playerHostStyle = computed<CSSProperties>(() => ({
-  '--space-pane-bottom-offset': paneBottomOffset(playerOwnsBottomEdge.value),
-}))
 const timelineHostStyle = computed<CSSProperties>(() => ({
   '--space-pane-bottom-offset': paneBottomOffset(timelineOwnsBottomEdge.value),
 }))
@@ -277,6 +225,7 @@ const swapViews = () => {
   min-width: 0;
   min-height: 0;
   overflow: clip;
+  pointer-events: none;
 }
 
 .timeline-pane__swap {
@@ -290,6 +239,7 @@ const swapViews = () => {
   position: absolute;
   bottom: var(--space-pane-bottom-offset);
   z-index: 1010;
+  pointer-events: auto;
 }
 
 .timeline-pane :deep(.pane-splitter) {

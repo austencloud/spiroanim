@@ -10,9 +10,7 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import {
   PANE_ADJACENT_CONTROL_START_INSET,
-  PANE_CORNER_CONTROL_CLEARANCE,
   PANE_CORNER_CONTROL_START_INSET,
-  PANE_CYCLE_CONTROL_START_CLEARANCE,
 } from '@/components/layout/paneControlLayout'
 
 class FakeResizeObserver {
@@ -21,23 +19,10 @@ class FakeResizeObserver {
   unobserve(): void {}
 }
 
-const TimelineStub = {
-  props: ['cols'],
-  emits: ['quickSlotApply', 'quickSlotSave'],
-  template:
-    '<div :data-cols="cols"><button data-role="apply" @click="$emit(\'quickSlotApply\', \'/time-vtg\')" /><button data-role="save" @click="$emit(\'quickSlotSave\', 2)" /></div>',
-}
-
 const PaneSwapButtonStub = {
   props: ['label'],
   emits: ['click'],
   template: '<button :aria-label="label" @click="$emit(\'click\')" />',
-}
-
-const AnimPlayerStub = {
-  props: ['controlsStartClearance', 'controlsEndClearance', 'conceptsVisible'],
-  template:
-    '<div data-role="player-view" :controls-start-clearance="controlsStartClearance" :controls-end-clearance="controlsEndClearance" :concepts-visible="conceptsVisible">Player</div>',
 }
 
 const mountTimelinePane = (playerVisible = false, paneCycleControlsVisible = true) =>
@@ -49,9 +34,6 @@ const mountTimelinePane = (playerVisible = false, paneCycleControlsVisible = tru
     },
     global: {
       stubs: {
-        Timeline: TimelineStub,
-        Player: AnimPlayerStub,
-        AnimPlayer: AnimPlayerStub,
         PaneSplitter: { template: '<div data-role="splitter-timeline" />' },
         PaneSwapButton: PaneSwapButtonStub,
       },
@@ -73,26 +55,13 @@ describe('TimelinePane', () => {
 
     const topPane = wrapper.get('[data-role="timeline-top-pane"]')
     const bottomPane = wrapper.get('[data-role="timeline-bottom-pane"]')
+    const playerMarker = wrapper.get('[data-role="timeline-player-host"]')
+    expect(playerMarker.element.closest('[data-role="timeline-top-pane"]')).toBe(topPane.element)
     expect(
       wrapper
-        .get('[data-role="timeline-player-host"]')
-        .element.closest('[data-role="timeline-top-pane"]'),
-    ).toBe(topPane.element)
-    expect(
-      wrapper
-        .get('[data-role="timeline-content"]')
+        .get('[data-role="timeline-content-host"]')
         .element.closest('[data-role="timeline-bottom-pane"]'),
     ).toBe(bottomPane.element)
-    expect(wrapper.get('[data-role="timeline-content"]').attributes('data-cols')).toBe('4')
-    expect(wrapper.get('[data-role="player-view"]').attributes('controls-end-clearance')).toBe(
-      '0px',
-    )
-    expect(wrapper.get('[data-role="player-view"]').attributes('controls-start-clearance')).toBe(
-      '0px',
-    )
-    expect(wrapper.get('[data-role="timeline-player-host"]').attributes('style')).toContain(
-      '--space-pane-bottom-offset: var(--space-pane-switch-bottom)',
-    )
     expect(wrapper.get('[data-role="timeline-content-host"]').attributes('style')).toContain(
       '--space-pane-bottom-offset: var(--space-workspace-bottom-offset)',
     )
@@ -101,39 +70,25 @@ describe('TimelinePane', () => {
     await flushPromises()
 
     expect(useTimelinePaneStore().parents).toEqual({ player: 'bottom', timeline: 'top' })
-    expect(
-      wrapper
-        .get('[data-role="timeline-player-host"]')
-        .element.closest('[data-role="timeline-bottom-pane"]'),
-    ).toBe(bottomPane.element)
-    expect(wrapper.get('[data-role="player-view"]').attributes('controls-end-clearance')).toBe(
-      PANE_CORNER_CONTROL_CLEARANCE,
+    expect(playerMarker.element.closest('[data-role="timeline-bottom-pane"]')).toBe(
+      bottomPane.element,
     )
-    expect(wrapper.get('[data-role="player-view"]').attributes('controls-start-clearance')).toBe(
-      PANE_CYCLE_CONTROL_START_CLEARANCE,
-    )
-    expect(wrapper.get('[data-role="timeline-player-host"]').attributes('style')).toContain(
-      '--space-pane-bottom-offset: var(--space-workspace-bottom-offset)',
-    )
+    expect(wrapper.get('[data-role="timeline-player-host"]').element).toBe(playerMarker.element)
     expect(wrapper.get('[data-role="timeline-content-host"]').attributes('style')).toContain(
       '--space-pane-bottom-offset: var(--space-pane-switch-bottom)',
     )
   })
 
-  it('reserves both footer controls when the top Player expands over a hidden bottom pane', async () => {
+  it('keeps the Player marker mounted when the top pane expands over a hidden bottom pane', async () => {
     const wrapper = mountTimelinePane()
+    const playerMarker = wrapper.get('[data-role="timeline-player-host"]').element
     useSplitterStore('timeline', 'top', 'bottom').topPerc = 100
     await flushPromises()
 
     expect(wrapper.get('[data-role="timeline-bottom-pane"]').isVisible()).toBe(false)
-    expect(wrapper.get('[data-role="player-view"]').attributes('controls-start-clearance')).toBe(
-      PANE_CYCLE_CONTROL_START_CLEARANCE,
-    )
-    expect(wrapper.get('[data-role="player-view"]').attributes('controls-end-clearance')).toBe(
-      PANE_CORNER_CONTROL_CLEARANCE,
-    )
-    expect(wrapper.get('[data-role="timeline-player-host"]').attributes('style')).toContain(
-      '--space-pane-bottom-offset: var(--space-workspace-bottom-offset)',
+    expect(wrapper.get('[data-role="timeline-player-host"]').element).toBe(playerMarker)
+    expect(playerMarker.closest('[data-role="timeline-top-pane"]')).toBe(
+      wrapper.get('[data-role="timeline-top-pane"]').element,
     )
   })
 
@@ -145,7 +100,6 @@ describe('TimelinePane', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-role="timeline-player-host"]').exists()).toBe(false)
-    expect(wrapper.get('[data-role="timeline-content"]').attributes('data-cols')).toBeUndefined()
     expect(wrapper.find('button[aria-label="Swap Timeline Views"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="splitter-timeline"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="timeline-bottom-pane"]').attributes('style')).toContain(
@@ -156,27 +110,8 @@ describe('TimelinePane', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-role="timeline-player-host"]').exists()).toBe(true)
-    expect(wrapper.get('[data-role="timeline-content"]').attributes('data-cols')).toBe('4')
     expect(wrapper.find('button[aria-label="Swap Timeline Views"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="splitter-timeline"]').exists()).toBe(true)
-  })
-
-  it('passes opposing Concepts visibility to its embedded Player', async () => {
-    const wrapper = mountTimelinePane()
-    await wrapper.setProps({ conceptsVisible: true })
-
-    expect(wrapper.get('[data-role="player-view"]').attributes('concepts-visible')).toBe('true')
-  })
-
-  it('forwards Timeline Quick Slot events', async () => {
-    const wrapper = mountTimelinePane()
-    await flushPromises()
-
-    await wrapper.get('[data-role="apply"]').trigger('click')
-    await wrapper.get('[data-role="save"]').trigger('click')
-
-    expect(wrapper.emitted('quickSlotApply')).toEqual([['/time-vtg']])
-    expect(wrapper.emitted('quickSlotSave')).toEqual([[2]])
   })
 
   it('owns the Show Full Timeline control', async () => {

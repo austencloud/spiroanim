@@ -12,18 +12,13 @@
         :dim="dProperties"
         :cols="pCols"
       />
-      <Timeline
+      <div
         v-if="viewVisible.timeline"
-        ref="cTimeline"
-        store="main"
+        ref="timelineMarker"
+        class="anim-editor__timeline-marker"
         data-type="timeline"
-        data-role="timeline-view"
-        :dim="dTimeline"
-        :landscape="false"
-        :cols="timelineColumns"
+        data-role="editor-timeline-host"
         :style="timelinePaneStyle"
-        @quick-slot-apply="emit('quickSlotApply', $event)"
-        @quick-slot-save="emit('quickSlotSave', $event)"
       />
     </div>
     <PaneSwapButton
@@ -48,7 +43,6 @@
 // src\components\SpiroAnim\AnimEditor.vue
 
 import Properties from '@/features/editor/components/AnimProperties.vue'
-import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import PaneSplitter from '@/components/layout/PaneSplitter.vue'
 import PaneSwapButton from '@/components/layout/PaneSwapButton.vue'
 import { mdiSwapVerticalBold } from '@mdi/js'
@@ -58,9 +52,8 @@ import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useEditorPaneStore } from '@/features/editor/stores/useEditorPaneStore'
 import { useEditorAccessStore } from '@/features/editor/stores/useEditorAccessStore'
-import { resolveEmbeddedTimelineColumns } from '@/features/timeline/resolveEmbeddedTimelineColumns'
 
-const emit = defineEmits<{
+defineEmits<{
   quickSlotApply: [path: string]
   quickSlotSave: [slot: number]
 }>()
@@ -84,11 +77,13 @@ const { parents, paneVisible, viewVisible, eProperties, eTimeline, eTop, eBottom
 
 // Component references
 const cProperties = ref<ComponentPublicInstance>()
-const cTimeline = ref<ComponentPublicInstance>()
+const timelineMarker = ref<HTMLElement>()
 
 // Supply root elements from components to Pane Store
 registerComponentEl(cProperties, eProperties)
-registerComponentEl(cTimeline, eTimeline)
+watch(timelineMarker, (element) => {
+  eTimeline.value = element
+})
 
 const topDim = computed(() => {
   return {
@@ -114,7 +109,6 @@ const dimComputeds = {
 
 // Dimensions of the current pane a view is mounted in, to pass into each component
 const dProperties = useViewDimensions('properties', parents, dimComputeds)
-const dTimeline = useViewDimensions('timeline', parents, dimComputeds)
 
 const flexTop = ref<CSSProperties['flex']>('0 0 0')
 const flexBottom = ref<CSSProperties['flex']>('0 0 0')
@@ -134,7 +128,6 @@ const enabled = computed(
     pCols.value >= minTimeCols &&
     dim.height > minTimeHeight,
 )
-const timelineColumns = computed(() => resolveEmbeddedTimelineColumns(viewVisible.value.timeline))
 const timelineOwnsBottomEdge = computed(
   () =>
     parents.value.timeline === 'bottom' ||
@@ -226,5 +219,13 @@ const containerStyle = computed<CSSProperties>(() => ({
   bottom: var(--space-workspace-bottom-offset);
   right: 11px;
   z-index: 1010;
+}
+
+.anim-editor__timeline-marker {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
 }
 </style>

@@ -151,8 +151,9 @@ const timelineSettingsStore = useTimelineSettingsStore()
 const { decreaseColumnOffset, increaseColumnOffset, adjustedColumnCount } = timelineSettingsStore
 const { columnOffset } = storeToRefs(timelineSettingsStore)
 
-// Dimensions provided by parent component
-const dim: Readonly<typeof props.dim> = readonly(props.dim)
+// Keep the local object stable while following replacement dimension props from pane placement.
+const dim = reactive({ ...props.dim })
+watchEffect(() => Object.assign(dim, props.dim))
 
 // Create worker and message channel
 const worker = new Worker(new URL('@/workers/AnimWorker.ts', import.meta.url), { type: 'module' })

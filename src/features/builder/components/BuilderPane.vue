@@ -121,23 +121,8 @@
         </div>
       </div>
 
-      <div
-        ref="ePlayer"
-        class="builder-pane__player"
-        data-type="player"
-        data-role="builder-player"
-        :style="playerHostStyle"
-      >
-        <div ref="playerHost" class="builder-pane__player-host">
-          <AnimPlayer
-            store="main"
-            data-role="player-view"
-            :dim="playerDimensions"
-            :controls-start-clearance="playerControlsStartClearance"
-            :controls-end-clearance="playerControlsEndClearance"
-            :selection-enabled="false"
-            :concepts-visible="props.conceptsVisible"
-          />
+      <div ref="ePlayer" class="builder-pane__player" data-type="player" data-role="builder-player">
+        <div class="builder-pane__player-host">
           <div
             v-if="PLAYBACK_PREVIEW_ACTIVE"
             class="builder-pane__player-revert"
@@ -238,11 +223,6 @@ import { useSplitterStore } from '@/stores/useSplitterStore'
 import { usePatternMatchingClient } from '@/features/concepts/composables/usePatternMatchingWorker'
 import { createBuilderQuickSlotCandidates } from '@/features/builder/createBuilderQuickSlotCandidates'
 import { preserveVtgBuilderScale } from '@/features/builder/preserveVtgBuilderScale'
-import AnimPlayer from '@/components/SpiroAnim/AnimPlayer.vue'
-import {
-  PANE_CORNER_CONTROL_CLEARANCE,
-  PANE_CYCLE_CONTROL_START_CLEARANCE,
-} from '@/components/layout/paneControlLayout'
 
 const props = withDefaults(
   defineProps<{
@@ -301,19 +281,6 @@ const setTopPercentage = (percentage: number) => {
 const swapViews = () => {
   setViewInPane('player', parents.value.player === 'top' ? 'bottom' : 'top')
 }
-const playerOwnsBottomEdge = computed(
-  () =>
-    parents.value.player === 'bottom' ||
-    (parents.value.player === 'top' && !paneVisible.value.bottom),
-)
-const playerControlsStartClearance = computed(() =>
-  props.paneCycleControlsVisible && playerOwnsBottomEdge.value
-    ? PANE_CYCLE_CONTROL_START_CLEARANCE
-    : '0px',
-)
-const playerControlsEndClearance = computed(() =>
-  playerOwnsBottomEdge.value ? PANE_CORNER_CONTROL_CLEARANCE : '0px',
-)
 const builderOwnsTopEdge = computed(
   () =>
     parents.value.thumbnails === 'top' ||
@@ -322,18 +289,6 @@ const builderOwnsTopEdge = computed(
 const exitAccountsForMainMenu = computed(
   () => hijackedPane.value === 'left' && builderOwnsTopEdge.value,
 )
-const playerHostStyle = computed<CSSProperties>(() => ({
-  '--space-pane-bottom-offset': playerOwnsBottomEdge.value
-    ? 'var(--space-workspace-bottom-offset)'
-    : 'var(--space-pane-switch-bottom)',
-}))
-const playerHost = ref<HTMLElement>()
-const { width: playerWidth, height: playerHeight } = useElementSize(playerHost)
-const playerDimensions = computed(() => ({
-  width: playerWidth.value,
-  height: playerHeight.value,
-  perc: 1,
-}))
 const playerStore = usePlayerStore('main')
 const qsStore = useQSMainStore()
 const { ROOT, CURRENT } = playerStore.raw()
@@ -626,6 +581,7 @@ const exit = () => {
   background: transparent;
   display: flex;
   flex-direction: column;
+  pointer-events: none;
 }
 
 .builder-pane__pane {
@@ -650,6 +606,7 @@ const exit = () => {
 
 .builder-pane__thumbnails {
   container-type: inline-size;
+  pointer-events: auto;
 }
 
 .builder-pane__scroll {
@@ -770,6 +727,7 @@ const exit = () => {
   position: absolute;
   top: 50%;
   z-index: 2;
+  pointer-events: auto;
   transform: translateY(-50%);
 }
 
@@ -844,10 +802,12 @@ const exit = () => {
   right: var(--space-2);
   bottom: var(--space-workspace-bottom-offset);
   z-index: 3;
+  pointer-events: auto;
 }
 
 .builder-pane :deep(.pane-splitter) {
   z-index: 3;
+  pointer-events: auto;
 }
 
 .builder-pane__column-control button {

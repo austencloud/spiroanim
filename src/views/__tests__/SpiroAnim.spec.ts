@@ -24,6 +24,13 @@ const AnimPlayerStub = {
     '<div data-role="player-view" :controls-start-clearance="controlsStartClearance" :controls-end-clearance="controlsEndClearance" :selection-enabled="selectionEnabled" :concepts-visible="conceptsVisible">Player</div>',
 }
 
+const AnimTimelineStub = {
+  props: ['cols'],
+  emits: ['quickSlotApply', 'quickSlotSave'],
+  template:
+    '<div data-role="timeline-content" :data-cols="cols"><div class="scrollbar" data-role="timeline-scroll" /></div>',
+}
+
 describe('SpiroAnim view', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -89,8 +96,8 @@ describe('SpiroAnim view', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          Player: { template: '<div>Player</div>' },
-          AnimPlayer: AnimPlayerStub,
+          Player: AnimPlayerStub,
+          AnimTimeline: AnimTimelineStub,
           Timeline: {
             template: '<div>Timeline<button type="button" aria-label="Show Full Timeline" /></div>',
           },
@@ -107,7 +114,13 @@ describe('SpiroAnim view', () => {
     expect(containerStyle.top).toBe('48px')
     expect(containerStyle.width).toBe('412px')
     expect(containerStyle.height).toBe('760px')
-    expect(wrapper.get('[data-role="left-pane"]').text()).toContain('Player')
+    const initialPlayer = wrapper.get('[data-role="player-view"]').element
+    expect(
+      wrapper.get('[data-role="main-player-host"]').element.closest('[data-role="left-pane"]'),
+    ).toBe(wrapper.get('[data-role="left-pane"]').element)
+    expect(
+      wrapper.get('[data-role="stable-player-surface"]').attributes('data-player-placement'),
+    ).toBe('main')
     expect((wrapper.get('[data-role="left-pane"]').element as HTMLElement).style.overflow).toBe(
       'clip',
     )
@@ -142,9 +155,10 @@ describe('SpiroAnim view', () => {
     await flushPromises()
     expect(wrapper.find('[data-role="player-view"]').exists()).toBe(true)
     expect(wrapper.find('[data-role="vtg-transition-support-error"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="player-view"]').element).toBe(initialPlayer)
     expect(
-      wrapper.get('[data-role="player-view"]').element.closest('.builder-pane__player-host'),
-    ).toBe(wrapper.get('.builder-pane__player-host').element)
+      wrapper.get('[data-role="stable-player-surface"]').attributes('data-player-placement'),
+    ).toBe('builder')
     expect(wrapper.findAll('[data-role="player-view"]')).toHaveLength(1)
     expect(wrapper.get('[data-role="player-view"]').attributes('controls-end-clearance')).toBe(
       '0px',
@@ -284,7 +298,7 @@ describe('SpiroAnim view', () => {
     expect(
       wrapper.get('[data-role="builder-player"]').element.closest('[data-role="top-pane"]'),
     ).toBe(builderTopPane.element)
-    expect(wrapper.get('[data-role="builder-player"]').attributes('style')).toContain(
+    expect(wrapper.get('[data-role="stable-player-surface"]').attributes('style')).toContain(
       '--space-pane-bottom-offset: var(--space-pane-switch-bottom)',
     )
     expect(wrapper.get('[data-role="player-view"]').attributes('selection-enabled')).toBe('false')
@@ -304,7 +318,7 @@ describe('SpiroAnim view', () => {
     expect(
       wrapper.get('[data-role="builder-player"]').element.closest('[data-role="bottom-pane"]'),
     ).toBe(builderBottomPane.element)
-    expect(wrapper.get('[data-role="builder-player"]').attributes('style')).toContain(
+    expect(wrapper.get('[data-role="stable-player-surface"]').attributes('style')).toContain(
       '--space-pane-bottom-offset: var(--space-workspace-bottom-offset)',
     )
     expect(
@@ -380,6 +394,10 @@ describe('SpiroAnim view', () => {
     await flushPromises()
     expect(wrapper.find('[data-role="builder-pane-view"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="player-view"]').exists()).toBe(true)
+    expect(wrapper.get('[data-role="player-view"]').element).toBe(initialPlayer)
+    expect(
+      wrapper.get('[data-role="stable-player-surface"]').attributes('data-player-placement'),
+    ).toBe('main')
     expect(wrapper.findAll('button[aria-label="Swap Views"]')).toHaveLength(2)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-pattern-builder"]').element.checked).toBe(
       false,
@@ -387,9 +405,26 @@ describe('SpiroAnim view', () => {
     expect(router.currentRoute.value.fullPath).toBe(routeAfterBuilderEdit)
 
     paneStore.setViewInPane('concepts', 'left')
+    paneStore.setViewInPane('timeline', 'right')
+    await flushPromises()
+    const displacedTimeline = wrapper.get('[data-role="timeline-view"]').element
+    expect(wrapper.get('[data-role="player-view"]').element).toBe(initialPlayer)
+    expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
+    await flushPromises()
+    expect(wrapper.find('[data-role="timeline-view"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="timeline-content"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="player-view"]').element).toBe(initialPlayer)
+    paneStore.exitPaneHijack()
+    await flushPromises()
+    expect(wrapper.get('[data-role="timeline-view"]').element).not.toBe(displacedTimeline)
+    expect(wrapper.find('[data-role="timeline-content"]').exists()).toBe(true)
+    expect(wrapper.get('[data-role="player-view"]').element).toBe(initialPlayer)
+
+    paneStore.setViewInPane('concepts', 'left')
     paneStore.setViewInPane('player', 'right')
     expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
     await flushPromises()
+    const routeBeforeConceptSwitch = router.currentRoute.value.fullPath
     expect(wrapper.get('[data-role="builder-thumbnails"]').classes()).not.toContain(
       'builder-pane__thumbnails--menu-offset',
     )
@@ -404,7 +439,7 @@ describe('SpiroAnim view', () => {
     expect(wrapper.find('[data-role="builder-pane-view"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="player-view"]').exists()).toBe(true)
     expect(useConceptsStore().selectedConcept).toBe('8stp')
-    expect(router.currentRoute.value.fullPath).toBe(routeAfterBuilderEdit)
+    expect(router.currentRoute.value.fullPath).toBe(routeBeforeConceptSwitch)
     useConceptsStore().selectedConcept = 'vtg'
     await flushPromises()
 
@@ -412,12 +447,14 @@ describe('SpiroAnim view', () => {
     await flushPromises()
     expect(propertiesStore.showFullTimeline).toBe(false)
     expect(propertiesStore.pFRAMES).toBe('motion')
+    expect(wrapper.find('[data-role="player-view"]').exists()).toBe(false)
     expect(wrapper.find('button[aria-label="Show Full Timeline"]').exists()).toBe(false)
 
     propertiesStore.pFRAMES = 'motion'
     await flushPromises()
     paneStore.setViewInPane('timeline', 'right')
     await flushPromises()
+    expect(wrapper.get('[data-role="player-view"]').element).not.toBe(initialPlayer)
     expect(wrapper.find('button[aria-label="Show Full Timeline"]').exists()).toBe(true)
 
     propertiesStore.pFRAMES = 'animation'
@@ -571,8 +608,8 @@ describe('SpiroAnim view', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          Player: { template: '<div>Player</div>' },
-          AnimPlayer: AnimPlayerStub,
+          Player: AnimPlayerStub,
+          AnimTimeline: AnimTimelineStub,
         },
       },
     })
@@ -608,8 +645,8 @@ describe('SpiroAnim view', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          Player: { template: '<div>Player</div>' },
-          AnimPlayer: AnimPlayerStub,
+          Player: AnimPlayerStub,
+          AnimTimeline: AnimTimelineStub,
         },
       },
     })
@@ -661,8 +698,8 @@ describe('SpiroAnim view', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          Player: { template: '<div>Player</div>' },
-          AnimPlayer: AnimPlayerStub,
+          Player: AnimPlayerStub,
+          AnimTimeline: AnimTimelineStub,
         },
       },
     })
@@ -712,8 +749,8 @@ describe('SpiroAnim view', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          Player: { template: '<div />' },
-          AnimPlayer: AnimPlayerStub,
+          Player: AnimPlayerStub,
+          AnimTimeline: AnimTimelineStub,
           Timeline: { template: '<div />' },
         },
       },
@@ -758,10 +795,12 @@ describe('SpiroAnim view', () => {
       emits: { quickSlotApply: (_path: string) => true },
       setup(_, { emit }) {
         return () =>
-          h('button', {
-            'data-role': 'apply-timeline-quick-slot',
-            onClick: () => emit('quickSlotApply', targetPath),
-          })
+          h('div', [
+            h('button', {
+              'data-role': 'apply-timeline-quick-slot',
+              onClick: () => emit('quickSlotApply', targetPath),
+            }),
+          ])
       },
     })
 
@@ -770,14 +809,14 @@ describe('SpiroAnim view', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          Player: { template: '<div />' },
-          AnimPlayer: AnimPlayerStub,
-          Timeline: TimelineStub,
+          Player: AnimPlayerStub,
+          AnimTimeline: TimelineStub,
+          Timeline: { template: '<div />' },
         },
       },
     })
     await flushPromises()
-    await wrapper.get('[data-role="timeline-view"]').trigger('click')
+    await wrapper.get('[data-role="apply-timeline-quick-slot"]').trigger('click')
     await flushPromises()
 
     const paneStore = useMainPaneStore()
@@ -806,6 +845,11 @@ describe('SpiroAnim view', () => {
     await router.isReady()
     const targetPath = router.resolve({ path: '/play-time', query }).fullPath
     const EditorStub = defineComponent({
+      setup() {
+        return () => h('div')
+      },
+    })
+    const EditorTimelineStub = defineComponent({
       emits: { quickSlotApply: (_path: string) => true },
       setup(_, { emit }) {
         return () => h('button', { onClick: () => emit('quickSlotApply', targetPath) })
@@ -816,11 +860,15 @@ describe('SpiroAnim view', () => {
     const wrapper = mount(SpiroAnim, {
       global: {
         plugins: [pinia, router],
-        stubs: { Player: { template: '<div />' }, AnimPlayer: AnimPlayerStub, Editor: EditorStub },
+        stubs: {
+          Player: AnimPlayerStub,
+          AnimTimeline: EditorTimelineStub,
+          Editor: EditorStub,
+        },
       },
     })
     await flushPromises()
-    await wrapper.get('[data-role="editor-view"]').trigger('click')
+    await wrapper.get('[data-role="timeline-content"]').trigger('click')
     await flushPromises()
 
     const paneStore = useMainPaneStore()
@@ -846,8 +894,8 @@ describe('SpiroAnim view', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          Player: { template: '<div>Player</div>' },
-          AnimPlayer: AnimPlayerStub,
+          Player: AnimPlayerStub,
+          AnimTimeline: AnimTimelineStub,
         },
       },
     })

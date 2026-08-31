@@ -69,17 +69,26 @@ test('mounts the full Player in Builder with live override playback and collisio
   const builderToggle = page
     .locator('label.vtg-pattern-builder-button')
     .filter({ hasText: 'Pattern Builder' })
+  const sharedPlayer = page.locator('[data-role="player-view"]')
+  await expect(sharedPlayer).toBeVisible()
+  await sharedPlayer.evaluate((element) => {
+    element.setAttribute('data-player-persistence-probe', 'mounted-before-builder')
+  })
   await builderToggle.click()
 
   const builder = page.locator('[data-role="builder-pane-view"]')
   const builderPlayer = builder.locator('[data-role="builder-player"]')
-  const sharedPlayer = builderPlayer.locator('[data-role="player-view"]')
+  const playerSurface = page.locator('[data-role="stable-player-surface"]')
   const freeCamera = sharedPlayer.getByRole('button', { name: 'Free camera' })
   const swap = builder.getByRole('button', { name: 'Swap Builder Views' })
   const exit = builder.getByRole('button', { name: 'Exit Pattern Builder' })
-  const menu = page.getByRole('button', { name: 'Open SpiroAnim menu' })
   await expect(builderPlayer).toBeVisible()
   await expect(sharedPlayer).toBeVisible()
+  await expect(sharedPlayer).toHaveAttribute(
+    'data-player-persistence-probe',
+    'mounted-before-builder',
+  )
+  await expect(playerSurface).toHaveAttribute('data-player-placement', 'builder')
   const position = sharedPlayer.getByRole('slider', { name: 'Animation position' })
   const initialPosition = Number(await position.inputValue())
   await expect.poll(async () => Number(await position.inputValue())).not.toBe(initialPosition)
@@ -103,20 +112,25 @@ test('mounts the full Player in Builder with live override playback and collisio
   await expect(exit).toHaveCSS('background-image', /linear-gradient/)
   await expect(exit).toHaveCSS('border-top-width', '2px')
 
-  const [builderBox, menuBox, exitBox] = await Promise.all([
+  const [builderBox, thumbnailsBox, exitBox] = await Promise.all([
     builder.boundingBox(),
-    menu.boundingBox(),
+    builder.locator('[data-role="builder-thumbnails"]').boundingBox(),
     exit.boundingBox(),
   ])
   expect(builderBox).not.toBeNull()
-  expect(menuBox).not.toBeNull()
+  expect(thumbnailsBox).not.toBeNull()
   expect(exitBox).not.toBeNull()
-  expect(exitBox!.y - builderBox!.y).toBeCloseTo(1, 0)
-  expect(exitBox!.x).toBeGreaterThanOrEqual(menuBox!.x + menuBox!.width + 8)
+  expect(exitBox!.y - thumbnailsBox!.y).toBeCloseTo(1, 0)
 
   // The Vite devtools iframe overlaps this bottom-right control in the test server.
   await swap.dispatchEvent('click')
-  await expect(builder.locator('[data-role="bottom-pane"] [data-role="player-view"]')).toBeVisible()
+  await expect(
+    builder.locator('[data-role="bottom-pane"] [data-role="builder-player"]'),
+  ).toBeVisible()
+  await expect(sharedPlayer).toHaveAttribute(
+    'data-player-persistence-probe',
+    'mounted-before-builder',
+  )
   await expect(sharedPlayer.locator('.slider')).toHaveCSS('right', '40px')
   const swappedInitialPosition = Number(await position.inputValue())
   await expect
@@ -136,6 +150,10 @@ test('mounts the full Player in Builder with live override playback and collisio
 
   await builderToggle.click()
   await expect(page.locator('[data-role="player-view"]')).toBeVisible()
+  await expect(sharedPlayer).toHaveAttribute(
+    'data-player-persistence-probe',
+    'mounted-before-builder',
+  )
   const restoredPosition = page
     .locator('[data-role="player-view"]')
     .getByRole('slider', { name: 'Animation position' })
@@ -147,6 +165,162 @@ test('mounts the full Player in Builder with live override playback and collisio
     page.locator('[data-role="player-view"]').getByRole('button', { name: 'Free camera' }),
   ).toHaveAttribute('aria-pressed', 'true')
   expect(pageErrors).toEqual([])
+})
+
+test('keeps one live Player while its surface moves from the main pane into Timeline', async ({
+  page,
+}) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.goto(
+    '/play-time?r=Ew08Yk11Y&p0=Q__.mBEQDk.5JE.......&x0=_s_&m0=_1_mxqv__&p1=N__.blERhw.5JEQpg.......&x1=_s_&c=_i_bhq&v=11',
+  )
+  const sharedPlayer = page.locator('[data-role="player-view"]')
+  const playerSurface = page.locator('[data-role="stable-player-surface"]')
+  const position = sharedPlayer.getByRole('slider', { name: 'Animation position' })
+  await expect(sharedPlayer).toBeVisible()
+  await expect(playerSurface).toHaveAttribute('data-player-placement', 'main')
+  await sharedPlayer.evaluate((element) => {
+    element.setAttribute('data-player-persistence-probe', 'mounted-before-timeline')
+  })
+
+  await page.locator('[data-role="left-pane"]').getByRole('button', { name: 'Swap Views' }).click()
+
+  const timelinePlayerMarker = page.locator('[data-role="timeline-player-host"]')
+  await expect(timelinePlayerMarker).toBeVisible()
+  await expect(playerSurface).toHaveAttribute('data-player-placement', 'timeline')
+  await expect(sharedPlayer).toHaveAttribute(
+    'data-player-persistence-probe',
+    'mounted-before-timeline',
+  )
+  const movedInitialPosition = Number(await position.inputValue())
+  await expect.poll(async () => Number(await position.inputValue())).not.toBe(movedInitialPosition)
+
+  const [markerBox, surfaceBox] = await Promise.all([
+    timelinePlayerMarker.boundingBox(),
+    playerSurface.boundingBox(),
+  ])
+  expect(markerBox).not.toBeNull()
+  expect(surfaceBox).not.toBeNull()
+  expect(surfaceBox!.x).toBeCloseTo(markerBox!.x, 0)
+  expect(surfaceBox!.y).toBeCloseTo(markerBox!.y, 0)
+  expect(surfaceBox!.width).toBeCloseTo(markerBox!.width, 0)
+  expect(surfaceBox!.height).toBeCloseTo(markerBox!.height, 0)
+
+  await page.getByRole('button', { name: 'Swap Timeline Views' }).click()
+  await expect(
+    page.locator('[data-role="timeline-bottom-pane"] [data-role="timeline-player-host"]'),
+  ).toBeVisible()
+  await expect(sharedPlayer).toHaveAttribute(
+    'data-player-persistence-probe',
+    'mounted-before-timeline',
+  )
+  const swappedInitialPosition = Number(await position.inputValue())
+  await expect
+    .poll(async () => Number(await position.inputValue()))
+    .not.toBe(swappedInitialPosition)
+  expect(pageErrors).toEqual([])
+})
+
+test('keeps the Timeline-embedded Player live while Builder opens and closes', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.goto(
+    '/time-vtg?r=Ew08Yk11Y&p0=Q__.mBEQDk.5JE.......&x0=_s_&m0=_1_mxqv__&p1=N__.blERhw.5JEQpg.......&x1=_s_&c=_i_bhq&v=11',
+  )
+  const sharedPlayer = page.locator('[data-role="player-view"]')
+  const playerSurface = page.locator('[data-role="stable-player-surface"]')
+  const timelineSurface = page.locator('[data-role="stable-timeline-surface"]')
+  const builderToggle = page
+    .locator('label.vtg-pattern-builder-button')
+    .filter({ hasText: 'Pattern Builder' })
+
+  await expect(playerSurface).toHaveAttribute('data-player-placement', 'timeline')
+  await expect(sharedPlayer).toBeVisible()
+  await expect(timelineSurface).toBeVisible()
+  await sharedPlayer.evaluate((element) => {
+    element.setAttribute('data-player-persistence-probe', 'mounted-in-timeline')
+  })
+
+  await builderToggle.click()
+
+  await expect(page.locator('[data-role="builder-pane-view"]')).toBeVisible()
+  await expect(playerSurface).toHaveAttribute('data-player-placement', 'builder')
+  await expect(sharedPlayer).toHaveAttribute('data-player-persistence-probe', 'mounted-in-timeline')
+  await expect(sharedPlayer).toBeVisible()
+  await expect(page.locator('[data-role="timeline-view"]')).toHaveCount(0)
+  await expect(timelineSurface).toHaveCount(0)
+  const position = sharedPlayer.getByRole('slider', { name: 'Animation position' })
+  const builderInitialPosition = Number(await position.inputValue())
+  await expect
+    .poll(async () => Number(await position.inputValue()))
+    .not.toBe(builderInitialPosition)
+
+  await builderToggle.click()
+
+  await expect(playerSurface).toHaveAttribute('data-player-placement', 'timeline')
+  await expect(sharedPlayer).toHaveAttribute('data-player-persistence-probe', 'mounted-in-timeline')
+  await expect(timelineSurface).toBeVisible()
+  const restoredInitialPosition = Number(await position.inputValue())
+  await expect
+    .poll(async () => Number(await position.inputValue()))
+    .not.toBe(restoredInitialPosition)
+  expect(pageErrors).toEqual([])
+})
+
+test('keeps one Timeline instance while moving between Editor and the main Timeline pane', async ({
+  page,
+}) => {
+  const pageErrors: string[] = []
+  const timelineWarnings: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  page.on('console', (message) => {
+    if (
+      message.type() === 'warning' &&
+      message.text().includes('Timeline thumbnail request failed')
+    )
+      timelineWarnings.push(message.text())
+  })
+
+  await page.goto(
+    '/play-edit?r=Ew08Yk11Y&p0=Q__.mBEQDk.5JE.......&x0=_s_&m0=_1_mxqv__&p1=N__.blERhw.5JEQpg.......&x1=_s_&c=_i_bhq&v=11',
+  )
+  const timeline = page.locator('[data-role="timeline-content"]')
+  const timelineSurface = page.locator('[data-role="stable-timeline-surface"]')
+  const timelineScroll = timeline.locator('.scrollbar')
+  const leftPaneCycle = page
+    .locator('[data-role="left-pane"]')
+    .getByRole('button', { name: 'Swap Views', exact: true })
+
+  await expect(page.locator('[data-role="editor-timeline-host"]')).toBeVisible()
+  await expect(timelineSurface).toHaveAttribute('data-timeline-placement', 'editor')
+  await expect(timeline).toBeVisible()
+  await timeline.evaluate((element) => {
+    element.setAttribute('data-timeline-persistence-probe', 'mounted-in-editor')
+  })
+  const initialScrollTop = await timelineScroll.evaluate((element) => {
+    element.scrollTop = Math.min(60, Math.max(0, element.scrollHeight - element.clientHeight))
+    return element.scrollTop
+  })
+
+  await leftPaneCycle.click()
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/time-edit')
+  await expect(timelineSurface).toHaveAttribute('data-timeline-placement', 'main')
+  await expect(timeline).toHaveAttribute('data-timeline-persistence-probe', 'mounted-in-editor')
+  await expect(page.locator('[data-role="timeline-content-host"]')).toBeVisible()
+  expect(await timelineScroll.evaluate((element) => element.scrollTop)).toBe(initialScrollTop)
+
+  await leftPaneCycle.click()
+  await expect(timelineSurface).toHaveAttribute('data-timeline-placement', 'editor')
+  await expect(timeline).toHaveAttribute('data-timeline-persistence-probe', 'mounted-in-editor')
+
+  await leftPaneCycle.click()
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/play-edit')
+  await expect(timeline).toHaveAttribute('data-timeline-persistence-probe', 'mounted-in-editor')
+  expect(pageErrors).toEqual([])
+  expect(timelineWarnings).toEqual([])
 })
 
 test('opens VTG documents and returns to the exact app URL', async ({ page }) => {

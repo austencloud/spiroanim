@@ -120,6 +120,26 @@ describe('AnimTimeline', () => {
     vi.unstubAllGlobals()
   })
 
+  it('updates its layout when the parent replaces the dimensions object', async () => {
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: 'timeline-dimensions',
+        dim: { width: 0, height: 0, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.get<HTMLElement>('.timeline').element.style.width).toBe('0px')
+    expect(wrapper.get<HTMLElement>('.timeline').element.style.height).toBe('0px')
+
+    await wrapper.setProps({ dim: { width: 640, height: 360, perc: 50 } })
+
+    expect(wrapper.get<HTMLElement>('.timeline').element.style.width).toBe('640px')
+    expect(wrapper.get<HTMLElement>('.timeline').element.style.height).toBe('360px')
+    expect(wrapper.get<HTMLElement>('.scrollbar').element.style.width).toBe('640px')
+    expect(wrapper.get<HTMLElement>('.scrollbar').element.style.height).toBe('360px')
+  })
+
   it('shows enabled Quick Slots at the top and emits stored animation data', async () => {
     const conceptsStore = useConceptsStore()
     conceptsStore.restoreQuickSlots()
