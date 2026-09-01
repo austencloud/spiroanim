@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { builderPatternPointerMoveEvent } from '@/features/builder/patternPointerDrag'
+import type { BuilderPatternPointerDetail } from '@/features/builder/patternPointerDrag'
 import { getCompiledVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
@@ -3409,6 +3410,61 @@ describe('VtgPane', () => {
       tile.element.dispatchEvent(pointerMove)
 
       expect(handlePointerMove).toHaveBeenCalledOnce()
+    } finally {
+      document.removeEventListener(builderPatternPointerMoveEvent, handlePointerMove)
+      wrapper.unmount()
+    }
+  })
+
+  it('uses the shared Full Grid thumbnail and Elemental icons in touch drag previews', async () => {
+    useConceptsStore().elementalLayout = true
+    const wrapper = mount(VtgPane, {
+      props: { builderActive: true, builderFullCatalog: true },
+    })
+    await settlePreviewRendering()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+
+    const tile = wrapper.get<HTMLElement>('[data-cell-reference="2-2"]')
+    const sharedPreview = wrapper.get<HTMLImageElement>('[data-preview-reference="1-1"]')
+    const handlePointerMove = vi.fn<(event: Event) => void>()
+    document.addEventListener(builderPatternPointerMoveEvent, handlePointerMove)
+
+    try {
+      const pointerDown = new MouseEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+        clientX: 10,
+        clientY: 10,
+      })
+      Object.defineProperties(pointerDown, {
+        isPrimary: { value: true },
+        pointerId: { value: 8 },
+        pointerType: { value: 'touch' },
+      })
+      tile.element.dispatchEvent(pointerDown)
+
+      const pointerMove = new MouseEvent('pointermove', {
+        bubbles: true,
+        clientX: 30,
+        clientY: 10,
+      })
+      Object.defineProperties(pointerMove, {
+        pointerId: { value: 8 },
+        pointerType: { value: 'touch' },
+      })
+      tile.element.dispatchEvent(pointerMove)
+
+      const pointerEvent = handlePointerMove.mock.calls[0]?.[0]
+      expect(pointerEvent).toBeInstanceOf(CustomEvent)
+      if (!(pointerEvent instanceof CustomEvent)) throw new Error('Expected pointer drag event')
+      const detail = pointerEvent.detail as BuilderPatternPointerDetail
+      expect(detail.preview.imageUrl).toBe(sharedPreview.element.src)
+      expect(detail.preview.elemental).toMatchObject({
+        hands: expect.any(Object),
+        props: expect.any(Object),
+      })
+      expect(tile.findAll('.elemental-relationship-icons__icon')).toHaveLength(2)
     } finally {
       document.removeEventListener(builderPatternPointerMoveEvent, handlePointerMove)
       wrapper.unmount()

@@ -1181,26 +1181,46 @@ const emitBuilderPreview = (tile?: VtgMatrixTile) => {
   emit('patternPreview', createPatternSelection(activeTile))
 }
 
+// Full Grid thumbnails sit at the shared corner of each 2x2 tile group. Paired layouts share
+// only across columns, so touch and desktop drag previews must resolve the same visible anchor.
 const previewReferenceForTile = (tile: VtgMatrixTile) =>
   usesPairedPreviewLayout.value
     ? createCellReference(
         tile.row,
         tile.column % 2 === 0 ? ((tile.column - 1) as VtgRuleNumber) : tile.column,
       )
-    : renderedReferenceForTile(tile)
+    : createCellReference(
+        tile.row % 2 === 0 ? ((tile.row - 1) as VtgRuleNumber) : tile.row,
+        tile.column % 2 === 0 ? ((tile.column - 1) as VtgRuleNumber) : tile.column,
+      )
 
 const createBuilderPointerPreview = (
   tile: VtgMatrixTile,
   source: HTMLElement | null,
 ): BuilderPatternPointerPreview => {
-  const rendererIndex = pairedPatternPreviewReferences.indexOf(previewReferenceForTile(tile))
+  const previewReference = previewReferenceForTile(tile)
+  const rendererIndex = pairedPatternPreviewReferences.indexOf(previewReference)
   const bounds = source?.getBoundingClientRect()
+  const renderedImage = paneElement.value?.querySelector<HTMLImageElement>(
+    `[data-preview-reference="${previewReference}"]`,
+  )
+  const imageUrl =
+    renderedImage?.currentSrc || renderedImage?.src || previewUrls.value[rendererIndex]
   return {
     width: bounds?.width ?? 0,
     height: bounds?.height ?? 0,
     label: tile.label,
-    ...(previewUrls.value[rendererIndex]
-      ? { imageUrl: previewUrls.value[rendererIndex] }
+    ...(imageUrl ? { imageUrl } : undefined),
+    ...(elementalLayout.value
+      ? {
+          elemental: {
+            hands: tile.hands,
+            props: tile.props,
+            handsIndeterminate: tile.handsIndeterminate,
+            propsIndeterminate: tile.propsIndeterminate,
+            ...(compactBuilder.value ? { prefix: getBuilderSpinLabel(tile) } : undefined),
+          },
+        }
       : undefined),
   }
 }
@@ -1259,7 +1279,8 @@ let builderPointerDrag:
       startX: number
       startY: number
       selection: ConceptPatternSelection
-      preview: BuilderPatternPointerPreview
+      tile: VtgMatrixTile
+      source: HTMLElement | null
       active: boolean
     }
   | undefined
@@ -1282,7 +1303,8 @@ const startBuilderPointerDrag = (tile: VtgMatrixTile, event: PointerEvent) => {
     startX: event.clientX,
     startY: event.clientY,
     selection: createPatternSelection(tile, renderedReference),
-    preview: createBuilderPointerPreview(tile, source),
+    tile,
+    source,
     active: false,
   }
   if (source && typeof source.setPointerCapture === 'function') {
@@ -1301,12 +1323,13 @@ const moveBuilderPointerDrag = (event: PointerEvent) => {
 
   drag.active = true
   event.preventDefault()
+  const preview = createBuilderPointerPreview(drag.tile, drag.source)
   document.dispatchEvent(
     createBuilderPatternPointerEvent(builderPatternPointerMoveEvent, {
       clientX: event.clientX,
       clientY: event.clientY,
       selection: drag.selection,
-      preview: drag.preview,
+      preview,
     }),
   )
 }
@@ -1317,12 +1340,13 @@ const finishBuilderPointerDrag = (event: PointerEvent) => {
   if (drag.active) {
     event.preventDefault()
     suppressBuilderPointerClick = true
+    const preview = createBuilderPointerPreview(drag.tile, drag.source)
     document.dispatchEvent(
       createBuilderPatternPointerEvent(builderPatternPointerDropEvent, {
         clientX: event.clientX,
         clientY: event.clientY,
         selection: drag.selection,
-        preview: drag.preview,
+        preview,
       }),
     )
   }

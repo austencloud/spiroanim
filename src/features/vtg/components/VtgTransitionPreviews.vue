@@ -168,28 +168,48 @@
       <span>Drag and drop a pattern here</span>
     </div>
 
-    <div
-      v-if="dragActive && pointerPosition"
-      class="vtg-transition-previews__pointer-drag"
-      :style="{
-        insetInlineStart: `${pointerPosition.x}px`,
-        insetBlockStart: `${pointerPosition.y}px`,
-        inlineSize: `${pointerPosition.preview.width}px`,
-        blockSize: `${pointerPosition.preview.height}px`,
-      }"
-      data-role="vtg-pattern-pointer-drag"
-      aria-hidden="true"
-    >
-      <img
-        v-if="pointerPosition.preview.imageUrl"
-        class="vtg-transition-previews__pointer-drag-image"
-        :src="pointerPosition.preview.imageUrl"
-        alt=""
-      />
-      <span class="vtg-transition-previews__pointer-drag-label">
-        {{ pointerPosition.preview.label }}
-      </span>
-    </div>
+    <Teleport to="body">
+      <div
+        v-if="dragActive && pointerPosition"
+        class="vtg-transition-previews__pointer-drag"
+        :style="{
+          insetInlineStart: `${pointerPosition.x}px`,
+          insetBlockStart: `${pointerPosition.y}px`,
+          inlineSize: `${pointerPosition.preview.width}px`,
+          blockSize: `${pointerPosition.preview.height}px`,
+        }"
+        data-role="vtg-pattern-pointer-drag"
+        aria-hidden="true"
+      >
+        <img
+          v-if="pointerPosition.preview.imageUrl"
+          class="vtg-transition-previews__pointer-drag-image"
+          :src="pointerPosition.preview.imageUrl"
+          alt=""
+        />
+        <span
+          class="vtg-transition-previews__pointer-drag-label"
+          :class="{
+            'vtg-transition-previews__pointer-drag-label--elemental':
+              pointerPosition.preview.elemental,
+          }"
+        >
+          <template v-if="pointerPosition.preview.elemental">
+            <span v-if="pointerPosition.preview.elemental.prefix">
+              {{ pointerPosition.preview.elemental.prefix }} /
+            </span>
+            <ElementalRelationshipIcons
+              :hands="pointerPosition.preview.elemental.hands"
+              :props="pointerPosition.preview.elemental.props"
+              :hands-indeterminate="pointerPosition.preview.elemental.handsIndeterminate"
+              :props-indeterminate="pointerPosition.preview.elemental.propsIndeterminate"
+              :size="16"
+            />
+          </template>
+          <template v-else>{{ pointerPosition.preview.label }}</template>
+        </span>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -437,16 +457,20 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
 }
 
 .vtg-transition-previews__pointer-drag {
+  /* VTG category colors are fixed domain colors and must travel with the teleported drag layer. */
+  --vtg-pointer-color-primary: #5968df;
+  --vtg-pointer-color-rule-text: #f6f8fb;
+
   position: fixed;
-  z-index: 1100;
+  z-index: calc(var(--z-tooltip) + 1);
   display: grid;
   min-width: 3rem;
   min-height: 3rem;
   overflow: hidden;
-  color: var(--vtg-color-rule-text);
+  color: var(--vtg-pointer-color-rule-text);
   pointer-events: none;
-  background: var(--vtg-color-primary);
-  border: 2px solid var(--vtg-color-rule-text);
+  background: var(--vtg-pointer-color-primary);
+  border: 2px solid var(--vtg-pointer-color-rule-text);
   border-radius: 1.7cqi;
   box-shadow: var(--shadow-sm);
   opacity: 0.92;
@@ -472,6 +496,13 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.vtg-transition-previews__pointer-drag-label--elemental {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
 }
 
 .vtg-transition-previews__placeholder {

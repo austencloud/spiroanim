@@ -167,6 +167,74 @@ test('mounts the full Player in Builder with live override playback and collisio
   expect(pageErrors).toEqual([])
 })
 
+test('keeps the Full Grid touch drag preview visible over VTG with its shared thumbnail', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.goto(
+    '/play-vtg?r=Ew08Yk11Y&p0=Q__.mBEQDk.5JE.......&x0=_s_&m0=_1_mxqv__&p1=N__.blERhw.5JEQpg.......&x1=_s_&c=_i_bhq&v=11',
+  )
+  await page
+    .locator('label.vtg-pattern-builder-button')
+    .filter({ hasText: 'Pattern Builder' })
+    .click()
+  await page.locator('label.vtg-pattern-builder-button').filter({ hasText: 'Full Grid' }).click()
+  await page.locator('[data-role="vtg-elemental"]').setChecked(true)
+
+  await expect(page.locator('[data-role="vtg-transition-previews"]')).toBeVisible()
+  const sharedThumbnail = page.locator('[data-preview-reference="1-1"]')
+  const tile = page.locator('[data-cell-reference="2-2"]')
+  await expect(sharedThumbnail).toBeVisible()
+  await expect(tile.locator('.elemental-relationship-icons__icon')).toHaveCount(2)
+  const tileBox = await tile.boundingBox()
+  expect(tileBox).not.toBeNull()
+  const startX = tileBox!.x + tileBox!.width / 2
+  const startY = tileBox!.y + tileBox!.height / 2
+
+  await tile.evaluate(
+    (element, { x, y }) => {
+      element.setPointerCapture = () => undefined
+      element.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          pointerId: 7,
+          pointerType: 'touch',
+          isPrimary: true,
+          button: 0,
+          clientX: x,
+          clientY: y,
+        }),
+      )
+      element.dispatchEvent(
+        new PointerEvent('pointermove', {
+          bubbles: true,
+          pointerId: 7,
+          pointerType: 'touch',
+          isPrimary: true,
+          clientX: x + 20,
+          clientY: y,
+        }),
+      )
+    },
+    { x: startX, y: startY },
+  )
+
+  const dragPreview = page.locator('body > [data-role="vtg-pattern-pointer-drag"]')
+  await expect(dragPreview).toBeVisible()
+  await expect(dragPreview.locator('img')).toHaveAttribute(
+    'src',
+    (await sharedThumbnail.getAttribute('src')) ?? '',
+  )
+  await expect(dragPreview.locator('.elemental-relationship-icons__icon')).toHaveCount(2)
+
+  await tile.dispatchEvent('pointercancel', {
+    pointerId: 7,
+    pointerType: 'touch',
+    isPrimary: true,
+  })
+  await expect(dragPreview).toHaveCount(0)
+})
+
 test('keeps one live Player while its surface moves from the main pane into Timeline', async ({
   page,
 }) => {

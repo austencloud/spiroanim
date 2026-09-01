@@ -10,6 +10,7 @@ import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { describePatternSelectionRelationships } from '@/features/concepts/math/describePatternSelectionRelationships'
 import {
   builderPatternPointerDropEvent,
+  builderPatternPointerEndEvent,
   builderPatternPointerMoveEvent,
   createBuilderPatternPointerEvent,
 } from '@/features/builder/patternPointerDrag'
@@ -413,11 +414,14 @@ describe('VtgTransitionPreviews', () => {
     )
     await nextTick()
     expect(target.classes()).toContain('vtg-transition-previews__item--drag-over')
-    const pointerDrag = wrapper.get<HTMLElement>('[data-role="vtg-pattern-pointer-drag"]')
-    expect(pointerDrag.text()).toBe('TS / TS')
-    expect(pointerDrag.attributes('style')).toContain('inline-size: 96px')
-    expect(pointerDrag.attributes('style')).toContain('block-size: 72px')
-    expect(pointerDrag.get('img').attributes('src')).toBe('preview.png')
+    const pointerDrag = document.body.querySelector<HTMLElement>(
+      '[data-role="vtg-pattern-pointer-drag"]',
+    )
+    expect(pointerDrag?.parentElement).toBe(document.body)
+    expect(pointerDrag?.textContent?.trim()).toBe('TS / TS')
+    expect(pointerDrag?.style.inlineSize).toBe('96px')
+    expect(pointerDrag?.style.blockSize).toBe('72px')
+    expect(pointerDrag?.querySelector('img')?.getAttribute('src')).toBe('preview.png')
 
     document.dispatchEvent(
       createBuilderPatternPointerEvent(builderPatternPointerDropEvent, {
@@ -429,8 +433,58 @@ describe('VtgTransitionPreviews', () => {
     )
     await nextTick()
     expect(wrapper.emitted('patternDrop')).toEqual([[{ previewIndex: 0, selection }]])
-    expect(wrapper.find('[data-role="vtg-pattern-pointer-drag"]').exists()).toBe(false)
+    expect(document.body.querySelector('[data-role="vtg-pattern-pointer-drag"]')).toBeNull()
 
+    Reflect.deleteProperty(document, 'elementFromPoint')
+    wrapper.unmount()
+  })
+
+  it('preserves Elemental icons in the viewport-level touch drag preview', async () => {
+    const wrapper = mount(VtgTransitionPreviews, {
+      attachTo: document.body,
+      props: {
+        animations: [animation],
+        relationships: [relationship],
+        refreshKey: 'elemental-touch-drag',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        scale: 1,
+      },
+    })
+    const selection = { reference: '1-1', speedRatio: '1:1' } as const
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn<() => Element | null>(() => null),
+    })
+
+    document.dispatchEvent(
+      createBuilderPatternPointerEvent(builderPatternPointerMoveEvent, {
+        clientX: 20,
+        clientY: 30,
+        selection,
+        preview: {
+          width: 96,
+          height: 72,
+          label: 'TS / TO',
+          elemental: {
+            hands: relationship.hands,
+            props: relationship.props,
+            handsIndeterminate: relationship.handsIndeterminate,
+            propsIndeterminate: relationship.propsIndeterminate,
+          },
+        },
+      }),
+    )
+    await nextTick()
+
+    const pointerDrag = document.body.querySelector<HTMLElement>(
+      '[data-role="vtg-pattern-pointer-drag"]',
+    )
+    expect(pointerDrag?.querySelectorAll('.elemental-relationship-icons__icon')).toHaveLength(2)
+    expect(pointerDrag?.textContent).not.toContain('TS / TO')
+
+    document.dispatchEvent(new Event(builderPatternPointerEndEvent))
+    await nextTick()
     Reflect.deleteProperty(document, 'elementFromPoint')
     wrapper.unmount()
   })
