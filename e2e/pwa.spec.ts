@@ -175,7 +175,9 @@ test('caches VTG4 and returns to the app offline', async ({ context, page }) => 
 
   await page.goto('/vtg4/')
   await expect(page.getByRole('heading', { name: 'Timing & Direction' })).toBeVisible()
-  await expect(page.getByText('VTG4 expands on VTG3')).toBeVisible()
+  await expect(
+    page.getByRole('complementary', { name: 'VTG4 and VTG3 relationship' }),
+  ).toBeVisible()
   await expect(page.getByRole('link', { name: 'Return to App' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Home' })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'About' })).toHaveCount(0)

@@ -140,6 +140,29 @@ describe('AnimTimeline', () => {
     expect(wrapper.get<HTMLElement>('.scrollbar').element.style.height).toBe('360px')
   })
 
+  it('does not request thumbnails before receiving nonzero dimensions', async () => {
+    const store = usePlayerStore('timeline-zero-dimensions')
+    store.raw().ROOT.value = {
+      ...store.raw().ROOT.value,
+      props: [{ anim: [{ beats: 1 }], motion: [] }],
+    }
+    await nextTick()
+
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: 'timeline-zero-dimensions',
+        dim: { width: 0, height: 0, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    FakeIntersectionObserver.instances[0]!.showObserved()
+
+    expect(FakeWorker.instances[0]!.imageRequests).toHaveLength(0)
+    wrapper.unmount()
+    await flushPromises()
+  })
+
   it('shows enabled Quick Slots at the top and emits stored animation data', async () => {
     const conceptsStore = useConceptsStore()
     conceptsStore.restoreQuickSlots()

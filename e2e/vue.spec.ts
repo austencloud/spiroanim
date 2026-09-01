@@ -225,7 +225,15 @@ test('keeps one live Player while its surface moves from the main pane into Time
 
 test('keeps the Timeline-embedded Player live while Builder opens and closes', async ({ page }) => {
   const pageErrors: string[] = []
+  const timelineWarnings: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
+  page.on('console', (message) => {
+    if (
+      message.type() === 'warning' &&
+      message.text().includes('Timeline thumbnail request failed')
+    )
+      timelineWarnings.push(message.text())
+  })
 
   await page.goto(
     '/time-vtg?r=Ew08Yk11Y&p0=Q__.mBEQDk.5JE.......&x0=_s_&m0=_1_mxqv__&p1=N__.blERhw.5JEQpg.......&x1=_s_&c=_i_bhq&v=11',
@@ -268,6 +276,7 @@ test('keeps the Timeline-embedded Player live while Builder opens and closes', a
     .poll(async () => Number(await position.inputValue()))
     .not.toBe(restoredInitialPosition)
   expect(pageErrors).toEqual([])
+  expect(timelineWarnings).toEqual([])
 })
 
 test('keeps one Timeline instance while moving between Editor and the main Timeline pane', async ({
@@ -360,7 +369,9 @@ test('opens VTG documents and returns to the exact app URL', async ({ page }) =>
   await docsMenu.locator('a', { hasText: 'VTG4 Expansion' }).click()
 
   await expect(page.getByRole('heading', { name: 'Timing & Direction' })).toBeVisible()
-  await expect(page.getByText('VTG4 expands on VTG3')).toBeVisible()
+  await expect(
+    page.getByRole('complementary', { name: 'VTG4 and VTG3 relationship' }),
+  ).toBeVisible()
   expect(new URL(page.url()).searchParams.get('returnTo')).toBe(appReturnPath)
   await page.getByRole('link', { name: 'Return to App' }).click()
   await expect(page).toHaveURL(appUrl)
@@ -376,29 +387,35 @@ test('opens VTG documents and returns to the exact app URL', async ({ page }) =>
 })
 
 test('does not rewrite 45 Trans Quick Slots while their controls hydrate', async ({ page }) => {
-  const quickSlotPaths = [
-    '/play-vtg?r=Ew08Yk11Y&p0=Q__.biQ_____s.5JEs8......._ZEwm........_ZEs8........_ZEwm........_ZEs8&m0=_1_mxqv__&p1=N__.biQ_____s.5L_s8......._ZEwm........_ZEs8........_ZEwm........_ZEs8&c=_i_bhq&v=6',
-    '/play-vtg?r=Ew08Yk11Y&p0=Q__.biQ_____s.5JEs8.......&m0=_1_mxqv__&p1=N__.biQ_____s.5L_s8.......&c=_i_bhq&v=6',
-    '/play-vtg?r=Ew08Yk11Y&p0=Q__.gU0_____s.5E0wm.......&m0=_1_mxqv__&p1=N__.5E0_____s.___wm.......&c=_i_bhq&v=6',
-    '/play-vtg?r=Ew08Yk11Y&p0=Q__.________s.5E0s8.......&m0=_1_mxqv__&p1=N__.mD______s.5L_s8.......&c=_i_bhq&v=6',
-    '/play-vtg?r=Ew08kk11Y&p0=Q__.5JE_____s.blExM...&m0=_1_mxqv__&p1=N__.5JE_____s.bn_xM...&c=_i_bhq&v=6',
-  ]
+  const legacyTransitionPath =
+    '/play-vtg?r=Ew08Yk11Y&p0=Q__.biQ_____s.5JEs8......._ZEwm........_ZEs8........_ZEwm........_ZEs8&m0=_1_mxqv__&p1=N__.biQ_____s.5L_s8......._ZEwm........_ZEs8........_ZEwm........_ZEs8&c=_i_bhq&v=6'
 
-  await page.goto(quickSlotPaths[0]!)
-  await page
-    .getByRole('button', {
-      name: 'Use the detected 45-degree transition with Quick Slots',
-    })
-    .click()
+  await page.goto(legacyTransitionPath)
+  await page.locator('label.vtg-pattern-builder-button--advanced').click()
+  const transitionQuickSlots = page.locator('[data-role="vtg-transition-qslots"]')
+  await expect(transitionQuickSlots).toBeEnabled()
+  await transitionQuickSlots.click()
   await expect(page.locator('[data-role^="quick-slot-"] input')).toHaveCount(5)
 
+  const readQuickSlotPaths = () =>
+    page.evaluate(() => {
+      const stored = localStorage.getItem('sa-concepts')
+      if (!stored) return []
+      const state: unknown = JSON.parse(stored)
+      if (typeof state !== 'object' || state === null) return []
+      const paths: unknown = Reflect.get(state, 'quickSlotPaths')
+      return Array.isArray(paths) && paths.every((path) => typeof path === 'string') ? paths : []
+    })
+  await expect.poll(readQuickSlotPaths).toHaveLength(5)
+  const generatedQuickSlotPaths = await readQuickSlotPaths()
+
   for (const slot of [1, 2, 4, 3, 5]) {
-    await page.locator(`[data-role="quick-slot-${slot}"] input`).click()
+    await page.locator(`[data-role="quick-slot-${slot}"]`).click()
     await expect
       .poll(() => {
         const url = new URL(page.url())
         return `${url.pathname}${url.search}`
       })
-      .toBe(quickSlotPaths[slot - 1])
+      .toBe(generatedQuickSlotPaths[slot - 1])
   }
 })

@@ -643,6 +643,8 @@ function thumbClick(index: number, event: MouseEvent | KeyboardEvent) {
 
 // Requests images from worker upon events in onMounted
 function requestImages() {
+  if (dim.width <= 0 || dim.height <= 0) return
+
   if (requesting) {
     repeat = true
     return
