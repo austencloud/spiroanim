@@ -13,16 +13,8 @@
 /reset/*
   Cache-Control: no-cache, no-store, must-revalidate
 
-/vtg4
-  X-Robots-Tag: noindex, nofollow, noarchive
-
-/vtg4/*
-  X-Robots-Tag: noindex, nofollow, noarchive
-
 /vtg3
   Cache-Control: no-cache, no-store, must-revalidate
-  X-Robots-Tag: noindex, nofollow, noarchive
 
 /vtg3/*
   Cache-Control: no-cache, no-store, must-revalidate
-  X-Robots-Tag: noindex, nofollow, noarchive

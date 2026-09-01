@@ -37,6 +37,7 @@ describe('NotFound view', () => {
     const applyUpdate = vi.fn<() => void>()
     const controller: PwaUpdateController = {
       applyUpdate,
+      checkForUpdate: vi.fn<() => Promise<boolean>>(async () => false),
       dismiss: vi.fn<() => void>(),
       needRefresh,
       offlineReady,

@@ -10,6 +10,7 @@ Production hosting must:
 - serve the site over HTTPS and redirect HTTP to HTTPS;
 - serve the generated directory index files so `/`, `/index`, `/about`, and `/tips` return their
   prerendered HTML;
+- serve `/vtg3/` and `/vtg4/` as their rendered, indexable standalone documents;
 - serve the generated client-only directory index files for `/app`, `/player`, `/editor`,
   `/timeline`, `/concepts`, `/vulcan-tech-gospel`, `/quarterspacing`, `/eight-step`,
   `/quarter-space-tech`, `/third-order`, `/the-kinetic-alphabet`, and the pane-layout aliases. A

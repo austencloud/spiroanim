@@ -3,14 +3,14 @@
     v-if="offlineReady || needRefresh || updateInstalling || unsupportedVersion !== undefined"
     class="pwa-update"
     :class="promptClass"
-    :role="updateInstalling ? 'status' : 'alert'"
-    :aria-live="updateInstalling ? 'polite' : 'assertive'"
+    :role="updateInProgress ? 'status' : 'alert'"
+    :aria-live="updateInProgress ? 'polite' : 'assertive'"
   >
     <div class="pwa-update-message">
-      <span v-if="updateInstalling" class="update-spinner" aria-hidden="true" />
+      <span v-if="updateInProgress" class="update-spinner" aria-hidden="true" />
       <p>{{ message }}</p>
     </div>
-    <div v-if="!updateInstalling" class="pwa-update-actions">
+    <div v-if="!updateInProgress" class="pwa-update-actions">
       <button v-if="needRefresh" class="primary-action" type="button" @click="applyUpdate">
         Update Now
       </button>
@@ -33,31 +33,48 @@
 import { usePwaUpdateController } from '@/composables/usePwaUpdate'
 import { useQueryVersionStore } from '@/stores/useQueryVersionStore'
 
-const { applyUpdate, dismiss, needRefresh, offlineReady, updateInstalling } =
-  usePwaUpdateController()
+const {
+  applyUpdate,
+  checkForUpdate,
+  dismiss,
+  needRefresh,
+  offlineReady,
+  updateFailed,
+  updateInstalling,
+} = usePwaUpdateController()
 const queryVersionStore = useQueryVersionStore()
 const { unsupportedVersion } = storeToRefs(queryVersionStore)
 const { clearUnsupportedVersion } = queryVersionStore
+const checkingForUpdate = ref(false)
+const updateInProgress = computed(
+  () =>
+    checkingForUpdate.value ||
+    updateInstalling.value ||
+    (needRefresh.value && unsupportedVersion.value !== undefined),
+)
 
 const message = computed(() => {
   if (needRefresh.value) {
     return unsupportedVersion.value === undefined
       ? 'A SpiroAnim update is ready.'
-      : `Update ready for format v${unsupportedVersion.value}.`
+      : `Applying the update for format v${unsupportedVersion.value}...`
   }
-  if (updateInstalling.value) {
+  if (updateInProgress.value) {
     return unsupportedVersion.value === undefined
       ? 'Downloading a SpiroAnim update...'
       : `Downloading an update for format v${unsupportedVersion.value}...`
   }
   if (unsupportedVersion.value !== undefined) {
+    if (updateFailed.value) {
+      return `The update for format v${unsupportedVersion.value} failed to load.`
+    }
     return `Format v${unsupportedVersion.value} needs a newer SpiroAnim.`
   }
   return 'Ready to use offline.'
 })
 
 const promptClass = computed(() => ({
-  'pwa-update--downloading': updateInstalling.value,
+  'pwa-update--downloading': updateInProgress.value,
   'pwa-update--ready': needRefresh.value,
   'pwa-update--unsupported': !needRefresh.value && unsupportedVersion.value !== undefined,
   'pwa-update--offline':
@@ -65,6 +82,29 @@ const promptClass = computed(() => ({
 }))
 
 const reloadPage = () => window.location.reload()
+
+watch(
+  unsupportedVersion,
+  async (version) => {
+    if (version === undefined) return
+
+    checkingForUpdate.value = true
+    try {
+      await checkForUpdate()
+    } finally {
+      checkingForUpdate.value = false
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  [needRefresh, unsupportedVersion],
+  ([ready, version]) => {
+    if (ready && version !== undefined) applyUpdate()
+  },
+  { immediate: true },
+)
 
 const dismissPrompt = () => {
   dismiss()

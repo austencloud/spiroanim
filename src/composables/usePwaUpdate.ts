@@ -11,6 +11,7 @@ const SERVICE_WORKER_URL = '/sw.js'
 
 export interface PwaUpdateController {
   applyUpdate: () => void
+  checkForUpdate: () => Promise<boolean>
   dismiss: () => void
   needRefresh: Readonly<Ref<boolean>>
   offlineReady: Readonly<Ref<boolean>>
@@ -29,6 +30,7 @@ export function usePwaUpdate(): PwaUpdateController {
   let reloadStarted = false
   let startupUpdateCheckPending = true
   let waitingWorkerDetected = false
+  let registration: ServiceWorkerRegistration | undefined
   let workbox: Workbox | undefined
   let stopControllerChangeReload: () => void = () => undefined
   let stopScheduledUpdates: () => void = () => undefined
@@ -97,7 +99,7 @@ export function usePwaUpdate(): PwaUpdateController {
     workbox.addEventListener('redundant', handleRedundant)
 
     try {
-      const registration = await workbox.register({ immediate: true })
+      registration = await workbox.register({ immediate: true })
       if (registration) {
         if (registration.waiting) waitingWorkerDetected = true
         await checkForServiceWorkerUpdate(registration, SERVICE_WORKER_URL, window, document)
@@ -139,6 +141,11 @@ export function usePwaUpdate(): PwaUpdateController {
     workbox?.messageSkipWaiting()
   }
 
+  function checkForUpdate() {
+    if (!registration) return Promise.resolve(false)
+    return checkForServiceWorkerUpdate(registration, SERVICE_WORKER_URL, window, document)
+  }
+
   function dismiss() {
     offlineReady.value = false
     needRefresh.value = false
@@ -146,6 +153,7 @@ export function usePwaUpdate(): PwaUpdateController {
 
   return {
     applyUpdate,
+    checkForUpdate,
     dismiss,
     needRefresh: readonly(needRefresh),
     offlineReady: readonly(offlineReady),

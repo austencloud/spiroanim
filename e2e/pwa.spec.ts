@@ -80,8 +80,6 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
   const landing = await (await request.get('/')).text()
   const about = await (await request.get('/about')).text()
   const app = await (await request.get('/app')).text()
-  const tempResponse = await request.get('/temp2')
-  const temp = await tempResponse.text()
   const notFound = await (await request.get('/404.html')).text()
 
   expect(landing).toContain('data-prerendered="true"')
@@ -93,9 +91,6 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
   expect(about).toContain('id="about-title"')
   expect(app).toContain('<div id="app"></div>')
   expect(app).not.toContain('data-prerendered="true"')
-  expect(tempResponse.ok()).toBe(true)
-  expect(temp).toContain('<div id="app"></div>')
-  expect(temp).not.toContain('data-prerendered="true"')
   expect(notFound).toContain('<meta name="robots" content="noindex, nofollow">')
   expect(notFound).toContain('<div id="app"></div>')
 })
@@ -110,7 +105,9 @@ test('serves the PWA reset page outside the application shell', async ({ request
   expect(html).not.toContain('<div id="app"></div>')
 })
 
-test('serves VTG3 as a standalone document without precaching it', async ({ request }) => {
+test('serves VTG3 as an indexable standalone document without precaching it', async ({
+  request,
+}) => {
   const extensionlessResponse = await request.get('/vtg3')
   const response = await request.get('/vtg3/')
   const html = await response.text()
@@ -120,6 +117,9 @@ test('serves VTG3 as a standalone document without precaching it', async ({ requ
   expect(await extensionlessResponse.text()).toContain('<h1>Vulcan Tech Gospel 3</h1>')
   expect(response.ok()).toBe(true)
   expect(html).toContain('<h1>Vulcan Tech Gospel 3</h1>')
+  expect(html).toContain('<meta name="robots" content="index, follow" />')
+  expect(html).toContain('<link rel="canonical" href="https://spiroanim.com/vtg3/" />')
+  expect(html).toContain('name="description"')
   expect(html).toContain('VTG3 and the VTG3 grid were created by Noel Yee.')
   expect(html).toContain('id="return-to-app"')
   expect(html).toContain('>Return to App</a')
@@ -180,6 +180,11 @@ test('caches VTG4 and returns to the app offline', async ({ context, page }) => 
 
   await page.goto('/vtg4/')
   await expect(page.getByRole('heading', { name: 'Timing & Direction' })).toBeVisible()
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow')
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://spiroanim.com/vtg4/',
+  )
   await expect(
     page.getByRole('complementary', { name: 'VTG4 and VTG3 relationship' }),
   ).toBeVisible()

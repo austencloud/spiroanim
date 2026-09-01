@@ -5,6 +5,8 @@ SpiroAnim selectively prerenders its public information pages during `npm run bu
 - `/` and `/index` contain the rendered landing page.
 - `/about` contains the rendered About page.
 - `/tips` contains the rendered Tips page.
+- `/vtg3/` and `/vtg4/` are fully rendered, indexable standalone reference documents copied into
+  the final build without requiring Vue or JavaScript.
 - `/app` and its player, editor, timeline, Concepts, concept-specific, and pane-layout aliases use a
   client-only shell.
 
@@ -20,7 +22,8 @@ appear only after the client mount.
 
 1. Builds the browser application and web manifest.
 2. Builds a temporary Vue server-rendering entry.
-3. Renders the landing and About routes into the browser build.
+3. Renders the landing, About, and Tips routes into the browser build and preserves the standalone
+   VTG3 and VTG4 rendered documents.
 4. Writes client-only route shells for the application aliases.
 5. Generates the final service worker from the complete browser and prerender output.
 6. Runs the TypeScript check.

@@ -19,6 +19,5 @@ describe('application routes', () => {
     expect(router.resolve('/play-to').name).toBe('main')
     expect(router.resolve('/about').name).toBe('about')
     expect(router.resolve('/tips').name).toBe('tips')
-    expect(router.resolve('/temp2').name).toBe('temp2')
   })
 })

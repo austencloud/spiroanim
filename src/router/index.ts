@@ -42,18 +42,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/TipsPage.vue'),
   },
   {
-    path: '/temp2',
-    name: 'temp2',
-    component: () => import('@/views/TempPage.vue'),
-  },
-  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFound.vue'),
   },
 ]
 
-export const clientOnlyPaths = ['/app', '/temp2', ...appRouteAliases]
+export const clientOnlyPaths = ['/app', ...appRouteAliases]
 
 export function createAppRouter(history: RouterHistory) {
   return createRouter({ history, routes })
