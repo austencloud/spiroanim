@@ -136,6 +136,38 @@ describe('PlayerProgress', () => {
     expect(wrapper.get<HTMLElement>('.selection-fill').element.style.insetInlineEnd).toBe('62.5%')
   })
 
+  it('applies a restored playback maximum before restoring its position', async () => {
+    const store = usePlayerStore('progress-override-exit')
+    const runtime = store.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      bpm: 60,
+      props: [{ anim: Array.from({ length: 9 }, () => ({ beats: 1 })), motion: [] }],
+    }
+    await nextTick()
+    store.setPlaybackOverride(
+      {
+        ...runtime.ROOT.value,
+        props: [{ anim: [{ beats: 1 }, { beats: 1 }], motion: [] }],
+      },
+      true,
+    )
+    const wrapper = mountProgress('progress-override-exit')
+    const slider = wrapper.get<HTMLInputElement>('input[aria-label="Animation position"]')
+
+    expect(slider.element.max).toBe('1000')
+
+    // Builder restores both values in one render when a shorter preview is deselected.
+    // The range constraint must expand before the position is assigned or the browser clamps it.
+    runtime.CURRENT.value = 4000
+    store.clearPlaybackOverride()
+    await nextTick()
+
+    expect(slider.element.max).toBe('8000')
+    expect(slider.element.value).toBe('4000')
+    expect(wrapper.get<HTMLElement>('.selection-fill').element.style.insetInlineEnd).toBe('50%')
+  })
+
   it('pauses during interaction and resumes only when it was already playing', async () => {
     const store = usePlayerStore('progress-playback')
     const wrapper = mountProgress('progress-playback')

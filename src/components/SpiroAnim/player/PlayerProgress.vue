@@ -50,12 +50,13 @@
         <div class="selection-track" aria-hidden="true">
           <div class="selection-fill" :style="positionFillStyle" />
         </div>
+        <!-- Native ranges clamp value against the currently applied max, so max must update first. -->
         <input
           class="range range--custom range--position"
           type="range"
           aria-label="Animation position"
-          :value="CURRENT"
           :max="max"
+          :value="CURRENT"
           step="1"
           min="0"
           @input="setCurrent"
