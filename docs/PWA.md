@@ -20,10 +20,14 @@ cache rules, and Cloudflare Pages configuration are documented in [`HOSTING.md`]
 - Browser installation is offered on the landing page only when the browser exposes an install
   prompt. Safari on iOS receives numbered Add to Home Screen instructions that identify the Share
   control and account for the More and Open as Web App steps shown by current iPadOS versions.
-- Service-worker updates require user confirmation. Do not switch to automatic reload without
-  accounting for active editor work.
+- Service-worker updates require user confirmation on normal application pages. The not-found view
+  is the deliberate exception: it applies a ready update and reloads automatically because there
+  is no active editor work to preserve on that page.
 - When an update is found, the update prompt shows an indeterminate activity indicator while the
   replacement service worker downloads and installs. The update action appears when it is ready.
+- The not-found view replaces all 404 messaging with a waiting state and an indeterminate progress
+  bar while an update installs. If installation fails, it stops the activity indicator and offers
+  an explicit page reload; if no update is active, the regular 404 recovery page remains visible.
 - While the application is open, it checks for an updated service worker hourly, when the browser
   comes back online, and when the page becomes visible. Checks are throttled and remain
   opportunistic so an update failure never interrupts editing.

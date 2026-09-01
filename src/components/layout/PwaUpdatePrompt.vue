@@ -30,10 +30,11 @@
 </template>
 
 <script setup lang="ts">
-import { usePwaUpdate } from '@/composables/usePwaUpdate'
+import { usePwaUpdateController } from '@/composables/usePwaUpdate'
 import { useQueryVersionStore } from '@/stores/useQueryVersionStore'
 
-const { applyUpdate, dismiss, needRefresh, offlineReady, updateInstalling } = usePwaUpdate()
+const { applyUpdate, dismiss, needRefresh, offlineReady, updateInstalling } =
+  usePwaUpdateController()
 const queryVersionStore = useQueryVersionStore()
 const { unsupportedVersion } = storeToRefs(queryVersionStore)
 const { clearUnsupportedVersion } = queryVersionStore

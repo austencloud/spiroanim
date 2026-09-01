@@ -11,10 +11,12 @@ import {
   patternMatchingWorkerKey,
   usePatternMatchingWorker,
 } from '@/features/concepts/composables/usePatternMatchingWorker'
+import { pwaUpdateControllerKey, usePwaUpdate } from '@/composables/usePwaUpdate'
 import { loadMobileDevTools } from '@/services/mobileDevTools'
 
 const patternMatchingWorker = usePatternMatchingWorker()
 provide(patternMatchingWorkerKey, patternMatchingWorker)
+provide(pwaUpdateControllerKey, usePwaUpdate())
 
 const PwaUpdatePrompt = import.meta.env.SSR
   ? null

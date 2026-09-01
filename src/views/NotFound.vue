@@ -10,35 +10,60 @@
           <span>SpiroAnim</span>
         </RouterLink>
 
-        <p class="error-code">Error 404</p>
-        <h1 id="not-found-title">This path drifted out of frame.</h1>
-        <p class="error-message">
-          The page you requested does not exist, or it may have moved somewhere else in the
-          animation.
-        </p>
+        <template v-if="updateRecoveryActive">
+          <div class="update-recovery" role="status" aria-live="polite">
+            <p class="update-label">Updating SpiroAnim</p>
+            <h1 id="not-found-title">Please wait.</h1>
+            <p class="update-message">{{ updateStatusMessage }}</p>
 
-        <aside class="update-hint" aria-label="Possible app update">
-          <BaseIcon class="update-hint__icon" :path="mdiUpdate" :size="24" />
-          <div>
-            <strong>Wait!</strong>
-            <p>
-              If you opened someone's link and have previously visited spiroanim.com, the app may
-              still be updating. If an <b>Update Now</b> prompt appears, clicking it may resolve
-              this page.
-            </p>
+            <div
+              v-if="!updateFailed"
+              class="update-progress"
+              role="progressbar"
+              aria-label="SpiroAnim update progress"
+            >
+              <span />
+            </div>
+
+            <aside v-if="updateFailed" class="update-failure" role="alert">
+              <strong>Update failed to load.</strong>
+              <p>Reload the page to try again.</p>
+              <button class="reload-button" type="button" @click="reloadPage">Reload Page</button>
+            </aside>
           </div>
-        </aside>
+        </template>
 
-        <nav class="not-found-actions" aria-label="Page recovery">
-          <RouterLink class="action-link action-link--primary" to="/">
-            <BaseIcon :path="mdiHomeOutline" :size="21" />
-            Return Home
-          </RouterLink>
-          <RouterLink class="action-link action-link--secondary" to="/app">
-            <BaseIcon :path="mdiCreationOutline" :size="21" />
-            Open SpiroAnim
-          </RouterLink>
-        </nav>
+        <template v-else>
+          <p class="error-code">Error 404</p>
+          <h1 id="not-found-title">This path drifted out of frame.</h1>
+          <p class="error-message">
+            The page you requested does not exist, or it may have moved somewhere else in the
+            animation.
+          </p>
+
+          <aside class="update-hint" aria-label="Possible app update">
+            <BaseIcon class="update-hint__icon" :path="mdiUpdate" :size="24" />
+            <div>
+              <strong>Wait!</strong>
+              <p>
+                If you opened someone's link and have previously visited spiroanim.com, the app may
+                still be updating. If an <b>Update Now</b> prompt appears, clicking it may resolve
+                this page.
+              </p>
+            </div>
+          </aside>
+
+          <nav class="not-found-actions" aria-label="Page recovery">
+            <RouterLink class="action-link action-link--primary" to="/">
+              <BaseIcon :path="mdiHomeOutline" :size="21" />
+              Return Home
+            </RouterLink>
+            <RouterLink class="action-link action-link--secondary" to="/app">
+              <BaseIcon :path="mdiCreationOutline" :size="21" />
+              Open SpiroAnim
+            </RouterLink>
+          </nav>
+        </template>
       </div>
 
       <div class="orbit-visual" aria-hidden="true">
@@ -49,7 +74,13 @@
           <span class="orbit-dot orbit-dot--one" />
           <span class="orbit-dot orbit-dot--two" />
           <img :src="brandIconUrl" alt="" />
-          <span class="visual-code">404</span>
+          <BaseIcon
+            v-if="updateRecoveryActive"
+            class="update-visual-icon"
+            :path="mdiUpdate"
+            :size="88"
+          />
+          <span v-else class="visual-code">404</span>
         </div>
       </div>
     </section>
@@ -61,8 +92,29 @@ import { mdiCreationOutline, mdiHomeOutline, mdiUpdate } from '@mdi/js'
 import { RouterLink } from 'vue-router'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import { usePwaUpdateController } from '@/composables/usePwaUpdate'
 
 const brandIconUrl = '/images/app-icons/pwa-source.svg'
+const { applyUpdate, needRefresh, updateFailed, updateInstalling } = usePwaUpdateController()
+const updateRecoveryActive = computed(
+  () => updateInstalling.value || needRefresh.value || updateFailed.value,
+)
+const updateStatusMessage = computed(() => {
+  if (updateFailed.value) return 'The update did not finish.'
+  return needRefresh.value
+    ? 'Applying the update. This page will reload automatically.'
+    : 'Downloading the update. This page will reload automatically when it is ready.'
+})
+
+watch(
+  needRefresh,
+  (ready) => {
+    if (ready) applyUpdate()
+  },
+  { immediate: true },
+)
+
+const reloadPage = () => window.location.reload()
 </script>
 
 <style scoped>
@@ -161,6 +213,81 @@ const brandIconUrl = '/images/app-icons/pwa-source.svg'
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+.update-recovery {
+  display: flex;
+  flex-direction: column;
+}
+
+.update-label {
+  margin: clamp(var(--space-8), 8vh, 4.5rem) 0 var(--space-3);
+  color: var(--color-action-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.update-message {
+  max-width: 34rem;
+  margin: var(--space-6) 0 0;
+  color: var(--color-text-muted);
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  line-height: 1.65;
+}
+
+.update-progress {
+  position: relative;
+  height: 0.5rem;
+  margin-block-start: var(--space-6);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-action-primary) 14%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-action-primary) 35%, var(--color-border));
+  border-radius: var(--radius-md);
+}
+
+.update-progress span {
+  position: absolute;
+  inset-block: -1px;
+  inset-inline-start: 0;
+  width: 42%;
+  background: var(--color-action-primary);
+  border-radius: inherit;
+  animation: update-progress-slide 1.3s ease-in-out infinite;
+}
+
+.update-failure {
+  margin-block-start: var(--space-6);
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-status-warning) 10%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-status-warning) 55%, var(--color-border));
+  border-radius: var(--radius-md);
+}
+
+.update-failure strong {
+  color: var(--color-status-warning);
+}
+
+.update-failure p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+}
+
+.reload-button {
+  min-height: 2.75rem;
+  margin-block-start: var(--space-4);
+  padding-inline: var(--space-4);
+  color: var(--color-on-action-primary);
+  font-weight: 750;
+  background: var(--color-action-primary);
+  border: 1px solid var(--color-action-primary);
+  border-radius: var(--radius-md);
+}
+
+.reload-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-action-primary) 48%, var(--color-text));
+  outline-offset: 4px;
 }
 
 h1 {
@@ -366,6 +493,23 @@ h1 {
   text-shadow: 0 0 2rem var(--color-canvas);
 }
 
+.update-visual-icon {
+  position: absolute;
+  z-index: 4;
+  color: var(--color-action-primary);
+  filter: drop-shadow(0 0 1.25rem color-mix(in srgb, var(--color-action-primary) 60%, transparent));
+}
+
+@keyframes update-progress-slide {
+  from {
+    transform: translateX(-110%);
+  }
+
+  to {
+    transform: translateX(340%);
+  }
+}
+
 @media (max-width: 48rem) {
   .not-found-page {
     padding-block-start: max(var(--space-4), var(--safe-area-inset-top));
@@ -416,6 +560,13 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   .action-link {
     transition: none;
+  }
+
+  .update-progress span {
+    width: 100%;
+    opacity: 0.7;
+    animation: none;
+    transform: none;
   }
 }
 </style>

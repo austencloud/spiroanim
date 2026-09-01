@@ -1,4 +1,5 @@
-import { Workbox, type WorkboxLifecycleEvent } from 'workbox-window'
+import type { InjectionKey } from 'vue'
+import type { Workbox, WorkboxLifecycleEvent } from 'workbox-window'
 
 import {
   reloadOnServiceWorkerControllerReplacement,
@@ -7,10 +8,23 @@ import {
 
 const SERVICE_WORKER_URL = '/sw.js'
 
-export function usePwaUpdate() {
+export interface PwaUpdateController {
+  applyUpdate: () => void
+  dismiss: () => void
+  needRefresh: Readonly<Ref<boolean>>
+  offlineReady: Readonly<Ref<boolean>>
+  updateFailed: Readonly<Ref<boolean>>
+  updateInstalling: Readonly<Ref<boolean>>
+}
+
+export const pwaUpdateControllerKey: InjectionKey<PwaUpdateController> =
+  Symbol('pwa-update-controller')
+
+export function usePwaUpdate(): PwaUpdateController {
   const offlineReady = ref(false)
   const needRefresh = ref(false)
   const updateInstalling = ref(false)
+  const updateFailed = ref(false)
   let reloadStarted = false
   let workbox: Workbox | undefined
   let stopControllerChangeReload: () => void = () => undefined
@@ -25,15 +39,25 @@ export function usePwaUpdate() {
 
   function showUpdatePrompt() {
     updateInstalling.value = false
+    updateFailed.value = false
     needRefresh.value = true
   }
 
   function handleInstalling(event: WorkboxLifecycleEvent) {
-    if (event.isUpdate || event.isExternal) updateInstalling.value = true
+    if (event.isUpdate || event.isExternal) {
+      needRefresh.value = false
+      updateFailed.value = false
+      updateInstalling.value = true
+    }
   }
 
-  function handleRedundant() {
+  function handleRedundant(event: WorkboxLifecycleEvent) {
+    const updateWasInstalling = updateInstalling.value || event.isUpdate || event.isExternal
     updateInstalling.value = false
+    if (updateWasInstalling) {
+      needRefresh.value = false
+      updateFailed.value = true
+    }
   }
 
   function handleInstalled(event: WorkboxLifecycleEvent) {
@@ -57,7 +81,8 @@ export function usePwaUpdate() {
       reloadPage,
     )
 
-    workbox = new Workbox(SERVICE_WORKER_URL)
+    const { Workbox: WorkboxClient } = await import('workbox-window')
+    workbox = new WorkboxClient(SERVICE_WORKER_URL)
     workbox.addEventListener('installing', handleInstalling)
     workbox.addEventListener('installed', handleInstalled)
     workbox.addEventListener('waiting', showUpdatePrompt)
@@ -74,6 +99,10 @@ export function usePwaUpdate() {
         )
       }
     } catch (error) {
+      if (updateInstalling.value) {
+        updateInstalling.value = false
+        updateFailed.value = true
+      }
       console.error('PWA service worker registration failed.', error)
     }
   })
@@ -101,6 +130,11 @@ export function usePwaUpdate() {
     dismiss,
     needRefresh: readonly(needRefresh),
     offlineReady: readonly(offlineReady),
+    updateFailed: readonly(updateFailed),
     updateInstalling: readonly(updateInstalling),
   }
+}
+
+export function usePwaUpdateController(): PwaUpdateController {
+  return inject(pwaUpdateControllerKey) ?? usePwaUpdate()
 }
