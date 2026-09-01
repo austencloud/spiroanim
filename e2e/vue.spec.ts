@@ -221,7 +221,7 @@ test('keeps the Full Grid touch drag preview visible over VTG with its shared th
 
   const dragPreview = page.locator('body > [data-role="vtg-pattern-pointer-drag"]')
   await expect(dragPreview).toBeVisible()
-  await expect(dragPreview.locator('img')).toHaveAttribute(
+  await expect(dragPreview.locator('.vtg-transition-previews__pointer-drag-image')).toHaveAttribute(
     'src',
     (await sharedThumbnail.getAttribute('src')) ?? '',
   )

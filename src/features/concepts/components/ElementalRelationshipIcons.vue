@@ -11,22 +11,28 @@
       :class="`elemental-relationship-icons__icon--${token.symbol.toLowerCase()}`"
       :data-element="token.symbol"
     >
-      <BaseIcon :path="relationshipIcons[token.symbol]" :size="size" />
+      <img
+        v-if="token.imageUrl"
+        class="base-icon elemental-relationship-icons__asset"
+        :src="token.imageUrl"
+        alt=""
+        :width="size"
+        :height="size"
+      />
+      <BaseIcon v-else :path="mdiCancel" :size="size" />
     </span>
   </span>
 </template>
 
 <script setup lang="ts">
-import {
-  mdiCancel,
-  mdiEarth,
-  mdiFire,
-  mdiMoonWaningCrescent,
-  mdiWeatherSunny,
-  mdiWater,
-  mdiWeatherWindy,
-} from '@mdi/js'
+import { mdiCancel } from '@mdi/js'
 
+import airIconUrl from '@/assets/icons/elements/air.svg'
+import earthIconUrl from '@/assets/icons/elements/earth.svg'
+import fireIconUrl from '@/assets/icons/elements/fire.svg'
+import moonIconUrl from '@/assets/icons/elements/moon.svg'
+import sunIconUrl from '@/assets/icons/elements/sun.svg'
+import waterIconUrl from '@/assets/icons/elements/water.svg'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import {
   relationshipElement,
@@ -55,16 +61,16 @@ type RelationshipSymbol = ElementName | 'Sun' | 'Moon' | 'Indeterminate'
 interface RelationshipToken {
   symbol: RelationshipSymbol
   label: string
+  imageUrl?: string
 }
 
-const relationshipIcons: Readonly<Record<RelationshipSymbol, string>> = {
-  Earth: mdiEarth,
-  Water: mdiWater,
-  Air: mdiWeatherWindy,
-  Fire: mdiFire,
-  Sun: mdiWeatherSunny,
-  Moon: mdiMoonWaningCrescent,
-  Indeterminate: mdiCancel,
+const relationshipIconUrls: Readonly<Record<ElementName | 'Sun' | 'Moon', string>> = {
+  Earth: earthIconUrl,
+  Water: waterIconUrl,
+  Air: airIconUrl,
+  Fire: fireIconUrl,
+  Sun: sunIconUrl,
+  Moon: moonIconUrl,
 }
 const createRelationshipTokens = (
   relationship: ElementalRelationship | undefined,
@@ -72,13 +78,13 @@ const createRelationshipTokens = (
 ): readonly RelationshipToken[] => {
   if (indeterminate) return [{ symbol: 'Indeterminate', label: 'Indeterminate' }]
   if (!relationship) return []
-  const symbol: RelationshipSymbol | undefined =
+  const symbol: Exclude<RelationshipSymbol, 'Indeterminate'> | undefined =
     relationship.timing === 'Q'
       ? relationship.direction === 'S'
         ? 'Sun'
         : 'Moon'
       : relationshipElement(relationship)
-  return symbol ? [{ symbol, label: symbol }] : []
+  return symbol ? [{ symbol, label: symbol, imageUrl: relationshipIconUrls[symbol] }] : []
 }
 const tokens = computed<readonly RelationshipToken[]>(() =>
   [
@@ -104,6 +110,11 @@ const tokens = computed<readonly RelationshipToken[]>(() =>
   filter: drop-shadow(0 0 1px var(--color-element-outline));
 }
 
+.elemental-relationship-icons__asset {
+  display: block;
+  object-fit: contain;
+}
+
 .elemental-relationship-icons--responsive :deep(.base-icon) {
   width: clamp(1rem, 3.5cqi, 2rem);
   height: clamp(1rem, 3.5cqi, 2rem);
@@ -115,30 +126,6 @@ const tokens = computed<readonly RelationshipToken[]>(() =>
   content: '/';
   font-size: 0.72em;
   font-weight: 700;
-}
-
-.elemental-relationship-icons__icon--earth {
-  color: var(--color-element-earth);
-}
-
-.elemental-relationship-icons__icon--water {
-  color: var(--color-element-water);
-}
-
-.elemental-relationship-icons__icon--air {
-  color: var(--color-element-air);
-}
-
-.elemental-relationship-icons__icon--fire {
-  color: var(--color-element-fire);
-}
-
-.elemental-relationship-icons__icon--sun {
-  color: var(--color-element-sun);
-}
-
-.elemental-relationship-icons__icon--moon {
-  color: var(--color-element-moon);
 }
 
 .elemental-relationship-icons__icon--indeterminate {
