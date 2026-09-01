@@ -43,7 +43,7 @@ describe('buildComposerUrl', () => {
       }
     }
 
-    expect(actual).toHaveLength(216)
+    expect(actual).toHaveLength(504)
     expect(actual).toEqual(expected)
   })
 
@@ -64,7 +64,7 @@ describe('buildComposerUrl', () => {
       }
     }
 
-    expect(actual).toHaveLength(216)
+    expect(actual).toHaveLength(504)
     expect(actual).toEqual(expected)
   })
 
@@ -173,7 +173,8 @@ describe('isComposerSpeedRatio', () => {
       expect(isComposerSpeedRatio(ratio)).toBe(true)
     }
 
-    const unbridgeable = ['1:2', '1:4', '2:1', '2:3', '2:5', '1:3v5', '']
+    // 2:1 is the one picker ratio with no Kinetic Alphabet reading.
+    const unbridgeable = ['2:1', '1:3v5', '']
     expect(unbridgeable.filter(isComposerSpeedRatio)).toEqual([])
   })
 

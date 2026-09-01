@@ -1008,8 +1008,8 @@ const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(re
  * `suppressPatternEmit`, which exists to stop hydration from re-applying a pattern.
  *
  * Anti is only part of a cell's identity on the spin-toggle cells, matching
- * `createPatternSelection`. Ratios outside the Composer's transcription have no bridge entry, so
- * they report no cell rather than a link that would resolve to nothing. The displayed pattern
+ * `createPatternSelection`. The 2:1 ratio has no bridge entry (its prop rotation has no Kinetic
+ * Alphabet reading), so it reports no cell rather than a link that would resolve to nothing. The displayed pattern
  * orientation travels with the cell so the Composer renders the flower the viewer is looking at;
  * an orientation outside the Composer's grammar (a hydration-inferred in-between angle) means the
  * view matches no catalog cell, so no cell is reported.

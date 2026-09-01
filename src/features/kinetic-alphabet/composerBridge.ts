@@ -13,8 +13,11 @@
 
 export type ComposerConcept = 'vtg' | 'qtr' | '8stp'
 
-/** Speed ratios the Composer's transcription covers. Other ratios have no bridge entry. */
-export type ComposerSpeedRatio = '1:1' | '1:3' | '1:5'
+/**
+ * Speed ratios the Composer's transcription covers: every picker ratio except 2:1, whose prop
+ * turns 45° per 90° hand arc and has no Kinetic Alphabet reading.
+ */
+export type ComposerSpeedRatio = '1:1' | '1:2' | '1:3' | '1:4' | '1:5' | '2:3' | '2:5'
 
 /** Pattern orientations the Composer's key grammar accepts. */
 export const composerPatternOrientations = [-90, -45, 0, 45, 90, 180] as const
@@ -42,8 +45,12 @@ const COMPOSER_ORIGIN = 'https://tkaflowarts.com'
 
 export const composerSpeedRatios = [
   '1:1',
+  '1:2',
   '1:3',
+  '1:4',
   '1:5',
+  '2:3',
+  '2:5',
 ] as const satisfies readonly ComposerSpeedRatio[]
 
 export const isComposerSpeedRatio = (value: string): value is ComposerSpeedRatio =>
