@@ -101,6 +101,7 @@ export function scheduleServiceWorkerUpdates(
 
   sourceWindow.addEventListener('online', handleOnline)
   sourceDocument.addEventListener('visibilitychange', handleVisibilityChange)
+  void checkForUpdate()
 
   return () => {
     sourceWindow.clearInterval(intervalId)

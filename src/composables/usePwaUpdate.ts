@@ -91,6 +91,7 @@ export function usePwaUpdate(): PwaUpdateController {
     try {
       const registration = await workbox.register({ immediate: true })
       if (registration) {
+        if (registration.waiting) showUpdatePrompt()
         stopScheduledUpdates = scheduleServiceWorkerUpdates(
           registration,
           SERVICE_WORKER_URL,

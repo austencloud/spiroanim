@@ -3,21 +3,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { usePwaUpdate, type PwaUpdateController } from '@/composables/usePwaUpdate'
 
-const workboxInstances = vi.hoisted(() => [] as EventTarget[])
+const workboxState = vi.hoisted(() => ({
+  instances: [] as EventTarget[],
+  waiting: null as object | null,
+}))
 
 vi.mock('workbox-window', () => ({
   Workbox: class extends EventTarget {
     readonly messageSkipWaiting = vi.fn<() => void>()
-    readonly register = vi.fn<() => Promise<{ installing: null; update: () => Promise<void> }>>(
-      async () => ({
-        installing: null,
-        update: vi.fn<() => Promise<void>>(async () => undefined),
-      }),
-    )
+    readonly register = vi.fn<
+      () => Promise<{ installing: null; waiting: object | null; update: () => Promise<void> }>
+    >(async () => ({
+      installing: null,
+      waiting: workboxState.waiting,
+      update: vi.fn<() => Promise<void>>(async () => undefined),
+    }))
 
     constructor() {
       super()
-      workboxInstances.push(this)
+      workboxState.instances.push(this)
     }
   },
 }))
@@ -30,7 +34,8 @@ describe('usePwaUpdate', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
-    workboxInstances.length = 0
+    workboxState.instances.length = 0
+    workboxState.waiting = null
   })
 
   it('reports a failed update when an installing worker becomes redundant', async () => {
@@ -48,8 +53,8 @@ describe('usePwaUpdate', () => {
         },
       }),
     )
-    await vi.waitFor(() => expect(workboxInstances).toHaveLength(1))
-    const workbox = workboxInstances[0]!
+    await vi.waitFor(() => expect(workboxState.instances).toHaveLength(1))
+    const workbox = workboxState.instances[0]!
 
     workbox.dispatchEvent(Object.assign(new Event('installing'), { isUpdate: true }))
     expect(controller.value?.updateInstalling.value).toBe(true)
@@ -58,6 +63,30 @@ describe('usePwaUpdate', () => {
     workbox.dispatchEvent(Object.assign(new Event('redundant'), { isUpdate: true }))
     expect(controller.value?.updateInstalling.value).toBe(false)
     expect(controller.value?.updateFailed.value).toBe(true)
+
+    harness.unmount()
+  })
+
+  it('reports an update that was already waiting when registration completes', async () => {
+    vi.stubEnv('PROD', true)
+    vi.stubGlobal('navigator', {
+      onLine: true,
+      serviceWorker: new TestServiceWorkerContainer(),
+    })
+    workboxState.waiting = {}
+    const controller = shallowRef<PwaUpdateController>()
+    const harness = mount(
+      defineComponent({
+        setup() {
+          controller.value = usePwaUpdate()
+          return () => null
+        },
+      }),
+    )
+
+    await vi.waitFor(() => expect(controller.value?.needRefresh.value).toBe(true))
+    expect(controller.value?.updateInstalling.value).toBe(false)
+    expect(controller.value?.updateFailed.value).toBe(false)
 
     harness.unmount()
   })

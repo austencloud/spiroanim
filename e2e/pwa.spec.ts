@@ -80,7 +80,8 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
   const landing = await (await request.get('/')).text()
   const about = await (await request.get('/about')).text()
   const app = await (await request.get('/app')).text()
-  const temp = await (await request.get('/temp')).text()
+  const tempResponse = await request.get('/temp')
+  const temp = await tempResponse.text()
   const notFound = await (await request.get('/404.html')).text()
 
   expect(landing).toContain('data-prerendered="true"')
@@ -92,6 +93,7 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
   expect(about).toContain('id="about-title"')
   expect(app).toContain('<div id="app"></div>')
   expect(app).not.toContain('data-prerendered="true"')
+  expect(tempResponse.ok()).toBe(true)
   expect(temp).toContain('<div id="app"></div>')
   expect(temp).not.toContain('data-prerendered="true"')
   expect(notFound).toContain('<meta name="robots" content="noindex, nofollow">')

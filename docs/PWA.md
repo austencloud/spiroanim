@@ -28,9 +28,9 @@ cache rules, and Cloudflare Pages configuration are documented in [`HOSTING.md`]
 - The not-found view replaces all 404 messaging with a waiting state and an indeterminate progress
   bar while an update installs. If installation fails, it stops the activity indicator and offers
   an explicit page reload; if no update is active, the regular 404 recovery page remains visible.
-- While the application is open, it checks for an updated service worker hourly, when the browser
-  comes back online, and when the page becomes visible. Checks are throttled and remain
-  opportunistic so an update failure never interrupts editing.
+- The application checks for an updated service worker when its update controller starts, hourly
+  while it remains open, when the browser comes back online, and when the page becomes visible.
+  Checks are throttled and remain opportunistic so an update failure never interrupts editing.
 - After an update is accepted, every page already controlled by the previous service worker reloads
   when the replacement takes control. This prevents an old page from requesting fingerprinted
   assets after the replacement worker removes the previous precache.

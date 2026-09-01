@@ -58,7 +58,7 @@ describe('reloadOnServiceWorkerControllerReplacement', () => {
 })
 
 describe('scheduleServiceWorkerUpdates', () => {
-  it('checks on visibility and online events while throttling repeated checks', async () => {
+  it('checks immediately and throttles repeated visibility and online checks', async () => {
     const sourceWindow = new TestUpdateWindow()
     const sourceDocument = new TestUpdateDocument()
     const registration = {
@@ -78,10 +78,10 @@ describe('scheduleServiceWorkerUpdates', () => {
       },
     )
 
-    sourceDocument.dispatchEvent(new Event('visibilitychange'))
     await vi.waitFor(() => expect(registration.update).toHaveBeenCalledOnce())
     expect(sourceWindow.fetch).toHaveBeenCalledWith('/sw.js', { cache: 'no-store' })
 
+    sourceDocument.dispatchEvent(new Event('visibilitychange'))
     sourceWindow.dispatchEvent(new Event('online'))
     await Promise.resolve()
     expect(registration.update).toHaveBeenCalledOnce()
