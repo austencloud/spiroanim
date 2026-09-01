@@ -371,7 +371,7 @@ describe('ConceptsPane', () => {
     ])
   })
 
-  it('shows The Kinetic Alphabet last without selecting a pattern', async () => {
+  it('shows The Kinetic Alphabet placeholder last without selecting a pattern', async () => {
     const wrapper = mount(ConceptsPane)
     const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
 
@@ -381,25 +381,11 @@ describe('ConceptsPane', () => {
     expect(wrapper.find('[data-role="vtg-pane"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="eight-step-pane"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('The Kinetic Alphabet')
-    expect(wrapper.get('[data-role="tka-pane"]').text()).toContain(
-      'TKA writes prop motion as letters',
-    )
-    expect(wrapper.get('[data-role="tka-guide-link"]').attributes('href')).toBe(
-      'https://tkaflowarts.com/guide',
+    expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('Possibly coming soon')
+    expect(wrapper.get('[data-role="tka-development-note"]').text()).toBe(
+      'Austin might be working on something for us...',
     )
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
-  })
-
-  it('carries a VTG match into The Kinetic Alphabet pane', async () => {
-    const wrapper = mount(ConceptsPane)
-    const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
-
-    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
-    await selector.setValue('tka')
-
-    expect(wrapper.get('[data-role="tka-composer-link"]').attributes('href')).toBe(
-      'https://tkaflowarts.com/from/spiroanim/vtg.1-1.1x3.diamond.base.o0',
-    )
   })
 
   it('shows the Third Order placeholder immediately before The Kinetic Alphabet', async () => {

@@ -99,7 +99,7 @@
       @customize="emit('customize', $event)"
     />
     <ThirdOrderPane v-else-if="selectedConcept === 'to'" />
-    <KineticAlphabetPane v-else :composer-cell="composerCell" />
+    <KineticAlphabetPane v-else />
   </section>
 </template>
 
