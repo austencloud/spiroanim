@@ -80,7 +80,7 @@ test('serves rendered HTML only for public pages', async ({ request }) => {
   const landing = await (await request.get('/')).text()
   const about = await (await request.get('/about')).text()
   const app = await (await request.get('/app')).text()
-  const tempResponse = await request.get('/temp')
+  const tempResponse = await request.get('/temp2')
   const temp = await tempResponse.text()
   const notFound = await (await request.get('/404.html')).text()
 

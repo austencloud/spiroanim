@@ -42,8 +42,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/TipsPage.vue'),
   },
   {
-    path: '/temp',
-    name: 'temp',
+    path: '/temp2',
+    name: 'temp2',
     component: () => import('@/views/TempPage.vue'),
   },
   {
@@ -53,7 +53,7 @@ const routes: RouteRecordRaw[] = [
   },
 ]
 
-export const clientOnlyPaths = ['/app', '/temp', ...appRouteAliases]
+export const clientOnlyPaths = ['/app', '/temp2', ...appRouteAliases]
 
 export function createAppRouter(history: RouterHistory) {
   return createRouter({ history, routes })

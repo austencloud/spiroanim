@@ -31,6 +31,9 @@ cache rules, and Cloudflare Pages configuration are documented in [`HOSTING.md`]
 - The application checks for an updated service worker when its update controller starts, hourly
   while it remains open, when the browser comes back online, and when the page becomes visible.
   Checks are throttled and remain opportunistic so an update failure never interrupts editing.
+- On startup, an already-waiting worker is not offered until that first update check finishes. This
+  lets a device replace an intermediate waiting build with the newest available build instead of
+  applying missed deployments one at a time.
 - After an update is accepted, every page already controlled by the previous service worker reloads
   when the replacement takes control. This prevents an old page from requesting fingerprinted
   assets after the replacement worker removes the previous precache.

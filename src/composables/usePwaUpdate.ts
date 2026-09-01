@@ -2,6 +2,7 @@ import type { InjectionKey } from 'vue'
 import type { Workbox, WorkboxLifecycleEvent } from 'workbox-window'
 
 import {
+  checkForServiceWorkerUpdate,
   reloadOnServiceWorkerControllerReplacement,
   scheduleServiceWorkerUpdates,
 } from '@/services/pwaUpdate'
@@ -26,6 +27,8 @@ export function usePwaUpdate(): PwaUpdateController {
   const updateInstalling = ref(false)
   const updateFailed = ref(false)
   let reloadStarted = false
+  let startupUpdateCheckPending = true
+  let waitingWorkerDetected = false
   let workbox: Workbox | undefined
   let stopControllerChangeReload: () => void = () => undefined
   let stopScheduledUpdates: () => void = () => undefined
@@ -38,6 +41,11 @@ export function usePwaUpdate(): PwaUpdateController {
   }
 
   function showUpdatePrompt() {
+    if (startupUpdateCheckPending) {
+      waitingWorkerDetected = true
+      return
+    }
+
     updateInstalling.value = false
     updateFailed.value = false
     needRefresh.value = true
@@ -91,15 +99,25 @@ export function usePwaUpdate(): PwaUpdateController {
     try {
       const registration = await workbox.register({ immediate: true })
       if (registration) {
-        if (registration.waiting) showUpdatePrompt()
+        if (registration.waiting) waitingWorkerDetected = true
+        await checkForServiceWorkerUpdate(registration, SERVICE_WORKER_URL, window, document)
+        startupUpdateCheckPending = false
+
+        if (!registration.installing && (registration.waiting || waitingWorkerDetected)) {
+          showUpdatePrompt()
+        }
         stopScheduledUpdates = scheduleServiceWorkerUpdates(
           registration,
           SERVICE_WORKER_URL,
           window,
           document,
+          { checkImmediately: false },
         )
+      } else {
+        startupUpdateCheckPending = false
       }
     } catch (error) {
+      startupUpdateCheckPending = false
       if (updateInstalling.value) {
         updateInstalling.value = false
         updateFailed.value = true

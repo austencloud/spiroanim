@@ -25,6 +25,7 @@ interface ServiceWorkerUpdateDocument {
 }
 
 interface ServiceWorkerUpdateSchedule {
+  checkImmediately?: boolean
   intervalMs?: number
   minimumCheckIntervalMs?: number
   now?: () => number
@@ -32,6 +33,32 @@ interface ServiceWorkerUpdateSchedule {
 
 const DEFAULT_UPDATE_INTERVAL_MS = 60 * 60 * 1000
 const DEFAULT_MINIMUM_CHECK_INTERVAL_MS = 60 * 1000
+
+export async function checkForServiceWorkerUpdate(
+  registration: ServiceWorkerUpdateRegistration,
+  workerUrl: string,
+  sourceWindow: ServiceWorkerUpdateWindow,
+  sourceDocument: ServiceWorkerUpdateDocument,
+): Promise<boolean> {
+  if (
+    registration.installing ||
+    !sourceWindow.navigator.onLine ||
+    sourceDocument.visibilityState !== 'visible'
+  ) {
+    return false
+  }
+
+  try {
+    const response = await sourceWindow.fetch(workerUrl, { cache: 'no-store' })
+    if (!response.ok) return false
+
+    await registration.update()
+    return true
+  } catch {
+    // Update discovery is opportunistic. A later online, visible, or scheduled check retries.
+    return false
+  }
+}
 
 export function reloadOnServiceWorkerControllerReplacement<Controller>(
   source: ServiceWorkerControllerSource<Controller>,
@@ -61,6 +88,7 @@ export function scheduleServiceWorkerUpdates(
   sourceWindow: ServiceWorkerUpdateWindow,
   sourceDocument: ServiceWorkerUpdateDocument,
   {
+    checkImmediately = true,
     intervalMs = DEFAULT_UPDATE_INTERVAL_MS,
     minimumCheckIntervalMs = DEFAULT_MINIMUM_CHECK_INTERVAL_MS,
     now = Date.now,
@@ -80,13 +108,7 @@ export function scheduleServiceWorkerUpdates(
     }
 
     lastCheck = checkTime
-
-    try {
-      const response = await sourceWindow.fetch(workerUrl, { cache: 'no-store' })
-      if (response.ok) await registration.update()
-    } catch {
-      // Update discovery is opportunistic. The next online, visible, or scheduled check retries.
-    }
+    await checkForServiceWorkerUpdate(registration, workerUrl, sourceWindow, sourceDocument)
   }
 
   const handleOnline: EventListener = () => {
@@ -101,7 +123,7 @@ export function scheduleServiceWorkerUpdates(
 
   sourceWindow.addEventListener('online', handleOnline)
   sourceDocument.addEventListener('visibilitychange', handleVisibilityChange)
-  void checkForUpdate()
+  if (checkImmediately) void checkForUpdate()
 
   return () => {
     sourceWindow.clearInterval(intervalId)
