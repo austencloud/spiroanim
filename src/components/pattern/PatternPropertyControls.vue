@@ -84,6 +84,12 @@
                 :aria-label="`${label} offset`"
                 :data-role="`${context}-offset-${propIndex}`"
                 @input="setOffsetFromSlider(propIndex, $event)"
+                @pointerdown="emit('sliderStart')"
+                @pointerup="emit('sliderEnd')"
+                @pointercancel="emit('sliderEnd')"
+                @keydown="emit('sliderStart')"
+                @keyup="emit('sliderEnd')"
+                @blur="emit('sliderEnd')"
               />
               <ConceptStepper
                 v-else
@@ -103,9 +109,9 @@
                 :value="offsetDraftValues[propIndex]"
                 :aria-label="`${label} offset value`"
                 :data-role="`${context}-offset-${propIndex}-input`"
-                @focus="focusOffset(propIndex)"
+                @focus="beginOffsetText(propIndex)"
                 @input="setOffsetFromText(propIndex, $event)"
-                @blur="blurOffset(propIndex)"
+                @blur="endOffsetText(propIndex)"
               />
               <button
                 type="button"
@@ -122,7 +128,6 @@
       </template>
       <template v-else-if="property.key === 'axis'">
         <p
-          v-if="context === 'vtg'"
           class="pattern-property-controls__usage-note"
           :data-role="`${context}-property-axis-note`"
         >
@@ -261,6 +266,12 @@
                     :aria-valuetext="`${frame.displayValues[fold.key]}°`"
                     :aria-label="`${column.label} ${fold.label} at beat ${formatBeat(frame.beat)}`"
                     @input="setFold(propIndex, frame.beat, fold.key, $event)"
+                    @pointerdown="emit('sliderStart')"
+                    @pointerup="emit('sliderEnd')"
+                    @pointercancel="emit('sliderEnd')"
+                    @keydown="emit('sliderStart')"
+                    @keyup="emit('sliderEnd')"
+                    @blur="emit('sliderEnd')"
                   />
                   <ConceptStepper
                     v-else
@@ -338,13 +349,19 @@
                 v-if="sliders"
                 type="range"
                 min="0"
-                :max="angleOptions(-360, 360).length - 1"
+                :max="twistAngleOptions.length - 1"
                 step="1"
-                :value="angleSliderIndex(frame.value, -360, 360)"
+                :value="angleSliderIndex(frame.value, -360, 360, allowTwistZero, 45)"
                 :aria-valuetext="`${frame.value}°`"
                 :aria-label="`${column.label} Twist at beat ${formatBeat(frame.beat)}`"
                 :data-role="`${context}-twist-${propIndex}-${frame.index}`"
                 @input="setTwist(propIndex, frame.index, $event)"
+                @pointerdown="emit('sliderStart')"
+                @pointerup="emit('sliderEnd')"
+                @pointercancel="emit('sliderEnd')"
+                @keydown="emit('sliderStart')"
+                @keyup="emit('sliderEnd')"
+                @blur="emit('sliderEnd')"
               />
               <ConceptStepper
                 v-else
@@ -353,7 +370,7 @@
                 :data-role="`${context}-twist-${propIndex}-${frame.index}-stepper`"
                 :min="-360"
                 :max="360"
-                :step="90"
+                :step="45"
                 :display-value="`${frame.value}°`"
                 @update:model-value="emitTwistValue(propIndex, frame.beat, $event)"
               />
@@ -377,6 +394,7 @@
 </template>
 
 <script setup lang="ts">
+import { getVtgFoldRotateMaterializationFactor } from '@/features/vtg/applyVtgFoldSettings'
 import { mdiTrashCanOutline } from '@mdi/js'
 import { useId } from 'vue'
 
@@ -404,10 +422,15 @@ const props = withDefaults(
   defineProps<{
     context: PatternPropertyContext
     showTurns?: boolean
+    showOffset?: boolean
     animation?: RootDataFinal
     offsetValues?: VtgPatternSelection['propRotationOffsets']
     twistMode?: VtgTwistMode
     twistValues?: VtgTwistValues
+    twistDisplayValues?: VtgTwistValues
+    initialYawValues?: readonly [number, number]
+    firstEditableFrameIndex?: number
+    allowTwistZero?: boolean
     foldValues?: VtgFoldValues
     foldValuesMaterialized?: boolean
     sliders?: boolean
@@ -422,8 +445,13 @@ const props = withDefaults(
   }>(),
   {
     showTurns: false,
+    showOffset: true,
     twistMode: 'simple',
     twistValues: () => [{}, {}],
+    twistDisplayValues: () => [{}, {}],
+    initialYawValues: () => [90, 90],
+    firstEditableFrameIndex: 0,
+    allowTwistZero: false,
     foldValues: () => [{}, {}],
     foldValuesMaterialized: false,
     sliders: true,
@@ -451,6 +479,8 @@ const emit = defineEmits<{
   'update:foldSpan': [span: VtgFoldSpan]
   'update:foldMirror': [mirror: boolean]
   'update:activeProperty': [property: PatternPropertyKey | null]
+  sliderStart: []
+  sliderEnd: []
 }>()
 const twistModes = ['simple', 'advanced'] as const
 const foldModes = ['simple', 'advanced'] as const
@@ -463,7 +493,7 @@ const folds = [
 
 const properties = [
   { key: 'offset', name: 'Offset', label: 'Offset' },
-  { key: 'axis', name: 'Axis', label: 'Axis' },
+  { key: 'axis', name: 'Rotate', label: 'Rotate' },
   { key: 'twist', name: 'Twist', label: 'Twist' },
   { key: 'turns', name: 'Turns', label: 'Turns' },
 ] as const satisfies readonly { key: PatternPropertyKey; name: string; label: string }[]
@@ -474,12 +504,14 @@ const rootElement = ref<HTMLElement>()
 const offsetDraftValues = ref<[string, string]>(['0', '0'])
 const focusedOffsetProp = ref<0 | 1>()
 const visibleProperties = computed(() =>
-  properties.filter((property) => property.key !== 'turns' || props.showTurns),
+  properties.filter(
+    (property) =>
+      (property.key !== 'turns' || props.showTurns) &&
+      (property.key !== 'offset' || props.showOffset),
+  ),
 )
-const propertyLabel = (property: (typeof properties)[number]) =>
-  props.context === 'vtg' && property.key === 'axis' ? 'Rotate' : property.label
-const propertyName = (property: (typeof properties)[number]) =>
-  props.context === 'vtg' && property.key === 'axis' ? 'Rotate' : property.name
+const propertyLabel = (property: (typeof properties)[number]) => property.label
+const propertyName = (property: (typeof properties)[number]) => property.name
 const propertyTooltip = (property: (typeof properties)[number]) =>
   property.key === 'axis'
     ? 'Set Direct and Rotate changes by beat for the left and right props.'
@@ -502,6 +534,10 @@ const focusOffset = (propIndex: number) => {
   if (!isPropIndex(propIndex)) return
   focusedOffsetProp.value = propIndex
 }
+const beginOffsetText = (propIndex: number) => {
+  focusOffset(propIndex)
+  emit('sliderStart')
+}
 const setOffsetFromText = (propIndex: number, event: Event) => {
   if (!isPropIndex(propIndex)) return
   const value = (event.target as HTMLInputElement).value
@@ -515,6 +551,10 @@ const blurOffset = (propIndex: number) => {
   if (!isPropIndex(propIndex)) return
   focusedOffsetProp.value = undefined
   offsetDraftValues.value[propIndex] = String(offsetValue(propIndex))
+}
+const endOffsetText = (propIndex: number) => {
+  blurOffset(propIndex)
+  emit('sliderEnd')
 }
 const clearOffset = (propIndex: number) => {
   if (!isPropIndex(propIndex)) return
@@ -531,19 +571,27 @@ const twistColumns = computed(() =>
         .map((frame, index) => {
           const authoredValue = props.twistValues[propIndex]?.[String(beat)]
           const isSet = authoredValue !== undefined
-          const result = { index, beat, isSet, value: authoredValue ?? 0 }
+          const inheritedValue = props.twistDisplayValues[propIndex]?.[String(beat)]
+          const result = { index, beat, isSet, value: authoredValue ?? inheritedValue ?? 0 }
           beat += frame.beats ?? 0.5
           return result
         })
-        .filter((frame) => props.twistMode === 'advanced' || frame.beat === 0.5),
+        .filter(
+          (frame) =>
+            frame.index >= props.firstEditableFrameIndex &&
+            (props.twistMode === 'advanced' || frame.beat === 0.5),
+        ),
     }
   }),
 )
 const foldColumnsUnfiltered = computed(() =>
   ['Left', 'Right'].map((label, propIndex) => {
     const frames = props.animation?.props[propIndex]?.anim ?? []
+    const minimumFrameBeat = frames
+      .slice(0, props.firstEditableFrameIndex)
+      .reduce((total, frame) => total + (frame.beats ?? 0.5), 0)
     let beat = 0
-    let inheritedYaw = 90
+    let inheritedYaw = props.initialYawValues[propIndex] ?? 90
     return {
       label,
       frames: frames.map((frame, index) => {
@@ -554,7 +602,11 @@ const foldColumnsUnfiltered = computed(() =>
           props.foldSpan === 'quarter' &&
           props.foldValuesMaterialized &&
           storedValues.rotate !== undefined
-            ? { rotate: storedValues.rotate * 2 }
+            ? {
+                rotate:
+                  storedValues.rotate *
+                  getVtgFoldRotateMaterializationFactor(props.foldSpan, beat, minimumFrameBeat),
+              }
             : {}),
         }
         const result = {
@@ -576,29 +628,47 @@ const foldColumns = computed(() =>
     .map((column, propIndex) => ({
       ...column,
       frames: column.frames.filter(
-        (frame) => props.foldMode === 'advanced' || frame.beat === props.foldBeat[propIndex],
+        (frame) =>
+          frame.index >= props.firstEditableFrameIndex &&
+          (props.foldMode === 'advanced' || frame.beat === props.foldBeat[propIndex]),
       ),
     })),
 )
 const availableFoldBeats = computed(() => {
   const beats = new Set<number>()
   for (const column of foldColumnsUnfiltered.value) {
-    for (const frame of column.frames) beats.add(frame.beat)
+    for (const frame of column.frames) {
+      if (
+        frame.index >= props.firstEditableFrameIndex &&
+        (props.context !== 'builder' || frame.beat > 0)
+      ) {
+        beats.add(frame.beat)
+      }
+    }
   }
   return [...beats].sort((first, second) => first - second)
 })
 const foldBeatOptions = computed(() => availableFoldBeats.value)
-const foldEveryOptions = computed(() => foldBeatOptions.value.filter((beat) => beat > 0))
+const foldEveryOptions = computed(() =>
+  foldBeatOptions.value.filter((beat) => beat > (props.foldSpan === 'quarter' ? 0.5 : 0)),
+)
 
-const angleOptions = (min: number, max: number) => {
+const angleOptions = (min: number, max: number, includeZero = false, increment = 90) => {
   const values: number[] = []
-  for (let value = Math.ceil(min / 90) * 90; value <= max; value += 90) {
-    if (value !== 0) values.push(value)
+  for (let value = Math.ceil(min / increment) * increment; value <= max; value += increment) {
+    if (includeZero || value !== 0) values.push(value)
   }
   return values
 }
-const angleSliderIndex = (value: number, min: number, max: number) => {
-  const options = angleOptions(min, max)
+const twistAngleOptions = computed(() => angleOptions(-360, 360, props.allowTwistZero, 45))
+const angleSliderIndex = (
+  value: number,
+  min: number,
+  max: number,
+  includeZero = false,
+  increment = 90,
+) => {
+  const options = angleOptions(min, max, includeZero, increment)
   const exact = options.indexOf(value)
   if (exact >= 0) return exact
   return options.reduce(
@@ -607,12 +677,18 @@ const angleSliderIndex = (value: number, min: number, max: number) => {
     0,
   )
 }
-const angleFromSlider = (event: Event, min: number, max: number) => {
-  const options = angleOptions(min, max)
+const angleFromSlider = (
+  event: Event,
+  min: number,
+  max: number,
+  includeZero = false,
+  increment = 90,
+) => {
+  const options = angleOptions(min, max, includeZero, increment)
   return options[Number((event.target as HTMLInputElement).value)] ?? options[0]!
 }
-const skipZero = (value: number, previous: number) =>
-  value === 0 ? (previous < 0 ? 90 : -90) : value
+const skipZero = (value: number, previous: number, increment = 90) =>
+  value === 0 ? (previous < 0 ? increment : -increment) : value
 
 const formatBeat = (beat: number) => (Number.isInteger(beat) ? String(beat) : String(beat))
 const isPropIndex = (propIndex: number): propIndex is 0 | 1 => propIndex === 0 || propIndex === 1
@@ -652,13 +728,18 @@ const setTwist = (propIndex: number, frameIndex: number, event: Event) => {
     (candidate) => candidate.index === frameIndex,
   )
   if (!frame || (propIndex !== 0 && propIndex !== 1)) return
-  emit('twistUpdate', propIndex, frame.beat, angleFromSlider(event, -360, 360))
+  emit(
+    'twistUpdate',
+    propIndex,
+    frame.beat,
+    angleFromSlider(event, -360, 360, props.allowTwistZero, 45),
+  )
 }
 const emitTwistValue = (propIndex: number, beat: number, value: number) => {
   if (propIndex !== 0 && propIndex !== 1) return
   const previous =
     twistColumns.value[propIndex]?.frames.find((frame) => frame.beat === beat)?.value ?? 0
-  emit('twistUpdate', propIndex, beat, skipZero(value, previous))
+  emit('twistUpdate', propIndex, beat, props.allowTwistZero ? value : skipZero(value, previous, 45))
 }
 
 const clearTwist = (propIndex: number, frameIndex: number) => {

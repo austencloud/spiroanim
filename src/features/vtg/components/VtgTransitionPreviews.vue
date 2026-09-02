@@ -10,145 +10,155 @@
     data-role="vtg-transition-previews"
     :style="{ '--vtg-transition-preview-columns': String(columns) }"
   >
-    <div
-      v-for="(url, index) in previewUrls"
-      :key="index"
-      class="vtg-transition-previews__item"
-      :class="{
-        'vtg-transition-previews__item--drag-over': dragOverIndex === index,
-        'vtg-transition-previews__item--drop-blocked':
-          dragOverIndex === index && !isDropAllowed(index),
-        'vtg-transition-previews__item--selected': selectedIndex === index,
-      }"
-      :data-preview-index="index"
-      @dragenter.prevent="dragOverIndex = index"
-      @dragover.prevent="allowPatternDrop(index, $event)"
-      @dragleave="leavePatternDrop(index, $event)"
-      @drop.prevent="dropPattern(index, $event)"
-    >
-      <AppTooltip
-        class="vtg-transition-previews__tooltip"
-        :text="previewRelationships[index]?.description"
+    <template v-for="(url, index) in previewUrls" :key="index">
+      <div
+        class="vtg-transition-previews__item"
+        :class="{
+          'vtg-transition-previews__item--drag-over': dragOverIndex === index,
+          'vtg-transition-previews__item--drop-blocked':
+            dragOverIndex === index && !isDropAllowed(index),
+          'vtg-transition-previews__item--selected': selectedIndex === index,
+        }"
+        :data-preview-index="index"
+        @dragenter.prevent="dragOverIndex = index"
+        @dragover.prevent="allowPatternDrop(index, $event)"
+        @dragleave="leavePatternDrop(index, $event)"
+        @drop.prevent="dropPattern(index, $event)"
       >
-        <template #activator="{ props: tooltipProps }">
-          <button
-            v-bind="tooltipProps"
-            class="vtg-transition-previews__visual"
-            type="button"
-            draggable="false"
-            :aria-label="`Preview pattern ${index + 1}`"
-            :aria-controls="`vtg-transition-preview-actions-${index}`"
-            :aria-expanded="selectedIndex === index"
-            :aria-pressed="selectedIndex === index"
-            @click="previewPattern(index)"
-            @dragstart.prevent
-          >
-            <img
-              v-if="url"
-              class="vtg-transition-previews__image"
-              :src="url"
-              :alt="`45 Trans pattern ${index + 1}`"
+        <AppTooltip
+          class="vtg-transition-previews__tooltip"
+          :text="previewRelationships[index]?.description"
+        >
+          <template #activator="{ props: tooltipProps }">
+            <button
+              v-bind="tooltipProps"
+              class="vtg-transition-previews__visual"
+              type="button"
               draggable="false"
-            />
-            <span v-if="previewRatios[index]" class="vtg-transition-previews__ratio">
-              {{ previewRatios[index] }}
-            </span>
-            <ElementalRelationshipIcons
-              v-if="elementalLayout"
-              class="vtg-transition-previews__label"
-              :hands="previewRelationships[index]?.hands"
-              :props="previewRelationships[index]?.props"
-              :hands-indeterminate="previewRelationships[index]?.handsIndeterminate"
-              :props-indeterminate="previewRelationships[index]?.propsIndeterminate"
-              :size="16"
-            />
-            <span v-else class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>
-          </button>
-        </template>
-      </AppTooltip>
-      <div :id="`vtg-transition-preview-actions-${index}`" class="vtg-transition-previews__actions">
-        <div class="vtg-transition-previews__transform-actions">
-          <AppTooltip text="Reverse">
-            <template #activator="{ props: tooltipProps }">
-              <button
-                v-bind="tooltipProps"
-                class="vtg-transition-previews__reverse"
-                type="button"
-                :aria-label="`Reverse direction of pattern ${index + 1}`"
-                data-role="vtg-transition-preview-reverse"
-                @click.stop="emit('patternReverse', index)"
-              >
-                <BaseIcon :path="mdiRotate3dVariant" :size="18" />
-              </button>
-            </template>
-          </AppTooltip>
-          <AppTooltip v-if="swappablePreviews[index]" text="Swap Props">
-            <template #activator="{ props: tooltipProps }">
-              <button
-                v-bind="tooltipProps"
-                class="vtg-transition-previews__swap"
-                type="button"
-                :aria-label="`Swap props in pattern ${index + 1}`"
-                data-role="vtg-transition-preview-swap"
-                @click.stop="emit('patternSwap', index)"
-              >
-                <BaseIcon :path="mdiSwapHorizontal" :size="18" />
-              </button>
-            </template>
-          </AppTooltip>
+              :aria-label="`Preview pattern ${index + 1}`"
+              :aria-controls="`vtg-transition-preview-actions-${index}`"
+              :aria-expanded="selectedIndex === index"
+              :aria-pressed="selectedIndex === index"
+              @click="previewPattern(index)"
+              @dragstart.prevent
+            >
+              <img
+                v-if="url"
+                class="vtg-transition-previews__image"
+                :src="url"
+                :alt="`45 Trans pattern ${index + 1}`"
+                draggable="false"
+              />
+              <span v-if="previewRatios[index]" class="vtg-transition-previews__ratio">
+                {{ previewRatios[index] }}
+              </span>
+              <ElementalRelationshipIcons
+                v-if="elementalLayout"
+                class="vtg-transition-previews__label"
+                :hands="previewRelationships[index]?.hands"
+                :props="previewRelationships[index]?.props"
+                :hands-indeterminate="previewRelationships[index]?.handsIndeterminate"
+                :props-indeterminate="previewRelationships[index]?.propsIndeterminate"
+                :size="16"
+              />
+              <span v-else class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>
+            </button>
+          </template>
+        </AppTooltip>
+        <div
+          :id="`vtg-transition-preview-actions-${index}`"
+          class="vtg-transition-previews__actions"
+        >
+          <div class="vtg-transition-previews__transform-actions">
+            <AppTooltip text="Reverse">
+              <template #activator="{ props: tooltipProps }">
+                <button
+                  v-bind="tooltipProps"
+                  class="vtg-transition-previews__reverse"
+                  type="button"
+                  :aria-label="`Reverse direction of pattern ${index + 1}`"
+                  data-role="vtg-transition-preview-reverse"
+                  @click.stop="emit('patternReverse', index)"
+                >
+                  <BaseIcon :path="mdiRotate3dVariant" :size="18" />
+                </button>
+              </template>
+            </AppTooltip>
+            <AppTooltip v-if="swappablePreviews[index]" text="Swap Props">
+              <template #activator="{ props: tooltipProps }">
+                <button
+                  v-bind="tooltipProps"
+                  class="vtg-transition-previews__swap"
+                  type="button"
+                  :aria-label="`Swap props in pattern ${index + 1}`"
+                  data-role="vtg-transition-preview-swap"
+                  @click.stop="emit('patternSwap', index)"
+                >
+                  <BaseIcon :path="mdiSwapHorizontal" :size="18" />
+                </button>
+              </template>
+            </AppTooltip>
+          </div>
+          <div class="vtg-transition-previews__delete-action">
+            <AppTooltip text="Delete">
+              <template #activator="{ props: tooltipProps }">
+                <button
+                  v-bind="tooltipProps"
+                  class="vtg-transition-previews__delete"
+                  type="button"
+                  :aria-label="`Delete pattern ${index + 1}`"
+                  @click.stop="emit('patternDelete', index)"
+                >
+                  <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+                </button>
+              </template>
+            </AppTooltip>
+          </div>
         </div>
-        <div class="vtg-transition-previews__delete-action">
-          <AppTooltip text="Delete">
-            <template #activator="{ props: tooltipProps }">
-              <button
-                v-bind="tooltipProps"
-                class="vtg-transition-previews__delete"
-                type="button"
-                :aria-label="`Delete pattern ${index + 1}`"
-                @click.stop="emit('patternDelete', index)"
-              >
-                <BaseIcon :path="mdiTrashCanOutline" :size="18" />
-              </button>
-            </template>
-          </AppTooltip>
+        <div class="vtg-transition-previews__beats">
+          <span class="vtg-transition-previews__visually-hidden">
+            Pattern {{ index + 1 }} beats
+          </span>
+          <input
+            v-if="sliders"
+            type="range"
+            :min="minimumBeatCount(index)"
+            :max="maximumBeatCount(index)"
+            step="0.5"
+            :value="beatCounts[index]"
+            :aria-label="`Pattern ${index + 1} beats`"
+            :aria-valuetext="`${beatCounts[index]} beats`"
+            data-role="vtg-transition-preview-beats"
+            @input="updateBeatCount(index, $event)"
+            @pointerdown="beginPointerSlider"
+            @pointerup="endPointerSlider"
+            @pointercancel="cancelPointerSlider"
+            @keydown="emit('sliderStart')"
+            @keyup="emit('sliderEnd')"
+            @blur="emit('sliderEnd')"
+          />
+          <output v-if="sliders">{{ beatCounts[index] }}</output>
+          <ConceptStepper
+            v-else
+            :model-value="beatCounts[index] ?? minimumBeatCount(index)"
+            label="Pattern beats"
+            :data-role="`vtg-transition-preview-beats-${index}`"
+            :min="minimumBeatCount(index)"
+            :max="maximumBeatCount(index)"
+            :step="0.5"
+            :display-value="String(beatCounts[index])"
+            @update:model-value="updateBeatCountValue(index, $event)"
+          />
         </div>
       </div>
-      <div class="vtg-transition-previews__beats">
-        <span class="vtg-transition-previews__visually-hidden">
-          Pattern {{ index + 1 }} beats
-        </span>
-        <input
-          v-if="sliders"
-          type="range"
-          :min="minimumBeatCount(index)"
-          :max="maximumBeatCount(index)"
-          step="0.5"
-          :value="beatCounts[index]"
-          :aria-label="`Pattern ${index + 1} beats`"
-          :aria-valuetext="`${beatCounts[index]} beats`"
-          data-role="vtg-transition-preview-beats"
-          @input="updateBeatCount(index, $event)"
-          @pointerdown="beginPointerSlider"
-          @pointerup="endPointerSlider"
-          @pointercancel="cancelPointerSlider"
-          @keydown="emit('sliderStart')"
-          @keyup="emit('sliderEnd')"
-          @blur="emit('sliderEnd')"
-        />
-        <output v-if="sliders">{{ beatCounts[index] }}</output>
-        <ConceptStepper
-          v-else
-          :model-value="beatCounts[index] ?? minimumBeatCount(index)"
-          label="Pattern beats"
-          :data-role="`vtg-transition-preview-beats-${index}`"
-          :min="minimumBeatCount(index)"
-          :max="maximumBeatCount(index)"
-          :step="0.5"
-          :display-value="String(beatCounts[index])"
-          @update:model-value="updateBeatCountValue(index, $event)"
-        />
+      <div
+        v-if="propertiesAfterPreviewIndex === index"
+        class="vtg-transition-previews__properties"
+        data-role="vtg-transition-preview-properties"
+      >
+        <slot name="selected-properties" />
       </div>
-    </div>
+    </template>
 
     <div
       v-if="selectedIndex !== 0"
@@ -166,6 +176,14 @@
       @drop.prevent="dropPattern(previewUrls.length, $event)"
     >
       <span>Drag and drop a pattern here</span>
+    </div>
+
+    <div
+      v-if="propertiesAfterPlaceholder"
+      class="vtg-transition-previews__properties"
+      data-role="vtg-transition-preview-properties"
+    >
+      <slot name="selected-properties" />
     </div>
 
     <Teleport to="body">
@@ -280,6 +298,22 @@ const { protectTouchScrolling, beginPointerSlider, endPointerSlider, cancelPoint
 const previewRelationships = computed(() => props.relationships)
 const previewLabels = computed(() => previewRelationships.value.map(({ label }) => label))
 const previewRatios = computed(() => props.animations.map(inferVtgDoubledPortionSpeedRatio))
+const propertiesRowEndPosition = computed(() => {
+  if (props.selectedIndex === undefined) return undefined
+  const rowStart = Math.floor(props.selectedIndex / props.columns) * props.columns
+  const itemCount = previewUrls.value.length + (props.selectedIndex === 0 ? 0 : 1)
+  return Math.min(rowStart + props.columns - 1, itemCount - 1)
+})
+const propertiesAfterPreviewIndex = computed(() => {
+  const rowEnd = propertiesRowEndPosition.value
+  return rowEnd !== undefined && rowEnd < previewUrls.value.length ? rowEnd : undefined
+})
+const propertiesAfterPlaceholder = computed(
+  () =>
+    props.selectedIndex !== undefined &&
+    props.selectedIndex !== 0 &&
+    propertiesRowEndPosition.value === previewUrls.value.length,
+)
 const swappablePreviews = computed(() =>
   props.animations.map((animation) => {
     const { spins } = getVtgBuilderMotion(animation)
@@ -442,6 +476,11 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   position: relative;
   min-width: 0;
   border-radius: var(--radius-sm);
+}
+
+.vtg-transition-previews__properties {
+  min-width: 0;
+  grid-column: 1 / -1;
 }
 
 .vtg-transition-previews__item--selected {

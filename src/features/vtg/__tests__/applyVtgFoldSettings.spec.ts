@@ -61,6 +61,50 @@ describe('applyVtgFoldSettings', () => {
     expect(applied.props[0]?.anim[2]).toMatchObject({ yaw: 45, rotate: 90 })
   })
 
+  it('keeps frame 0 as the established position when Quarter starts at 0.5', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const applied = applyVtgFoldSettings(animation, [{ 0.5: { rotate: 180 } }, {}], {
+      mode: 'simple',
+      beat: [0.5, 0.5],
+      repeat: [false, false],
+      every: [1, 1],
+      alternate: [false, false],
+      span: 'quarter',
+      mirror: false,
+    })
+
+    expect(applied.props[0]?.anim[0]?.rotate).toBeUndefined()
+    expect(applied.props[0]?.anim[1]?.rotate).toBe(180)
+    expect(detectVtgFoldSimpleSettings(applied)).toMatchObject({
+      beat: [0.5, 0],
+      span: 'quarter',
+    })
+  })
+
+  it('preserves inherited Builder Fold values before the first editable frame', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    animation.props[0]!.anim[0] = {
+      ...animation.props[0]!.anim[0]!,
+      yaw: 30,
+      rotate: 45,
+    }
+    const applied = applyVtgFoldSettings(animation, [{ 0.5: { rotate: 180 } }, {}], {
+      mode: 'simple',
+      beat: [0.5, 0.5],
+      repeat: [false, false],
+      every: [1, 1],
+      alternate: [false, false],
+      span: 'quarter',
+      mirror: false,
+      firstEditableFrameIndex: 1,
+    })
+
+    expect(applied.props[0]?.anim[0]).toMatchObject({ yaw: 30, rotate: 45 })
+    expect(applied.props[0]?.anim[1]?.rotate).toBe(180)
+  })
+
   it('supports half-beat Start and Every values for Quarter folds', () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
     if (!animation) throw new Error('Expected a supported VTG animation')
@@ -117,6 +161,49 @@ describe('applyVtgFoldSettings', () => {
 
     expect(extractVtgFoldValues(second)).toEqual(materialized)
     expect(sources[0]?.['2']?.rotate).toBe(180)
+  })
+
+  it('prefers Quarter when materialized rotations also match an Eighth schedule', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const applied = applyVtgFoldSettings(animation, [{ 2: { rotate: 180 } }, {}], {
+      mode: 'simple',
+      beat: [2, 2],
+      repeat: [false, false],
+      every: [2, 2],
+      alternate: [false, false],
+      span: 'quarter',
+      mirror: false,
+    })
+
+    expect(detectVtgFoldSimpleSettings(applied)).toMatchObject({
+      beat: [2, 0],
+      repeat: [false, false],
+      span: 'quarter',
+      mirror: false,
+    })
+  })
+
+  it('does not detect an overlapping Every 0.5 schedule for Quarter rotations', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const applied = applyVtgFoldSettings(animation, [{ 0: { rotate: 180 } }, {}], {
+      mode: 'simple',
+      beat: [0, 0],
+      repeat: [true, true],
+      every: [1, 1],
+      alternate: [false, false],
+      span: 'quarter',
+      mirror: true,
+    })
+
+    expect(detectVtgFoldSimpleSettings(applied)).toMatchObject({
+      beat: [0, 0],
+      repeat: [true, true],
+      every: [1, 1],
+      span: 'quarter',
+      mirror: true,
+    })
   })
 
   it('detects a Simple schedule only when it exactly represents the pattern values', () => {

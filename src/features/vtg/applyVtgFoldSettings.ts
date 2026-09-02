@@ -28,6 +28,7 @@ export const applyVtgFoldSettings = (
     alternate: VtgFoldSideSettings<boolean>
     span: VtgFoldSpan
     mirror: boolean
+    firstEditableFrameIndex?: number
   } = {
     mode: 'advanced',
     beat: [2, 2],
@@ -41,13 +42,21 @@ export const applyVtgFoldSettings = (
   ...animation,
   props: animation.props.map((prop, propIndex) => {
     let beat = 0
+    const firstEditableFrameIndex = options.firstEditableFrameIndex ?? 0
+    const minimumFrameBeat = prop.anim
+      .slice(0, firstEditableFrameIndex)
+      .reduce((total, frame) => total + (frame.beats ?? 0.5), 0)
     return {
       ...prop,
-      anim: prop.anim.map((frame) => {
+      anim: prop.anim.map((frame, frameIndex) => {
         const nextFrame = { ...frame }
+        if (frameIndex < firstEditableFrameIndex) {
+          beat += frame.beats ?? 0.5
+          return nextFrame
+        }
         delete nextFrame.yaw
         delete nextFrame.rotate
-        const fold = resolveFold(values, propIndex, beat, options)
+        const fold = resolveFold(values, propIndex, beat, { ...options, minimumFrameBeat })
         if (fold?.yaw !== undefined) nextFrame.yaw = fold.yaw
         if (fold?.rotate !== undefined) nextFrame.rotate = fold.rotate
         beat += frame.beats ?? 0.5
@@ -69,10 +78,17 @@ export const deriveVtgFoldSimpleSources = (
   beats: VtgFoldSideSettings<number>,
   span: VtgFoldSpan,
   materialized: boolean,
+  minimumFrameBeat = 0,
 ): VtgFoldValues => [
-  deriveVtgFoldSimpleSource(values, beats, 0, span, materialized),
-  deriveVtgFoldSimpleSource(values, beats, 1, span, materialized),
+  deriveVtgFoldSimpleSource(values, beats, 0, span, materialized, minimumFrameBeat),
+  deriveVtgFoldSimpleSource(values, beats, 1, span, materialized, minimumFrameBeat),
 ]
+
+export const getVtgFoldRotateMaterializationFactor = (
+  span: VtgFoldSpan,
+  occurrenceBeat: number,
+  minimumFrameBeat = 0,
+): 1 | 2 => (span === 'quarter' && occurrenceBeat > minimumFrameBeat + 0.5 + 0.000001 ? 2 : 1)
 
 const deriveVtgFoldSimpleSource = (
   values: VtgFoldValues,
@@ -80,6 +96,7 @@ const deriveVtgFoldSimpleSource = (
   propIndex: 0 | 1,
   span: VtgFoldSpan,
   materialized: boolean,
+  minimumFrameBeat: number,
 ) => {
   const beat = beats[propIndex]
   const fold = values[propIndex][String(beat)]
@@ -89,7 +106,12 @@ const deriveVtgFoldSimpleSource = (
       ...(fold.yaw === undefined ? {} : { yaw: fold.yaw }),
       ...(fold.rotate === undefined
         ? {}
-        : { rotate: materialized && span === 'quarter' ? fold.rotate * 2 : fold.rotate }),
+        : {
+            rotate:
+              materialized && span === 'quarter'
+                ? fold.rotate * getVtgFoldRotateMaterializationFactor(span, beat, minimumFrameBeat)
+                : fold.rotate,
+          }),
     },
   }
 }
@@ -122,6 +144,7 @@ const resolveFold = (
     alternate: VtgFoldSideSettings<boolean>
     span: VtgFoldSpan
     mirror: boolean
+    minimumFrameBeat?: number
   },
 ): VtgFoldValue | undefined => {
   if (options.mode === 'advanced') return values[propIndex]?.[String(frameBeat)]
@@ -137,10 +160,14 @@ const resolveFold = (
     if (!options.repeat[scheduleIndex] && occurrence !== 0) return
     return occurrence
   }
-  const occurrence =
-    getOccurrence(frameBeat) ??
-    (options.span === 'quarter' ? getOccurrence(frameBeat + 0.5) : undefined)
+  const directOccurrence = getOccurrence(frameBeat)
+  const precedingOccurrence =
+    options.span === 'quarter' && frameBeat > (options.minimumFrameBeat ?? 0) + 0.000001
+      ? getOccurrence(frameBeat + 0.5)
+      : undefined
+  const occurrence = directOccurrence ?? precedingOccurrence
   if (occurrence === undefined) return
+  const occurrenceBeat = startBeat + occurrence * interval
 
   const sourceIndex = options.mirror
     ? 0
@@ -159,7 +186,14 @@ const resolveFold = (
     ...(source.rotate === undefined
       ? {}
       : {
-          rotate: (options.span === 'quarter' ? source.rotate / 2 : source.rotate) * rotateSign,
+          rotate:
+            (source.rotate /
+              getVtgFoldRotateMaterializationFactor(
+                options.span,
+                occurrenceBeat,
+                options.minimumFrameBeat,
+              )) *
+            rotateSign,
         }),
   }
 }
@@ -184,9 +218,10 @@ interface SideCandidate {
   alternate: boolean
 }
 
-const sideCandidates = (beats: readonly number[]): SideCandidate[] => {
+const sideCandidates = (beats: readonly number[], span: VtgFoldSpan): SideCandidate[] => {
   const selectable = beats
-  const intervals = selectable.filter((beat) => beat > 0)
+  const minimumInterval = span === 'quarter' ? 0.5 : 0
+  const intervals = selectable.filter((beat) => beat > minimumInterval)
   return selectable.flatMap((beat) => [
     { beat, repeat: false, every: 2, alternate: false },
     ...intervals.flatMap((every) => [
@@ -200,6 +235,7 @@ const simpleSources = (
   values: VtgFoldValues,
   candidates: readonly [SideCandidate, SideCandidate],
   span: VtgFoldSpan,
+  minimumFrameBeat = 0,
 ): VtgFoldValues =>
   candidates.map(({ beat }, propIndex) => {
     const fold = values[propIndex]?.[String(beat)]
@@ -209,7 +245,10 @@ const simpleSources = (
         ...(fold.yaw === undefined ? {} : { yaw: fold.yaw }),
         ...(fold.rotate === undefined
           ? {}
-          : { rotate: span === 'quarter' ? fold.rotate * 2 : fold.rotate }),
+          : {
+              rotate:
+                fold.rotate * getVtgFoldRotateMaterializationFactor(span, beat, minimumFrameBeat),
+            }),
       },
     }
   }) as VtgFoldValues
@@ -220,8 +259,8 @@ export const detectVtgFoldSimpleSettings = (
   values: VtgFoldValues = extractVtgFoldValues(animation),
 ): VtgFoldSimpleSettings | undefined => {
   const beats = [frameBeats(animation, 0), frameBeats(animation, 1)] as const
-  for (const span of ['eighth', 'quarter'] as const) {
-    const candidates = [sideCandidates(beats[0]), sideCandidates(beats[1])] as const
+  for (const span of ['quarter', 'eighth'] as const) {
+    const candidates = [sideCandidates(beats[0], span), sideCandidates(beats[1], span)] as const
     for (const left of candidates[0]) {
       const options: VtgFoldSimpleSettings = {
         beat: [left.beat, left.beat],

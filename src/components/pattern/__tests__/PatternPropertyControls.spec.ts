@@ -204,8 +204,46 @@ describe('PatternPropertyControls', () => {
       'builder',
     )
     expect(wrapper.get('[data-role="builder-property-offset-toggle"]').text()).toBe('Offset')
-    expect(wrapper.get('[data-role="builder-property-axis-toggle"]').text()).toBe('Axis')
+    expect(wrapper.get('[data-role="builder-property-axis-toggle"]').text()).toBe('Rotate')
+    expect(wrapper.get('[data-role="builder-property-axis-note"]').text()).toBe(
+      'For Static Props, allowing off-axis turns',
+    )
     expect(wrapper.find('[data-role="builder-property-turns-toggle"]').exists()).toBe(false)
+  })
+
+  it('treats a later Builder portion first frame as context and allows explicit zero Twist', async () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const wrapper = mount(PatternPropertyControls, {
+      props: {
+        context: 'builder',
+        animation,
+        showOffset: false,
+        activeProperty: 'twist',
+        twistMode: 'advanced',
+        twistValues: [{}, {}],
+        twistDisplayValues: [{ 0.5: 90 }, {}],
+        firstEditableFrameIndex: 1,
+        allowTwistZero: true,
+      },
+    })
+
+    expect(wrapper.find('[data-role="builder-property-offset-toggle"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="builder-twist-0-0"]').exists()).toBe(false)
+    const firstOwned = wrapper.get<HTMLInputElement>('[data-role="builder-twist-0-1"]')
+    expect(firstOwned.attributes()).toMatchObject({ max: '16', 'aria-valuetext': '90°' })
+    expect(firstOwned.element.closest('label')?.classList).not.toContain(
+      'pattern-property-controls__value-set',
+    )
+    expect(wrapper.find('[data-role="builder-twist-0-8"]').exists()).toBe(true)
+
+    await firstOwned.trigger('pointerdown')
+    firstOwned.element.value = '8'
+    await firstOwned.trigger('input')
+    await firstOwned.trigger('pointerup')
+    expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0.5, 0])
+    expect(wrapper.emitted('sliderStart')).toHaveLength(1)
+    expect(wrapper.emitted('sliderEnd')).toHaveLength(1)
   })
 
   it.each(['vtg', 'builder'] as const)(
@@ -234,7 +272,7 @@ describe('PatternPropertyControls', () => {
 
     const leftFirst = wrapper.get<HTMLInputElement>('[data-role="vtg-twist-0-0"]')
     const rightFirst = wrapper.get<HTMLInputElement>('[data-role="vtg-twist-1-0"]')
-    expect(leftFirst.attributes()).toMatchObject({ min: '0', max: '7', step: '1' })
+    expect(leftFirst.attributes()).toMatchObject({ min: '0', max: '15', step: '1' })
     expect(leftFirst.attributes('aria-valuetext')).toBe('45°')
     expect(rightFirst.attributes('aria-valuetext')).toBe('0°')
     expect(leftFirst.element.closest('label')?.classList).toContain(
@@ -248,7 +286,7 @@ describe('PatternPropertyControls', () => {
     expect(wrapper.get('[aria-label="Left Twist"] header').text()).toBe('BeatLeftValue')
     expect(wrapper.get('[aria-label="Right Twist"] header').text()).toBe('BeatRightValue')
 
-    rightFirst.element.value = '4'
+    rightFirst.element.value = '9'
     await rightFirst.trigger('input')
     expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([1, 0, 90])
 
@@ -264,7 +302,7 @@ describe('PatternPropertyControls', () => {
     expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0])
   })
 
-  it('offers only supported nonzero 90-degree slider values for Twist and Rotate', async () => {
+  it('offers nonzero 45-degree Twist values while keeping Rotate at 90 degrees', async () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:1' })
     if (!animation) throw new Error('Expected a supported VTG animation')
     const wrapper = mount(PatternPropertyControls, {
@@ -272,12 +310,12 @@ describe('PatternPropertyControls', () => {
     })
 
     const twist = wrapper.get<HTMLInputElement>('[data-role="vtg-twist-0-0"]')
-    twist.element.value = '3'
+    twist.element.value = '7'
     await twist.trigger('input')
-    expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0, -90])
-    twist.element.value = '4'
+    expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0, -45])
+    twist.element.value = '8'
     await twist.trigger('input')
-    expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0, 90])
+    expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0, 45])
 
     const direct = wrapper.get<HTMLInputElement>('input[aria-label="Left Direct at beat 0"]')
     expect(direct.attributes()).toMatchObject({ min: '0', max: '1', step: '1' })
@@ -422,7 +460,7 @@ describe('PatternPropertyControls', () => {
     await wrapper.get('[data-role="vtg-yaw-0-0-stepper-decrease"]').trigger('click')
     expect(wrapper.emitted('foldUpdate')?.at(-1)).toEqual([0, 0, 'yaw', -90])
     await wrapper.get('[data-role="vtg-twist-0-0-stepper-decrease"]').trigger('click')
-    expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0, -90])
+    expect(wrapper.emitted('twistUpdate')?.at(-1)).toEqual([0, 0, -45])
   })
 
   it('offers styled Simple fold repetition and span controls', async () => {
@@ -470,8 +508,35 @@ describe('PatternPropertyControls', () => {
         .get<HTMLSelectElement>('select[aria-label="Left repeat folds every"]')
         .findAll('option')
         .map((option) => option.text()),
-    ).toContain('0.5')
+    ).toEqual(expect.arrayContaining(['1', '1.5']))
+    expect(
+      wrapper
+        .get<HTMLSelectElement>('select[aria-label="Left repeat folds every"]')
+        .findAll('option')
+        .map((option) => option.text()),
+    ).not.toContain('0.5')
   })
+
+  it.each([0, 1])(
+    'excludes beat 0 from Builder fold Start options at editable frame %s',
+    (firstEditableFrameIndex) => {
+      const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
+      if (!animation) throw new Error('Expected a supported VTG animation')
+      const wrapper = mount(PatternPropertyControls, {
+        props: { context: 'builder', animation, firstEditableFrameIndex },
+      })
+
+      expect(
+        wrapper
+          .get<HTMLSelectElement>('select[aria-label="Left folds start"]')
+          .findAll('option')
+          .map((option) => option.text()),
+      ).not.toContain('0')
+      expect(
+        wrapper.get<HTMLSelectElement>('select[aria-label="Left folds start"]').element.value,
+      ).toBe('2')
+    },
+  )
 
   it('offers Mirror only in Simple and hides both side labels and the Right controls', async () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })

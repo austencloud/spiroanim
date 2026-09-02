@@ -1,19 +1,28 @@
 import type { VtgTwistMode, VtgTwistValues } from '@/features/concepts/stores/useConceptsStore'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
+export interface ApplyVtgTwistSettingsOptions {
+  firstEditableFrameIndex?: number
+}
+
 /** Applies generator Twist settings without mutating the generated VTG animation. */
 export const applyVtgTwistSettings = (
   animation: RootDataFinal,
   mode: VtgTwistMode,
   values: VtgTwistValues,
+  options: ApplyVtgTwistSettingsOptions = {},
 ): RootDataFinal => ({
   ...animation,
   props: animation.props.map((prop, propIndex) => {
     let beat = 0
     return {
       ...prop,
-      anim: prop.anim.map((frame) => {
+      anim: prop.anim.map((frame, frameIndex) => {
         const nextFrame = { ...frame }
+        if (frameIndex < (options.firstEditableFrameIndex ?? 0)) {
+          beat += frame.beats ?? 0.5
+          return nextFrame
+        }
         delete nextFrame.twist
         const value = values[propIndex]?.[String(beat)]
         if ((mode === 'advanced' || beat === 0.5) && value !== undefined) nextFrame.twist = value

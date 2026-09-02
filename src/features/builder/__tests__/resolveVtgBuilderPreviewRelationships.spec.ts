@@ -6,8 +6,10 @@ import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
+import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
+import { matchVtgPatternRequest } from '@/workers/pattern-matching/handlePatternMatchingRequest'
 
 describe('resolveVtgBuilderPreviewRelationships', () => {
   const matchVtg = async ({
@@ -22,13 +24,15 @@ describe('resolveVtgBuilderPreviewRelationships', () => {
   }
 
   const resolveQueryRelationships = async (query: string) => {
-    const version = await loadSpiroAnimQSVersion(6)
+    const params = new URLSearchParams(query)
+    const queryVersion = Number(params.get('v') ?? 6)
+    const version = await loadSpiroAnimQSVersion(queryVersion)
     const codec = await useSpiroAnimQS(
       version.VDEF,
       useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      6,
+      queryVersion,
     )
-    const animation = codec.decodeQS(Object.fromEntries(new URLSearchParams(query)))
+    const animation = codec.decodeQS(Object.fromEntries(params))
     const previews = createVtgTransitionPreviewAnimations(animation)
     if (!previews) throw new Error('Expected Builder portions from the compound ratio')
 
@@ -82,5 +86,38 @@ describe('resolveVtgBuilderPreviewRelationships', () => {
 
     expect(relationships).toBeDefined()
     expect(relationships).toHaveLength(5)
+  })
+
+  it('uses the active catalog family while preserving actual prop rotation relationships', async () => {
+    const query =
+      'r=Ew48Yk11Y&p0=Q__.mD_.5L_Qpg.......&x0=_r_&m0=_1_mxqv__&p1=N__.___R3s_U0.5E0____WQ.......&x1=_r_&c=_g_bhq&v=11'
+    const params = new URLSearchParams(query)
+    const version = await loadSpiroAnimQSVersion(11)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      11,
+    )
+    const animation = codec.decodeQS(Object.fromEntries(params))
+    const prepared = prepareVtg45TransitionPattern(animation)
+    const previews = createVtgTransitionPreviewAnimations(prepared.pattern)
+    if (!previews) throw new Error('Expected Builder previews for the supplied URL')
+    expect(previews.map((preview) => describePatternRelationships(preview).label)).toEqual([
+      'SO / QS',
+    ])
+
+    const vtgRelationships = await resolveVtgBuilderPreviewRelationships(
+      previews,
+      matchVtgPatternRequest,
+      'vtg',
+    )
+    const qtrRelationships = await resolveVtgBuilderPreviewRelationships(
+      previews,
+      matchVtgPatternRequest,
+      'qtr',
+    )
+
+    expect(vtgRelationships?.map(({ label }) => label)).toEqual(['SO / QS'])
+    expect(qtrRelationships?.map(({ label }) => label)).toEqual(['QO / QS'])
   })
 })

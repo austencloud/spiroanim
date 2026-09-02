@@ -20,23 +20,30 @@ const matchedQtr = (
 export const matchVtgPatternRequest = async ({
   animation,
   preferences,
+  source,
   rotationFilter,
   lastSelection,
 }: VtgPatternMatchRequest): Promise<VtgPatternMatchResult> => {
-  if (!rotationFilter && lastSelection && 'quarters' in lastSelection) {
+  if (source !== 'vtg' && !rotationFilter && lastSelection && 'quarters' in lastSelection) {
     const { exactlyMatchesQtrSelection } = await import('@/features/vtg/qtr/matchQtrAnimation')
     if (exactlyMatchesQtrSelection(animation, lastSelection)) return { status: 'unchanged' }
   }
 
   const { exactlyMatchesVtgSelection, findVtgPatternMatchResolution } =
     await import('@/features/vtg/matchVtgAnimation')
-  if (!rotationFilter && lastSelection && !('quarters' in lastSelection)) {
+  if (source !== 'qtr' && !rotationFilter && lastSelection && !('quarters' in lastSelection)) {
     if (exactlyMatchesVtgSelection(animation, lastSelection)) return { status: 'unchanged' }
   }
 
   const { findQtrPatternMatchResolution } = await import('@/features/vtg/qtr/matchQtrAnimation')
-  const qtrResolution = findQtrPatternMatchResolution(animation, preferences, rotationFilter)
-  const vtgResolution = findVtgPatternMatchResolution(animation, preferences, rotationFilter)
+  const qtrResolution =
+    source === 'vtg'
+      ? undefined
+      : findQtrPatternMatchResolution(animation, preferences, rotationFilter)
+  const vtgResolution =
+    source === 'qtr'
+      ? undefined
+      : findVtgPatternMatchResolution(animation, preferences, rotationFilter)
   const qtrMatch = qtrResolution?.match
   const vtgMatch = vtgResolution?.match
   const qtrExactlyRegenerates = qtrResolution?.exact ?? false

@@ -54,6 +54,14 @@
           >
             Pattern not supported.
           </p>
+          <p
+            v-else-if="!isEmptyPattern && previewAnimations === undefined"
+            class="builder-pane__support-error"
+            data-role="vtg-transition-preview-error"
+            role="alert"
+          >
+            Pattern is supported, but Builder could not reconstruct its portions.
+          </p>
           <VtgTransitionPreviews
             v-if="resizedPreviewAnimations && previewRelationships"
             :key="resizedPreviewAnimations.length"
@@ -75,7 +83,49 @@
             @beat-change="updatePreviewBeatCount"
             @slider-start="beginSliderHistory"
             @slider-end="endSliderHistory"
-          />
+          >
+            <template #selected-properties>
+              <PatternPropertyControls
+                v-if="selectedControlAnimation"
+                context="builder"
+                :animation="selectedControlAnimation"
+                :show-offset="selectedPreviewIndex === 0"
+                :show-turns="false"
+                :offset-values="builderOffsetValues"
+                :twist-mode="builderTwistMode"
+                :twist-values="builderTwistValues"
+                :twist-display-values="builderTwistDisplayValues"
+                :fold-values="builderFoldValues"
+                :fold-values-materialized="true"
+                :fold-mode="builderFoldMode"
+                :fold-beat="builderFoldBeat"
+                :fold-repeat="builderFoldRepeat"
+                :fold-every="builderFoldEvery"
+                :fold-alternate="builderFoldAlternate"
+                :fold-span="builderFoldSpan"
+                :fold-mirror="builderFoldMirror"
+                :initial-yaw-values="builderInitialYawValues"
+                :first-editable-frame-index="selectedPreviewIndex === 0 ? 0 : 1"
+                :active-property="builderActiveProperty"
+                :sliders="sliders"
+                allow-twist-zero
+                @offset-update="updateBuilderOffset"
+                @twist-update="updateBuilderTwist"
+                @fold-update="updateBuilderFold"
+                @update:twist-mode="updateBuilderTwistMode"
+                @update:fold-mode="updateBuilderFoldMode"
+                @update:fold-beat="updateBuilderFoldBeat"
+                @update:fold-repeat="updateBuilderFoldRepeat"
+                @update:fold-every="updateBuilderFoldEvery"
+                @update:fold-alternate="updateBuilderFoldAlternate"
+                @update:fold-span="updateBuilderFoldSpan"
+                @update:fold-mirror="updateBuilderFoldMirror"
+                @update:active-property="builderActiveProperty = $event"
+                @slider-start="beginSliderHistory"
+                @slider-end="endSliderHistory"
+              />
+            </template>
+          </VtgTransitionPreviews>
 
           <div class="builder-pane__qslots">
             <QuickSlotsAction
@@ -185,6 +235,7 @@ import AppTooltip from '@/components/AppTooltip.vue'
 import PaneSplitter from '@/components/layout/PaneSplitter.vue'
 import PaneSwapButton from '@/components/layout/PaneSwapButton.vue'
 import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
+import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
 import QuickSlotsAction from '@/features/concepts/components/QuickSlotsAction.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import {
@@ -201,7 +252,7 @@ import {
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
-import { resolveVtgBuilderPreviewRelationships } from '@/features/builder/resolveVtgBuilderPreviewRelationships'
+import { resolveVtgBuilderPreviewDetails } from '@/features/builder/resolveVtgBuilderPreviewRelationships'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useQSMainStore } from '@/stores/useQSMainStore'
@@ -213,6 +264,7 @@ import {
   replaceFirstVtgBuilderPattern,
   swapVtgBuilderPatternProps,
 } from '@/features/builder/appendVtgBuilderPattern'
+import { resolveVtgBuilderSelectionAfterDelete } from '@/features/builder/resolveVtgBuilderSelectionAfterDelete'
 import { isVtgPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { rootCompile } from '@/math/animation/AnimFunc'
@@ -223,6 +275,7 @@ import { useSplitterStore } from '@/stores/useSplitterStore'
 import { usePatternMatchingClient } from '@/features/concepts/composables/usePatternMatchingWorker'
 import { createBuilderQuickSlotCandidates } from '@/features/builder/createBuilderQuickSlotCandidates'
 import { preserveVtgBuilderScale } from '@/features/builder/preserveVtgBuilderScale'
+import { useVtgBuilderPortionProperties } from '@/features/builder/composables/useVtgBuilderPortionProperties'
 
 const props = withDefaults(
   defineProps<{
@@ -314,6 +367,8 @@ const {
   leftPropColor,
   rightPropColor,
   prop,
+  sliders,
+  qtrEnabled,
 } = storeToRefs(conceptsStore)
 const hasPopulatedQuickSlots = computed(
   () =>
@@ -342,25 +397,28 @@ watch(
 )
 const resizedPreviewAnimations = previewAnimations
 const patternMatcher = usePatternMatchingClient(computed(() => true))
-const previewRelationships =
-  shallowRef<Awaited<ReturnType<typeof resolveVtgBuilderPreviewRelationships>>>()
+const previewDetails = shallowRef<Awaited<ReturnType<typeof resolveVtgBuilderPreviewDetails>>>()
+const previewRelationships = computed(() =>
+  previewDetails.value?.map(({ relationships }) => relationships),
+)
 let previewRelationshipRevision = 0
-watchImmediate(resizedPreviewAnimations, async (previews) => {
+watchImmediate([resizedPreviewAnimations, qtrEnabled], async ([previews, isQtr]) => {
   const revision = ++previewRelationshipRevision
   if (!previews) {
-    previewRelationships.value = undefined
+    previewDetails.value = undefined
     return
   }
 
-  const relationships = await resolveVtgBuilderPreviewRelationships(
+  const details = await resolveVtgBuilderPreviewDetails(
     previews,
     patternMatcher.matchVtg,
+    isQtr ? 'qtr' : 'vtg',
   )
   // Keep the mounted controls and their active pointer capture while a beat resize is rematched.
   // Replacing the relationships only after they resolve prevents range input drags from being
   // interrupted by an avoidable thumbnail-grid unmount.
-  if (revision === previewRelationshipRevision && relationships) {
-    previewRelationships.value = relationships
+  if (revision === previewRelationshipRevision && details) {
+    previewDetails.value = details
   }
 })
 const quickSlotCreationError = ref<string>()
@@ -465,6 +523,41 @@ const applyBuilderPatternUpdate = (
   if (current !== undefined) CURRENT.value = current
 }
 
+const {
+  selectedControlAnimation,
+  activeProperty: builderActiveProperty,
+  offsetValues: builderOffsetValues,
+  twistMode: builderTwistMode,
+  twistValues: builderTwistValues,
+  twistDisplayValues: builderTwistDisplayValues,
+  foldValues: builderFoldValues,
+  foldMode: builderFoldMode,
+  foldBeat: builderFoldBeat,
+  foldRepeat: builderFoldRepeat,
+  foldEvery: builderFoldEvery,
+  foldAlternate: builderFoldAlternate,
+  foldSpan: builderFoldSpan,
+  foldMirror: builderFoldMirror,
+  initialYawValues: builderInitialYawValues,
+  updateOffset: updateBuilderOffset,
+  updateTwist: updateBuilderTwist,
+  updateTwistMode: updateBuilderTwistMode,
+  updateFold: updateBuilderFold,
+  updateFoldMode: updateBuilderFoldMode,
+  updateFoldBeat: updateBuilderFoldBeat,
+  updateFoldRepeat: updateBuilderFoldRepeat,
+  updateFoldEvery: updateBuilderFoldEvery,
+  updateFoldAlternate: updateBuilderFoldAlternate,
+  updateFoldSpan: updateBuilderFoldSpan,
+  updateFoldMirror: updateBuilderFoldMirror,
+} = useVtgBuilderPortionProperties({
+  pattern: computed(() => preparedPattern.value.pattern),
+  previews: resizedPreviewAnimations,
+  previewDetails,
+  selectedIndex: selectedPreviewIndex,
+  commit: (updated) => applyBuilderPatternUpdate(updated, undefined, true),
+})
+
 watch(historyApplied, (applied) => {
   if (applied === undefined) return
   if (PLAYBACK_PREVIEW_ACTIVE.value) playerStore.endPlaybackPreview()
@@ -496,36 +589,33 @@ const acceptPatternDrop = (drop: BuilderPatternDrop) => {
 }
 const updatePreviewBeatCount = (index: number, beatCount: number) => {
   const updated = resizeVtgTransitionPatternPreview(preparedPattern.value.pattern, index, beatCount)
-  if (updated !== undefined) applyBuilderPatternUpdate(updated)
+  if (updated !== undefined) applyBuilderPatternUpdate(updated, undefined, true)
 }
 const deletePreview = (index: number) => {
   const generated = removeVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
   if (generated === undefined) return
   const updated = index === 0 ? preserveVtgBuilderScale(ROOT.value, generated) : generated
+  const selectedIndex = selectedPreviewIndex.value
+  const nextSelectedIndex = resolveVtgBuilderSelectionAfterDelete(selectedIndex, index)
 
-  const nextPreviewStartMS =
-    selectedPreviewIndex.value === index ? getPreviewStartMS(updated, index) : undefined
-  applyBuilderPatternUpdate(updated, nextPreviewStartMS)
+  const nextPreviewStartMS = selectedIndex === index ? getPreviewStartMS(updated, index) : undefined
+  applyBuilderPatternUpdate(updated, nextPreviewStartMS, nextSelectedIndex !== undefined)
+  if (nextSelectedIndex !== undefined && nextSelectedIndex !== selectedIndex) {
+    selectedPreviewIndex.value = nextSelectedIndex
+    emit('previewSelectionChange', nextSelectedIndex)
+  }
 }
 const reversePreview = (index: number) => {
   const updated = reverseVtgTransitionPatternPreview(preparedPattern.value.pattern, index)
   if (updated === undefined) return
 
-  applyBuilderPatternUpdate(
-    updated,
-    undefined,
-    PREVIEW_PLAYING.value && selectedPreviewIndex.value === index,
-  )
+  applyBuilderPatternUpdate(updated, undefined, true)
 }
 const swapPreviewProps = (index: number) => {
   const updated = swapVtgBuilderPatternProps(preparedPattern.value.pattern, index)
   if (updated === undefined) return
 
-  applyBuilderPatternUpdate(
-    updated,
-    undefined,
-    PREVIEW_PLAYING.value && selectedPreviewIndex.value === index,
-  )
+  applyBuilderPatternUpdate(updated, undefined, true)
 }
 const previewRefreshKey = computed(() =>
   [

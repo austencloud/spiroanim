@@ -16,7 +16,7 @@ import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
-import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import * as transitionAnimations from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 
 const AnimPlayerStub = {
   props: ['controlsStartClearance', 'controlsEndClearance', 'selectionEnabled', 'conceptsVisible'],
@@ -209,6 +209,17 @@ describe('SpiroAnim view', () => {
     expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
       'vtg-transition-previews__item--selected',
     )
+    wrapper.get('[data-role="builder-properties"]')
+    wrapper.get('[data-role="builder-property-offset-toggle"]')
+    await wrapper.get('[data-role="builder-property-twist-toggle"]').trigger('click')
+    const firstPortionTwist = wrapper.get<HTMLInputElement>('[data-role="builder-twist-0-1"]')
+    firstPortionTwist.element.value = '10'
+    await firstPortionTwist.trigger('input')
+    await flushPromises()
+    expect(playerRoot.value.props[0]?.anim[1]?.twist).toBe(90)
+    expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
+      'vtg-transition-previews__item--selected',
+    )
     const replacementDragData = new Map<string, string>()
     const replacementDataTransfer = {
       effectAllowed: 'none',
@@ -226,7 +237,9 @@ describe('SpiroAnim view', () => {
     })
     await flushPromises()
     expect(playerRoot.value).not.toBe(rootBeforeReplacement)
-    const replacedFirstPreview = createVtgTransitionPreviewAnimations(playerRoot.value)?.[0]
+    const replacedFirstPreview = transitionAnimations.createVtgTransitionPreviewAnimations(
+      playerRoot.value,
+    )?.[0]
     expect(replacedFirstPreview).toBeDefined()
     expect(findVtgPatternMatch(replacedFirstPreview!)).toMatchObject({ reference: '3-4' })
     expect(router.currentRoute.value.fullPath).not.toBe(routeBeforeReplacement)
@@ -238,10 +251,14 @@ describe('SpiroAnim view', () => {
     await wrapper.findAll('[data-role="vtg-transition-preview-reverse"]')[0]!.trigger('click')
     await flushPromises()
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
-    expect(playerStore.raw().CURRENT.value).toBe(0)
+    expect(playerStore.raw().CURRENT.value).toBe(500)
     expect(wrapper.find('[data-role="builder-preview-countdown"]').exists()).toBe(false)
-    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(8)
-
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
+    expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
+      'vtg-transition-previews__item--selected',
+    )
+    await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
+    await flushPromises()
     playerStore.setPlaybackOverride(playerRoot.value)
     playerStore.raw().CURRENT.value = 0
     await nextTick()
@@ -276,6 +293,11 @@ describe('SpiroAnim view', () => {
     await wrapper.get('button[aria-label="Preview pattern 2"]').trigger('click')
     await flushPromises()
     expect(playerStore.raw().CURRENT.value).toBe(0)
+    expect(wrapper.find('[data-role="builder-property-offset-toggle"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="builder-twist-0-0"]').exists()).toBe(false)
+    const laterPortionTwistControls = wrapper.findAll('[data-role^="builder-twist-0-"]')
+    expect(laterPortionTwistControls.length).toBeGreaterThan(0)
+    expect(laterPortionTwistControls.at(-1)?.attributes('data-role')).not.toBe('builder-twist-0-0')
     await wrapper.get('button[aria-label="Preview pattern 2"]').trigger('click')
     await flushPromises()
     expect(playerStore.raw().CURRENT.value).toBe(insertedStartMS)
@@ -350,6 +372,9 @@ describe('SpiroAnim view', () => {
     expect(playerStore.raw().CURRENT.value).toBe(0)
     expect(playerStore.PLAYING).toBe(false)
     expect(playerRoot.value.props[0]!.anim).toHaveLength(frameCountBeforeResize + 1)
+    expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
+      'vtg-transition-previews__item--selected',
+    )
     expect(Number(durationSlider.element.max)).toBe(Number(durationSlider.element.value) + 2)
     await durationSlider.trigger('pointerdown')
     await durationSlider.setValue(durationSlider.element.max)
@@ -361,6 +386,7 @@ describe('SpiroAnim view', () => {
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     await wrapper.get('button[aria-label="Delete pattern 1"]').trigger('click')
     await flushPromises()
+    expect(wrapper.find('.vtg-transition-previews__item--selected').exists()).toBe(false)
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     expect(playerStore.raw().CURRENT.value).toBe(0)
     expect(playerStore.PLAYING).toBe(false)
@@ -585,6 +611,57 @@ describe('SpiroAnim view', () => {
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)
   }, 15_000)
+
+  it('reconstructs Builder portions after Rotate and retains a distinct extraction error', async () => {
+    const pinia = createPinia().use(piniaPluginPersistedstate)
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    })
+    await router.push(
+      '/play-vtg?r=Ew68Yk11Y&p0=Q__.blE.5JEQpg........5GQQpg.......&x0=_r_&r0=............_ZML_&m0=_1_mxqv__&p1=N__.bn_.5L_Qpg........5GQQpg.......&x1=_r_&r1=............_Z3L_&c=_g_bhq&v=11',
+    )
+    await router.isReady()
+    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+    const wrapper = mount(SpiroAnim, {
+      attachTo: document.body,
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Player: AnimPlayerStub,
+          AnimTimeline: AnimTimelineStub,
+        },
+      },
+    })
+    await flushPromises()
+
+    const paneStore = useMainPaneStore()
+    paneStore.setViewInPane('concepts', 'right')
+    expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
+    await flushPromises()
+
+    expect(wrapper.find('[data-role="vtg-transition-preview-error"]').exists()).toBe(false)
+    expect(wrapper.findAll('button[aria-label^="Preview pattern"]')).toHaveLength(2)
+
+    const previewSpy = vi
+      .spyOn(transitionAnimations, 'createVtgTransitionPreviewAnimations')
+      .mockReturnValue(undefined)
+    const playerRoot = usePlayerStore('main').raw().ROOT
+    playerRoot.value = { ...playerRoot.value }
+    await nextTick()
+
+    const error = wrapper.get('[data-role="vtg-transition-preview-error"]')
+    expect(error.attributes('role')).toBe('alert')
+    expect(error.text()).toBe(
+      'Pattern is supported, but Builder could not reconstruct its portions.',
+    )
+    expect(wrapper.find('[data-role="vtg-transition-support-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-transition-previews"]').exists()).toBe(false)
+
+    previewSpy.mockRestore()
+    wrapper.unmount()
+  })
 
   it('does not save a Quick Slot when animation data is loaded from a URL', async () => {
     const pinia = createPinia().use(piniaPluginPersistedstate)

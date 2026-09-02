@@ -38,6 +38,19 @@ describe('applyVtgTwistSettings', () => {
     ])
   })
 
+  it('preserves materialized context before the first editable frame', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    animation.props[0]!.anim[0]!.twist = 270
+
+    const applied = applyVtgTwistSettings(animation, 'advanced', [{ 0.5: 90 }, {}], {
+      firstEditableFrameIndex: 1,
+    })
+
+    expect(applied.props[0]?.anim[0]?.twist).toBe(270)
+    expect(applied.props[0]?.anim[1]?.twist).toBe(90)
+  })
+
   it('derives values and selects Advanced when Twist exists outside beat 0.5', () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '2:3' })
     if (!animation) throw new Error('Expected a supported VTG animation')

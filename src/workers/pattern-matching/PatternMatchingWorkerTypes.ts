@@ -19,6 +19,7 @@ export interface VtgPatternMatchRequest {
   animation: RootDataFinal
   preferences: VtgPatternMatchPreferences &
     Pick<QtrPatternMatchPreferences, 'quarters' | 'orientation'>
+  source?: 'vtg' | 'qtr'
   rotationFilter?: VtgPatternRotationFilter
   lastSelection?: VtgPatternSelection | QtrPatternSelection
 }

@@ -457,7 +457,9 @@ const solveWrappedPrimaryRotation = (
 
 // Rebuilds an interval crossing a local-roll seam from its angular velocity. Only the finite
 // equivalent representations of the existing Yaw/Rotate channel are considered; each resulting
-// primary generator must also reproduce the complete source quaternion curve.
+// primary generator must also reproduce the complete source quaternion curve. A zero-Rotate
+// source can still require this reconstruction because the carried local roll changes the basis
+// in which its primary rotation must be expressed.
 const solveWrappedLocalRollRotation = (
   state: ShiftedOrientationState,
   rawStart: Vector3,
@@ -468,8 +470,6 @@ const solveWrappedLocalRollRotation = (
   yaw: number,
   rotate: number,
 ): InitialOrientationReconstruction | undefined => {
-  if (rotate === 0) return undefined
-
   const sourcePrimaryStart = new Quaternion().fromArray(sourceStart.primaryOrient)
   const sourceSecondaryStart = new Quaternion().fromArray(sourceStart.secondaryOrient)
   const sourceRotationRadians =
@@ -604,6 +604,7 @@ export const shiftAnimationFrameRange = (
   const preserveFinalOutgoing = options.preserveFinalOutgoing ?? false
   const originalStart = compiled[startIndex]!
   const originalEnd = compiled[endIndex]!
+  const precedingTwistRoll = startIndex > 0 ? compiled[startIndex - 1]!.twistRoll : 0
   const hasLocalRollBoundaryMismatch =
     vectorsAlign(originalStart.pos, originalEnd.pos) &&
     vectorsAlign(originalStart.rot, originalEnd.rot) &&
@@ -831,7 +832,11 @@ export const shiftAnimationFrameRange = (
         MathUtils.radToDeg(rotationRadians) -
           (target.type === TTYPE.SPHE ? MathUtils.radToDeg(arcRadians) : 0),
       ),
-      twist: preserveOutgoing ? originalEnd.twist : target.twist,
+      twist: preserveOutgoing
+        ? originalEnd.twist
+        : rebuildStart
+          ? snapNumber(target.twistRoll - precedingTwistRoll)
+          : target.twist,
       yaw,
       rotate,
       beats: preserveOutgoing

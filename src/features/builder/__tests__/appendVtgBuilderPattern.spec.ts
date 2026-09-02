@@ -23,7 +23,7 @@ import {
 } from '@/features/builder/describeVtgBuilderMotion'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
-import type { RootDataFinal } from '@/types/AnimTypes'
+import type { AnimData, RootDataFinal } from '@/types/AnimTypes'
 import type { VtgCellReference } from '@/features/vtg/types'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 
@@ -32,6 +32,49 @@ const expectSameMotionAndDuration = (actual: RootDataFinal, expected: RootDataFi
     areVtgBuilderMotionsEqual(getVtgBuilderMotion(actual), getVtgBuilderMotion(expected)),
   ).toBe(true)
   expect(getVtgTransitionPreviewBeatCount(actual)).toBe(getVtgTransitionPreviewBeatCount(expected))
+}
+
+const expectOnlyNecessaryFrameValues = (animation: RootDataFinal, frameIndex: number) => {
+  const expected = rootCompile(animation).props
+  const testedKeys = [
+    'twist',
+    'yaw',
+    'rotate',
+    'beats',
+    'scale',
+    'depth',
+    'type',
+    'adjust',
+    'arc',
+    'plane',
+    'axis',
+  ] as const satisfies readonly (keyof AnimData)[]
+
+  animation.props.forEach((prop, propIndex) => {
+    const frame = prop.anim[frameIndex]
+    if (!frame) throw new Error(`Expected frame ${frameIndex} for prop ${propIndex}`)
+
+    for (const key of testedKeys) {
+      if (frame[key] === undefined) continue
+      const withoutValue: RootDataFinal = {
+        ...animation,
+        props: animation.props.map((candidateProp, candidatePropIndex) => ({
+          ...candidateProp,
+          anim: candidateProp.anim.map((candidateFrame, candidateFrameIndex) => {
+            const nextFrame = { ...candidateFrame }
+            if (candidatePropIndex === propIndex && candidateFrameIndex === frameIndex) {
+              delete nextFrame[key]
+            }
+            return nextFrame
+          }),
+        })),
+      }
+      expect(
+        rootCompile(withoutValue).props,
+        `prop ${propIndex} frame ${frameIndex} ${key}`,
+      ).not.toEqual(expected)
+    }
+  })
 }
 
 describe('appendVtgBuilderPattern', () => {
@@ -63,6 +106,16 @@ describe('appendVtgBuilderPattern', () => {
       expect(updatedPreviews).toHaveLength(3)
       expect(twicePreviews).toHaveLength(3)
       expect(JSON.stringify(source)).toBe(serializedSource)
+
+      if (targetIndex < 2) {
+        const updatedSuccessorFrame = findExplicitPlaneOrTurnsFrameIndices(updated, 2)[targetIndex]
+        const twiceSuccessorFrame = findExplicitPlaneOrTurnsFrameIndices(twice, 2)[targetIndex]
+        if (updatedSuccessorFrame === undefined || twiceSuccessorFrame === undefined) {
+          throw new Error('Expected an explicit successor relationship frame')
+        }
+        expectOnlyNecessaryFrameValues(updated, updatedSuccessorFrame)
+        expectOnlyNecessaryFrameValues(twice, twiceSuccessorFrame)
+      }
 
       for (const previewIndex of [0, 1, 2]) {
         const beforeMotion = getVtgBuilderMotion(beforePreviews![previewIndex]!)

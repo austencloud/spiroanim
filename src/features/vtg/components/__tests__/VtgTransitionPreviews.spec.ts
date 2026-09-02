@@ -91,6 +91,51 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.getComponent(AppTooltip).props('text')).toBe(relationship.description)
   })
 
+  it('places selected properties after the complete selected thumbnail row', () => {
+    const animations = Array.from({ length: 6 }, () => animation)
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations,
+        relationships: animations.map(() => relationship),
+        refreshKey: 'properties-row',
+        initialBeatCounts: animations.map(() => 1),
+        beatCounts: animations.map(() => 1),
+        scale: 1,
+        columns: 4,
+        selectedIndex: 1,
+      },
+      slots: { 'selected-properties': '<div data-test="selected-properties">Properties</div>' },
+    })
+
+    const gridChildren = wrapper.get('[data-role="vtg-transition-previews"]').element.children
+    const properties = wrapper.get('[data-role="vtg-transition-preview-properties"]').element
+    expect(properties.previousElementSibling?.getAttribute('data-preview-index')).toBe('3')
+    expect([...gridChildren].indexOf(properties)).toBe(4)
+    expect(wrapper.get('[data-test="selected-properties"]').text()).toBe('Properties')
+  })
+
+  it('places selected properties after a placeholder that completes the final row', () => {
+    const animations = Array.from({ length: 5 }, () => animation)
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations,
+        relationships: animations.map(() => relationship),
+        refreshKey: 'properties-placeholder-row',
+        initialBeatCounts: animations.map(() => 1),
+        beatCounts: animations.map(() => 1),
+        scale: 1,
+        columns: 4,
+        selectedIndex: 4,
+      },
+      slots: { 'selected-properties': '<div>Properties</div>' },
+    })
+
+    const properties = wrapper.get('[data-role="vtg-transition-preview-properties"]').element
+    expect(properties.previousElementSibling?.getAttribute('data-role')).toBe(
+      'vtg-transition-preview-drop-target',
+    )
+  })
+
   it('shows Sun and Moon icons for Quarter relationships in Elemental Builder thumbnails', () => {
     useConceptsStore().elementalLayout = true
     const quarterRelationship = {

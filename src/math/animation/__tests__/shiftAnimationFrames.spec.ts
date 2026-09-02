@@ -137,6 +137,34 @@ describe('shared shiftAnimationFrames', () => {
     })
   })
 
+  it('reconstructs accumulated Twist as a carried roll gauge', () => {
+    const frames: AnimData[] = [
+      { arc: 0, twist: 30 },
+      { arc: 90 },
+      { arc: 90 },
+      { arc: 90 },
+      { arc: 90 },
+    ]
+    const compiled = compileFrames(frames)
+    const shifted = shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1, {
+      allowEndpointMismatch: true,
+      shiftCount: 2,
+    })
+
+    expect(shifted).toBeDefined()
+    expect(shifted?.[0]?.twist).toBe(compiled[2]!.twistRoll)
+    const result = compileFrames(shifted!)
+    const rollGauge = compiled.at(-1)!.twistRoll - compiled[0]!.twistRoll
+    const targetIndices = [2, 3, 4, 1, 2]
+    expect(result.map(({ twistRoll }) => twistRoll)).toEqual(
+      targetIndices.map((sourceIndex, resultIndex) =>
+        resultIndex > 2
+          ? compiled[sourceIndex]!.twistRoll + rollGauge
+          : compiled[sourceIndex]!.twistRoll,
+      ),
+    )
+  })
+
   it('produces the same compiled result for a direct offset as repeated single shifts', () => {
     const frames: AnimData[] = [
       { arc: 0, beats: 1, scale: 8, depth: 1 },
@@ -385,6 +413,64 @@ describe('shared shiftAnimationFrames', () => {
       )
     }
     expect(Math.abs(headPathVolume(roundTripResult))).toBeGreaterThan(1e-4)
+  })
+
+  it('reconstructs a zero-Rotate interval after a local-roll seam', () => {
+    const frames: AnimData[] = [
+      { plane: 180, arc: 90, scale: 7 },
+      { plane: 180, arc: 45, turns: -180 },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      { plane: 0, arc: 45, turns: -180 },
+      {},
+      {},
+      { rotate: 90 },
+      {},
+      {},
+      {},
+      {},
+    ]
+    const compiled = compileFrames(frames)
+    for (let shiftCount = 1; shiftCount < frames.length; shiftCount += 1) {
+      expect(
+        shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1, {
+          allowEndpointMismatch: true,
+          shiftCount,
+        }),
+      ).toBeDefined()
+    }
+    const shifted = shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1, {
+      allowEndpointMismatch: true,
+      shiftCount: 8,
+    })
+
+    expect(shifted).toBeDefined()
+    const result = compileFrames(shifted!)
+    const targetIndices = [8, 9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8]
+    const localRollGauge = new Quaternion()
+      .fromArray(compiled[0]!.orient)
+      .invert()
+      .multiply(new Quaternion().fromArray(compiled.at(-1)!.orient))
+
+    for (const [resultIndex, sourceIndex] of targetIndices.entries()) {
+      expectVectorClose(result[resultIndex]!.pos, compiled[sourceIndex]!.pos)
+      expectVectorClose(result[resultIndex]!.rot, compiled[sourceIndex]!.rot)
+      const expectedOrientation = new Quaternion().fromArray(compiled[sourceIndex]!.orient)
+      if (resultIndex > 8) expectedOrientation.multiply(localRollGauge)
+      expectQuaternionClose(result[resultIndex]!.orient, expectedOrientation.toArray())
+    }
+    expect(result[9]!.rotate).toBe(0)
+    for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
+      const expected = new Quaternion()
+        .fromArray(sampleOrientation(compiled, 1, progress))
+        .multiply(localRollGauge)
+      expectQuaternionClose(sampleOrientation(result, 9, progress), expected.toArray())
+    }
   })
 
   it('omits values that can use defaults or inherit from the preceding frame', () => {
