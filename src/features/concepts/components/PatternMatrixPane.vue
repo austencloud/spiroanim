@@ -425,6 +425,7 @@ import {
   describePatternSelectionRelationshipsAcrossBeats,
   inferPatternRelationshipOrientation,
   inferPatternRelationshipPropRotationOffsets,
+  markBeatVaryingTiming,
 } from '@/features/concepts/math/describePatternSelectionRelationships'
 import type { PatternRelationshipLabel } from '@/features/concepts/math/describePatternRelationships'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
@@ -952,7 +953,10 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
           : undefined
       const displayedRelationships =
         builderAnimation && (props.builderInsertionIndex ?? 0) > 0
-          ? describeVtgBuilderPreviewRelationship(builderAnimation)
+          ? markBeatVaryingTiming(
+              describeVtgBuilderPreviewRelationship(builderAnimation),
+              selection.speedRatio,
+            )
           : relationships
       if (!compactBuilder.value) return { ...address, ...displayedRelationships }
 

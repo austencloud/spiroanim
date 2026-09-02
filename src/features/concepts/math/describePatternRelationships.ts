@@ -6,12 +6,17 @@ import type { RootDataFinal } from '@/types/AnimTypes'
 export type RelationshipVector = readonly [number, number, number]
 
 export const indeterminateRelationshipCode = 'XX' as const
+export const indeterminateTimingCode = 'X' as const
 export const patternRelationshipErrorLabel = 'XX / XX' as const
-export type PatternRelationshipCode = VtgRelationshipCode | typeof indeterminateRelationshipCode
+export type PatternTimingCode = VtgTimingCode | typeof indeterminateTimingCode
+export type PatternRelationshipCode =
+  | VtgRelationshipCode
+  | `${typeof indeterminateTimingCode}${VtgDirectionCode}`
+  | typeof indeterminateRelationshipCode
 export type PatternRelationshipLabel = `${PatternRelationshipCode} / ${PatternRelationshipCode}`
 
 export interface PatternRelationship {
-  timing: VtgTimingCode
+  timing: PatternTimingCode
   direction: VtgDirectionCode
 }
 
@@ -193,7 +198,9 @@ const relationshipDescription = (
   relationship: PatternRelationship | undefined,
 ): string =>
   relationship
-    ? `${name}: ${describeRelationship(relationship.timing, relationship.direction)}`
+    ? relationship.timing === indeterminateTimingCode
+      ? `${name}: Indeterminate / ${directionDescriptions[relationship.direction]}`
+      : `${name}: ${describeRelationship(relationship.timing, relationship.direction)}`
     : `${name}: Indeterminate`
 
 export const createPatternRelationships = (
@@ -204,19 +211,23 @@ export const createPatternRelationships = (
   description: `${relationshipDescription('Hands', hands)}\n${relationshipDescription('Props', props)}`,
   ...(hands ? { hands } : undefined),
   ...(props ? { props } : undefined),
-  handsIndeterminate: hands === undefined,
-  propsIndeterminate: props === undefined,
+  handsIndeterminate: hands === undefined || hands.timing === indeterminateTimingCode,
+  propsIndeterminate: props === undefined || props.timing === indeterminateTimingCode,
 })
 
-const classifyRelationship = (
-  classify: () => PatternRelationship,
-): PatternRelationship | undefined => {
+const classifyRelationshipValue = <Value>(classify: () => Value): Value | undefined => {
   try {
     return classify()
   } catch {
     return undefined
   }
 }
+
+const createClassifiedRelationship = (
+  timing: VtgTimingCode | undefined,
+  direction: VtgDirectionCode | undefined,
+): PatternRelationship | undefined =>
+  direction ? { timing: timing ?? indeterminateTimingCode, direction } : undefined
 
 const describePatternRelationshipsUnsafe = (
   animation: RootDataFinal,
@@ -231,7 +242,7 @@ const describePatternRelationshipsUnsafe = (
     throw new Error('Pattern relationships require two props with at least two compiled frames')
   }
 
-  const hands = classifyRelationship(() => {
+  const handTiming = classifyRelationshipValue(() => {
     const startTiming = classifyDirectedTiming(
       firstStart.pos,
       firstEnd.posx,
@@ -244,13 +255,14 @@ const describePatternRelationshipsUnsafe = (
       secondEnd.pos,
       secondEnd.posx,
     )
-    return {
-      timing: checkpoint === 'source' ? startTiming : destinationTiming,
-      direction: directionCode(relationshipSign(firstEnd.posx, secondEnd.posx)),
-    }
+    return checkpoint === 'source' ? startTiming : destinationTiming
   })
+  const handDirection = classifyRelationshipValue(() =>
+    directionCode(relationshipSign(firstEnd.posx, secondEnd.posx)),
+  )
+  const hands = createClassifiedRelationship(handTiming, handDirection)
 
-  const props = classifyRelationship(() => {
+  const propTiming = classifyRelationshipValue(() => {
     // VTG relationship labels describe the props at their three-quarter phase checkpoint. Unequal
     // ratios change how many degrees each prop travels per beat, so their Cartesian endpoints can
     // coincide even when the paths represent a Split relationship. Advance each real starting
@@ -284,11 +296,16 @@ const describePatternRelationshipsUnsafe = (
             secondPropPhase,
             secondVelocityAxis,
           )
-    return {
-      timing,
-      direction: directionCode(relationshipSign(firstVelocityAxis, secondVelocityAxis)),
-    }
+    return timing
   })
+  const propDirection = classifyRelationshipValue(() => {
+    const firstRotationDirection = Math.sign(firstEnd.turns + firstEnd.arc)
+    const secondRotationDirection = Math.sign(secondEnd.turns + secondEnd.arc)
+    const firstVelocityAxis = scaledVector(firstEnd.rotx, firstRotationDirection || 1)
+    const secondVelocityAxis = scaledVector(secondEnd.rotx, secondRotationDirection || 1)
+    return directionCode(relationshipSign(firstVelocityAxis, secondVelocityAxis))
+  })
+  const props = createClassifiedRelationship(propTiming, propDirection)
 
   return createPatternRelationships(hands, props)
 }

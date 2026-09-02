@@ -106,8 +106,9 @@ describe('describePatternRelationships', () => {
     expect(
       describePatternRelationships(applyVtgPropRotationOffsets(animation, [45, 0])),
     ).toMatchObject({
-      label: 'TS / XX',
+      label: 'TS / XS',
       hands: { timing: 'T', direction: 'S' },
+      props: { timing: 'X', direction: 'S' },
       handsIndeterminate: false,
       propsIndeterminate: true,
     })
@@ -192,7 +193,7 @@ describe('describePatternRelationships', () => {
     ])
   })
 
-  it('derives hybrid display stability from the exact relative phase increment', () => {
+  it('preserves hybrid direction when timing varies by Beat', () => {
     expect(isPatternPropTimingBeatInvariant('1:1v1:3', 'T')).toBe(false)
     expect(isPatternPropTimingBeatInvariant('1:1v1:3', 'Q')).toBe(false)
     expect(isPatternPropTimingBeatInvariant('1:1v1:5', 'T')).toBe(false)
@@ -206,11 +207,28 @@ describe('describePatternRelationships', () => {
         beat: 1.5,
       }),
     ).toMatchObject({
-      label: 'TS / XX',
-      hands: { timing: 'T', direction: 'S' },
-      handsIndeterminate: false,
+      label: 'TS / XO',
+      description: 'Hands: Together / Same\nProps: Indeterminate / Opposite',
+      props: { timing: 'X', direction: 'O' },
       propsIndeterminate: true,
     })
+  })
+
+  it('preserves prop direction throughout the 2:1v1:2 hybrid grid', () => {
+    for (const row of ruleNumbers) {
+      for (const column of ruleNumbers) {
+        const reference = `${row}-${column}` as const
+        for (const beat of getVtgBeats('2:1v1:2')) {
+          const relationships = describePatternSelectionRelationshipsAcrossBeats({
+            reference,
+            speedRatio: '2:1v1:2',
+            beat,
+          })
+          expect(relationships.props?.direction, `${reference} Beat ${beat}`).toMatch(/^[SO]$/)
+          expect(relationships.label, `${reference} Beat ${beat}`).not.toContain('/ XX')
+        }
+      }
+    }
   })
 
   it('keeps the supplied URL phase alignment stable across every Beat', () => {

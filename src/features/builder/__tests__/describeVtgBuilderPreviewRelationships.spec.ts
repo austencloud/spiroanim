@@ -169,4 +169,14 @@ describe('describeVtgBuilderPreviewRelationships', () => {
       'SO / QS',
     ])
   })
+
+  it('preserves direction when an encoded Builder portion has beat-varying timing', async () => {
+    const previews = await decodePreviews(
+      'r=Ew08Yk11Y&p0=Q__.mD_.5L_Qpg.......&x0=_s_&m0=_1_mxqv__&p1=N__.mD_.5L_.......&x1=_s_&c=_i_bhq&v=11',
+    )
+
+    expect(describeVtgBuilderPreviewRelationships(previews).map(({ label }) => label)).toEqual([
+      'TS / XO',
+    ])
+  })
 })

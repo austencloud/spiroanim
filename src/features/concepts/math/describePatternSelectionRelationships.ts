@@ -9,6 +9,7 @@ import {
   createPatternRelationshipError,
   describePatternRelationships,
 } from '@/features/concepts/math/describePatternRelationships'
+import type { PatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 type MatrixPatternSelection = VtgPatternSelection | QtrPatternSelection
@@ -70,8 +71,9 @@ export const describePatternSelectionRelationships = (selection: MatrixPatternSe
  */
 export const isPatternPropTimingBeatInvariant = (
   speedRatio: VtgPatternSelection['speedRatio'],
-  timing: NonNullable<ReturnType<typeof describePatternRelationships>['props']>['timing'],
+  timing: NonNullable<PatternRelationships['props']>['timing'],
 ): boolean => {
+  if (timing === 'X') return false
   const [firstRatio, secondRatio] = getVtgPropSpeedRatios(speedRatio)
   const first = parseVtgIndividualSpeedRatio(firstRatio)
   const second = parseVtgIndividualSpeedRatio(secondRatio)
@@ -85,22 +87,22 @@ export const isPatternPropTimingBeatInvariant = (
 
 /**
  * Produces matrix/Elemental labels that remain truthful for the complete repeating Beat cycle.
- * The selected-Beat classifier remains separate so matching can still inspect the exact animation.
+ * A direction that remains stable is preserved when only timing varies with the starting Beat.
  */
+export const markBeatVaryingTiming = (
+  relationships: PatternRelationships,
+  speedRatio: VtgPatternSelection['speedRatio'],
+): PatternRelationships => {
+  const props = relationships.props
+  return props && !isPatternPropTimingBeatInvariant(speedRatio, props.timing)
+    ? createPatternRelationships(relationships.hands, { timing: 'X', direction: props.direction })
+    : relationships
+}
+
 export const describePatternSelectionRelationshipsAcrossBeats = (
   selection: MatrixPatternSelection,
-) => {
-  const current = describePatternSelectionRelationships(selection)
-  const hands = current.handsIndeterminate ? undefined : current.hands
-  const props =
-    current.props &&
-    !current.propsIndeterminate &&
-    isPatternPropTimingBeatInvariant(selection.speedRatio, current.props.timing)
-      ? current.props
-      : undefined
-
-  return createPatternRelationships(hands, props)
-}
+): PatternRelationships =>
+  markBeatVaryingTiming(describePatternSelectionRelationships(selection), selection.speedRatio)
 
 export const inferPatternRelationshipPropRotationOffsets = (
   animation: RootDataFinal,

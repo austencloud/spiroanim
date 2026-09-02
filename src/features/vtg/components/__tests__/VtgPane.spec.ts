@@ -2440,7 +2440,7 @@ describe('VtgPane', () => {
     })
   })
 
-  it('marks beat-varying hybrid timing indeterminate in text and Elemental layouts', async () => {
+  it('preserves direction while marking beat-varying hybrid timing indeterminate', async () => {
     const initialSelection = {
       reference: '1-1',
       speedRatio: '1:1v1:3',
@@ -2469,13 +2469,13 @@ describe('VtgPane', () => {
       expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
     })
     const target = () => wrapper.get('[data-cell-reference="1-1"]')
-    expect(target().text()).toContain('TS / XX')
+    expect(target().text()).toContain('TS / XO')
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').setValue('1.5')
-    expect(target().text()).toContain('TS / XX')
+    expect(target().text()).toContain('TS / XO')
 
     await target().trigger('click')
-    expect(target().text()).toContain('TS / XX')
+    expect(target().text()).toContain('TS / XO')
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]').setValue(true)
     expect(
@@ -2483,10 +2483,15 @@ describe('VtgPane', () => {
         .findAll('.elemental-relationship-icons__icon')
         .map((icon) => icon.attributes('data-element')),
     ).toEqual(['Earth', 'Indeterminate'])
-    expect(target().get('[data-element="Indeterminate"]').classes()).toContain(
-      'elemental-relationship-icons__icon--indeterminate',
-    )
     expect(target().attributes('aria-label')).toContain('Earth / Indeterminate')
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]').setValue(false)
+    await wrapper.setProps({
+      builderActive: true,
+      builderFullCatalog: true,
+      builderInsertionIndex: 1,
+    })
+    expect(target().text()).toContain('TS / XO')
   })
 
   it('ignores a stale match after a newer animation has been hydrated', async () => {
