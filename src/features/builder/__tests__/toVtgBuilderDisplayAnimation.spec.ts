@@ -1,48 +1,32 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  getVtgBuilderMaximumScale,
   toVtgBuilderDisplayAnimation,
   type VtgBuilderDisplaySettings,
 } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
-import {
-  getVtgDistanceForScale,
-  toVtgInternalScale,
-  vtgThickControl,
-} from '@/features/vtg/data/vtgPlayerSettings'
-import { rootCompile } from '@/math/animation/AnimFunc'
+import { getVtgDistanceForScale, vtgThickControl } from '@/features/vtg/data/vtgPlayerSettings'
 import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
 
 describe('toVtgBuilderDisplayAnimation', () => {
-  it('uses the literal Customize Scale instead of the ratio-adjusted VTG scale', () => {
-    const scale = 0.8
+  it('preserves authored Scale and frames the camera from the highest effective value', () => {
     const animation = createDefaultVtgAnimation({
       reference: '1-1',
       speedRatio: '1:5',
-      scale,
+      scale: 0.8,
     })
     if (!animation) throw new Error('Expected a supported VTG pattern')
+    animation.props[0]!.anim[3] = { ...animation.props[0]!.anim[3], scale: 13 }
+    animation.props[1]!.anim[5] = { ...animation.props[1]!.anim[5], scale: 11 }
+    const original = structuredClone(animation)
 
-    const display = toVtgBuilderDisplayAnimation(animation, scale)
-    expect(rootCompile(animation).props[0]!.anim[0]!.scale).not.toBe(toVtgInternalScale(scale))
-    expect(
-      display.props.every(
-        (prop, propIndex) =>
-          prop.anim[0]?.scale === toVtgInternalScale(scale) &&
-          prop.anim
-            .slice(1)
-            .every(
-              (frame, frameIndex) =>
-                frame.scale === animation.props[propIndex]?.anim[frameIndex + 1]?.scale,
-            ),
-      ),
-    ).toBe(true)
-    expect(
-      rootCompile(display).props.every((prop) =>
-        prop.anim.every((frame) => frame.scale === toVtgInternalScale(scale)),
-      ),
-    ).toBe(true)
-    expect(display.camera[0]?.orbit?.distance).toBe(getVtgDistanceForScale(scale))
+    const display = toVtgBuilderDisplayAnimation(animation)
+
+    expect(getVtgBuilderMaximumScale(animation)).toBe(13)
+    expect(display.props).toEqual(animation.props)
+    expect(display.camera[0]?.orbit?.distance).toBe(getVtgDistanceForScale(1.3))
+    expect(animation).toEqual(original)
   })
 
   it('preserves every non-Scale Customize setting for Builder visuals', () => {
@@ -72,7 +56,7 @@ describe('toVtgBuilderDisplayAnimation', () => {
           ),
       ),
     ).toBe(true)
-    const display = toVtgBuilderDisplayAnimation(customized, 1.2)
+    const display = toVtgBuilderDisplayAnimation(customized)
 
     expect(display.bpm).toBe(customized.bpm)
     expect(display.thick).toBe(9)
@@ -99,7 +83,6 @@ describe('toVtgBuilderDisplayAnimation', () => {
     const original = structuredClone(animation)
     const settings = {
       bpm: 91,
-      scale: 1.2,
       thick: 9,
       spacing: 7,
       paths: false,
@@ -153,8 +136,16 @@ describe('toVtgBuilderDisplayAnimation', () => {
     expect(player.props.map((prop) => prop.color)).toEqual(
       thumbnail.props.map((prop) => prop.color),
     )
-    expect(
-      player.props.every((prop) => prop.anim.slice(1).every((frame) => frame.scale === undefined)),
-    ).toBe(true)
+    expect(player.props.map((prop) => prop.anim)).toEqual(animation.props.map((prop) => prop.anim))
+  })
+
+  it('uses a supplied whole-pattern maximum to keep portion cameras consistent', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG pattern')
+
+    const display = toVtgBuilderDisplayAnimation(animation, undefined, { maximumScale: 14 })
+
+    expect(display.camera[0]?.orbit?.distance).toBe(getVtgDistanceForScale(1.4))
+    expect(display.props).toEqual(animation.props)
   })
 })

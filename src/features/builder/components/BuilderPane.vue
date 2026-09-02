@@ -71,7 +71,7 @@
             :initial-beat-counts="baselineBeatCounts"
             :beat-counts="currentBeatCounts"
             :relationships="previewRelationships"
-            :scale="scale"
+            :maximum-scale="builderMaximumScale"
             :display-settings="builderDisplaySettings"
             :selected-index="selectedPreviewIndex"
             :allow-first-drop="allowFirstDrop"
@@ -92,6 +92,9 @@
                 :show-offset="selectedPreviewIndex === 0"
                 :show-turns="false"
                 :offset-values="builderOffsetValues"
+                :scale-mode="builderScaleMode"
+                :scale-values="builderScaleValues"
+                :scale-display-values="builderScaleDisplayValues"
                 :twist-mode="builderTwistMode"
                 :twist-values="builderTwistValues"
                 :twist-display-values="builderTwistDisplayValues"
@@ -110,9 +113,11 @@
                 :sliders="sliders"
                 allow-twist-zero
                 @offset-update="updateBuilderOffset"
+                @scale-update="updateBuilderScale"
                 @twist-update="updateBuilderTwist"
                 @fold-update="updateBuilderFold"
                 @update:twist-mode="updateBuilderTwistMode"
+                @update:scale-mode="updateBuilderScaleMode"
                 @update:fold-mode="updateBuilderFoldMode"
                 @update:fold-beat="updateBuilderFoldBeat"
                 @update:fold-repeat="updateBuilderFoldRepeat"
@@ -269,7 +274,10 @@ import { resolveVtgBuilderSelectionAfterDelete } from '@/features/builder/resolv
 import { resolveVtgBuilderSelectionAfterInsert } from '@/features/builder/resolveVtgBuilderSelectionAfterInsert'
 import { isVtgBuilderDropAllowed } from '@/features/builder/isVtgBuilderDropAllowed'
 import { isQtrPatternSelection, isVtgPatternSelection } from '@/features/concepts/types'
-import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
+import {
+  getVtgBuilderMaximumScale,
+  toVtgBuilderDisplayAnimation,
+} from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import { PROPTIMES } from '@/math/animation/PlayerFunc'
@@ -279,6 +287,7 @@ import { usePatternMatchingClient } from '@/features/concepts/composables/usePat
 import { createBuilderQuickSlotCandidates } from '@/features/builder/createBuilderQuickSlotCandidates'
 import { preserveVtgBuilderScale } from '@/features/builder/preserveVtgBuilderScale'
 import { useVtgBuilderPortionProperties } from '@/features/builder/composables/useVtgBuilderPortionProperties'
+import { resolveVtgBuilderPatternMatchAnimation } from '@/features/builder/resolveVtgBuilderPatternMatchAnimation'
 
 const props = withDefaults(
   defineProps<{
@@ -292,6 +301,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
   previewSelectionChange: [index: number | undefined]
+  patternMatchAnimationChange: [animation: RootDataFinal | undefined]
 }>()
 
 const paneStore = useMainPaneStore()
@@ -359,7 +369,6 @@ const { decreaseColumns, increaseColumns } = builderSettingsStore
 const conceptsStore = useConceptsStore()
 const {
   bpm,
-  scale,
   thick,
   spacing,
   paths,
@@ -455,7 +464,6 @@ const createBuilderQSlots = async () => {
 }
 const builderDisplaySettings = computed(() => ({
   bpm: bpm.value,
-  scale: scale.value,
   thick: thick.value,
   spacing: spacing.value,
   paths: paths.value,
@@ -468,17 +476,28 @@ const builderDisplaySettings = computed(() => ({
 }))
 const selectedPreviewIndex = ref<number>()
 const previewRevision = ref(0)
+const patternMatchAnimation = computed(() =>
+  resolveVtgBuilderPatternMatchAnimation(
+    resizedPreviewAnimations.value,
+    selectedPreviewIndex.value,
+  ),
+)
+watchImmediate(patternMatchAnimation, (animation) => emit('patternMatchAnimationChange', animation))
+const builderMaximumScale = computed(() => getVtgBuilderMaximumScale(preparedPattern.value.pattern))
 const selectedPreviewAnimation = computed(() => {
   const index = selectedPreviewIndex.value
-  const animation = index === undefined ? undefined : resizedPreviewAnimations.value?.[index]
+  const animation =
+    index === undefined ? preparedPattern.value.pattern : resizedPreviewAnimations.value?.[index]
   return animation === undefined
     ? undefined
-    : toVtgBuilderDisplayAnimation(animation, builderDisplaySettings.value)
+    : toVtgBuilderDisplayAnimation(animation, builderDisplaySettings.value, {
+        maximumScale: builderMaximumScale.value,
+      })
 })
 const restoreBuilderPlayback = () => {
   const animation = selectedPreviewAnimation.value
   if (animation === undefined) playerStore.clearPlaybackOverride()
-  else playerStore.setPlaybackOverride(animation, true)
+  else playerStore.setPlaybackOverride(animation, selectedPreviewIndex.value !== undefined)
 }
 watchImmediate(selectedPreviewAnimation, (animation) => {
   if (PLAYBACK_PREVIEW_ACTIVE.value) return
@@ -529,6 +548,9 @@ const {
   selectedControlAnimation,
   activeProperty: builderActiveProperty,
   offsetValues: builderOffsetValues,
+  scaleMode: builderScaleMode,
+  scaleValues: builderScaleValues,
+  scaleDisplayValues: builderScaleDisplayValues,
   twistMode: builderTwistMode,
   twistValues: builderTwistValues,
   twistDisplayValues: builderTwistDisplayValues,
@@ -542,6 +564,8 @@ const {
   foldMirror: builderFoldMirror,
   initialYawValues: builderInitialYawValues,
   updateOffset: updateBuilderOffset,
+  updateScale: updateBuilderScale,
+  updateScaleMode: updateBuilderScaleMode,
   updateTwist: updateBuilderTwist,
   updateTwistMode: updateBuilderTwistMode,
   updateFold: updateBuilderFold,
@@ -631,7 +655,6 @@ const swapPreviewProps = (index: number) => {
 const previewRefreshKey = computed(() =>
   [
     bpm.value,
-    scale.value,
     spacing.value,
     paths.value,
     hands.value,
@@ -659,6 +682,7 @@ const endSliderHistory = () => {
 onBeforeUnmount(() => {
   endSliderHistory()
   emit('previewSelectionChange', undefined)
+  emit('patternMatchAnimationChange', undefined)
   playerStore.endPlaybackPreview()
 })
 

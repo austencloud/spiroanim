@@ -211,6 +211,9 @@ describe('SpiroAnim view', () => {
     expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
       'vtg-transition-previews__item--selected',
     )
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
+    })
     wrapper.get('[data-role="builder-properties"]')
     wrapper.get('[data-role="builder-property-offset-toggle"]')
     await wrapper.get('[data-role="builder-property-twist-toggle"]').trigger('click')
@@ -297,9 +300,19 @@ describe('SpiroAnim view', () => {
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     expect(playerStore.raw().CURRENT.value).toBe(appendedStartMS)
     expect(playerStore.PLAYING).toBe(false)
+    const selectedPortion = transitionAnimations.createVtgTransitionPreviewAnimations(
+      playerRoot.value,
+    )?.[1]
+    if (!selectedPortion) throw new Error('Expected a second Builder portion')
     await wrapper.get('button[aria-label="Preview pattern 2"]').trigger('click')
     await flushPromises()
     expect(playerStore.raw().CURRENT.value).toBe(0)
+    expect(playerStore.PLAYBACK_ROOT.props[0]?.anim).toHaveLength(
+      selectedPortion.props[0]?.anim.length ?? 0,
+    )
+    await vi.waitFor(() => {
+      expect(wrapper.find('.vtg-tile--selected').exists()).toBe(true)
+    })
     expect(wrapper.find('[data-role="builder-property-offset-toggle"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="builder-twist-0-0"]').exists()).toBe(false)
     const laterPortionTwistControls = wrapper.findAll('[data-role^="builder-twist-0-"]')
@@ -314,6 +327,10 @@ describe('SpiroAnim view', () => {
     await selectedTrailingSlot.trigger('click')
     await flushPromises()
     expect(selectedTrailingSlot.classes()).toContain('vtg-transition-previews__item--selected')
+    await vi.waitFor(() => {
+      expect(wrapper.find('.vtg-tile--selected').exists()).toBe(true)
+    })
+    expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     await wrapper.get('[data-cell-reference="1-2"]').trigger('dragstart', { dataTransfer })
     await selectedTrailingSlot.trigger('drop', { dataTransfer })
     await flushPromises()
@@ -718,7 +735,7 @@ describe('SpiroAnim view', () => {
     wrapper.unmount()
   })
 
-  it('reconstructs Builder portions after Rotate and retains a distinct extraction error', async () => {
+  it('automatically opens and reconstructs Builder after unmatched Rotate', async () => {
     const pinia = createPinia().use(piniaPluginPersistedstate)
     setActivePinia(pinia)
     const router = createRouter({
@@ -744,9 +761,9 @@ describe('SpiroAnim view', () => {
 
     const paneStore = useMainPaneStore()
     paneStore.setViewInPane('concepts', 'right')
-    expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
     await flushPromises()
 
+    expect(paneStore.isPaneHijacked).toBe(true)
     expect(wrapper.find('[data-role="vtg-transition-preview-error"]').exists()).toBe(false)
     expect(wrapper.findAll('button[aria-label^="Preview pattern"]')).toHaveLength(2)
 

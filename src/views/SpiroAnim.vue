@@ -45,6 +45,7 @@
         :builder-full-catalog-forced="builderFullCatalogForced"
         :builder-full-grid="builderFullGrid"
         :builder-insertion-index="selectedBuilderPreviewIndex"
+        :builder-match-animation="builderPatternMatchAnimation"
         :docs-return-path="currentRoute.fullPath"
         :pane="parents.concepts"
         data-type="concepts"
@@ -67,6 +68,7 @@
         :allow-first-drop="builderFullGrid"
         @quick-slots-create="saveAnimationsToQuickSlots"
         @preview-selection-change="selectedBuilderPreviewIndex = $event"
+        @pattern-match-animation-change="builderPatternMatchAnimation = $event"
       />
     </div>
     <div
@@ -134,7 +136,10 @@ import {
   isVtgPatternSelection,
   type ConceptPatternSelection,
 } from '@/features/concepts/types'
-import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
+import {
+  getVtgBuilderMaximumScale,
+  toVtgBuilderDisplayAnimation,
+} from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
 
@@ -201,6 +206,7 @@ const commitConceptAnimation = (animation: RootDataFinal) => {
   else ROOT.value = animation
 }
 const selectedBuilderPreviewIndex = ref<number>()
+const builderPatternMatchAnimation = shallowRef<RootDataFinal>()
 const builderFullGrid = ref(false)
 const builderFullCatalogForced = computed(
   () =>
@@ -376,7 +382,14 @@ const previewConceptPattern = (selection: ConceptPatternSelection) => {
       : createConceptPattern(ROOT.value, selection)
   if (!animation) return
 
-  playerStore.startPlaybackPreview(toVtgBuilderDisplayAnimation(animation, conceptsStore.scale))
+  playerStore.startPlaybackPreview(
+    toVtgBuilderDisplayAnimation(animation, undefined, {
+      maximumScale: Math.max(
+        getVtgBuilderMaximumScale(ROOT.value),
+        getVtgBuilderMaximumScale(animation),
+      ),
+    }),
+  )
 }
 
 const applyBuilderCustomization = (selection: ConceptPatternSelection) => {

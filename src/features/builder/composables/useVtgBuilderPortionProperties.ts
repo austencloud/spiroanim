@@ -1,11 +1,14 @@
 import type { ComputedRef, Ref } from 'vue'
 
+import { applyVtgBuilderScaleSettings } from '@/features/builder/applyVtgBuilderScaleSettings'
 import {
   applyVtgBuilderPortionProperties,
   getVtgBuilderPortionAuthoredValues,
   getVtgBuilderPortionEffectiveValues,
   getVtgBuilderPortionRanges,
+  type VtgBuilderPortionPropertyKey,
 } from '@/features/builder/editVtgBuilderPortionProperties'
+import type { VtgBuilderScaleMode, VtgBuilderScaleValues } from '@/features/builder/types'
 import type {
   VtgFoldMode,
   VtgFoldSideSettings,
@@ -36,7 +39,12 @@ interface UseVtgBuilderPortionPropertiesOptions {
 }
 
 const emptyTwistValues = (): VtgTwistValues => [{}, {}]
+const emptyScaleValues = (): VtgBuilderScaleValues => [{}, {}]
 const emptyFoldValues = (): VtgFoldValues => [{}, {}]
+const copyScaleValues = (values: VtgBuilderScaleValues): VtgBuilderScaleValues => [
+  { ...values[0] },
+  { ...values[1] },
+]
 const copyTwistValues = (values: VtgTwistValues): VtgTwistValues => [
   { ...values[0] },
   { ...values[1] },
@@ -68,8 +76,9 @@ export const useVtgBuilderPortionProperties = ({
     })
   })
 
-  const activeProperty = ref<VtgPropertyKey | null>(null)
+  const activeProperty = ref<VtgPropertyKey | 'scale' | null>(null)
   const offsetValues = ref<readonly [number, number]>([0, 0])
+  const scaleMode = ref<VtgBuilderScaleMode>('simple')
   const twistMode = ref<VtgTwistMode>('simple')
   const foldMode = ref<VtgFoldMode>('simple')
   const foldBeat = ref<VtgFoldSideSettings<number>>([2, 2])
@@ -88,6 +97,38 @@ export const useVtgBuilderPortionProperties = ({
       selectedLocalBeats.value,
       'twist',
     ) ?? emptyTwistValues()) as VtgTwistValues
+  })
+  const scaleValues = computed<VtgBuilderScaleValues>(() => {
+    const index = selectedIndex.value
+    if (index === undefined) return emptyScaleValues()
+    const values = getVtgBuilderPortionAuthoredValues(
+      pattern.value,
+      index,
+      selectedLocalBeats.value,
+      'scale',
+    )
+    if (!values) return emptyScaleValues()
+    return values.map((side) =>
+      Object.fromEntries(
+        Object.entries(side).flatMap(([beat, value]) =>
+          value === undefined ? [] : [[beat, value / 10]],
+        ),
+      ),
+    ) as VtgBuilderScaleValues
+  })
+  const scaleDisplayValues = computed<VtgBuilderScaleValues>(() => {
+    const index = selectedIndex.value
+    if (index === undefined) return emptyScaleValues()
+    const values = getVtgBuilderPortionEffectiveValues(
+      pattern.value,
+      index,
+      selectedLocalBeats.value,
+      'scale',
+    )
+    if (!values) return emptyScaleValues()
+    return values.map((side) =>
+      Object.fromEntries(Object.entries(side).map(([beat, value]) => [beat, value / 10])),
+    ) as VtgBuilderScaleValues
   })
   const twistDisplayValues = computed<VtgTwistValues>(() => {
     const index = selectedIndex.value
@@ -159,6 +200,12 @@ export const useVtgBuilderPortionProperties = ({
   const hydrateModes = () => {
     const animation = selectedControlAnimation.value
     if (!animation) return
+    const firstEditableBeat = selectedLocalBeats.value[firstEditableFrameIndex.value] ?? 0
+    scaleMode.value = scaleValues.value.every((side) =>
+      Object.keys(side).every((beat) => Number(beat) === firstEditableBeat),
+    )
+      ? 'simple'
+      : 'advanced'
     twistMode.value = detectVtgTwistMode(twistValues.value)
     const values = foldValues.value
     const hasAuthoredFold = values.some((side) => Object.keys(side).length > 0)
@@ -166,7 +213,6 @@ export const useVtgBuilderPortionProperties = ({
     foldMode.value = simpleFold ? 'simple' : 'advanced'
     if (!simpleFold) return
 
-    const firstEditableBeat = selectedLocalBeats.value[firstEditableFrameIndex.value] ?? 0
     const defaultBeat = selectedLocalBeats.value.includes(2) ? 2 : firstEditableBeat
     foldBeat.value = hasAuthoredFold ? [...simpleFold.beat] : [defaultBeat, defaultBeat]
     foldRepeat.value = [...simpleFold.repeat]
@@ -185,12 +231,33 @@ export const useVtgBuilderPortionProperties = ({
 
   const commitWorkingProperties = (
     working: RootDataFinal,
-    keys: readonly ('twist' | 'yaw' | 'rotate')[],
+    keys: readonly VtgBuilderPortionPropertyKey[],
   ) => {
     const index = selectedIndex.value
     if (index === undefined) return
     const updated = applyVtgBuilderPortionProperties(pattern.value, index, working, keys)
     if (updated) commit(updated)
+  }
+
+  const applyScaleValues = (mode: VtgBuilderScaleMode, values: VtgBuilderScaleValues) => {
+    const animation = selectedControlAnimation.value
+    if (!animation) return
+    commitWorkingProperties(
+      applyVtgBuilderScaleSettings(animation, mode, values, {
+        firstEditableFrameIndex: firstEditableFrameIndex.value,
+      }),
+      ['scale'],
+    )
+  }
+  const updateScale = (propIndex: 0 | 1, beat: number, value?: number) => {
+    const values = copyScaleValues(scaleValues.value)
+    if (value === undefined) delete values[propIndex][String(beat)]
+    else values[propIndex][String(beat)] = value
+    applyScaleValues(scaleMode.value, values)
+  }
+  const updateScaleMode = (mode: VtgBuilderScaleMode) => {
+    scaleMode.value = mode
+    applyScaleValues(mode, scaleValues.value)
   }
 
   const applyTwistValues = (mode: VtgTwistMode, values: VtgTwistValues) => {
@@ -321,6 +388,9 @@ export const useVtgBuilderPortionProperties = ({
     selectedControlAnimation,
     activeProperty,
     offsetValues,
+    scaleMode,
+    scaleValues,
+    scaleDisplayValues,
     twistMode,
     twistValues,
     twistDisplayValues,
@@ -334,6 +404,8 @@ export const useVtgBuilderPortionProperties = ({
     foldMirror,
     initialYawValues,
     updateOffset,
+    updateScale,
+    updateScaleMode,
     updateTwist,
     updateTwistMode,
     updateFold,

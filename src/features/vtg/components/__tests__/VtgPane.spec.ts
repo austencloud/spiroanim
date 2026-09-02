@@ -5,7 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { builderPatternPointerMoveEvent } from '@/features/builder/patternPointerDrag'
 import type { BuilderPatternPointerDetail } from '@/features/builder/patternPointerDrag'
-import { getCompiledVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
+import {
+  describeVtgBuilderMotion,
+  getCompiledVtgBuilderMotion,
+} from '@/features/builder/describeVtgBuilderMotion'
 import { appendVtgBuilderPattern } from '@/features/builder/appendVtgBuilderPattern'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
@@ -3346,6 +3349,107 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('patternPreview')).toHaveLength(previewsBeforeReset + 1)
   })
 
+  it('matches the selected Builder portion without emitting a playback preview', async () => {
+    const first = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    const second = createDefaultVtgAnimation({ reference: '3-3', speedRatio: '1:3' })
+    if (!first || !second) throw new Error('Expected supported VTG animations')
+    useConceptsStore().elementalLayout = false
+
+    const matches = ['1-1', '3-3'] as const
+    let matchIndex = 0
+    const matchVtg = vi.fn<PatternMatchingClient['matchVtg']>(async () => {
+      const reference = matches[matchIndex++]
+      if (!reference) return { status: 'unmatched' }
+      return {
+        status: 'matched',
+        source: 'vtg',
+        match: {
+          reference,
+          speedRatio: '1:3',
+          isAnti: false,
+          swapProps: false,
+          reversePlane: false,
+          bpm: 40,
+          scale: 0.8,
+        },
+      }
+    })
+    const patternMatcher: PatternMatchingClient = {
+      matchVtg,
+      matchEightStep: async () => ({ status: 'unmatched' }),
+      matchQst: async () => ({ status: 'unmatched' }),
+    }
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation: first,
+        builderActive: true,
+        builderMatchAnimation: first,
+        patternMatcher,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
+    })
+    expect(wrapper.emitted('patternPreview')).toBeUndefined()
+    expect(matchVtg.mock.calls[0]?.[0].lastSelection).toBeUndefined()
+
+    await wrapper.setProps({ builderMatchAnimation: second })
+    await vi.waitFor(() => {
+      expect(wrapper.get('.vtg-tile--selected .vtg-tile__label-text').text()).toBe(
+        describeVtgBuilderMotion(second),
+      )
+    })
+    expect(wrapper.emitted('patternPreview')).toBeUndefined()
+
+    await wrapper.setProps({ builderMatchAnimation: undefined })
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBeUndefined()
+    })
+    expect(wrapper.emitted('patternPreview')).toBeUndefined()
+  })
+
+  it('requests Builder once when a loaded unmatched VTG pattern has multiple portions', async () => {
+    const first = createDefaultVtgAnimation({ reference: '5-6', speedRatio: '1:3' })
+    const animation = first
+      ? appendVtgBuilderPattern(first, { reference: '2-3', speedRatio: '1:3' })
+      : undefined
+    if (!animation) throw new Error('Expected a two-portion Builder pattern')
+    const patternMatcher: PatternMatchingClient = {
+      matchVtg: async () => ({ status: 'unmatched' }),
+      matchEightStep: async () => ({ status: 'unmatched' }),
+      matchQst: async () => ({ status: 'unmatched' }),
+    }
+    const wrapper = mount(VtgPane, {
+      props: { animation, animationRevision: 0, patternMatcher },
+    })
+
+    await vi.waitFor(() => expect(wrapper.emitted('builderOpen')).toHaveLength(1))
+
+    await wrapper.setProps({ builderActive: true })
+    await wrapper.setProps({ builderActive: false })
+    await flushPromises()
+
+    expect(wrapper.emitted('builderOpen')).toHaveLength(1)
+  })
+
+  it('does not request Builder for an unmatched single-portion VTG pattern', async () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const patternMatcher: PatternMatchingClient = {
+      matchVtg: async () => ({ status: 'unmatched' }),
+      matchEightStep: async () => ({ status: 'unmatched' }),
+      matchQst: async () => ({ status: 'unmatched' }),
+    }
+    const wrapper = mount(VtgPane, {
+      props: { animation, animationRevision: 0, patternMatcher },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.emitted('builderOpen')).toBeUndefined()
+  })
+
   it('updates Builder Elemental labels for the selected insertion target', async () => {
     const first = createDefaultVtgAnimation({ reference: '5-6', speedRatio: '1:3' })
     const animation = first
@@ -3636,6 +3740,34 @@ describe('VtgPane', () => {
     expect(
       wrapper.get<HTMLInputElement>('[data-role="vtg-builder-full-grid"]').element.checked,
     ).toBe(true)
+  })
+
+  it('shows Full Grid playback controls only for the first Builder portion', async () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        builderActive: true,
+        builderFullCatalog: true,
+        builderFullGrid: true,
+        builderInsertionIndex: 1,
+      },
+    })
+
+    expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-qtr"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-orientation"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-beat"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-builder-full-grid"]').exists()).toBe(true)
+
+    await wrapper.setProps({ builderFullCatalogForced: true, builderInsertionIndex: 0 })
+
+    expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-qtr"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-orientation"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-beat"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="vtg-builder-full-grid"]').exists()).toBe(false)
   })
 
   it('limits Builder to the eight final relationship sources at every ratio', async () => {

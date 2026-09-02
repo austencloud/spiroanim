@@ -1,7 +1,6 @@
 import {
   clampVtgBpm,
   getVtgDistanceForScale,
-  toVtgInternalScale,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import {
@@ -10,11 +9,14 @@ import {
 } from '@/features/concepts/patternPropColors'
 import { getPatternPropMoves } from '@/features/concepts/patternPropSpacing'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
-import type { MotionData, PropDataFinal, PropInd, RootDataFinal } from '@/types/AnimTypes'
+import {
+  INITIAL_ANIMATION_FRAME,
+  resolveAnimationFrames,
+} from '@/math/animation/frameSemantics'
+import type { MotionData, PropInd, RootDataFinal } from '@/types/AnimTypes'
 
 export interface VtgBuilderDisplaySettings {
   bpm: number
-  scale: number
   thick: number
   spacing: number
   paths: boolean
@@ -28,6 +30,7 @@ export interface VtgBuilderDisplaySettings {
 
 interface VtgBuilderDisplayOptions {
   thumbnail?: boolean
+  maximumScale?: number
 }
 
 const createSpacingMotion = (move: number): MotionData[] =>
@@ -35,36 +38,37 @@ const createSpacingMotion = (move: number): MotionData[] =>
     ? []
     : [{ precision: true, arc: 90, plane: move < 0 ? 180 : 0, distance: Math.abs(move) }]
 
-const withFirstFrameScale = (prop: PropDataFinal, scale: number): PropDataFinal => {
-  const firstFrame = prop.anim[0]
-  if (!firstFrame) return prop
+/** Returns the highest effective internal Scale used anywhere in a Builder pattern. */
+export const getVtgBuilderMaximumScale = (animation: RootDataFinal): number => {
+  let maximumScale: number | undefined
 
-  return {
-    ...prop,
-    anim: [{ ...firstFrame, scale }, ...prop.anim.slice(1)],
+  for (const prop of animation.props) {
+    for (const frame of resolveAnimationFrames(prop.anim)) {
+      maximumScale = Math.max(maximumScale ?? frame.scale, frame.scale)
+    }
   }
+
+  return maximumScale ?? INITIAL_ANIMATION_FRAME.scale
 }
 
-/** Applies Builder display controls without changing the authored animation. */
+/** Applies Builder display controls without changing authored Scale or the source animation. */
 export const toVtgBuilderDisplayAnimation = (
   animation: RootDataFinal,
-  settings: number | VtgBuilderDisplaySettings,
+  settings?: VtgBuilderDisplaySettings,
   options: VtgBuilderDisplayOptions = {},
 ): RootDataFinal => {
-  const scale = typeof settings === 'number' ? settings : settings.scale
-  const internalScale = toVtgInternalScale(scale)
-  const scaled = {
+  const maximumScale = options.maximumScale ?? getVtgBuilderMaximumScale(animation)
+  const framed = {
     ...animation,
-    camera: [createDefaultCameraFrame(getVtgDistanceForScale(scale))],
-    props: animation.props.map((prop) => withFirstFrameScale(prop, internalScale)),
+    camera: [createDefaultCameraFrame(getVtgDistanceForScale(maximumScale / 10))],
   }
 
-  if (typeof settings === 'number') return scaled
+  if (settings === undefined) return framed
 
   const thumbnail = options.thumbnail === true
   const moves = getPatternPropMoves(settings.spacing)
   const thick = thumbnail ? vtgThickControl.max : settings.thick
-  const props = scaled.props.map((original, index) => {
+  const props = framed.props.map((original, index) => {
     const { visible: _visible, ...prop } = original
     const visible = index === 0 ? settings.leftPropVisible : settings.rightPropVisible
     const displayed = {
@@ -83,7 +87,7 @@ export const toVtgBuilderDisplayAnimation = (
 
   return applyPatternPropColors(
     {
-      ...scaled,
+      ...framed,
       bpm: clampVtgBpm(settings.bpm) * 2,
       prop: settings.prop,
       paths: settings.paths,

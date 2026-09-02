@@ -266,12 +266,12 @@ const props = withDefaults(
     initialBeatCounts: readonly number[]
     beatCounts: readonly number[]
     relationships: readonly PatternRelationships[]
-    scale: number
+    maximumScale?: number
     displaySettings?: VtgBuilderDisplaySettings
     selectedIndex?: number
     allowFirstDrop?: boolean
   }>(),
-  { columns: 4, allowFirstDrop: false },
+  { columns: 4, maximumScale: 10, allowFirstDrop: false },
 )
 const { elementalLayout, sliders } = storeToRefs(useConceptsStore())
 const previewReferences = props.animations.map((_, index) => String(index + 1))
@@ -438,9 +438,14 @@ const { previewUrls, requestPreviews } = useConceptPreviewRenderer({
     if (!animation) return undefined
 
     if (props.displaySettings)
-      return toVtgBuilderDisplayAnimation(animation, props.displaySettings, { thumbnail: true })
+      return toVtgBuilderDisplayAnimation(animation, props.displaySettings, {
+        thumbnail: true,
+        maximumScale: props.maximumScale,
+      })
 
-    const display = toVtgBuilderDisplayAnimation(animation, props.scale)
+    const display = toVtgBuilderDisplayAnimation(animation, undefined, {
+      maximumScale: props.maximumScale,
+    })
     return {
       ...display,
       thick: vtgThickControl.max,

@@ -203,12 +203,89 @@ describe('PatternPropertyControls', () => {
     expect(wrapper.get('[data-role="builder-properties"]').attributes('data-context')).toBe(
       'builder',
     )
-    expect(wrapper.get('[data-role="builder-property-offset-toggle"]').text()).toBe('Offset')
+    expect(
+      wrapper
+        .findAll('[role="tab"]')
+        .map((tab) => tab.text())
+        .slice(0, 3),
+    ).toEqual(['Offset', 'Scale', 'Rotate'])
     expect(wrapper.get('[data-role="builder-property-axis-toggle"]').text()).toBe('Rotate')
     expect(wrapper.get('[data-role="builder-property-axis-note"]').text()).toBe(
       'For Static Props, allowing off-axis turns',
     )
     expect(wrapper.find('[data-role="builder-property-turns-toggle"]').exists()).toBe(false)
+  })
+
+  it('offers independent Builder-only Scale values from 0 through 1.4', async () => {
+    const builder = mount(PatternPropertyControls, {
+      props: {
+        context: 'builder',
+        activeProperty: 'scale',
+        scaleValues: [{}, { 0: 1.2 }],
+        scaleDisplayValues: [{ 0: 0.8 }, { 0: 1.2 }],
+      },
+    })
+    const vtg = mount(PatternPropertyControls, { props: { context: 'vtg' } })
+    const left = builder.get<HTMLInputElement>('[data-role="builder-scale-0"]')
+    const right = builder.get<HTMLInputElement>('[data-role="builder-scale-1"]')
+    const leftDelete = builder.get<HTMLButtonElement>('button[aria-label="Clear Left Scale"]')
+    const rightDelete = builder.get<HTMLButtonElement>('button[aria-label="Clear Right Scale"]')
+
+    expect(vtg.find('[data-role="vtg-property-scale-toggle"]').exists()).toBe(false)
+    expect(builder.get<HTMLInputElement>('input[value="simple"]').element.checked).toBe(true)
+    expect(builder.get('[aria-label="Left Scale"] header').text()).toBe('BeatLeftValue')
+    expect(builder.get('[aria-label="Left Scale"] .pattern-property-controls__beat').text()).toBe(
+      '0',
+    )
+    expect(left.attributes()).toMatchObject({ min: '0', max: '1.4', step: '0.1' })
+    expect(left.attributes('aria-valuetext')).toBe('0.8')
+    expect(right.attributes('aria-valuetext')).toBe('1.2')
+    expect(leftDelete.element.disabled).toBe(true)
+    expect(rightDelete.element.disabled).toBe(false)
+
+    left.element.value = '0'
+    await left.trigger('input')
+    expect(builder.emitted('scaleUpdate')?.at(-1)).toEqual([0, 0, 0])
+    await rightDelete.trigger('click')
+    expect(builder.emitted('scaleUpdate')?.at(-1)).toEqual([1, 0])
+  })
+
+  it('offers inherited per-frame Scale values in Advanced mode', async () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const wrapper = mount(PatternPropertyControls, {
+      props: {
+        context: 'builder',
+        animation,
+        activeProperty: 'scale',
+        scaleMode: 'advanced',
+        scaleValues: [{ 0.5: 0.8 }, {}],
+        scaleDisplayValues: [{ 0.5: 0.8, 1: 1.2 }, { 0.5: 1.1 }],
+        firstEditableFrameIndex: 1,
+      },
+    })
+
+    expect(wrapper.get<HTMLInputElement>('input[value="advanced"]').element.checked).toBe(true)
+    expect(wrapper.find('[data-role="builder-scale-0-0"]').exists()).toBe(false)
+    const leftFirst = wrapper.get<HTMLInputElement>('[data-role="builder-scale-0-1"]')
+    const leftSecond = wrapper.get<HTMLInputElement>('[data-role="builder-scale-0-2"]')
+    expect(leftFirst.attributes('aria-valuetext')).toBe('0.8')
+    expect(leftSecond.attributes('aria-valuetext')).toBe('1.2')
+    expect(leftFirst.element.closest('label')?.classList).toContain(
+      'pattern-property-controls__value-set',
+    )
+    expect(leftSecond.element.closest('label')?.classList).not.toContain(
+      'pattern-property-controls__value-set',
+    )
+
+    leftSecond.element.value = '1.4'
+    await leftSecond.trigger('input')
+    expect(wrapper.emitted('scaleUpdate')?.at(-1)).toEqual([0, 1, 1.4])
+    await wrapper.get('button[aria-label="Clear Left Scale at beat 0.5"]').trigger('click')
+    expect(wrapper.emitted('scaleUpdate')?.at(-1)).toEqual([0, 0.5])
+
+    await wrapper.get<HTMLInputElement>('input[value="simple"]').trigger('change')
+    expect(wrapper.emitted('update:scaleMode')?.at(-1)).toEqual(['simple'])
   })
 
   it('treats a later Builder portion first frame as context and allows explicit zero Twist', async () => {

@@ -2,9 +2,10 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import type { AnimData, RootDataFinal } from '@/types/AnimTypes'
 
-export type VtgBuilderPortionPropertyKey = 'twist' | 'yaw' | 'rotate'
+export type VtgBuilderPortionPropertyKey = 'scale' | 'twist' | 'yaw' | 'rotate'
 
 const inheritedPortionPropertyKeys = [
+  'scale',
   'twist',
   'yaw',
 ] as const satisfies readonly VtgBuilderPortionPropertyKey[]
@@ -187,7 +188,9 @@ export const getVtgBuilderPortionAuthoredValues = <TKey extends VtgBuilderPortio
   }) as [Record<string, AnimData[TKey]>, Record<string, AnimData[TKey]>]
 }
 
-export const getVtgBuilderPortionEffectiveValues = <TKey extends 'twist' | 'yaw'>(
+export const getVtgBuilderPortionEffectiveValues = <
+  TKey extends (typeof inheritedPortionPropertyKeys)[number],
+>(
   animation: RootDataFinal,
   portionIndex: number,
   localBeats: readonly number[],

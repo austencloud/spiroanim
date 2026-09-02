@@ -67,6 +67,7 @@
       :builder-full-catalog-forced="builderFullCatalogForced"
       :builder-full-grid="builderFullGrid"
       :builder-insertion-index="builderInsertionIndex"
+      :builder-match-animation="builderMatchAnimation"
       @pattern-select="emit('patternSelect', $event)"
       @pattern-preview="emit('patternPreview', $event)"
       @customize="emit('customize', $event)"
@@ -123,6 +124,7 @@ const props = defineProps<{
   builderFullCatalogForced?: boolean
   builderFullGrid?: boolean
   builderInsertionIndex?: number
+  builderMatchAnimation?: RootDataFinal
   docsReturnPath?: string
   pane?: 'left' | 'right' | 'hidden'
 }>()
@@ -142,7 +144,11 @@ const emit = defineEmits<{
 const conceptsStore = useConceptsStore()
 const { quickSlotCount, selectedConcept } = storeToRefs(conceptsStore)
 const usesPatternMatching = computed(
-  () => selectedConcept.value !== 'to' && selectedConcept.value !== 'tka' && !props.builderActive,
+  () =>
+    selectedConcept.value !== 'to' &&
+    selectedConcept.value !== 'tka' &&
+    (!props.builderActive ||
+      (selectedConcept.value === 'vtg' && props.builderMatchAnimation !== undefined)),
 )
 const patternMatcher = usePatternMatchingClient(usesPatternMatching)
 

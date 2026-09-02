@@ -126,6 +126,155 @@
           </section>
         </div>
       </template>
+      <template v-else-if="property.key === 'scale'">
+        <fieldset
+          class="pattern-property-controls__option-group pattern-property-controls__twist-mode"
+        >
+          <legend class="pattern-property-controls__visually-hidden">Scale detail</legend>
+          <label v-for="mode in scaleModes" :key="mode">
+            <input
+              type="radio"
+              :name="`${controlId}-scale-mode`"
+              :value="mode"
+              :checked="scaleMode === mode"
+              @change="emit('update:scaleMode', mode)"
+            />
+            <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
+          </label>
+        </fieldset>
+        <div v-if="scaleMode === 'simple'" class="pattern-property-controls__twist-columns">
+          <section
+            v-for="(label, propIndex) in propLabels"
+            :key="label"
+            class="pattern-property-controls__twist-column"
+            :aria-label="`${label} Scale`"
+          >
+            <header class="pattern-property-controls__twist-header">
+              <span>Beat</span>
+              <h3>{{ label }}</h3>
+              <span>Value</span>
+            </header>
+            <label
+              class="pattern-property-controls__twist-frame"
+              :class="{
+                'pattern-property-controls__twist-frame--inherited': !scaleIsSet(propIndex),
+                'pattern-property-controls__value-set': scaleIsSet(propIndex),
+                'pattern-property-controls__twist-frame--stepper': !sliders,
+              }"
+            >
+              <span class="pattern-property-controls__beat">
+                {{ formatBeat(simpleScaleFrame(propIndex).beat) }}
+              </span>
+              <input
+                v-if="sliders"
+                type="range"
+                min="0"
+                max="1.4"
+                step="0.1"
+                :value="scaleValue(propIndex)"
+                :aria-valuetext="scaleValue(propIndex).toFixed(1)"
+                :aria-label="`${label} Scale`"
+                :data-role="`${context}-scale-${propIndex}`"
+                @input="setScaleFromSlider(propIndex, simpleScaleFrame(propIndex).beat, $event)"
+                @pointerdown="emit('sliderStart')"
+                @pointerup="emit('sliderEnd')"
+                @pointercancel="emit('sliderEnd')"
+                @keydown="emit('sliderStart')"
+                @keyup="emit('sliderEnd')"
+                @blur="emit('sliderEnd')"
+              />
+              <ConceptStepper
+                v-else
+                :model-value="scaleValue(propIndex)"
+                :min="0"
+                :max="1.4"
+                :step="0.1"
+                :label="`${label} Scale`"
+                :data-role="`${context}-scale-${propIndex}-stepper`"
+                :display-value="scaleValue(propIndex).toFixed(1)"
+                @update:model-value="
+                  setScaleFromStepper(propIndex, simpleScaleFrame(propIndex).beat, $event)
+                "
+              />
+              <output v-if="sliders">{{ scaleValue(propIndex).toFixed(1) }}</output>
+              <button
+                type="button"
+                class="pattern-property-controls__delete"
+                :disabled="!scaleIsSet(propIndex)"
+                :aria-label="`Clear ${label} Scale`"
+                @click="clearScale(propIndex, simpleScaleFrame(propIndex).beat)"
+              >
+                <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+              </button>
+            </label>
+          </section>
+        </div>
+        <div v-else class="pattern-property-controls__twist-columns">
+          <section
+            v-for="(column, propIndex) in scaleColumns"
+            :key="column.label"
+            class="pattern-property-controls__twist-column"
+            :aria-label="`${column.label} Scale`"
+          >
+            <header class="pattern-property-controls__twist-header">
+              <span>Beat</span>
+              <h3>{{ column.label }}</h3>
+              <span>Value</span>
+            </header>
+            <label
+              v-for="frame in column.frames"
+              :key="frame.index"
+              class="pattern-property-controls__twist-frame"
+              :class="{
+                'pattern-property-controls__twist-frame--inherited': !frame.isSet,
+                'pattern-property-controls__value-set': frame.isSet,
+                'pattern-property-controls__twist-frame--stepper': !sliders,
+              }"
+            >
+              <span class="pattern-property-controls__beat">{{ formatBeat(frame.beat) }}</span>
+              <input
+                v-if="sliders"
+                type="range"
+                min="0"
+                max="1.4"
+                step="0.1"
+                :value="frame.value"
+                :aria-valuetext="frame.value.toFixed(1)"
+                :aria-label="`${column.label} Scale at beat ${formatBeat(frame.beat)}`"
+                :data-role="`${context}-scale-${propIndex}-${frame.index}`"
+                @input="setScaleFromSlider(propIndex, frame.beat, $event)"
+                @pointerdown="emit('sliderStart')"
+                @pointerup="emit('sliderEnd')"
+                @pointercancel="emit('sliderEnd')"
+                @keydown="emit('sliderStart')"
+                @keyup="emit('sliderEnd')"
+                @blur="emit('sliderEnd')"
+              />
+              <ConceptStepper
+                v-else
+                :model-value="frame.value"
+                :min="0"
+                :max="1.4"
+                :step="0.1"
+                :label="`${column.label} Scale at beat ${formatBeat(frame.beat)}`"
+                :data-role="`${context}-scale-${propIndex}-${frame.index}-stepper`"
+                :display-value="frame.value.toFixed(1)"
+                @update:model-value="setScaleFromStepper(propIndex, frame.beat, $event)"
+              />
+              <output v-if="sliders">{{ frame.value.toFixed(1) }}</output>
+              <button
+                type="button"
+                class="pattern-property-controls__delete"
+                :disabled="!frame.isSet"
+                :aria-label="`Clear ${column.label} Scale at beat ${formatBeat(frame.beat)}`"
+                @click="clearScale(propIndex, frame.beat)"
+              >
+                <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+              </button>
+            </label>
+          </section>
+        </div>
+      </template>
       <template v-else-if="property.key === 'axis'">
         <p
           class="pattern-property-controls__usage-note"
@@ -411,12 +560,13 @@ import type {
   VtgTwistMode,
   VtgTwistValues,
 } from '@/features/concepts/stores/useConceptsStore'
+import type { VtgBuilderScaleMode, VtgBuilderScaleValues } from '@/features/builder/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { isTouchDevice } from '@/utils/device'
 import type { VtgPatternSelection } from '@/features/vtg/types'
 
 type PatternPropertyContext = 'vtg' | 'builder'
-type PatternPropertyKey = VtgPropertyKey
+type PatternPropertyKey = VtgPropertyKey | 'scale'
 
 const props = withDefaults(
   defineProps<{
@@ -425,6 +575,9 @@ const props = withDefaults(
     showOffset?: boolean
     animation?: RootDataFinal
     offsetValues?: VtgPatternSelection['propRotationOffsets']
+    scaleMode?: VtgBuilderScaleMode
+    scaleValues?: VtgBuilderScaleValues
+    scaleDisplayValues?: VtgBuilderScaleValues
     twistMode?: VtgTwistMode
     twistValues?: VtgTwistValues
     twistDisplayValues?: VtgTwistValues
@@ -446,6 +599,9 @@ const props = withDefaults(
   {
     showTurns: false,
     showOffset: true,
+    scaleMode: 'simple',
+    scaleValues: () => [{}, {}],
+    scaleDisplayValues: () => [{}, {}],
     twistMode: 'simple',
     twistValues: () => [{}, {}],
     twistDisplayValues: () => [{}, {}],
@@ -468,6 +624,8 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   offsetUpdate: [propIndex: 0 | 1, value?: number]
+  scaleUpdate: [propIndex: 0 | 1, beat: number, value?: number]
+  'update:scaleMode': [mode: VtgBuilderScaleMode]
   twistUpdate: [propIndex: 0 | 1, beat: number, value?: number]
   'update:twistMode': [mode: VtgTwistMode]
   foldUpdate: [propIndex: 0 | 1, beat: number, fold: keyof VtgFoldValue, value?: number]
@@ -483,6 +641,7 @@ const emit = defineEmits<{
   sliderEnd: []
 }>()
 const twistModes = ['simple', 'advanced'] as const
+const scaleModes = ['simple', 'advanced'] as const
 const foldModes = ['simple', 'advanced'] as const
 const foldSpans = ['quarter', 'eighth'] as const
 const propLabels = ['Left', 'Right'] as const
@@ -493,6 +652,7 @@ const folds = [
 
 const properties = [
   { key: 'offset', name: 'Offset', label: 'Offset' },
+  { key: 'scale', name: 'Scale', label: 'Scale' },
   { key: 'axis', name: 'Rotate', label: 'Rotate' },
   { key: 'twist', name: 'Twist', label: 'Twist' },
   { key: 'turns', name: 'Turns', label: 'Turns' },
@@ -507,7 +667,8 @@ const visibleProperties = computed(() =>
   properties.filter(
     (property) =>
       (property.key !== 'turns' || props.showTurns) &&
-      (property.key !== 'offset' || props.showOffset),
+      (property.key !== 'offset' || props.showOffset) &&
+      (property.key !== 'scale' || props.context === 'builder'),
   ),
 )
 const propertyLabel = (property: (typeof properties)[number]) => property.label
@@ -559,6 +720,47 @@ const endOffsetText = (propIndex: number) => {
 const clearOffset = (propIndex: number) => {
   if (!isPropIndex(propIndex)) return
   emit('offsetUpdate', propIndex)
+}
+
+const scaleColumns = computed(() =>
+  propLabels.map((label, propIndex) => {
+    const frames = props.animation?.props[propIndex]?.anim ?? []
+    let beat = 0
+    return {
+      label,
+      frames: frames
+        .map((frame, index) => {
+          const authoredValue = props.scaleValues[propIndex]?.[String(beat)]
+          const isSet = authoredValue !== undefined
+          const inheritedValue = props.scaleDisplayValues[propIndex]?.[String(beat)]
+          const result = { index, beat, isSet, value: authoredValue ?? inheritedValue ?? 1 }
+          beat += frame.beats ?? 0.5
+          return result
+        })
+        .filter((frame) => frame.index >= props.firstEditableFrameIndex),
+    }
+  }),
+)
+const simpleScaleFrame = (propIndex: number) =>
+  scaleColumns.value[propIndex]?.frames[0] ?? {
+    index: props.firstEditableFrameIndex,
+    beat: 0,
+    isSet: props.scaleValues[propIndex]?.['0'] !== undefined,
+    value: props.scaleValues[propIndex]?.['0'] ?? props.scaleDisplayValues[propIndex]?.['0'] ?? 1,
+  }
+const scaleValue = (propIndex: number) => simpleScaleFrame(propIndex).value
+const scaleIsSet = (propIndex: number) => simpleScaleFrame(propIndex).isSet
+const setScaleFromSlider = (propIndex: number, beat: number, event: Event) => {
+  if (!isPropIndex(propIndex)) return
+  emit('scaleUpdate', propIndex, beat, Number((event.target as HTMLInputElement).value))
+}
+const setScaleFromStepper = (propIndex: number, beat: number, value: number) => {
+  if (!isPropIndex(propIndex)) return
+  emit('scaleUpdate', propIndex, beat, value)
+}
+const clearScale = (propIndex: number, beat: number) => {
+  if (!isPropIndex(propIndex)) return
+  emit('scaleUpdate', propIndex, beat)
 }
 
 const twistColumns = computed(() =>
@@ -785,7 +987,8 @@ const collapseFromTabRow = (event: MouseEvent) => {
 }
 
 const revealOpenedProperty = async (property: PatternPropertyKey | null) => {
-  if (property !== 'offset' && property !== 'axis' && property !== 'twist') return
+  if (property !== 'offset' && property !== 'scale' && property !== 'axis' && property !== 'twist')
+    return
   await nextTick()
   const root = rootElement.value
   const target = root?.querySelector<HTMLElement>(

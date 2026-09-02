@@ -138,6 +138,35 @@ describe('editVtgBuilderPortionProperties', () => {
     )
   })
 
+  it('sets Scale at the portion start and minimally restores its successor inheritance', () => {
+    const animation = createThreePortions()
+    animation.props[0]!.anim[0] = { ...animation.props[0]!.anim[0], scale: 8 }
+    const preview = createVtgTransitionPreviewAnimations(animation)?.[1]
+    const range = getVtgBuilderPortionRanges(animation)[1]
+    if (!preview || !range?.successorFirstOwnedFrameIndex) {
+      throw new Error('Expected a middle portion with a successor')
+    }
+
+    const scaled = cloneAnimation(preview)
+    scaled.props[0]!.anim[1] = { ...scaled.props[0]!.anim[1], scale: 14 }
+    const updated = applyVtgBuilderPortionProperties(animation, 1, scaled, ['scale'])
+    if (!updated) throw new Error('Expected a Scale update')
+
+    expect(updated.props[0]?.anim[range.firstOwnedFrameIndex]?.scale).toBe(14)
+    expect(updated.props[0]?.anim[range.successorFirstOwnedFrameIndex]?.scale).toBe(8)
+    expect(rootCompile(updated).props[0]?.anim[range.successorFirstOwnedFrameIndex]?.scale).toBe(8)
+
+    const updatedPreview = createVtgTransitionPreviewAnimations(updated)?.[1]
+    if (!updatedPreview) throw new Error('Expected the updated middle portion')
+    const cleared = cloneAnimation(updatedPreview)
+    delete cleared.props[0]!.anim[1]!.scale
+    const restored = applyVtgBuilderPortionProperties(updated, 1, cleared, ['scale'])
+
+    expect(restored?.props[0]?.anim[range.firstOwnedFrameIndex]?.scale).toBeUndefined()
+    expect(restored?.props[0]?.anim[range.successorFirstOwnedFrameIndex]?.scale).toBeUndefined()
+    expect(rootCompile(restored!).props[0]?.anim[range.successorFirstOwnedFrameIndex]?.scale).toBe(8)
+  })
+
   it('reconstructs the supplied supported Builder pattern after editing Rotate', async () => {
     const query =
       'r=Ew68Yk11Y&p0=Q__.blE.5JEQpg........5GQQpg.......&x0=_r_&r0=............_ZML_&m0=_1_mxqv__&p1=N__.bn_.5L_Qpg........5GQQpg.......&x1=_r_&r1=............_Z3L_&c=_g_bhq&v=11'

@@ -305,14 +305,14 @@
     <ConceptAnimationControls :animation="animation">
       <template #before-controls="{ beginSliderHistory, endSliderHistory }">
         <PatternPlaybackControls
-          v-if="vtgAdvanced && (!builderActive || builderFullCatalog)"
+          v-if="vtgAdvanced && (!builderActive || builderFullCatalogForced)"
           v-model:beat="beat"
           v-model:qtr="isQtr"
           v-model:orientation="orientation"
           concept="vtg"
           :speed-ratio="speedRatio"
           :orientation-options="availablePatternOrientations"
-          :show-orientation="!builderActive || builderFullCatalog"
+          :show-orientation="!builderActive || builderFullCatalogForced"
           @slider-start="beginSliderHistory"
           @slider-end="endSliderHistory"
         />
@@ -401,7 +401,7 @@
           @update:fold-alternate="updateFoldAlternate"
           @update:fold-span="updateFoldSpan"
           @update:fold-mirror="updateFoldMirror"
-          @update:active-property="vtgActiveProperty = $event"
+          @update:active-property="updateVtgActiveProperty"
         />
       </template>
     </ConceptAnimationControls>
@@ -434,6 +434,7 @@ import type {
   VtgFoldMode,
   VtgFoldSpan,
   VtgFoldValue,
+  VtgPropertyKey,
   VtgTwistMode,
 } from '@/features/concepts/stores/useConceptsStore'
 import {
@@ -513,9 +514,11 @@ import {
   vtgSpeedRatioRows,
 } from '@/features/vtg/types'
 import {
+  createVtgTransitionPreviewAnimations,
   createVtgTransitionQuickSlotAnimationCandidates,
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import { toColor } from '@/utils/UtilFunc'
@@ -554,6 +557,7 @@ const props = withDefaults(
     builderFullCatalogForced?: boolean
     builderFullGrid?: boolean
     builderInsertionIndex?: number
+    builderMatchAnimation?: RootDataFinal
   }>(),
   {
     animationReady: true,
@@ -626,6 +630,9 @@ const speedRatioRows = computed(() =>
 const visibleSpeedRatios = computed<ReadonlySet<VtgSpeedRatio>>(
   () => new Set<VtgSpeedRatio>(speedRatioRows.value.flat()),
 )
+const updateVtgActiveProperty = (property: VtgPropertyKey | 'scale' | null) => {
+  if (property !== 'scale') vtgActiveProperty.value = property
+}
 const updatePropRotationOffset = (propIndex: 0 | 1, value?: number) => {
   const offsets: [number, number] = [
     propRotationOffsets.value?.[0] ?? 0,
@@ -1569,6 +1576,21 @@ const matchPattern = async (request: Parameters<PatternMatchingClient['matchVtg'
   return matchVtgPatternRequest(request)
 }
 
+let autoBuilderOpenAnimation: RootDataFinal | undefined
+let autoBuilderOpenRevision: number | undefined
+const markAutoBuilderOpenEvaluated = (animation: RootDataFinal) => {
+  autoBuilderOpenAnimation = animation
+  autoBuilderOpenRevision = props.animationRevision
+}
+const shouldEvaluateAutoBuilderOpen = (animation: RootDataFinal): boolean =>
+  autoBuilderOpenAnimation !== animation || autoBuilderOpenRevision !== props.animationRevision
+const hasMultipleVtgBuilderPortions = (animation: RootDataFinal): boolean => {
+  const prepared = prepareVtg45TransitionPattern(animation)
+  return (
+    prepared.supported && (createVtgTransitionPreviewAnimations(prepared.pattern)?.length ?? 0) > 1
+  )
+}
+
 const hydratePatternControls = async (animation: RootDataFinal) => {
   const version = ++hydrationVersion
   conceptsStore.hydrateVtgPropertyControls(animation)
@@ -1576,7 +1598,8 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   // The parent suppresses revisions produced by this pane. A supplied revision therefore marks
   // an external change (Editor, Timeline, Quick Slots, or another control surface) and must be
   // canonicalized independently instead of preserving the pane's previous cell alias.
-  const selection = props.animationRevision === undefined ? lastEmittedSelection : undefined
+  const selection =
+    !props.builderActive && props.animationRevision === undefined ? lastEmittedSelection : undefined
   lastEmittedSelection = undefined
 
   const matchPreferences = {
@@ -1601,7 +1624,11 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     return
   }
 
-  if (version !== hydrationVersion || !componentMounted || props.animation !== animation) return
+  const currentMatchAnimation = props.builderActive ? props.builderMatchAnimation : props.animation
+  if (version !== hydrationVersion || !componentMounted || currentMatchAnimation !== animation)
+    return
+  const evaluateAutoBuilderOpen = !props.builderActive && shouldEvaluateAutoBuilderOpen(animation)
+  if (evaluateAutoBuilderOpen) markAutoBuilderOpenEvaluated(animation)
   if (result.status === 'unchanged') {
     previewsReady.value = true
     return
@@ -1611,8 +1638,6 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   const suppressionOwner = beginPatternEmitSuppression()
 
   if (match) {
-    const tile = matrixTiles.value.find(({ reference }) => reference === match.reference)
-    selectedCell.value = tile ? { column: tile.column, row: tile.row } : undefined
     speedRatio.value = match.speedRatio
     isAnti.value = match.isAnti
     swapProps.value = match.swapProps
@@ -1661,6 +1686,14 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
         : COLORS[animation.props[1].color]
     prop.value = animation.prop
     isQtr.value = result.status === 'matched' && result.source === 'qtr'
+    const tile =
+      matrixTiles.value.find(({ reference }) => reference === match.reference) ??
+      (compactBuilder.value
+        ? matrixTiles.value.find(
+            ({ label }) => label === describeVtgBuilderMotion(patternAnimation),
+          )
+        : undefined)
+    selectedCell.value = tile ? { column: tile.column, row: tile.row } : undefined
   } else {
     selectedCell.value = undefined
     isQtr.value = false
@@ -1679,6 +1712,13 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
 
   releasePatternEmitSuppression(suppressionOwner)
   previewsReady.value = true
+  if (
+    evaluateAutoBuilderOpen &&
+    result.status === 'unmatched' &&
+    hasMultipleVtgBuilderPortions(animation)
+  ) {
+    emit('builderOpen')
+  }
 }
 
 const selectInitialRandomPattern = () => {
@@ -1703,18 +1743,38 @@ const selectInitialRandomPattern = () => {
   releasePatternEmitSuppression(suppressionOwner)
 }
 
+const clearBuilderPatternMatch = () => {
+  hydrationVersion++
+  previewsReady.value = true
+  const suppressionOwner = beginPatternEmitSuppression()
+  selectedCell.value = undefined
+  isQtr.value = false
+  orientation.value = 0
+  propRotationOffsets.value = undefined
+  nextTick(() => releasePatternEmitSuppression(suppressionOwner))
+}
+
 const syncPatternControls = () => {
-  if (!componentMounted || props.builderActive) return
+  if (!componentMounted) return
   if (!props.animationReady) {
     previewsReady.value = false
     return
   }
-  if (!props.animation) {
-    previewsReady.value = true
+
+  const animation = props.builderActive ? props.builderMatchAnimation : props.animation
+  if (!animation) {
+    if (props.builderActive) clearBuilderPatternMatch()
+    else previewsReady.value = true
     return
   }
 
-  if (props.animation.props.length === 0) {
+  if (props.builderActive) {
+    previewsReady.value = false
+    void hydratePatternControls(animation)
+    return
+  }
+
+  if (animation.props.length === 0) {
     if (initialAnimationHandled) return
 
     initialAnimationHandled = true
@@ -1725,13 +1785,14 @@ const syncPatternControls = () => {
 
   initialAnimationHandled = true
   previewsReady.value = false
-  void hydratePatternControls(props.animation)
+  void hydratePatternControls(animation)
 }
 
 watch(
   [
     () => props.animationReady,
     () => props.animationRevision,
+    () => props.builderMatchAnimation,
     // Standalone consumers that do not provide a revision retain the original prop-update API.
     () => (props.animationRevision === undefined ? props.animation : undefined),
   ],
@@ -1740,16 +1801,13 @@ watch(
 
 watch(
   () => props.builderActive,
-  (active) => {
+  (active, previousActive) => {
     hydrationVersion++
+    if (!active && previousActive === true && props.animation) {
+      markAutoBuilderOpenEvaluated(props.animation)
+    }
     if (active) {
-      previewsReady.value = true
-      const suppressionOwner = beginPatternEmitSuppression()
-      selectedCell.value = undefined
-      isQtr.value = false
-      orientation.value = 0
-      propRotationOffsets.value = undefined
-      nextTick(() => releasePatternEmitSuppression(suppressionOwner))
+      syncPatternControls()
       return
     }
 
