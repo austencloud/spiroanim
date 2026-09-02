@@ -6,7 +6,7 @@
           v-bind="activatorProps"
           type="button"
           :aria-label="`Decrease ${label}`"
-          :disabled="modelValue <= min"
+          :disabled="disabled || modelValue <= min"
           :data-role="`${dataRole}-decrease`"
           @click="update(-step)"
         >
@@ -21,7 +21,7 @@
           v-bind="activatorProps"
           type="button"
           :aria-label="`Increase ${label}`"
-          :disabled="modelValue >= max"
+          :disabled="disabled || modelValue >= max"
           :data-role="`${dataRole}-increase`"
           @click="update(step)"
         >
@@ -46,6 +46,7 @@ const props = defineProps<{
   label: string
   dataRole: string
   displayValue?: string
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{

@@ -3,11 +3,18 @@ import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightSte
 import { eightStepShapes } from '@/features/eight-step/types'
 import type { EightStepPatternMatch, EightStepPatternSelection } from '@/features/eight-step/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
+import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import type { AnimDataCompiled, RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 
 const booleanOptions = [false, true] as const
 
-type EightStepCandidateMatch = Omit<EightStepPatternMatch, 'bpm' | 'scale'>
+type EightStepCandidateMatch = Omit<
+  EightStepPatternMatch,
+  'bpm' | 'scale' | 'propRotationOffsets'
+> & {
+  animation: RootDataFinal
+}
 
 let candidateCache: ReadonlyMap<string, readonly EightStepCandidateMatch[]> | undefined
 
@@ -22,14 +29,33 @@ const frameSignature = (frame: AnimDataCompiled) => [
   normalizePlane(frame.plane),
 ]
 
-const rootSignature = (animation: RootDataCompiled) =>
+const structuralFrameSignature = (frame: AnimDataCompiled, frameIndex: number) => [
+  // Viewer Offset changes only the initial prop alignment. Keep every subsequent turn so the
+  // authored Eight-Step choreography remains exact while the initial alignment stays editable.
+  frameIndex === 0 ? 0 : frame.turns,
+  frame.arc,
+  normalizePlane(frame.plane),
+]
+
+const exactRootSignature = (animation: RootDataCompiled) =>
   JSON.stringify(animation.props.map((prop) => prop.anim.map(frameSignature)))
+
+const structuralRootSignature = (animation: RootDataCompiled) =>
+  JSON.stringify(animation.props.map((prop) => prop.anim.map(structuralFrameSignature)))
+
+const createExactSignature = (animation: RootDataFinal): string | undefined => {
+  try {
+    return exactRootSignature(rootCompile(animation))
+  } catch {
+    return undefined
+  }
+}
 
 const createSignature = (animation: RootDataFinal): string | undefined => {
   if (animation.props.length !== 2) return undefined
 
   try {
-    return rootSignature(rootCompile(animation))
+    return structuralRootSignature(rootCompile(animation))
   } catch {
     return undefined
   }
@@ -38,6 +64,21 @@ const createSignature = (animation: RootDataFinal): string | undefined => {
 const getScale = (animation: RootDataFinal): number | undefined => {
   const firstScale = animation.props[0]?.anim[0]?.scale
   return firstScale === undefined ? undefined : firstScale / 10
+}
+
+const normalizeForMatching = (animation: RootDataFinal): RootDataFinal => {
+  const prepared = prepareVtg45TransitionPattern(animation)
+  return prepared.supported ? prepared.pattern : animation
+}
+
+const getPropRotationOffsets = (
+  animation: RootDataFinal,
+  candidate: RootDataFinal,
+): readonly [number, number] | undefined => {
+  const left = (animation.props[0]?.anim[0]?.turns ?? 0) - (candidate.props[0]?.anim[0]?.turns ?? 0)
+  const right =
+    (animation.props[1]?.anim[0]?.turns ?? 0) - (candidate.props[1]?.anim[0]?.turns ?? 0)
+  return animation.props.length === 2 && candidate.props.length === 2 ? [left, right] : undefined
 }
 
 const buildCandidateCache = () => {
@@ -57,7 +98,8 @@ const buildCandidateCache = () => {
           const animation = createDefaultEightStepAnimation(selection)
           if (!animation) continue
 
-          const signature = createSignature(animation)
+          const normalizedAnimation = normalizeForMatching(animation)
+          const signature = createSignature(normalizedAnimation)
           if (!signature) continue
 
           const matches = candidates.get(signature) ?? []
@@ -66,6 +108,7 @@ const buildCandidateCache = () => {
             swapProps,
             reversePlane,
             shape,
+            animation: normalizedAnimation,
           })
           candidates.set(signature, matches)
         }
@@ -81,15 +124,28 @@ export const findEightStepPatternMatches = (
   animation: RootDataFinal,
 ): readonly EightStepPatternMatch[] => {
   const scale = getScale(animation)
-  const signature = createSignature(animation)
+  const normalizedAnimation = normalizeForMatching(animation)
+  const signature = createSignature(normalizedAnimation)
   if (scale === undefined || !signature) return []
 
   const candidates = candidateCache ?? buildCandidateCache()
-  return (candidates.get(signature) ?? []).map((candidate) => ({
-    ...candidate,
-    bpm: animation.bpm,
-    scale,
-  }))
+  return (candidates.get(signature) ?? []).flatMap((candidate) => {
+    const propRotationOffsets = getPropRotationOffsets(normalizedAnimation, candidate.animation)
+    if (!propRotationOffsets) return []
+    const alignedCandidate = applyVtgPropRotationOffsets(candidate.animation, propRotationOffsets)
+    if (createExactSignature(normalizedAnimation) !== createExactSignature(alignedCandidate))
+      return []
+    const { animation: _candidateAnimation, ...match } = candidate
+    const hasPropRotationOffsets = propRotationOffsets.some((offset) => offset !== 0)
+    return [
+      {
+        ...match,
+        bpm: animation.bpm,
+        scale,
+        ...(hasPropRotationOffsets ? { propRotationOffsets } : undefined),
+      },
+    ]
+  })
 }
 
 export const findEightStepPatternMatch = (
@@ -103,5 +159,11 @@ export const matchesEightStepSelection = (
   const candidate = createDefaultEightStepAnimation(selection)
   if (!candidate) return false
 
-  return createSignature(animation) === createSignature(candidate)
+  const normalizedAnimation = normalizeForMatching(animation)
+  const normalizedCandidate = normalizeForMatching(candidate)
+
+  return (
+    createSignature(normalizedAnimation) === createSignature(normalizedCandidate) &&
+    createExactSignature(normalizedAnimation) === createExactSignature(normalizedCandidate)
+  )
 }

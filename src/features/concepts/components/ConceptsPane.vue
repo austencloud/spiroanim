@@ -73,16 +73,20 @@
       @customize="emit('customize', $event)"
       @quick-slots-create="emit('quickSlotsCreate', $event)"
       @animation-update="emit('animationUpdate', $event)"
-      @builder-open="emit('builderOpen')"
+      @builder-open="emit('builderOpen', $event)"
       @update:builder-full-grid="emit('update:builderFullGrid', $event)"
     />
     <EightStepPane
       v-else-if="selectedConcept === '8stp'"
       :animation="animation"
       :animation-ready="animationReady"
+      :builder-active="builderActive"
       :pattern-matcher="patternMatcher"
       @pattern-select="emit('patternSelect', $event)"
       @customize="emit('customize', $event)"
+      @animation-update="emit('animationUpdate', $event)"
+      @builder-open="emit('builderOpen', $event)"
+      @pattern-matched="emit('eightStepPatternMatched')"
     />
     <QuarterSpaceTechPane
       v-else-if="selectedConcept === 'qst'"
@@ -137,7 +141,8 @@ const emit = defineEmits<{
   quickSlotSave: [slot: number]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
   animationUpdate: [animation: RootDataFinal]
-  builderOpen: []
+  builderOpen: [source: 'manual' | 'automatic']
+  eightStepPatternMatched: []
   'update:builderFullGrid': [enabled: boolean]
 }>()
 

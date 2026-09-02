@@ -33,6 +33,7 @@ export interface EightStepPatternSelection
   shape?: EightStepShape
   bpm?: number
   scale?: number
+  propRotationOffsets?: readonly [number, number]
   thick?: number
   paths?: boolean
   hands?: boolean
@@ -47,6 +48,7 @@ export interface EightStepPatternMatch {
   shape: EightStepShape
   bpm: number
   scale: number
+  propRotationOffsets?: readonly [number, number]
 }
 
 export type EightStepReadableAnimation = Partial<

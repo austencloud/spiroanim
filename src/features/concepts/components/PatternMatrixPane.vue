@@ -339,15 +339,13 @@
           <span>Full Grid</span>
         </label>
         <div class="vtg-pattern-builder-actions">
-          <label class="vtg-pattern-builder-button">
-            <input
-              type="checkbox"
-              :checked="builderActive"
-              data-role="vtg-pattern-builder"
-              @change="emit('builderOpen')"
-            />
-            <span>Pattern Builder</span>
-          </label>
+          <PatternWorkspaceToggle
+            label="Pattern Builder"
+            control-role="vtg-pattern-builder"
+            :checked="builderActive"
+            grouped
+            @toggle="emit('builderOpen', 'manual')"
+          />
           <label class="vtg-pattern-builder-button vtg-pattern-builder-button--advanced">
             <input v-model="vtgAdvanced" type="checkbox" data-role="vtg-advanced" />
             <span>Advanced</span>
@@ -420,6 +418,7 @@ import { COLORS, COLSET, PROPSR } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
 import PatternTransitionControls from '@/features/concepts/components/PatternTransitionControls.vue'
+import PatternWorkspaceToggle from '@/features/concepts/components/PatternWorkspaceToggle.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import {
   describePatternSelectionRelationshipsAcrossBeats,
@@ -575,7 +574,7 @@ const emit = defineEmits<{
   customize: [selection: ConceptPatternSelection]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
   animationUpdate: [animation: RootDataFinal]
-  builderOpen: []
+  builderOpen: [source: 'manual' | 'automatic']
   'update:builderFullGrid': [enabled: boolean]
 }>()
 
@@ -1721,7 +1720,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     result.status === 'unmatched' &&
     hasMultipleVtgBuilderPortions(animation)
   ) {
-    emit('builderOpen')
+    emit('builderOpen', 'automatic')
   }
 }
 

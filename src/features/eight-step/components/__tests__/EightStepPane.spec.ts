@@ -5,10 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import EightStepPane from '@/features/eight-step/components/EightStepPane.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
+import { findEightStepPatternMatch } from '@/features/eight-step/matchEightStepAnimation'
 import type {
   EightStepPatternMatchResult,
   PatternMatchingClient,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
+import type { RootDataFinal } from '@/types/AnimTypes'
 
 const createDeferred = <Value>() => {
   let resolve!: (value: Value) => void
@@ -326,7 +328,7 @@ describe('EightStepPane', () => {
     await expectNineMorePreviews(() => reportAllPreviewDimensions(80, 76))
   })
 
-  it('offers a leftmost Tilted checkbox and warns about unvalidated tilted patterns', async () => {
+  it('places Tilted after 180 and before Reset and warns about tilted patterns', async () => {
     const wrapper = mount(EightStepPane)
     const tilted = wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]')
 
@@ -337,17 +339,16 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[data-role="eight-step-diamond-note"]').text()).toBe(
       'Patterns highlighted in yellow, or red when selected, may be difficult or impossible to perform in Wall-Plane without significant modification.',
     )
-    const sliderControls = wrapper.get('.concept-slider-controls').element
     const shapeControls = wrapper.get('[data-role="eight-step-shape-controls"]').element
-    const renderControls = wrapper.get('.concept-render-options').element
+    const topOptions = wrapper.get('.eight-step-top-options').element
+    const reverse = wrapper.get<HTMLInputElement>('[data-role="eight-step-reverse"]').element
+    const reset = wrapper.get<HTMLButtonElement>('[data-role="eight-step-reset"]').element
+    expect(topOptions.contains(shapeControls)).toBe(true)
     expect(
-      renderControls.compareDocumentPosition(sliderControls) & Node.DOCUMENT_POSITION_FOLLOWING,
+      reverse.compareDocumentPosition(shapeControls) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
-    expect(shapeControls.parentElement).toBe(renderControls)
     expect(
-      shapeControls.compareDocumentPosition(
-        wrapper.get<HTMLInputElement>('[data-role="eight-step-paths"]').element,
-      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+      shapeControls.compareDocumentPosition(reset) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
     await wrapper.get('[data-cell-reference="1-AI"]').trigger('click')
@@ -356,7 +357,7 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('Tilted')
     expect(wrapper.findAll('.eight-step-cell--marked')).toHaveLength(0)
     expect(wrapper.get('[data-role="eight-step-box-note"]').text()).toBe(
-      'Box mode is experimental, and its patterns have not been validated. Difficult / Impossible highlighting for patterns performed in Wall-Plane is disabled.',
+      'Tilted / Box mode is experimental, and its patterns have not been validated. Difficult / Impossible highlighting for patterns performed in Wall-Plane is disabled.',
     )
     expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(false)
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
@@ -387,7 +388,7 @@ describe('EightStepPane', () => {
     expect(right.element.checked).toBe(true)
     expect(
       Array.from(options?.querySelectorAll('label span') ?? []).map((option) => option.textContent),
-    ).toEqual(['Tilted', 'Paths', 'Hands', 'Arms', 'Left', 'Right'])
+    ).toEqual(['Paths', 'Hands', 'Arms', 'Left', 'Right'])
 
     await wrapper.get('[data-cell-reference="1-AA"]').trigger('click')
     const patternSelectionCount = wrapper.emitted('patternSelect')?.length
@@ -621,6 +622,7 @@ describe('EightStepPane', () => {
       hands: true,
       arms: false,
       shape: 'box',
+      propRotationOffsets: [23, -37],
     })
     expect(animation).toBeDefined()
 
@@ -645,6 +647,200 @@ describe('EightStepPane', () => {
       true,
     )
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
+    expect(wrapper.emitted('patternMatched')).toHaveLength(1)
+
+    await wrapper.get<HTMLInputElement>('[data-role="eight-step-scale"]').setValue(1.2)
+    expect(wrapper.emitted('customize')?.at(-1)?.[0]).toMatchObject({
+      reference: '6-AI',
+      scale: 1.2,
+      propRotationOffsets: [23, -37],
+    })
+
+    await wrapper.get('[data-role="eight-step-pattern-builder"]').trigger('click')
+    expect(wrapper.emitted('builderOpen')).toHaveLength(1)
+  })
+
+  it('applies whole-pattern Offset, Rotate, and Twist properties without losing the match', async () => {
+    const animation = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '4-EI',
+    })
+    if (!animation) throw new Error('Expected a supported Eight Step animation')
+    const wrapper = mount(EightStepPane, { props: { animation } })
+    await vi.waitFor(() => expect(wrapper.attributes('data-selected-cell')).toBe('4-EI'))
+
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Offset')
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Rotate')
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Twist')
+
+    await wrapper.get('[data-role="eight-step-property-twist-toggle"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('input[data-role^="eight-step-twist-0-"]').setValue('10')
+    const twisted = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as RootDataFinal | undefined
+    expect(twisted?.props[0]?.anim.some((frame) => frame.twist !== undefined)).toBe(true)
+    expect(twisted && findEightStepPatternMatch(twisted)?.reference).toBe('4-EI')
+
+    await wrapper.setProps({ animation: twisted })
+    await vi.waitFor(() => expect(wrapper.attributes('data-selected-cell')).toBe('4-EI'))
+    await wrapper.get('[data-role="eight-step-property-axis-toggle"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('input[aria-label^="Left Rotate at beat"]').setValue('4')
+    const rotated = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as RootDataFinal | undefined
+    expect(rotated?.props[0]?.anim.some((frame) => frame.rotate !== undefined)).toBe(true)
+    expect(rotated && findEightStepPatternMatch(rotated)?.reference).toBe('4-EI')
+
+    await wrapper.setProps({ animation: rotated })
+    await wrapper.get('[data-role="eight-step-property-offset-toggle"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('[data-role="eight-step-offset-0-input"]').setValue('30')
+    await wrapper.get('[data-role="eight-step-offset-0-input"]').trigger('change')
+    const offset = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as RootDataFinal | undefined
+    expect(findEightStepPatternMatch(offset!)?.propRotationOffsets?.[0]).toBe(30)
+  })
+
+  it('keeps Advanced Twist active through whole-pattern animation updates', async () => {
+    const animation = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '4-EI',
+    })
+    if (!animation) throw new Error('Expected a supported Eight Step animation')
+    const wrapper = mount(EightStepPane, { props: { animation } })
+    await vi.waitFor(() => expect(wrapper.attributes('data-selected-cell')).toBe('4-EI'))
+
+    await wrapper.get('[data-role="eight-step-property-twist-toggle"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('input[name$="-twist-mode"][value="advanced"]').setValue()
+    const modeAnimation = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as
+      | RootDataFinal
+      | undefined
+    await wrapper.setProps({ animation: modeAnimation })
+    await flushPromises()
+
+    expect(
+      wrapper.get<HTMLInputElement>('input[name$="-twist-mode"][value="advanced"]').element.checked,
+    ).toBe(true)
+    await wrapper.get<HTMLInputElement>('input[aria-label="Left Twist at beat 1"]').setValue('10')
+    const updated = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as RootDataFinal | undefined
+    await wrapper.setProps({ animation: updated })
+    await flushPromises()
+
+    expect(
+      wrapper.get<HTMLInputElement>('input[name$="-twist-mode"][value="advanced"]').element.checked,
+    ).toBe(true)
+    expect(updated?.props[0]?.anim.some((frame) => frame.twist !== undefined)).toBe(true)
+    expect(updated && findEightStepPatternMatch(updated)?.reference).toBe('4-EI')
+  })
+
+  it('keeps Advanced Rotate active through whole-pattern animation updates', async () => {
+    const animation = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '4-EI',
+    })
+    if (!animation) throw new Error('Expected a supported Eight Step animation')
+    const wrapper = mount(EightStepPane, { props: { animation } })
+    await vi.waitFor(() => expect(wrapper.attributes('data-selected-cell')).toBe('4-EI'))
+
+    await wrapper.get('[data-role="eight-step-property-axis-toggle"]').trigger('click')
+    const advancedRotate = wrapper.findAll<HTMLInputElement>('input[name$="-fold-mode"]')[1]
+    if (!advancedRotate) throw new Error('Expected an Advanced Rotate mode control')
+    await advancedRotate.setValue()
+    const modeAnimation = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as
+      | RootDataFinal
+      | undefined
+    await wrapper.setProps({ animation: modeAnimation })
+    await flushPromises()
+
+    expect(wrapper.findAll<HTMLInputElement>('input[name$="-fold-mode"]')[1]?.element.checked).toBe(
+      true,
+    )
+    await wrapper.get<HTMLInputElement>('input[aria-label="Left Rotate at beat 1"]').setValue('4')
+    const updated = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as RootDataFinal | undefined
+    await wrapper.setProps({ animation: updated })
+    await flushPromises()
+
+    expect(wrapper.findAll<HTMLInputElement>('input[name$="-fold-mode"]')[1]?.element.checked).toBe(
+      true,
+    )
+    expect(updated?.props[0]?.anim.some((frame) => frame.rotate !== undefined)).toBe(true)
+    expect(updated && findEightStepPatternMatch(updated)?.reference).toBe('4-EI')
+  })
+
+  it('applies and keeps the selected Rotate mirror setting through animation updates', async () => {
+    const animation = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '4-EI',
+    })
+    if (!animation) throw new Error('Expected a supported Eight Step animation')
+    const wrapper = mount(EightStepPane, { props: { animation } })
+    await vi.waitFor(() => expect(wrapper.attributes('data-selected-cell')).toBe('4-EI'))
+
+    await wrapper.get('[data-role="eight-step-property-axis-toggle"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('input[aria-label="Mirror folds"]').setValue(false)
+    const unmirroredMode = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as
+      | RootDataFinal
+      | undefined
+    await wrapper.setProps({ animation: unmirroredMode })
+    await flushPromises()
+
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Mirror folds"]').element.checked).toBe(
+      false,
+    )
+    await wrapper.get<HTMLInputElement>('input[aria-label^="Left Rotate at beat"]').setValue('4')
+    const unmirroredFold = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as
+      | RootDataFinal
+      | undefined
+    expect(unmirroredFold?.props[0]?.anim.some((frame) => frame.rotate !== undefined)).toBe(true)
+    expect(unmirroredFold?.props[1]?.anim.some((frame) => frame.rotate !== undefined)).toBe(false)
+
+    await wrapper.setProps({ animation: unmirroredFold })
+    await flushPromises()
+    await wrapper.get<HTMLInputElement>('input[aria-label="Mirror folds"]').setValue(true)
+    const mirroredFold = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as
+      | RootDataFinal
+      | undefined
+    await wrapper.setProps({ animation: mirroredFold })
+    await flushPromises()
+
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Mirror folds"]').element.checked).toBe(
+      true,
+    )
+    expect(mirroredFold?.props[1]?.anim.some((frame) => frame.rotate !== undefined)).toBe(true)
+    expect(mirroredFold && findEightStepPatternMatch(mirroredFold)?.reference).toBe('4-EI')
+  })
+
+  it('hides whole-pattern properties while Pattern Viewer is open', async () => {
+    const animation = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '4-EI',
+    })
+    if (!animation) throw new Error('Expected a supported Eight Step animation')
+    const wrapper = mount(EightStepPane, { props: { animation, builderActive: true } })
+
+    await vi.waitFor(() => expect(wrapper.attributes('data-selected-cell')).toBe('4-EI'))
+    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(false)
+
+    await wrapper.setProps({ builderActive: false })
+    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(true)
+  })
+
+  it('reports the first clicked match after an unmatched animation load', async () => {
+    const initial = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AA' })
+    const selected = createDefaultEightStepAnimation({ concept: '8stp', reference: '2-AA' })
+    if (!initial || !selected) throw new Error('Expected supported Eight Step animations')
+
+    const matchEightStep = vi
+      .fn<PatternMatchingClient['matchEightStep']>()
+      .mockResolvedValueOnce({ status: 'unmatched' })
+      .mockResolvedValueOnce({ status: 'unchanged' })
+    const patternMatcher: PatternMatchingClient = {
+      matchVtg: async () => ({ status: 'unmatched' }),
+      matchEightStep,
+      matchQst: async () => ({ status: 'unmatched' }),
+    }
+    const wrapper = mount(EightStepPane, { props: { animation: initial, patternMatcher } })
+    await vi.waitFor(() => expect(matchEightStep).toHaveBeenCalledOnce())
+    expect(wrapper.emitted('patternMatched')).toBeUndefined()
+
+    await wrapper.get('[data-cell-reference="2-AA"]').trigger('click')
+    await wrapper.setProps({ animation: selected })
+
+    await vi.waitFor(() => expect(wrapper.emitted('patternMatched')).toHaveLength(1))
   })
 
   it('ignores a stale match after a newer animation has been hydrated', async () => {

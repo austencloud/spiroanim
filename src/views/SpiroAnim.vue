@@ -56,7 +56,8 @@
         @quick-slot-save="saveCurrentPatternToQuickSlot"
         @quick-slots-create="saveAnimationsToQuickSlots"
         @animation-update="applyPropertyAnimation"
-        @builder-open="toggleBuilder"
+        @builder-open="handleBuilderOpen"
+        @eight-step-pattern-matched="handleEightStepPatternMatched"
         @customize="applyBuilderCustomization"
         @update:builder-full-grid="builderFullGrid = $event"
       />
@@ -66,9 +67,11 @@
         data-type="builder"
         data-role="builder-pane-view"
         :allow-first-drop="builderFullGrid"
+        :mode="activeBuilderOwner ?? 'vtg'"
         @quick-slots-create="saveAnimationsToQuickSlots"
         @preview-selection-change="selectedBuilderPreviewIndex = $event"
         @pattern-match-animation-change="builderPatternMatchAnimation = $event"
+        @close="closeActiveBuilder(true)"
       />
     </div>
     <div
@@ -132,6 +135,7 @@ import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
 import BuilderPane from '@/features/builder/components/BuilderPane.vue'
 import { applyConceptPattern as createConceptPattern } from '@/features/concepts/applyConceptPattern'
 import {
+  isEightStepPatternSelection,
   isQtrPatternSelection,
   isVtgPatternSelection,
   type ConceptPatternSelection,
@@ -208,6 +212,10 @@ const commitConceptAnimation = (animation: RootDataFinal) => {
 const selectedBuilderPreviewIndex = ref<number>()
 const builderPatternMatchAnimation = shallowRef<RootDataFinal>()
 const builderFullGrid = ref(false)
+type BuilderOwner = 'vtg' | 'eight-step'
+const activeBuilderOwner = ref<BuilderOwner>()
+const vtgBuilderOpen = ref<boolean>()
+const eightStepBuilderOpen = ref<boolean>()
 const builderFullCatalogForced = computed(
   () =>
     paneStore.isPaneHijacked &&
@@ -365,9 +373,10 @@ const playerSurfaceStyle = computed<CSSProperties>(() => ({
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
   const createdAnimation = createConceptPattern(ROOT.value, selection)
   if (createdAnimation) {
-    const animation = isVtgPatternSelection(selection)
-      ? conceptsStore.applyVtgPropertyControls(createdAnimation)
-      : createdAnimation
+    const animation =
+      isVtgPatternSelection(selection) || isEightStepPatternSelection(selection)
+        ? conceptsStore.applyVtgPropertyControls(createdAnimation)
+        : createdAnimation
     commitConceptAnimation(animation)
     playerStore.cameraReset = Symbol()
   }
@@ -397,7 +406,12 @@ const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
   if (playerStore.PLAYBACK_PREVIEW_ACTIVE) playerStore.endPlaybackPreview()
   const animation = isVtgPatternSelection(selection)
     ? applyVtgCustomization(ROOT.value, selection)
-    : createConceptPattern(ROOT.value, selection)
+    : (() => {
+        const createdAnimation = createConceptPattern(ROOT.value, selection)
+        return createdAnimation && isEightStepPatternSelection(selection)
+          ? conceptsStore.applyVtgPropertyControls(createdAnimation)
+          : createdAnimation
+      })()
   if (!animation) return
   qsStore.qsSkip = true
   commitConceptAnimation(animation)
@@ -408,18 +422,80 @@ const applyPropertyAnimation = (animation: RootDataFinal) => {
   commitConceptAnimation(animation)
 }
 
-const toggleBuilder = () => {
+const selectedBuilderOwner = (): BuilderOwner =>
+  conceptsStore.selectedConcept === '8stp' ? 'eight-step' : 'vtg'
+
+const rememberBuilderOpen = (owner: BuilderOwner, open: boolean) => {
+  if (owner === 'eight-step') eightStepBuilderOpen.value = open
+  else vtgBuilderOpen.value = open
+}
+
+const shouldRestoreBuilder = (owner: BuilderOwner) =>
+  owner === 'eight-step' ? eightStepBuilderOpen.value === true : vtgBuilderOpen.value === true
+
+const openBuilder = (owner: BuilderOwner) => {
+  if (paneStore.isPaneHijacked && activeBuilderOwner.value === owner) {
+    rememberBuilderOpen(owner, true)
+    return
+  }
   builderFullGrid.value = false
   if (paneStore.isPaneHijacked) paneStore.exitPaneHijack()
-  else paneStore.hijackOppositePane('builder', 'concepts')
+  if (!paneStore.hijackOppositePane('builder', 'concepts')) return
+  activeBuilderOwner.value = owner
+  rememberBuilderOpen(owner, true)
+}
+
+const closeActiveBuilder = (rememberClosure: boolean) => {
+  if (rememberClosure && activeBuilderOwner.value)
+    rememberBuilderOpen(activeBuilderOwner.value, false)
+  builderFullGrid.value = false
+  if (paneStore.isPaneHijacked) paneStore.exitPaneHijack()
+  activeBuilderOwner.value = undefined
+}
+
+const toggleBuilder = () => {
+  const owner = selectedBuilderOwner()
+  if (
+    paneStore.isPaneHijacked &&
+    (activeBuilderOwner.value === owner || activeBuilderOwner.value === undefined)
+  ) {
+    closeActiveBuilder(true)
+    return
+  }
+  openBuilder(owner)
+}
+
+const handleBuilderOpen = (source: 'manual' | 'automatic') => {
+  if (source === 'automatic') {
+    if (conceptsStore.selectedConcept === 'vtg' && vtgBuilderOpen.value !== false) {
+      openBuilder('vtg')
+    }
+    return
+  }
+  toggleBuilder()
+}
+
+const handleEightStepPatternMatched = () => {
+  if (eightStepBuilderOpen.value === undefined) eightStepBuilderOpen.value = true
+  if (
+    eightStepBuilderOpen.value &&
+    conceptsStore.selectedConcept === '8stp' &&
+    activeBuilderOwner.value !== 'eight-step'
+  ) {
+    openBuilder('eight-step')
+  }
 }
 
 watch(
   () => conceptsStore.selectedConcept,
-  () => {
-    if (!paneStore.isPaneHijacked) return
-    builderFullGrid.value = false
-    paneStore.exitPaneHijack()
+  (concept) => {
+    closeActiveBuilder(false)
+    const owner = concept === '8stp' ? 'eight-step' : concept === 'vtg' ? 'vtg' : undefined
+    if (owner && shouldRestoreBuilder(owner)) {
+      void nextTick(() => {
+        if (selectedBuilderOwner() === owner) openBuilder(owner)
+      })
+    }
   },
 )
 

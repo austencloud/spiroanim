@@ -219,8 +219,8 @@ export function useMainRoute() {
     animationPath?.split('?', 2)[1]?.split('#', 1)[0]
   let lastObservedAnimationQuery = animationQueryFromPath(createQuickSlotAnimationPath(ROOT.value))
 
-  const updatePath = () => {
-    if (isPaneHijacked.value) return
+  const updatePath = (allowWhilePaneHijacked = false) => {
+    if (isPaneHijacked.value && !allowWhilePaneHijacked) return
 
     let newPath: string | null = null
     const left = findKeyByValue(parents.value, 'left')
@@ -263,10 +263,12 @@ export function useMainRoute() {
   if (!page || page === 'app' || switchedToConcepts || shouldCanonicalizeConceptRoute) updatePath()
 
   // Watch for view/pane changes
-  watch(parents, updatePath)
+  watch(parents, () => updatePath())
 
   // The selected child is part of the shareable pane layout path.
-  watch(selectedConcept, updatePath)
+  // A Builder/Viewer pane is only a temporary overlay, so concept switches can still derive their
+  // route from the unchanged underlying pane layout while that overlay is active.
+  watch(selectedConcept, () => updatePath(true))
 
   // The route owns Quick Slot reconciliation, and slot identity depends only on the serialized
   // animation query. Path-only changes such as switching concepts or rearranging panes must not

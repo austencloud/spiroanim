@@ -15,7 +15,7 @@
     @customize="emit('customize', $event)"
     @quick-slots-create="emit('quickSlotsCreate', $event)"
     @animation-update="emit('animationUpdate', $event)"
-    @builder-open="emit('builderOpen')"
+    @builder-open="emit('builderOpen', $event)"
     @update:builder-full-grid="emit('update:builderFullGrid', $event)"
   />
 </template>
@@ -54,7 +54,7 @@ const emit = defineEmits<{
   customize: [selection: ConceptPatternSelection]
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
   animationUpdate: [animation: RootDataFinal]
-  builderOpen: []
+  builderOpen: [source: 'manual' | 'automatic']
   'update:builderFullGrid': [enabled: boolean]
 }>()
 

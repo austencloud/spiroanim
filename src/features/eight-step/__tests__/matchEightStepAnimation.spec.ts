@@ -5,6 +5,13 @@ import {
   findEightStepPatternMatch,
   matchesEightStepSelection,
 } from '@/features/eight-step/matchEightStepAnimation'
+import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
+import { applyVtgBuilderScaleSettings } from '@/features/builder/applyVtgBuilderScaleSettings'
+import { applyVtgTwistSettings } from '@/features/vtg/applyVtgTwistSettings'
+import { applyVtgFoldSettings } from '@/features/vtg/applyVtgFoldSettings'
+import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
+import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import { applyVtgBuilderPortionProperties } from '@/features/builder/editVtgBuilderPortionProperties'
 
 describe('matchEightStepAnimation', () => {
   it('recovers the cell and transforms from compiled geometry', () => {
@@ -71,6 +78,79 @@ describe('matchEightStepAnimation', () => {
 
     expect(animation).toBeDefined()
     expect(animation && findEightStepPatternMatch(animation)?.reference).toBe('3-EI')
+  })
+
+  it('recovers Viewer prop rotation offsets without losing the Eight-Step match', () => {
+    const selection = {
+      concept: '8stp',
+      reference: '4-EE',
+      swapProps: true,
+      reversePlane: false,
+      shape: 'diamond',
+    } as const
+    const base = createDefaultEightStepAnimation(selection)
+    expect(base).toBeDefined()
+    if (!base) return
+
+    const animation = applyVtgPropRotationOffsets(base, [23, -37])
+
+    expect(findEightStepPatternMatch(animation)).toEqual({
+      reference: '4-EE',
+      swapProps: true,
+      reversePlane: false,
+      shape: 'diamond',
+      bpm: animation.bpm,
+      scale: 0.8,
+      propRotationOffsets: [23, -37],
+    })
+    expect(
+      matchesEightStepSelection(animation, { ...selection, propRotationOffsets: [23, -37] }),
+    ).toBe(true)
+    expect(matchesEightStepSelection(animation, selection)).toBe(false)
+  })
+
+  it('ignores Viewer Scale, Twist, Yaw, and Rotate properties when identifying choreography', () => {
+    const selection = {
+      concept: '8stp',
+      reference: '8-II',
+      swapProps: false,
+      reversePlane: true,
+      shape: 'box',
+    } as const
+    const base = createDefaultEightStepAnimation(selection)
+    expect(base).toBeDefined()
+    if (!base) return
+
+    const scaled = applyVtgBuilderScaleSettings(base, 'advanced', [{ 0: 1.1, 2: 0.7 }, { 1: 1.3 }])
+    const twisted = applyVtgTwistSettings(scaled, 'advanced', [{ 0.5: 45, 3: -90 }, { 1.5: 120 }])
+    const customized = applyVtgFoldSettings(twisted, [
+      { 0: { yaw: 45, rotate: 180 }, 2: { yaw: -15 } },
+      { 1: { yaw: -30 }, 3: { rotate: -90 } },
+    ])
+
+    expect(findEightStepPatternMatch(customized)).toMatchObject({
+      reference: '8-II',
+      swapProps: false,
+      reversePlane: true,
+      shape: 'box',
+    })
+  })
+
+  it('matches after Viewer properties are copied back from a reconstructed portion', () => {
+    const base = createDefaultEightStepAnimation({ concept: '8stp', reference: '4-EI' })
+    expect(base).toBeDefined()
+    if (!base) return
+    const prepared = prepareVtg45TransitionPattern(base)
+    expect(prepared.supported).toBe(true)
+    if (!prepared.supported) return
+    const preview = createVtgTransitionPreviewAnimations(prepared.pattern)?.[0]
+    expect(preview).toBeDefined()
+    if (!preview) return
+
+    const scaledPreview = applyVtgBuilderScaleSettings(preview, 'simple', [{ 0: 1.1 }, {}])
+    const scaled = applyVtgBuilderPortionProperties(prepared.pattern, 0, scaledPreview, ['scale'])
+    expect(scaled).toBeDefined()
+    expect(scaled && findEightStepPatternMatch(scaled)?.reference).toBe('4-EI')
   })
 
   it('rejects non-Eight-Step frame geometry', () => {

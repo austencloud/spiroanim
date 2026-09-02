@@ -19,6 +19,7 @@ import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import * as transitionAnimations from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
 import type { QtrPatternSelection } from '@/features/vtg/types'
+import { createCompiledVtgPatternSignature } from '@/features/vtg/math/createVtgAnimationSignature'
 
 const AnimPlayerStub = {
   props: ['controlsStartClearance', 'controlsEndClearance', 'selectionEnabled', 'conceptsVisible'],
@@ -485,7 +486,6 @@ describe('SpiroAnim view', () => {
     paneStore.setViewInPane('player', 'right')
     expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
     await flushPromises()
-    const routeBeforeConceptSwitch = router.currentRoute.value.fullPath
     expect(wrapper.get('[data-role="builder-thumbnails"]').classes()).not.toContain(
       'builder-pane__thumbnails--menu-offset',
     )
@@ -500,9 +500,11 @@ describe('SpiroAnim view', () => {
     expect(wrapper.find('[data-role="builder-pane-view"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="player-view"]').exists()).toBe(true)
     expect(useConceptsStore().selectedConcept).toBe('8stp')
-    expect(router.currentRoute.value.fullPath).toBe(routeBeforeConceptSwitch)
+    expect(router.currentRoute.value.path).toBe('/8stp-play')
     useConceptsStore().selectedConcept = 'vtg'
     await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/vtg-play')
+    expect(paneStore.isPaneHijacked).toBe(false)
 
     paneStore.setViewInPane('editor', 'right')
     await flushPromises()
@@ -783,6 +785,157 @@ describe('SpiroAnim view', () => {
     expect(wrapper.find('[data-role="vtg-transition-previews"]').exists()).toBe(false)
 
     previewSpy.mockRestore()
+    wrapper.unmount()
+  })
+
+  it('remembers each pattern workspace while switching concepts and routes', async () => {
+    const pinia = createPinia().use(piniaPluginPersistedstate)
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    })
+    await router.push('/8stp-play')
+    await router.isReady()
+
+    const playerRoot = usePlayerStore('main').raw().ROOT
+    const animation = createEightStepAnimation(playerRoot.value, {
+      concept: '8stp',
+      reference: '1-AE',
+    })
+    if (!animation) throw new Error('Expected a supported Eight Step animation')
+    playerRoot.value = animation
+
+    const conceptsStore = useConceptsStore()
+    conceptsStore.selectedConcept = '8stp'
+    const paneStore = useMainPaneStore()
+    paneStore.setViewInPane('concepts', 'right')
+
+    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+    const wrapper = mount(SpiroAnim, {
+      attachTo: document.body,
+      global: {
+        plugins: [pinia, router],
+        stubs: { Player: AnimPlayerStub, AnimTimeline: AnimTimelineStub },
+      },
+    })
+
+    await vi.waitFor(() => expect(paneStore.isPaneHijacked).toBe(true))
+    expect(
+      wrapper.get<HTMLInputElement>('[data-role="eight-step-pattern-builder"]').element.checked,
+    ).toBe(true)
+    expect(
+      wrapper.get('[data-role="eight-step-pattern-builder"]').element.nextSibling?.textContent,
+    ).toBe('Pattern Viewer')
+    expect(wrapper.get('[data-role="builder-pane-view"]').text()).toContain('Pattern Viewer')
+    expect(wrapper.find('[data-role="vtg-transition-preview-reverse"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-transition-preview-swap"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label^="Delete pattern"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(false)
+
+    await wrapper.get('[data-role="builder-exit"]').trigger('click')
+    await flushPromises()
+    expect(paneStore.isPaneHijacked).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(true)
+
+    await wrapper.get('[data-role="eight-step-property-twist-toggle"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('input[data-role^="eight-step-twist-0-"]').setValue('10')
+    await flushPromises()
+    expect(playerRoot.value.props[0]?.anim.some((frame) => frame.twist !== undefined)).toBe(true)
+
+    await wrapper.get('[data-role="eight-step-pattern-builder"]').trigger('click')
+    await flushPromises()
+    expect(paneStore.isPaneHijacked).toBe(true)
+
+    await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-role="builder-properties"]').exists()).toBe(true)
+    expect(usePlayerStore('main').PLAYBACK_OVERRIDE_ACTIVE).toBe(true)
+
+    const playerStore = usePlayerStore('main')
+    const rootBeforeTransform = playerRoot.value
+    const playbackBeforeTransform = playerStore.PLAYBACK_ROOT
+    const rootSignatureBeforeTransform = createCompiledVtgPatternSignature(rootBeforeTransform)
+    const playbackSignatureBeforeTransform =
+      createCompiledVtgPatternSignature(playbackBeforeTransform)
+    await wrapper.get<HTMLInputElement>('[data-role="eight-step-swap"]').setValue(true)
+    await flushPromises()
+    expect(playerRoot.value).not.toBe(rootBeforeTransform)
+    expect(playerStore.PLAYBACK_ROOT).not.toBe(playbackBeforeTransform)
+    expect(playerStore.PLAYBACK_ROOT).not.toBe(playerRoot.value)
+    expect(createCompiledVtgPatternSignature(playerRoot.value)).not.toBe(
+      rootSignatureBeforeTransform,
+    )
+    expect(createCompiledVtgPatternSignature(playerStore.PLAYBACK_ROOT)).not.toBe(
+      playbackSignatureBeforeTransform,
+    )
+    expect(
+      playerRoot.value.props.some((prop) => prop.anim.some((frame) => frame.twist !== undefined)),
+    ).toBe(true)
+
+    const animationBeforeSelection = playerRoot.value
+    await wrapper.get('[data-cell-reference="2-AA"]').trigger('click')
+    await flushPromises()
+    expect(playerRoot.value).not.toBe(animationBeforeSelection)
+    expect(usePlayerStore('main').PLAYBACK_PREVIEW_ACTIVE).toBe(false)
+    expect(paneStore.isPaneHijacked).toBe(true)
+
+    await wrapper.get('[data-role="builder-exit"]').trigger('click')
+    await flushPromises()
+    expect(paneStore.isPaneHijacked).toBe(false)
+
+    conceptsStore.selectedConcept = 'vtg'
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/vtg-play')
+    expect(paneStore.isPaneHijacked).toBe(true)
+    expect(wrapper.get('[data-role="builder-pane-view"]').text()).toContain('Pattern Builder')
+    conceptsStore.selectedConcept = '8stp'
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/8stp-play')
+    expect(paneStore.isPaneHijacked).toBe(false)
+
+    await wrapper.get('[data-role="eight-step-pattern-builder"]').trigger('click')
+    await flushPromises()
+    expect(paneStore.isPaneHijacked).toBe(true)
+
+    conceptsStore.selectedConcept = 'vtg'
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/vtg-play')
+    expect(paneStore.isPaneHijacked).toBe(true)
+    expect(wrapper.get('[data-role="builder-pane-view"]').text()).toContain('Pattern Builder')
+    conceptsStore.selectedConcept = '8stp'
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/8stp-play')
+    expect(paneStore.isPaneHijacked).toBe(true)
+
+    conceptsStore.selectedConcept = 'vtg'
+    await flushPromises()
+    expect(paneStore.isPaneHijacked).toBe(true)
+
+    conceptsStore.selectedConcept = '8stp'
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/8stp-play')
+    expect(paneStore.isPaneHijacked).toBe(true)
+    expect(wrapper.get('[data-role="builder-pane-view"]').text()).toContain('Pattern Viewer')
+
+    conceptsStore.selectedConcept = 'vtg'
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/vtg-play')
+    expect(paneStore.isPaneHijacked).toBe(true)
+    expect(wrapper.get('[data-role="builder-pane-view"]').text()).toContain('Pattern Builder')
+
+    await wrapper.get('[data-role="vtg-pattern-builder"]').trigger('click')
+    await flushPromises()
+    expect(paneStore.isPaneHijacked).toBe(false)
+    conceptsStore.selectedConcept = '8stp'
+    await flushPromises()
+    expect(paneStore.isPaneHijacked).toBe(true)
+    conceptsStore.selectedConcept = 'vtg'
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/vtg-play')
+    expect(paneStore.isPaneHijacked).toBe(false)
+
     wrapper.unmount()
   })
 

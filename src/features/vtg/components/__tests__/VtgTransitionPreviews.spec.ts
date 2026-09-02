@@ -74,6 +74,27 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.emitted('patternPreview')).toHaveLength(1)
   })
 
+  it('disables structural editing and drop affordances for read-only Builder portions', () => {
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [mixedSpinAnimation],
+        relationships: [relationship],
+        refreshKey: 'read-only-structure',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        structureEditingEnabled: false,
+      },
+    })
+
+    expect(wrapper.find('[data-role="vtg-transition-preview-reverse"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-transition-preview-swap"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="Delete pattern 1"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
+    expect(
+      wrapper.get<HTMLInputElement>('[data-role="vtg-transition-preview-beats"]').element.disabled,
+    ).toBe(true)
+  })
+
   it('uses elemental icons with the original description in the Builder mini grid', () => {
     useConceptsStore().elementalLayout = true
     const wrapper = mount(VtgTransitionPreviews, {

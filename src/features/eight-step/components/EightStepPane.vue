@@ -11,7 +11,11 @@
     </h1>
 
     <div class="eight-step-top-options">
-      <PatternTransformControls role-prefix="eight-step" @reset="resetPatternControls" />
+      <PatternTransformControls role-prefix="eight-step" @reset="resetPatternControls">
+        <template #before-reset>
+          <PatternShapeControls v-model:shape="shape" role-prefix="eight-step" />
+        </template>
+      </PatternTransformControls>
     </div>
 
     <div class="eight-step-board" :style="headColorStyle" data-role="eight-step-board">
@@ -124,14 +128,52 @@
     </div>
 
     <ConceptAnimationControls :animation="animation" role-prefix="eight-step">
-      <template #before-render-controls>
-        <PatternShapeControls v-model:shape="shape" role-prefix="eight-step" />
+      <template #before-customize>
+        <PatternPropertyControls
+          v-if="!builderActive && animation && selectedCell"
+          context="eight-step"
+          :animation="animation"
+          :offset-values="propRotationOffsets"
+          :twist-mode="vtgTwistMode"
+          :twist-values="vtgTwistValues"
+          :fold-values="vtgFoldValues"
+          :fold-values-materialized="vtgFoldValuesMaterialized"
+          :fold-mode="vtgFoldMode"
+          :fold-beat="vtgFoldBeat"
+          :fold-repeat="vtgFoldRepeat"
+          :fold-every="vtgFoldEvery"
+          :fold-alternate="vtgFoldAlternate"
+          :fold-span="vtgFoldSpan"
+          :fold-mirror="vtgFoldMirror"
+          :active-property="vtgActiveProperty"
+          :sliders="sliders"
+          @offset-update="updatePropRotationOffset"
+          @twist-update="updateTwistSetting"
+          @fold-update="updateFoldSetting"
+          @update:twist-mode="updateTwistMode"
+          @update:fold-mode="updateFoldMode"
+          @update:fold-beat="updateFoldBeat"
+          @update:fold-repeat="updateFoldRepeat"
+          @update:fold-every="updateFoldEvery"
+          @update:fold-alternate="updateFoldAlternate"
+          @update:fold-span="updateFoldSpan"
+          @update:fold-mirror="updateFoldMirror"
+          @update:active-property="vtgActiveProperty = $event === 'scale' ? null : $event"
+        />
       </template>
     </ConceptAnimationControls>
 
+    <PatternWorkspaceToggle
+      label="Pattern Viewer"
+      control-role="eight-step-pattern-builder"
+      :checked="builderActive"
+      :disabled="selectedCell === undefined"
+      @toggle="emit('builderOpen', 'manual')"
+    />
+
     <p v-if="shape === 'box'" class="eight-step-development-note" data-role="eight-step-box-note">
-      Box mode is experimental, and its patterns have not been validated. Difficult / Impossible
-      highlighting for patterns performed in Wall-Plane is disabled.
+      Tilted / Box mode is experimental, and its patterns have not been validated. Difficult /
+      Impossible highlighting for patterns performed in Wall-Plane is disabled.
     </p>
     <p
       v-else
@@ -186,11 +228,20 @@ import { mdiShuffleVariant } from '@mdi/js'
 
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
+import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
 import { COLORS, COLSET } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import AppTooltip from '@/components/AppTooltip.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
+import PatternWorkspaceToggle from '@/features/concepts/components/PatternWorkspaceToggle.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import type {
+  VtgFoldSideSettings,
+  VtgFoldValue,
+  VtgFoldMode,
+  VtgFoldSpan,
+  VtgTwistMode,
+} from '@/features/concepts/stores/useConceptsStore'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import {
@@ -215,6 +266,12 @@ import {
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
+import {
+  applyVtgFoldSettings,
+  deriveVtgFoldSimpleSources,
+  extractVtgFoldValues,
+} from '@/features/vtg/applyVtgFoldSettings'
 import { toColor } from '@/utils/UtilFunc'
 import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
@@ -222,6 +279,7 @@ const props = withDefaults(
   defineProps<{
     animation?: RootDataFinal
     animationReady?: boolean
+    builderActive?: boolean
     patternMatcher?: PatternMatchingClient
   }>(),
   {
@@ -232,6 +290,9 @@ const props = withDefaults(
 const emit = defineEmits<{
   patternSelect: [selection: EightStepPatternSelection]
   customize: [selection: EightStepPatternSelection]
+  animationUpdate: [animation: RootDataFinal]
+  builderOpen: [source: 'manual']
+  patternMatched: []
 }>()
 
 interface EightStepCell extends EightStepPatternDefinition {
@@ -317,15 +378,43 @@ const {
   leftPropColor,
   rightPropColor,
   prop,
+  sliders,
+  vtgTwistMode,
+  vtgTwistValues,
+  vtgFoldValues,
+  vtgFoldValuesMaterialized,
+  vtgFoldMode,
+  vtgFoldBeat,
+  vtgFoldRepeat,
+  vtgFoldEvery,
+  vtgFoldAlternate,
+  vtgFoldSpan,
+  vtgFoldMirror,
+  vtgActiveProperty,
 } = storeToRefs(conceptsStore)
 const selectedCell = ref<EightStepPatternDefinition>()
 const shape = ref<EightStepShape>('diamond')
+const propRotationOffsets = ref<EightStepPatternSelection['propRotationOffsets']>()
 
 let suppressPatternEmit = false
 let hydrationVersion = 0
 let lastEmittedSelection: EightStepPatternSelection | undefined
 let componentMounted = false
 let initialAnimationHandled = false
+let pendingPropertyControlHydration:
+  | {
+      animation: RootDataFinal
+      twistMode: VtgTwistMode
+      foldMode: VtgFoldMode
+      foldBeat: VtgFoldSideSettings<number>
+      foldRepeat: VtgFoldSideSettings<boolean>
+      foldEvery: VtgFoldSideSettings<number>
+      foldAlternate: VtgFoldSideSettings<boolean>
+      foldSpan: VtgFoldSpan
+      foldMirror: boolean
+      foldValuesMaterialized: boolean
+    }
+  | undefined
 
 const cells: readonly EightStepCell[] = eightStepPatternDefinitions.map((definition) => ({
   ...definition,
@@ -398,6 +487,8 @@ const createSelection = (cell: EightStepPatternDefinition): EightStepPatternSele
   if (shape.value !== 'diamond') selection.shape = shape.value
   if (bpm.value !== vtgBpmControl.default) selection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
+  if (propRotationOffsets.value !== undefined)
+    selection.propRotationOffsets = propRotationOffsets.value
   if (thick.value !== vtgThickControl.default) selection.thick = thick.value
   if (spacing.value !== vtgSpacingControl.default) selection.spacing = spacing.value
   if (paths.value !== vtgPlayerSettings.paths) selection.paths = paths.value
@@ -463,10 +554,158 @@ const selectColumnGroup = (group: EightStepColumnGroup) => {
   else selectRandomCellFrom(cells.filter((item) => item.column === column))
 }
 
+const emitPropertyAnimation = () => {
+  if (!props.animation) return
+  const animation = conceptsStore.applyVtgPropertyControls(props.animation)
+  pendingPropertyControlHydration = {
+    animation,
+    twistMode: vtgTwistMode.value,
+    foldMode: vtgFoldMode.value,
+    foldBeat: [...vtgFoldBeat.value],
+    foldRepeat: [...vtgFoldRepeat.value],
+    foldEvery: [...vtgFoldEvery.value],
+    foldAlternate: [...vtgFoldAlternate.value],
+    foldSpan: vtgFoldSpan.value,
+    foldMirror: vtgFoldMirror.value,
+    foldValuesMaterialized: vtgFoldValuesMaterialized.value,
+  }
+  emit('animationUpdate', animation)
+}
+
+const updatePropRotationOffset = (propIndex: 0 | 1, value?: number) => {
+  if (!props.animation) return
+  const previous: readonly [number, number] = propRotationOffsets.value ?? [0, 0]
+  const next: [number, number] = [...previous]
+  next[propIndex] = value ?? 0
+  const delta: [number, number] = [next[0] - previous[0], next[1] - previous[1]]
+  propRotationOffsets.value = next.every((offset) => offset === 0) ? undefined : next
+  emit('animationUpdate', applyVtgPropRotationOffsets(props.animation, delta))
+}
+
+const getSimpleFoldSources = () =>
+  deriveVtgFoldSimpleSources(
+    vtgFoldValues.value,
+    vtgFoldBeat.value,
+    vtgFoldSpan.value,
+    vtgFoldValuesMaterialized.value,
+  )
+
+const materializeSimpleFoldValues = (sources = getSimpleFoldSources()) => {
+  if (!props.animation) return
+  vtgFoldValues.value = extractVtgFoldValues(
+    applyVtgFoldSettings(props.animation, sources, {
+      mode: 'simple',
+      beat: vtgFoldBeat.value,
+      repeat: vtgFoldRepeat.value,
+      every: vtgFoldEvery.value,
+      alternate: vtgFoldAlternate.value,
+      span: vtgFoldSpan.value,
+      mirror: vtgFoldMirror.value,
+    }),
+  )
+  vtgFoldValuesMaterialized.value = true
+}
+
+const updateTwistSetting = (propIndex: 0 | 1, beat: number, value?: number) => {
+  conceptsStore.setVtgTwistValue(propIndex, beat, value)
+  emitPropertyAnimation()
+}
+
+const updateTwistMode = (mode: VtgTwistMode) => {
+  vtgTwistMode.value = mode
+  emitPropertyAnimation()
+}
+
+const updateFoldSetting = (
+  propIndex: 0 | 1,
+  beat: number,
+  fold: keyof VtgFoldValue,
+  value?: number,
+) => {
+  if (vtgFoldMode.value === 'simple') {
+    const sources = getSimpleFoldSources()
+    const source = sources[propIndex][String(beat)] ?? {}
+    if (value === undefined) delete source[fold]
+    else source[fold] = value
+    if (source.yaw === undefined && source.rotate === undefined) {
+      delete sources[propIndex][String(beat)]
+    } else sources[propIndex][String(beat)] = source
+    materializeSimpleFoldValues(sources)
+  } else {
+    conceptsStore.setVtgFoldValue(propIndex, beat, fold, value)
+    vtgFoldValuesMaterialized.value = true
+  }
+  emitPropertyAnimation()
+}
+
+const updateFoldMode = (mode: VtgFoldMode) => {
+  if (vtgFoldMode.value === 'simple' && mode === 'advanced') materializeSimpleFoldValues()
+  vtgFoldMode.value = mode
+  emitPropertyAnimation()
+}
+
+const updateFoldBeat = (propIndex: 0 | 1, beat: number) => {
+  const sources = getSimpleFoldSources()
+  const previousBeat = vtgFoldBeat.value[propIndex]
+  const source = sources[propIndex][String(previousBeat)]
+  vtgFoldBeat.value[propIndex] = beat
+  if (vtgFoldMirror.value && propIndex === 0) vtgFoldBeat.value[1] = beat
+  delete sources[propIndex][String(previousBeat)]
+  if (source) sources[propIndex][String(beat)] = source
+  materializeSimpleFoldValues(sources)
+  emitPropertyAnimation()
+}
+
+const updateFoldRepeat = (propIndex: 0 | 1, repeat: boolean) => {
+  const sources = getSimpleFoldSources()
+  vtgFoldRepeat.value[propIndex] = repeat
+  if (vtgFoldMirror.value && propIndex === 0) vtgFoldRepeat.value[1] = repeat
+  if (!repeat) vtgFoldAlternate.value[propIndex] = false
+  materializeSimpleFoldValues(sources)
+  emitPropertyAnimation()
+}
+
+const updateFoldEvery = (propIndex: 0 | 1, every: number) => {
+  const sources = getSimpleFoldSources()
+  vtgFoldEvery.value[propIndex] = every
+  if (vtgFoldMirror.value && propIndex === 0) vtgFoldEvery.value[1] = every
+  materializeSimpleFoldValues(sources)
+  emitPropertyAnimation()
+}
+
+const updateFoldAlternate = (propIndex: 0 | 1, alternate: boolean) => {
+  const sources = getSimpleFoldSources()
+  vtgFoldAlternate.value[propIndex] = alternate
+  if (vtgFoldMirror.value && propIndex === 0) vtgFoldAlternate.value[1] = alternate
+  materializeSimpleFoldValues(sources)
+  emitPropertyAnimation()
+}
+
+const updateFoldSpan = (span: VtgFoldSpan) => {
+  const sources = getSimpleFoldSources()
+  vtgFoldSpan.value = span
+  materializeSimpleFoldValues(sources)
+  emitPropertyAnimation()
+}
+
+const updateFoldMirror = (mirror: boolean) => {
+  const sources = getSimpleFoldSources()
+  vtgFoldMirror.value = mirror
+  if (mirror) {
+    vtgFoldBeat.value[1] = vtgFoldBeat.value[0]
+    vtgFoldRepeat.value[1] = vtgFoldRepeat.value[0]
+    vtgFoldEvery.value[1] = vtgFoldEvery.value[0]
+    vtgFoldAlternate.value[1] = vtgFoldAlternate.value[0]
+  }
+  materializeSimpleFoldValues(sources)
+  emitPropertyAnimation()
+}
+
 const resetPatternControls = async () => {
   suppressPatternEmit = true
   conceptsStore.resetPatternControls()
   shape.value = 'diamond'
+  propRotationOffsets.value = undefined
   await nextTick()
   suppressPatternEmit = false
   if (selectedCell.value) emitPatternSelection(selectedCell.value)
@@ -507,6 +746,23 @@ const matchPattern = async (request: Parameters<PatternMatchingClient['matchEigh
 
 const hydratePatternControls = async (animation: RootDataFinal) => {
   const version = ++hydrationVersion
+  const preservedPropertyModes =
+    pendingPropertyControlHydration?.animation === toRaw(animation)
+      ? pendingPropertyControlHydration
+      : undefined
+  pendingPropertyControlHydration = undefined
+  conceptsStore.hydrateVtgPropertyControls(animation)
+  if (preservedPropertyModes) {
+    vtgTwistMode.value = preservedPropertyModes.twistMode
+    vtgFoldMode.value = preservedPropertyModes.foldMode
+    vtgFoldBeat.value = preservedPropertyModes.foldBeat
+    vtgFoldRepeat.value = preservedPropertyModes.foldRepeat
+    vtgFoldEvery.value = preservedPropertyModes.foldEvery
+    vtgFoldAlternate.value = preservedPropertyModes.foldAlternate
+    vtgFoldSpan.value = preservedPropertyModes.foldSpan
+    vtgFoldMirror.value = preservedPropertyModes.foldMirror
+    vtgFoldValuesMaterialized.value = preservedPropertyModes.foldValuesMaterialized
+  }
   const selection = lastEmittedSelection
   lastEmittedSelection = undefined
 
@@ -524,18 +780,23 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   }
 
   if (version !== hydrationVersion || !componentMounted || props.animation !== animation) return
-  if (result.status === 'unchanged') return
+  if (result.status === 'unchanged') {
+    emit('patternMatched')
+    return
+  }
 
   const match = result.status === 'matched' ? result.match : undefined
   suppressPatternEmit = true
 
   if (match) {
+    emit('patternMatched')
     selectedCell.value = cells.find(({ reference }) => reference === match.reference)
     swapProps.value = match.swapProps
     reversePlane.value = match.reversePlane
     shape.value = match.shape
     bpm.value = match.bpm
     scale.value = match.scale
+    propRotationOffsets.value = match.propRotationOffsets
     thick.value = animation.thick
     paths.value = animation.paths
     hands.value = animation.hands ?? vtgPlayerSettings.hands
@@ -553,6 +814,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     prop.value = animation.prop
   } else {
     selectedCell.value = undefined
+    propRotationOffsets.value = undefined
   }
 
   void nextTick(() => {
@@ -565,6 +827,7 @@ const selectInitialRandomPattern = () => {
   suppressPatternEmit = true
   conceptsStore.resetPatternControls()
   shape.value = 'diamond'
+  propRotationOffsets.value = undefined
   selectRandomCell()
 
   void nextTick(() => {

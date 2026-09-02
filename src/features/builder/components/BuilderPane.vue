@@ -32,7 +32,7 @@
         <button
           class="builder-pane__exit"
           type="button"
-          aria-label="Exit Pattern Builder"
+          :aria-label="`Exit ${workspaceName}`"
           data-role="builder-exit"
           @click="exit"
         >
@@ -42,7 +42,7 @@
         <div class="builder-pane__scroll scrollbar">
           <div class="builder-pane__header-region">
             <header class="builder-pane__header">
-              <h1 id="builder-pane-title">Pattern Builder</h1>
+              <h1 id="builder-pane-title">{{ workspaceName }}</h1>
             </header>
           </div>
 
@@ -75,6 +75,7 @@
             :display-settings="builderDisplaySettings"
             :selected-index="selectedPreviewIndex"
             :allow-first-drop="allowFirstDrop"
+            :structure-editing-enabled="structureEditingEnabled"
             @pattern-drop="acceptPatternDrop"
             @pattern-delete="deletePreview"
             @pattern-reverse="reversePreview"
@@ -292,17 +293,29 @@ import { resolveVtgBuilderPatternMatchAnimation } from '@/features/builder/resol
 const props = withDefaults(
   defineProps<{
     allowFirstDrop?: boolean
+    mode?: 'vtg' | 'eight-step'
     paneCycleControlsVisible?: boolean
     conceptsVisible?: boolean
   }>(),
-  { allowFirstDrop: false, paneCycleControlsVisible: true, conceptsVisible: false },
+  {
+    allowFirstDrop: false,
+    mode: 'vtg',
+    paneCycleControlsVisible: true,
+    conceptsVisible: false,
+  },
 )
 
 const emit = defineEmits<{
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
   previewSelectionChange: [index: number | undefined]
   patternMatchAnimationChange: [animation: RootDataFinal | undefined]
+  close: []
 }>()
+
+const structureEditingEnabled = computed(() => props.mode === 'vtg')
+const workspaceName = computed(() =>
+  props.mode === 'eight-step' ? 'Pattern Viewer' : 'Pattern Builder',
+)
 
 const paneStore = useMainPaneStore()
 const { hijackedPane } = storeToRefs(paneStore)
@@ -689,7 +702,7 @@ onBeforeUnmount(() => {
 const exit = () => {
   selectPreview(undefined)
   playerStore.endPlaybackPreview()
-  paneStore.exitPaneHijack()
+  emit('close')
 }
 </script>
 

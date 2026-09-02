@@ -70,7 +70,7 @@
           class="vtg-transition-previews__actions"
         >
           <div class="vtg-transition-previews__transform-actions">
-            <AppTooltip text="Reverse">
+            <AppTooltip v-if="structureEditingEnabled" text="Reverse">
               <template #activator="{ props: tooltipProps }">
                 <button
                   v-bind="tooltipProps"
@@ -84,7 +84,10 @@
                 </button>
               </template>
             </AppTooltip>
-            <AppTooltip v-if="swappablePreviews[index]" text="Swap Props">
+            <AppTooltip
+              v-if="structureEditingEnabled && swappablePreviews[index]"
+              text="Swap Props"
+            >
               <template #activator="{ props: tooltipProps }">
                 <button
                   v-bind="tooltipProps"
@@ -99,7 +102,7 @@
               </template>
             </AppTooltip>
           </div>
-          <div class="vtg-transition-previews__delete-action">
+          <div v-if="structureEditingEnabled" class="vtg-transition-previews__delete-action">
             <AppTooltip text="Delete">
               <template #activator="{ props: tooltipProps }">
                 <button
@@ -128,6 +131,7 @@
             :value="beatCounts[index]"
             :aria-label="`Pattern ${index + 1} beats`"
             :aria-valuetext="`${beatCounts[index]} beats`"
+            :disabled="!structureEditingEnabled"
             data-role="vtg-transition-preview-beats"
             @input="updateBeatCount(index, $event)"
             @pointerdown="beginPointerSlider"
@@ -147,6 +151,7 @@
             :max="maximumBeatCount(index)"
             :step="0.5"
             :display-value="String(beatCounts[index])"
+            :disabled="!structureEditingEnabled"
             @update:model-value="updateBeatCountValue(index, $event)"
           />
         </div>
@@ -270,8 +275,9 @@ const props = withDefaults(
     displaySettings?: VtgBuilderDisplaySettings
     selectedIndex?: number
     allowFirstDrop?: boolean
+    structureEditingEnabled?: boolean
   }>(),
-  { columns: 4, maximumScale: 10, allowFirstDrop: false },
+  { columns: 4, maximumScale: 10, allowFirstDrop: false, structureEditingEnabled: true },
 )
 const { elementalLayout, sliders } = storeToRefs(useConceptsStore())
 const previewReferences = props.animations.map((_, index) => String(index + 1))
@@ -297,7 +303,9 @@ const previewRelationships = computed(() => props.relationships)
 const previewLabels = computed(() => previewRelationships.value.map(({ label }) => label))
 const previewRatios = computed(() => props.animations.map(inferVtgDoubledPortionSpeedRatio))
 const dropPlaceholderVisible = computed(
-  () => props.selectedIndex === undefined || props.selectedIndex >= props.animations.length,
+  () =>
+    props.structureEditingEnabled &&
+    (props.selectedIndex === undefined || props.selectedIndex >= props.animations.length),
 )
 const propertiesRowEndPosition = computed(() => {
   if (props.selectedIndex === undefined || props.selectedIndex >= previewUrls.value.length) {
@@ -330,6 +338,7 @@ useEventListener(typeof document === 'undefined' ? null : document, 'drop', () =
 })
 const dragOverIndex = ref<number>()
 const isDropAllowed = (index: number) =>
+  props.structureEditingEnabled &&
   isVtgBuilderDropAllowed({
     portionCount: props.animations.length,
     selectedIndex: props.selectedIndex,

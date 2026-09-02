@@ -66,6 +66,7 @@
         </label>
       </template>
     </AppTooltip>
+    <slot name="before-reset" />
     <AppTooltip text="Reset the pattern and its controls">
       <template #activator="{ props: activatorProps }">
         <button

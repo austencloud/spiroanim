@@ -565,7 +565,7 @@ import type { RootDataFinal } from '@/types/AnimTypes'
 import { isTouchDevice } from '@/utils/device'
 import type { VtgPatternSelection } from '@/features/vtg/types'
 
-type PatternPropertyContext = 'vtg' | 'builder'
+type PatternPropertyContext = 'vtg' | 'builder' | 'eight-step'
 type PatternPropertyKey = VtgPropertyKey | 'scale'
 
 const props = withDefaults(
