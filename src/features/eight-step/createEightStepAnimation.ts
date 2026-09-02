@@ -14,6 +14,12 @@ import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
+import {
+  doubleAnimationPlayback,
+  doublePlaybackMultiplier,
+} from '@/math/animation/subdivideAnimationPlayback'
+
+export const eightStepPlaybackMultiplier = doublePlaybackMultiplier
 
 const addPropDefaults = (pattern: EightStepReadableAnimation): EightStepReadableAnimation => ({
   ...pattern,
@@ -73,13 +79,20 @@ export const createEightStepAnimation = (
     depth: pattern.depth ?? current.depth,
   }
 
+  // The 8-Step control keeps its performer-facing 90-degree BPM. Canonical playback uses two
+  // 45-degree intervals per step, so subdivision doubles both the frame count and internal BPM
+  // without changing the visible path or duration.
+  const canonical = doubleAnimationPlayback(animation)
+  if (!canonical) return undefined
+
   // Eight Step definitions name the first relationship first, but performers expect that
   // relationship on prop 2. Invert the shared Swap transform here so the expected assignment is
   // the concept default while the application-wide Swap control keeps its normal meaning.
-  const transformed = applyPatternFinalTransforms(animation, {
+  const transformed = applyPatternFinalTransforms(canonical, {
     ...selection,
     swapProps: !selection.swapProps,
   })
+
   return applyPatternPropColors(
     applyVtgPropRotationOffsets(transformed, selection.propRotationOffsets),
     selection,

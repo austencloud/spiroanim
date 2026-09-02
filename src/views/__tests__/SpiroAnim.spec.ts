@@ -34,6 +34,42 @@ const AnimTimelineStub = {
     '<div data-role="timeline-content" :data-cols="cols"><div class="scrollbar" data-role="timeline-scroll" /></div>',
 }
 
+const mountEightStepView = async () => {
+  const pinia = createPinia().use(piniaPluginPersistedstate)
+  setActivePinia(pinia)
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+  })
+  await router.push('/8stp-play')
+  await router.isReady()
+
+  const playerRoot = usePlayerStore('main').raw().ROOT
+  const animation = createEightStepAnimation(playerRoot.value, {
+    concept: '8stp',
+    reference: '1-AE',
+  })
+  if (!animation) throw new Error('Expected a supported Eight Step animation')
+  playerRoot.value = animation
+
+  const conceptsStore = useConceptsStore()
+  conceptsStore.selectedConcept = '8stp'
+  const paneStore = useMainPaneStore()
+  paneStore.setViewInPane('concepts', 'right')
+
+  const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+  const wrapper = mount(SpiroAnim, {
+    attachTo: document.body,
+    global: {
+      plugins: [pinia, router],
+      stubs: { Player: AnimPlayerStub, AnimTimeline: AnimTimelineStub },
+    },
+  })
+
+  await vi.waitFor(() => expect(paneStore.isPaneHijacked).toBe(true))
+  return { wrapper, router, playerRoot, conceptsStore, paneStore }
+}
+
 describe('SpiroAnim view', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -641,7 +677,9 @@ describe('SpiroAnim view', () => {
     await wrapper.get('[data-cell-reference="8-II"]').trigger('click')
 
     expect(playerRoot.value).toEqual(expectedEightStep)
-    expect(playerRoot.value.props.map(({ anim }) => anim.length)).toEqual([13, 13])
+    expect(playerRoot.value.props.map(({ anim }) => anim.length)).toEqual([25, 25])
+    expect(playerRoot.value.bpm).toBe(120)
+    expect(conceptsStore.bpm).toBe(60)
     expect(conceptsStore.quickSlotPaths[0]).toBe(previousQuickSlot)
     expect(conceptsStore.quickSlotPaths[1]).toMatch(/^\/8stp-time\?r=/)
 
@@ -788,39 +826,9 @@ describe('SpiroAnim view', () => {
     wrapper.unmount()
   })
 
-  it('remembers each pattern workspace while switching concepts and routes', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
-    setActivePinia(pinia)
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
-    })
-    await router.push('/8stp-play')
-    await router.isReady()
+  it('auto-opens Pattern Viewer with structure editing and external properties disabled', async () => {
+    const { wrapper, paneStore } = await mountEightStepView()
 
-    const playerRoot = usePlayerStore('main').raw().ROOT
-    const animation = createEightStepAnimation(playerRoot.value, {
-      concept: '8stp',
-      reference: '1-AE',
-    })
-    if (!animation) throw new Error('Expected a supported Eight Step animation')
-    playerRoot.value = animation
-
-    const conceptsStore = useConceptsStore()
-    conceptsStore.selectedConcept = '8stp'
-    const paneStore = useMainPaneStore()
-    paneStore.setViewInPane('concepts', 'right')
-
-    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
-    const wrapper = mount(SpiroAnim, {
-      attachTo: document.body,
-      global: {
-        plugins: [pinia, router],
-        stubs: { Player: AnimPlayerStub, AnimTimeline: AnimTimelineStub },
-      },
-    })
-
-    await vi.waitFor(() => expect(paneStore.isPaneHijacked).toBe(true))
     expect(
       wrapper.get<HTMLInputElement>('[data-role="eight-step-pattern-builder"]').element.checked,
     ).toBe(true)
@@ -838,6 +846,15 @@ describe('SpiroAnim view', () => {
     await flushPromises()
     expect(paneStore.isPaneHijacked).toBe(false)
     expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('keeps whole-pattern properties while selecting and transforming 8-Step patterns', async () => {
+    const { wrapper, playerRoot, paneStore } = await mountEightStepView()
+
+    await wrapper.get('[data-role="builder-exit"]').trigger('click')
+    await flushPromises()
 
     await wrapper.get('[data-role="eight-step-property-twist-toggle"]').trigger('click')
     await wrapper.get<HTMLInputElement>('input[data-role^="eight-step-twist-0-"]').setValue('10')
@@ -880,6 +897,12 @@ describe('SpiroAnim view', () => {
     expect(playerRoot.value).not.toBe(animationBeforeSelection)
     expect(usePlayerStore('main').PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     expect(paneStore.isPaneHijacked).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('remembers the VTG Builder and 8-Step Viewer states independently while routing', async () => {
+    const { wrapper, router, conceptsStore, paneStore } = await mountEightStepView()
 
     await wrapper.get('[data-role="builder-exit"]').trigger('click')
     await flushPromises()

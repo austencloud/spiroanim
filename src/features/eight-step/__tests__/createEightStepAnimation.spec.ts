@@ -4,6 +4,7 @@ import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import {
   createDefaultEightStepAnimation,
   createEightStepAnimation,
+  eightStepPlaybackMultiplier,
 } from '@/features/eight-step/createEightStepAnimation'
 import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
@@ -61,13 +62,18 @@ describe('createEightStepAnimation', () => {
 
     expect(animation).toBeDefined()
     expect(animation).toMatchObject({
-      bpm: vtgPlayerSettings.bpm,
+      bpm: vtgPlayerSettings.bpm * eightStepPlaybackMultiplier,
       aspectx: vtgPlayerSettings.aspectx,
       aspecty: vtgPlayerSettings.aspecty,
       smooth: current.smooth,
       props: [{ color: 4 }, { color: 1 }],
     })
-    expect(animation?.props.map(({ anim }) => anim.length)).toEqual([13, 13])
+    expect(animation?.props.map(({ anim }) => anim.length)).toEqual([25, 25])
+    expect(
+      rootCompile(animation!).props.every((prop) =>
+        prop.anim.slice(1).every((frame) => frame.arc === 45),
+      ),
+    ).toBe(true)
   })
 
   it('applies shared player controls and swaps complete tracks', () => {
@@ -88,7 +94,7 @@ describe('createEightStepAnimation', () => {
     expect(base).toBeDefined()
     expect(transformed).toBeDefined()
     expect(transformed).toMatchObject({
-      bpm: 84,
+      bpm: 84 * eightStepPlaybackMultiplier,
       thick: 11,
       paths: false,
       hands: true,
@@ -129,7 +135,10 @@ describe('createEightStepAnimation', () => {
       },
     )
 
-    expect(animation).toMatchObject({ bpm: 84, speed: 0.5 })
+    expect(animation).toMatchObject({
+      bpm: 84 * eightStepPlaybackMultiplier,
+      speed: 0.5,
+    })
   })
 
   it('applies prop visibility overrides only to unchecked sides', () => {
@@ -211,6 +220,7 @@ describe('createEightStepAnimation', () => {
 
         const [first, second] = rootCompile(animation).props
         for (const [frameIndex, firstFrame] of first!.anim.entries()) {
+          if (frameIndex % eightStepPlaybackMultiplier !== 0) continue
           const secondFrame = second!.anim[frameIndex]!
           const dot = firstFrame.pos.reduce(
             (sum, coordinate, index) => sum + coordinate * secondFrame.pos[index]!,
@@ -247,7 +257,7 @@ describe('createEightStepAnimation', () => {
     const query = codec.encodeQS(animation, false)
     const decoded = await codec.decodeVer(query)
 
-    expect(new URLSearchParams(query).toString().length).toBeLessThanOrEqual(180)
+    expect(new URLSearchParams(query).toString().length).toBeLessThanOrEqual(220)
     expect(decoded).toMatchObject({
       bpm: animation.bpm,
       thick: animation.thick,

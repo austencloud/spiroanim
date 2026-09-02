@@ -234,14 +234,8 @@ import ConceptAnimationControls from '@/features/concepts/components/ConceptAnim
 import AppTooltip from '@/components/AppTooltip.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
 import PatternWorkspaceToggle from '@/features/concepts/components/PatternWorkspaceToggle.vue'
+import { usePatternPropertyControls } from '@/features/concepts/composables/usePatternPropertyControls'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
-import type {
-  VtgFoldSideSettings,
-  VtgFoldValue,
-  VtgFoldMode,
-  VtgFoldSpan,
-  VtgTwistMode,
-} from '@/features/concepts/stores/useConceptsStore'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import {
@@ -267,11 +261,6 @@ import {
 } from '@/features/vtg/data/vtgPlayerSettings'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
-import {
-  applyVtgFoldSettings,
-  deriveVtgFoldSimpleSources,
-  extractVtgFoldValues,
-} from '@/features/vtg/applyVtgFoldSettings'
 import { toColor } from '@/utils/UtilFunc'
 import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
@@ -379,6 +368,24 @@ const {
   rightPropColor,
   prop,
   sliders,
+} = storeToRefs(conceptsStore)
+const selectedCell = ref<EightStepPatternDefinition>()
+const shape = ref<EightStepShape>('diamond')
+const propRotationOffsets = ref<EightStepPatternSelection['propRotationOffsets']>()
+
+let suppressPatternEmit = false
+let hydrationVersion = 0
+let lastEmittedSelection: EightStepPatternSelection | undefined
+let componentMounted = false
+let initialAnimationHandled = false
+let pendingPropertyAnimation: RootDataFinal | undefined
+
+const emitPropertyAnimation = (animation: RootDataFinal) => {
+  pendingPropertyAnimation = animation
+  emit('animationUpdate', animation)
+}
+
+const {
   vtgTwistMode,
   vtgTwistValues,
   vtgFoldValues,
@@ -391,30 +398,20 @@ const {
   vtgFoldSpan,
   vtgFoldMirror,
   vtgActiveProperty,
-} = storeToRefs(conceptsStore)
-const selectedCell = ref<EightStepPatternDefinition>()
-const shape = ref<EightStepShape>('diamond')
-const propRotationOffsets = ref<EightStepPatternSelection['propRotationOffsets']>()
-
-let suppressPatternEmit = false
-let hydrationVersion = 0
-let lastEmittedSelection: EightStepPatternSelection | undefined
-let componentMounted = false
-let initialAnimationHandled = false
-let pendingPropertyControlHydration:
-  | {
-      animation: RootDataFinal
-      twistMode: VtgTwistMode
-      foldMode: VtgFoldMode
-      foldBeat: VtgFoldSideSettings<number>
-      foldRepeat: VtgFoldSideSettings<boolean>
-      foldEvery: VtgFoldSideSettings<number>
-      foldAlternate: VtgFoldSideSettings<boolean>
-      foldSpan: VtgFoldSpan
-      foldMirror: boolean
-      foldValuesMaterialized: boolean
-    }
-  | undefined
+  updateTwistSetting,
+  updateTwistMode,
+  updateFoldSetting,
+  updateFoldMode,
+  updateFoldBeat,
+  updateFoldRepeat,
+  updateFoldEvery,
+  updateFoldAlternate,
+  updateFoldSpan,
+  updateFoldMirror,
+} = usePatternPropertyControls({
+  animation: toRef(props, 'animation'),
+  onAnimationUpdate: emitPropertyAnimation,
+})
 
 const cells: readonly EightStepCell[] = eightStepPatternDefinitions.map((definition) => ({
   ...definition,
@@ -554,24 +551,6 @@ const selectColumnGroup = (group: EightStepColumnGroup) => {
   else selectRandomCellFrom(cells.filter((item) => item.column === column))
 }
 
-const emitPropertyAnimation = () => {
-  if (!props.animation) return
-  const animation = conceptsStore.applyVtgPropertyControls(props.animation)
-  pendingPropertyControlHydration = {
-    animation,
-    twistMode: vtgTwistMode.value,
-    foldMode: vtgFoldMode.value,
-    foldBeat: [...vtgFoldBeat.value],
-    foldRepeat: [...vtgFoldRepeat.value],
-    foldEvery: [...vtgFoldEvery.value],
-    foldAlternate: [...vtgFoldAlternate.value],
-    foldSpan: vtgFoldSpan.value,
-    foldMirror: vtgFoldMirror.value,
-    foldValuesMaterialized: vtgFoldValuesMaterialized.value,
-  }
-  emit('animationUpdate', animation)
-}
-
 const updatePropRotationOffset = (propIndex: 0 | 1, value?: number) => {
   if (!props.animation) return
   const previous: readonly [number, number] = propRotationOffsets.value ?? [0, 0]
@@ -579,126 +558,7 @@ const updatePropRotationOffset = (propIndex: 0 | 1, value?: number) => {
   next[propIndex] = value ?? 0
   const delta: [number, number] = [next[0] - previous[0], next[1] - previous[1]]
   propRotationOffsets.value = next.every((offset) => offset === 0) ? undefined : next
-  emit('animationUpdate', applyVtgPropRotationOffsets(props.animation, delta))
-}
-
-const getSimpleFoldSources = () =>
-  deriveVtgFoldSimpleSources(
-    vtgFoldValues.value,
-    vtgFoldBeat.value,
-    vtgFoldSpan.value,
-    vtgFoldValuesMaterialized.value,
-  )
-
-const materializeSimpleFoldValues = (sources = getSimpleFoldSources()) => {
-  if (!props.animation) return
-  vtgFoldValues.value = extractVtgFoldValues(
-    applyVtgFoldSettings(props.animation, sources, {
-      mode: 'simple',
-      beat: vtgFoldBeat.value,
-      repeat: vtgFoldRepeat.value,
-      every: vtgFoldEvery.value,
-      alternate: vtgFoldAlternate.value,
-      span: vtgFoldSpan.value,
-      mirror: vtgFoldMirror.value,
-    }),
-  )
-  vtgFoldValuesMaterialized.value = true
-}
-
-const updateTwistSetting = (propIndex: 0 | 1, beat: number, value?: number) => {
-  conceptsStore.setVtgTwistValue(propIndex, beat, value)
-  emitPropertyAnimation()
-}
-
-const updateTwistMode = (mode: VtgTwistMode) => {
-  vtgTwistMode.value = mode
-  emitPropertyAnimation()
-}
-
-const updateFoldSetting = (
-  propIndex: 0 | 1,
-  beat: number,
-  fold: keyof VtgFoldValue,
-  value?: number,
-) => {
-  if (vtgFoldMode.value === 'simple') {
-    const sources = getSimpleFoldSources()
-    const source = sources[propIndex][String(beat)] ?? {}
-    if (value === undefined) delete source[fold]
-    else source[fold] = value
-    if (source.yaw === undefined && source.rotate === undefined) {
-      delete sources[propIndex][String(beat)]
-    } else sources[propIndex][String(beat)] = source
-    materializeSimpleFoldValues(sources)
-  } else {
-    conceptsStore.setVtgFoldValue(propIndex, beat, fold, value)
-    vtgFoldValuesMaterialized.value = true
-  }
-  emitPropertyAnimation()
-}
-
-const updateFoldMode = (mode: VtgFoldMode) => {
-  if (vtgFoldMode.value === 'simple' && mode === 'advanced') materializeSimpleFoldValues()
-  vtgFoldMode.value = mode
-  emitPropertyAnimation()
-}
-
-const updateFoldBeat = (propIndex: 0 | 1, beat: number) => {
-  const sources = getSimpleFoldSources()
-  const previousBeat = vtgFoldBeat.value[propIndex]
-  const source = sources[propIndex][String(previousBeat)]
-  vtgFoldBeat.value[propIndex] = beat
-  if (vtgFoldMirror.value && propIndex === 0) vtgFoldBeat.value[1] = beat
-  delete sources[propIndex][String(previousBeat)]
-  if (source) sources[propIndex][String(beat)] = source
-  materializeSimpleFoldValues(sources)
-  emitPropertyAnimation()
-}
-
-const updateFoldRepeat = (propIndex: 0 | 1, repeat: boolean) => {
-  const sources = getSimpleFoldSources()
-  vtgFoldRepeat.value[propIndex] = repeat
-  if (vtgFoldMirror.value && propIndex === 0) vtgFoldRepeat.value[1] = repeat
-  if (!repeat) vtgFoldAlternate.value[propIndex] = false
-  materializeSimpleFoldValues(sources)
-  emitPropertyAnimation()
-}
-
-const updateFoldEvery = (propIndex: 0 | 1, every: number) => {
-  const sources = getSimpleFoldSources()
-  vtgFoldEvery.value[propIndex] = every
-  if (vtgFoldMirror.value && propIndex === 0) vtgFoldEvery.value[1] = every
-  materializeSimpleFoldValues(sources)
-  emitPropertyAnimation()
-}
-
-const updateFoldAlternate = (propIndex: 0 | 1, alternate: boolean) => {
-  const sources = getSimpleFoldSources()
-  vtgFoldAlternate.value[propIndex] = alternate
-  if (vtgFoldMirror.value && propIndex === 0) vtgFoldAlternate.value[1] = alternate
-  materializeSimpleFoldValues(sources)
-  emitPropertyAnimation()
-}
-
-const updateFoldSpan = (span: VtgFoldSpan) => {
-  const sources = getSimpleFoldSources()
-  vtgFoldSpan.value = span
-  materializeSimpleFoldValues(sources)
-  emitPropertyAnimation()
-}
-
-const updateFoldMirror = (mirror: boolean) => {
-  const sources = getSimpleFoldSources()
-  vtgFoldMirror.value = mirror
-  if (mirror) {
-    vtgFoldBeat.value[1] = vtgFoldBeat.value[0]
-    vtgFoldRepeat.value[1] = vtgFoldRepeat.value[0]
-    vtgFoldEvery.value[1] = vtgFoldEvery.value[0]
-    vtgFoldAlternate.value[1] = vtgFoldAlternate.value[0]
-  }
-  materializeSimpleFoldValues(sources)
-  emitPropertyAnimation()
+  emitPropertyAnimation(applyVtgPropRotationOffsets(props.animation, delta))
 }
 
 const resetPatternControls = async () => {
@@ -746,23 +606,9 @@ const matchPattern = async (request: Parameters<PatternMatchingClient['matchEigh
 
 const hydratePatternControls = async (animation: RootDataFinal) => {
   const version = ++hydrationVersion
-  const preservedPropertyModes =
-    pendingPropertyControlHydration?.animation === toRaw(animation)
-      ? pendingPropertyControlHydration
-      : undefined
-  pendingPropertyControlHydration = undefined
-  conceptsStore.hydrateVtgPropertyControls(animation)
-  if (preservedPropertyModes) {
-    vtgTwistMode.value = preservedPropertyModes.twistMode
-    vtgFoldMode.value = preservedPropertyModes.foldMode
-    vtgFoldBeat.value = preservedPropertyModes.foldBeat
-    vtgFoldRepeat.value = preservedPropertyModes.foldRepeat
-    vtgFoldEvery.value = preservedPropertyModes.foldEvery
-    vtgFoldAlternate.value = preservedPropertyModes.foldAlternate
-    vtgFoldSpan.value = preservedPropertyModes.foldSpan
-    vtgFoldMirror.value = preservedPropertyModes.foldMirror
-    vtgFoldValuesMaterialized.value = preservedPropertyModes.foldValuesMaterialized
-  }
+  const shouldHydratePropertyControls = pendingPropertyAnimation !== toRaw(animation)
+  pendingPropertyAnimation = undefined
+  if (shouldHydratePropertyControls) conceptsStore.hydrateVtgPropertyControls(animation)
   const selection = lastEmittedSelection
   lastEmittedSelection = undefined
 

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
+import {
+  createDefaultEightStepAnimation,
+  eightStepPlaybackMultiplier,
+} from '@/features/eight-step/createEightStepAnimation'
 import {
   findEightStepPatternMatch,
   matchesEightStepSelection,
@@ -12,6 +15,8 @@ import { applyVtgFoldSettings } from '@/features/vtg/applyVtgFoldSettings'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { applyVtgBuilderPortionProperties } from '@/features/builder/editVtgBuilderPortionProperties'
+import { consolidateAnimationPlayback } from '@/math/animation/subdivideAnimationPlayback'
+import { rootCompile } from '@/math/animation/AnimFunc'
 
 describe('matchEightStepAnimation', () => {
   it('recovers the cell and transforms from compiled geometry', () => {
@@ -99,7 +104,7 @@ describe('matchEightStepAnimation', () => {
       swapProps: true,
       reversePlane: false,
       shape: 'diamond',
-      bpm: animation.bpm,
+      bpm: animation.bpm / eightStepPlaybackMultiplier,
       scale: 0.8,
       propRotationOffsets: [23, -37],
     })
@@ -153,12 +158,43 @@ describe('matchEightStepAnimation', () => {
     expect(scaled && findEightStepPatternMatch(scaled)?.reference).toBe('4-EI')
   })
 
+  it('matches legacy 90-degree animations using the performer-facing BPM', () => {
+    const selection = {
+      concept: '8stp',
+      reference: '7-IE',
+      swapProps: true,
+      reversePlane: true,
+      shape: 'diamond',
+      bpm: 91,
+      scale: 1.1,
+    } as const
+    const canonical = createDefaultEightStepAnimation(selection)
+    const legacy = canonical
+      ? consolidateAnimationPlayback(canonical, eightStepPlaybackMultiplier)
+      : undefined
+    expect(legacy).toBeDefined()
+    if (!legacy) return
+
+    expect(legacy.bpm).toBe(91)
+    expect(
+      rootCompile(legacy).props.every((prop) =>
+        prop.anim.slice(1).every((frame) => frame.arc === 90),
+      ),
+    ).toBe(true)
+    expect(findEightStepPatternMatch(legacy)).toMatchObject({
+      reference: '7-IE',
+      bpm: 91,
+      scale: 1.1,
+    })
+    expect(matchesEightStepSelection(legacy, selection)).toBe(true)
+  })
+
   it('rejects non-Eight-Step frame geometry', () => {
     const animation = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AA' })
     expect(animation).toBeDefined()
     if (!animation) return
 
-    animation.props[0]!.anim[4]!.arc = 45
+    animation.props[0]!.anim[4]!.arc = 30
     expect(findEightStepPatternMatch(animation)).toBeUndefined()
   })
 })

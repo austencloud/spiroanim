@@ -420,33 +420,22 @@ import PatternPlaybackControls from '@/features/concepts/components/PatternPlayb
 import PatternTransitionControls from '@/features/concepts/components/PatternTransitionControls.vue'
 import PatternWorkspaceToggle from '@/features/concepts/components/PatternWorkspaceToggle.vue'
 import PatternTransformControls from '@/features/concepts/components/PatternTransformControls.vue'
+import { usePatternPropertyControls } from '@/features/concepts/composables/usePatternPropertyControls'
 import {
   describePatternSelectionRelationshipsAcrossBeats,
   inferPatternRelationshipOrientation,
   inferPatternRelationshipPropRotationOffsets,
-  markBeatVaryingTiming,
 } from '@/features/concepts/math/describePatternSelectionRelationships'
 import type { PatternRelationshipLabel } from '@/features/concepts/math/describePatternRelationships'
 import { isPatternPropVisible } from '@/features/concepts/patternPropVisibility'
 import { defaultPatternPropColors } from '@/features/concepts/patternPropColors'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
-import type {
-  VtgFoldMode,
-  VtgFoldSpan,
-  VtgFoldValue,
-  VtgPropertyKey,
-  VtgTwistMode,
-} from '@/features/concepts/stores/useConceptsStore'
+import type { VtgPropertyKey } from '@/features/concepts/stores/useConceptsStore'
 import {
   relationshipElement,
   type ElementalRelationship,
 } from '@/features/concepts/elementalRelationships'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
-import {
-  applyVtgFoldSettings,
-  deriveVtgFoldSimpleSources,
-  extractVtgFoldValues,
-} from '@/features/vtg/applyVtgFoldSettings'
 import {
   builderPatternPointerDropEvent,
   builderPatternPointerEndEvent,
@@ -602,6 +591,12 @@ const {
   leftPropColor,
   rightPropColor,
   prop,
+  sliders,
+  classicLayout,
+  elementalLayout,
+  qtrEnabled: isQtr,
+} = storeToRefs(conceptsStore)
+const {
   vtgTwistMode,
   vtgTwistValues,
   vtgFoldValues,
@@ -614,11 +609,20 @@ const {
   vtgFoldSpan,
   vtgFoldMirror,
   vtgActiveProperty,
-  sliders,
-  classicLayout,
-  elementalLayout,
-  qtrEnabled: isQtr,
-} = storeToRefs(conceptsStore)
+  updateTwistSetting,
+  updateTwistMode,
+  updateFoldSetting,
+  updateFoldMode,
+  updateFoldBeat,
+  updateFoldRepeat,
+  updateFoldEvery,
+  updateFoldAlternate,
+  updateFoldSpan,
+  updateFoldMirror,
+} = usePatternPropertyControls({
+  animation: toRef(props, 'animation'),
+  onAnimationUpdate: (animation) => emit('animationUpdate', animation),
+})
 const isAnti = ref(false)
 const speedRatioRows = computed(() =>
   vtgAdvanced.value
@@ -640,117 +644,6 @@ const updatePropRotationOffset = (propIndex: 0 | 1, value?: number) => {
   ]
   offsets[propIndex] = value ?? 0
   propRotationOffsets.value = offsets.every((offset) => offset === 0) ? undefined : offsets
-}
-const emitTwistAnimation = () => {
-  if (!props.animation) return
-  emit('animationUpdate', conceptsStore.applyVtgPropertyControls(props.animation))
-}
-const getSimpleFoldSources = () =>
-  deriveVtgFoldSimpleSources(
-    vtgFoldValues.value,
-    vtgFoldBeat.value,
-    vtgFoldSpan.value,
-    vtgFoldValuesMaterialized.value,
-  )
-const materializeSimpleFoldValues = (sources = getSimpleFoldSources()) => {
-  if (!props.animation) return
-  vtgFoldValues.value = extractVtgFoldValues(
-    applyVtgFoldSettings(props.animation, sources, {
-      mode: 'simple',
-      beat: vtgFoldBeat.value,
-      repeat: vtgFoldRepeat.value,
-      every: vtgFoldEvery.value,
-      alternate: vtgFoldAlternate.value,
-      span: vtgFoldSpan.value,
-      mirror: vtgFoldMirror.value,
-    }),
-  )
-  vtgFoldValuesMaterialized.value = true
-}
-const updateTwistSetting = (propIndex: 0 | 1, beat: number, value?: number) => {
-  conceptsStore.setVtgTwistValue(propIndex, beat, value)
-  emitTwistAnimation()
-}
-const updateTwistMode = (mode: VtgTwistMode) => {
-  vtgTwistMode.value = mode
-  emitTwistAnimation()
-}
-const updateFoldSetting = (
-  propIndex: 0 | 1,
-  beat: number,
-  fold: keyof VtgFoldValue,
-  value?: number,
-) => {
-  if (vtgFoldMode.value === 'simple') {
-    const sources = getSimpleFoldSources()
-    const source = sources[propIndex][String(beat)] ?? {}
-    if (value === undefined) delete source[fold]
-    else source[fold] = value
-    if (source.yaw === undefined && source.rotate === undefined) {
-      delete sources[propIndex][String(beat)]
-    } else sources[propIndex][String(beat)] = source
-    materializeSimpleFoldValues(sources)
-  } else {
-    conceptsStore.setVtgFoldValue(propIndex, beat, fold, value)
-    vtgFoldValuesMaterialized.value = true
-  }
-  emitTwistAnimation()
-}
-const updateFoldMode = (mode: VtgFoldMode) => {
-  if (vtgFoldMode.value === 'simple' && mode === 'advanced') materializeSimpleFoldValues()
-  vtgFoldMode.value = mode
-  emitTwistAnimation()
-}
-const updateFoldBeat = (propIndex: 0 | 1, beat: number) => {
-  const sources = getSimpleFoldSources()
-  const previousBeat = vtgFoldBeat.value[propIndex]
-  const source = sources[propIndex][String(previousBeat)]
-  vtgFoldBeat.value[propIndex] = beat
-  if (vtgFoldMirror.value && propIndex === 0) vtgFoldBeat.value[1] = beat
-  delete sources[propIndex][String(previousBeat)]
-  if (source) sources[propIndex][String(beat)] = source
-  materializeSimpleFoldValues(sources)
-  emitTwistAnimation()
-}
-const updateFoldRepeat = (propIndex: 0 | 1, repeat: boolean) => {
-  const sources = getSimpleFoldSources()
-  vtgFoldRepeat.value[propIndex] = repeat
-  if (vtgFoldMirror.value && propIndex === 0) vtgFoldRepeat.value[1] = repeat
-  if (!repeat) vtgFoldAlternate.value[propIndex] = false
-  materializeSimpleFoldValues(sources)
-  emitTwistAnimation()
-}
-const updateFoldEvery = (propIndex: 0 | 1, every: number) => {
-  const sources = getSimpleFoldSources()
-  vtgFoldEvery.value[propIndex] = every
-  if (vtgFoldMirror.value && propIndex === 0) vtgFoldEvery.value[1] = every
-  materializeSimpleFoldValues(sources)
-  emitTwistAnimation()
-}
-const updateFoldAlternate = (propIndex: 0 | 1, alternate: boolean) => {
-  const sources = getSimpleFoldSources()
-  vtgFoldAlternate.value[propIndex] = alternate
-  if (vtgFoldMirror.value && propIndex === 0) vtgFoldAlternate.value[1] = alternate
-  materializeSimpleFoldValues(sources)
-  emitTwistAnimation()
-}
-const updateFoldSpan = (span: VtgFoldSpan) => {
-  const sources = getSimpleFoldSources()
-  vtgFoldSpan.value = span
-  materializeSimpleFoldValues(sources)
-  emitTwistAnimation()
-}
-const updateFoldMirror = (mirror: boolean) => {
-  const sources = getSimpleFoldSources()
-  vtgFoldMirror.value = mirror
-  if (mirror) {
-    vtgFoldBeat.value[1] = vtgFoldBeat.value[0]
-    vtgFoldRepeat.value[1] = vtgFoldRepeat.value[0]
-    vtgFoldEvery.value[1] = vtgFoldEvery.value[0]
-    vtgFoldAlternate.value[1] = vtgFoldAlternate.value[0]
-  }
-  materializeSimpleFoldValues(sources)
-  emitTwistAnimation()
 }
 const initialPropRatios = getVtgPropSpeedRatios(speedRatio.value)
 const moreRatios = ref(
@@ -952,10 +845,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
           : undefined
       const displayedRelationships =
         builderAnimation && (props.builderInsertionIndex ?? 0) > 0
-          ? markBeatVaryingTiming(
-              describeVtgBuilderPreviewRelationship(builderAnimation),
-              selection.speedRatio,
-            )
+          ? describeVtgBuilderPreviewRelationship(builderAnimation, selection.speedRatio)
           : relationships
       if (!compactBuilder.value) return { ...address, ...displayedRelationships }
 

@@ -759,6 +759,18 @@ describe('EightStepPane', () => {
     )
     expect(updated?.props[0]?.anim.some((frame) => frame.rotate !== undefined)).toBe(true)
     expect(updated && findEightStepPatternMatch(updated)?.reference).toBe('4-EI')
+
+    await wrapper.get('[data-role="eight-step-property-offset-toggle"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('[data-role="eight-step-offset-0-input"]').setValue('30')
+    await wrapper.get('[data-role="eight-step-offset-0-input"]').trigger('change')
+    const offset = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as RootDataFinal | undefined
+    await wrapper.setProps({ animation: offset })
+    await flushPromises()
+    await wrapper.get('[data-role="eight-step-property-axis-toggle"]').trigger('click')
+
+    expect(wrapper.findAll<HTMLInputElement>('input[name$="-fold-mode"]')[1]?.element.checked).toBe(
+      true,
+    )
   })
 
   it('applies and keeps the selected Rotate mirror setting through animation updates', async () => {
@@ -777,6 +789,18 @@ describe('EightStepPane', () => {
       | undefined
     await wrapper.setProps({ animation: unmirroredMode })
     await flushPromises()
+
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Mirror folds"]').element.checked).toBe(
+      false,
+    )
+
+    await wrapper.get('[data-role="eight-step-property-offset-toggle"]').trigger('click')
+    await wrapper.get<HTMLInputElement>('[data-role="eight-step-offset-0-input"]').setValue('30')
+    await wrapper.get('[data-role="eight-step-offset-0-input"]').trigger('change')
+    const offset = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as RootDataFinal | undefined
+    await wrapper.setProps({ animation: offset })
+    await flushPromises()
+    await wrapper.get('[data-role="eight-step-property-axis-toggle"]').trigger('click')
 
     expect(wrapper.get<HTMLInputElement>('input[aria-label="Mirror folds"]').element.checked).toBe(
       false,

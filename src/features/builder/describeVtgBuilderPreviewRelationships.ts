@@ -2,6 +2,7 @@ import { describePatternRelationships } from '@/features/concepts/math/describeP
 import type { PatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { markBeatVaryingTiming } from '@/features/concepts/math/describePatternSelectionRelationships'
 import { inferVtgDoubledPortionSpeedRatio } from '@/features/vtg/math/inferVtgSpeedRatio'
+import type { VtgSpeedRatio } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const minimumRelationshipFrameCount = 3
@@ -24,13 +25,14 @@ const extendVtgBuilderRelationshipFrames = (animation: RootDataFinal): RootDataF
 /** Describes one Builder portion directly from its compiled geometry. */
 export const describeVtgBuilderPreviewRelationship = (
   preview: RootDataFinal,
+  speedRatio: VtgSpeedRatio | undefined = inferVtgDoubledPortionSpeedRatio(preview),
 ): PatternRelationships => {
   const relationships = describePatternRelationships(extendVtgBuilderRelationshipFrames(preview))
-  const speedRatio = inferVtgDoubledPortionSpeedRatio(preview)
   return speedRatio ? markBeatVaryingTiming(relationships, speedRatio) : relationships
 }
 
 /** Describes Builder portions without rematching them to the VTG or QTR catalogs. */
 export const describeVtgBuilderPreviewRelationships = (
   previews: readonly RootDataFinal[],
-): readonly PatternRelationships[] => previews.map(describeVtgBuilderPreviewRelationship)
+): readonly PatternRelationships[] =>
+  previews.map((preview) => describeVtgBuilderPreviewRelationship(preview))

@@ -2,7 +2,10 @@ import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
 import { PNTIND, PPOS } from '@/domain/animation/AnimStruct'
-import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
+import {
+  createDefaultEightStepAnimation,
+  eightStepPlaybackMultiplier,
+} from '@/features/eight-step/createEightStepAnimation'
 import {
   eightStepHandpathsByPage,
   eightStepPatternDefinitions,
@@ -129,11 +132,16 @@ describe('eightStepPatternDefinitions', () => {
         reference,
         swapProps: true,
       })
-      return animation
-        ? rootCompile(animation)
-            .props[propIndex]!.anim.slice(1, 4)
-            .map((frame) => frame.turns)
-        : undefined
+      if (!animation) return undefined
+      const frames = rootCompile(animation).props[propIndex]!.anim
+      return Array.from({ length: 3 }, (_, stepIndex) =>
+        frames
+          .slice(
+            stepIndex * eightStepPlaybackMultiplier + 1,
+            (stepIndex + 1) * eightStepPlaybackMultiplier + 1,
+          )
+          .reduce((total, frame) => total + frame.turns, 0),
+      )
     }
 
     expect(turns('1-AA', 0)).toEqual([-360, -360, 0])
@@ -178,13 +186,14 @@ describe('eightStepPatternDefinitions', () => {
 
       for (const [propIndex, tokens] of [source.green, source.orange].entries()) {
         const frames = compiled.props[propIndex]!.anim
-        expect(frames).toHaveLength(13)
+        expect(frames).toHaveLength(25)
+        expect(frames.slice(1).every((frame) => frame.arc === 45)).toBe(true)
         expectVector(frames[0]!.pos, tokenPoints[tokens[0]!]!)
 
         for (let stepIndex = 0; stepIndex < 12; stepIndex++) {
           const start = tokenPoints[tokens[stepIndex]!]!
           const end = tokenPoints[tokens[(stepIndex + 1) % 12]!]!
-          const frame = frames[stepIndex + 1]!
+          const frame = frames[(stepIndex + 1) * eightStepPlaybackMultiplier]!
           const context = `${definition.reference} prop ${propIndex + 1} step ${stepIndex + 1}`
           expectVector(frame.pos, end, `${context} position`)
           expectVector(
@@ -195,7 +204,7 @@ describe('eightStepPatternDefinitions', () => {
         }
 
         expectVector(frames[0]!.rot, tokenPoints[tokens[0]!]!)
-        expectVector(frames[12]!.rot, tokenPoints[tokens[0]!]!)
+        expectVector(frames[12 * eightStepPlaybackMultiplier]!.rot, tokenPoints[tokens[0]!]!)
       }
     }
   })
@@ -227,7 +236,7 @@ describe('eightStepPatternDefinitions', () => {
         for (let stepIndex = 0; stepIndex < 12; stepIndex++) {
           const start = tokenPoints[tokens[stepIndex]!]!
           const end = tokenPoints[tokens[(stepIndex + 1) % 12]!]!
-          const frame = frames[stepIndex + 1]!
+          const frame = frames[(stepIndex + 1) * eightStepPlaybackMultiplier]!
           const context = `page ${flippedPage} prop ${propIndex + 1} step ${stepIndex + 1}`
           expectVector(frame.pos, end, `${context} position`)
           expectVector(

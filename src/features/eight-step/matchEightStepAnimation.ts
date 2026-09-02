@@ -1,4 +1,7 @@
-import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
+import {
+  createDefaultEightStepAnimation,
+  eightStepPlaybackMultiplier,
+} from '@/features/eight-step/createEightStepAnimation'
 import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
 import { eightStepShapes } from '@/features/eight-step/types'
 import type { EightStepPatternMatch, EightStepPatternSelection } from '@/features/eight-step/types'
@@ -66,9 +69,31 @@ const getScale = (animation: RootDataFinal): number | undefined => {
   return firstScale === undefined ? undefined : firstScale / 10
 }
 
-const normalizeForMatching = (animation: RootDataFinal): RootDataFinal => {
+interface PreparedEightStepMatchAnimation {
+  animation: RootDataFinal
+  controlBpm: number
+}
+
+const prepareForMatching = (animation: RootDataFinal): PreparedEightStepMatchAnimation => {
+  try {
+    const continuationArc = rootCompile(animation).props[0]?.anim[1]?.arc
+    if (continuationArc === 45) {
+      return {
+        animation,
+        controlBpm: animation.bpm / eightStepPlaybackMultiplier,
+      }
+    }
+  } catch {
+    return { animation, controlBpm: animation.bpm }
+  }
+
+  // Legacy 90-degree URLs are normalized only at the matching boundary. Their stored BPM is
+  // already the performer-facing value and remains unchanged in the controls.
   const prepared = prepareVtg45TransitionPattern(animation)
-  return prepared.supported ? prepared.pattern : animation
+  return {
+    animation: prepared.supported ? prepared.pattern : animation,
+    controlBpm: animation.bpm,
+  }
 }
 
 const getPropRotationOffsets = (
@@ -98,8 +123,7 @@ const buildCandidateCache = () => {
           const animation = createDefaultEightStepAnimation(selection)
           if (!animation) continue
 
-          const normalizedAnimation = normalizeForMatching(animation)
-          const signature = createSignature(normalizedAnimation)
+          const signature = createSignature(animation)
           if (!signature) continue
 
           const matches = candidates.get(signature) ?? []
@@ -108,7 +132,7 @@ const buildCandidateCache = () => {
             swapProps,
             reversePlane,
             shape,
-            animation: normalizedAnimation,
+            animation,
           })
           candidates.set(signature, matches)
         }
@@ -124,7 +148,8 @@ export const findEightStepPatternMatches = (
   animation: RootDataFinal,
 ): readonly EightStepPatternMatch[] => {
   const scale = getScale(animation)
-  const normalizedAnimation = normalizeForMatching(animation)
+  const prepared = prepareForMatching(animation)
+  const normalizedAnimation = prepared.animation
   const signature = createSignature(normalizedAnimation)
   if (scale === undefined || !signature) return []
 
@@ -140,7 +165,7 @@ export const findEightStepPatternMatches = (
     return [
       {
         ...match,
-        bpm: animation.bpm,
+        bpm: prepared.controlBpm,
         scale,
         ...(hasPropRotationOffsets ? { propRotationOffsets } : undefined),
       },
@@ -159,11 +184,10 @@ export const matchesEightStepSelection = (
   const candidate = createDefaultEightStepAnimation(selection)
   if (!candidate) return false
 
-  const normalizedAnimation = normalizeForMatching(animation)
-  const normalizedCandidate = normalizeForMatching(candidate)
+  const normalizedAnimation = prepareForMatching(animation).animation
 
   return (
-    createSignature(normalizedAnimation) === createSignature(normalizedCandidate) &&
-    createExactSignature(normalizedAnimation) === createExactSignature(normalizedCandidate)
+    createSignature(normalizedAnimation) === createSignature(candidate) &&
+    createExactSignature(normalizedAnimation) === createExactSignature(candidate)
   )
 }
