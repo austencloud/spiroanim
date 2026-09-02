@@ -36,7 +36,9 @@ interface UseVtgPreviewsOptions {
   activeReferences: Readonly<Ref<readonly VtgCellReference[]>>
   active?: Readonly<Ref<boolean>>
   previewContext?: Readonly<Ref<unknown>>
-  createVtgPreview?: (selection: VtgPatternSelection) => RootDataFinal | undefined
+  createVtgPreview?: (
+    selection: VtgPatternSelection | QtrPatternSelection,
+  ) => RootDataFinal | undefined
 }
 
 export const pairedPatternPreviewReferences = [1, 2, 3, 4, 5, 6].flatMap((row) =>
@@ -126,11 +128,10 @@ export const usePatternPreviews = ({
     active,
     createAnimation: (reference) => {
       const selection = buildSelection(reference)
+      if (createVtgPreview) return createVtgPreview(selection)
       return 'quarters' in selection
         ? createQtrPreviewAnimation(selection)
-        : createVtgPreview
-          ? createVtgPreview(selection)
-          : createVtgPreviewAnimation(selection)
+        : createVtgPreviewAnimation(selection)
     },
   })
 

@@ -1,6 +1,7 @@
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
-import { getVtgTimingCycleCount, type VtgPatternSelection } from '@/features/vtg/types'
+import { getVtgTimingCycleCount } from '@/features/vtg/types'
 import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import { rejoinVtgBuilderJunction } from '@/features/builder/rejoinVtgBuilderJunction'
 import { selectVtgBuilderJunctionMotion } from '@/features/builder/selectVtgBuilderJunctionPlane'
@@ -9,10 +10,18 @@ import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExpli
 import { orthoAngle } from '@/math/animation/OrthogonalFunc'
 import type { AnimData, AnimDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 import { MathUtils, Vector3 } from 'three'
+import type { VtgBuilderPatternSelection } from '@/features/builder/types'
 
 const doubledFourBeatIntervalCount = 8
-const getBuilderPieceIntervalCount = (selection: VtgPatternSelection): number =>
+const getBuilderPieceIntervalCount = (selection: VtgBuilderPatternSelection): number =>
   getVtgTimingCycleCount(selection.speedRatio) * doubledFourBeatIntervalCount
+const createBuilderPatternAnimation = (
+  current: RootDataFinal,
+  selection: VtgBuilderPatternSelection,
+): RootDataFinal | undefined =>
+  'quarters' in selection
+    ? createQtrAnimation(current, selection)
+    : createVtgAnimation(current, selection)
 const normalizeSignedAngle = (angle: number): number => {
   const normalized = ((angle % 360) + 360) % 360
   return normalized > 180 ? normalized - 360 : normalized
@@ -88,9 +97,9 @@ const createTransportedBuilderPieceFrames = (
 
 const createBuilderPieceFrames = (
   current: RootDataFinal,
-  selection: VtgPatternSelection,
+  selection: VtgBuilderPatternSelection,
 ): AnimData[][] | undefined => {
-  const source = createVtgAnimation(current, selection)
+  const source = createBuilderPatternAnimation(current, selection)
   if (!source || source.props.length !== current.props.length) return undefined
   return createTransportedBuilderPieceFrames(source, getBuilderPieceIntervalCount(selection))
 }
@@ -110,9 +119,9 @@ const swapAnimationTracks = (animation: RootDataFinal): RootDataFinal | undefine
 
 const createStartingVtgBuilderPattern = (
   current: RootDataFinal,
-  selection: VtgPatternSelection,
+  selection: VtgBuilderPatternSelection,
 ): RootDataFinal | undefined => {
-  const source = createVtgAnimation(current, selection)
+  const source = createBuilderPatternAnimation(current, selection)
   if (!source || source.props.length !== current.props.length) return undefined
   const targetIntervalCount = getBuilderPieceIntervalCount(selection)
   const compiledSource = rootCompile(source)
@@ -145,7 +154,7 @@ const createStartingVtgBuilderPattern = (
 
 const prependVtgBuilderPattern = (
   current: RootDataFinal,
-  selection: VtgPatternSelection,
+  selection: VtgBuilderPatternSelection,
 ): RootDataFinal | undefined => {
   const candidate = createStartingVtgBuilderPattern(current, selection)
   const targetIntervalCount = getBuilderPieceIntervalCount(selection)
@@ -163,9 +172,9 @@ const prependVtgBuilderPattern = (
 /** Appends a dragged VTG cell as one complete doubled timing cycle. */
 export const appendVtgBuilderPattern = (
   current: RootDataFinal,
-  selection: VtgPatternSelection,
+  selection: VtgBuilderPatternSelection,
 ): RootDataFinal | undefined => {
-  if (current.props.length === 0) return createVtgAnimation(current, selection)
+  if (current.props.length === 0) return createBuilderPatternAnimation(current, selection)
 
   const appendedByProp = createBuilderPieceFrames(current, selection)
   if (!appendedByProp) return undefined
@@ -179,7 +188,7 @@ export const appendVtgBuilderPattern = (
       anim: [...prop.anim.map((frame) => ({ ...frame })), ...appendedByProp[index]!],
     })),
   }
-  const source = createVtgAnimation(current, selection)
+  const source = createBuilderPatternAnimation(current, selection)
   if (!source || source.props.length < 2 || appended.props.length < 2) return appended
   const appendTarget = current.props[0]?.anim.length
   if (appendTarget === undefined) return appended
@@ -260,7 +269,7 @@ export const swapVtgBuilderPatternProps = (
 /** Inserts a dragged VTG cell before an existing Builder preview. */
 export const insertVtgBuilderPattern = (
   current: RootDataFinal,
-  selection: VtgPatternSelection,
+  selection: VtgBuilderPatternSelection,
   previewIndex: number,
 ): RootDataFinal | undefined => {
   if (!current.props[0]) return undefined

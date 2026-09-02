@@ -8,7 +8,7 @@ import { createDefaultEightStepAnimation } from '@/features/eight-step/createEig
 import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 import { builderPatternPointerMoveEvent } from '@/features/builder/patternPointerDrag'
 import { builderPatternDragType } from '@/features/builder/types'
-import type { VtgPatternSelection } from '@/features/vtg/types'
+import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
 
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
 const scrollIntoView = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>()
@@ -93,6 +93,25 @@ describe('ConceptsPane', () => {
 
     await expect(dragSelection('1-1')).resolves.toMatchObject({ reference: '1-1' })
     await expect(dragSelection('1-2')).resolves.toMatchObject({ reference: '1-2' })
+  })
+
+  it('includes Quarter mode in Builder drag payloads', async () => {
+    const wrapper = mount(ConceptsPane, { props: { builderActive: true } })
+    const setData = vi.fn<(format: string, data: string) => void>()
+    useConceptsStore().qtrEnabled = true
+    await nextTick()
+
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('dragstart', {
+      dataTransfer: { effectAllowed: 'none', setData },
+    })
+    const payload = setData.mock.calls.find(([type]) => type === builderPatternDragType)?.[1]
+    if (typeof payload !== 'string') throw new Error('Missing Quarter Builder drag payload')
+
+    expect(JSON.parse(payload) as QtrPatternSelection).toMatchObject({
+      reference: '1-1',
+      speedRatio: '1:3',
+      quarters: 1,
+    })
   })
 
   it('pointer-drags the exact labeled cell from each half of a paired Builder thumbnail', async () => {

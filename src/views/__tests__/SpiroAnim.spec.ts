@@ -17,6 +17,8 @@ import { createEightStepAnimation } from '@/features/eight-step/createEightStepA
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import * as transitionAnimations from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
+import type { QtrPatternSelection } from '@/features/vtg/types'
 
 const AnimPlayerStub = {
   props: ['controlsStartClearance', 'controlsEndClearance', 'selectionEnabled', 'conceptsVisible'],
@@ -627,6 +629,94 @@ describe('SpiroAnim view', () => {
     wrapper.unmount()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(false)
   }, 15_000)
+
+  it('drops Quarter patterns into Builder with and without a selected portion', async () => {
+    const pinia = createPinia().use(piniaPluginPersistedstate)
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    })
+    await router.push('/play-vtg')
+    await router.isReady()
+    const playerStore = usePlayerStore('main')
+    const playerRoot = playerStore.raw().ROOT
+    const initial = createVtgAnimation(playerRoot.value, {
+      reference: '1-1',
+      speedRatio: '1:3',
+    })
+    if (!initial) throw new Error('Expected an initial Builder pattern')
+    playerRoot.value = initial
+    const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+    const wrapper = mount(SpiroAnim, {
+      attachTo: document.body,
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Player: AnimPlayerStub,
+          AnimTimeline: AnimTimelineStub,
+        },
+      },
+    })
+    await flushPromises()
+    const paneStore = useMainPaneStore()
+    paneStore.setViewInPane('concepts', 'right')
+    await flushPromises()
+    expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
+    await flushPromises()
+    useConceptsStore().qtrEnabled = true
+    await nextTick()
+
+    const selection = {
+      reference: '1-1',
+      speedRatio: '1:3',
+      quarters: 1,
+    } as const satisfies QtrPatternSelection
+    const createDataTransfer = () => {
+      const data = new Map<string, string>()
+      return {
+        effectAllowed: 'none',
+        dropEffect: 'none',
+        setData: (type: string, value: string) => data.set(type, value),
+        getData: (type: string) => data.get(type) ?? '',
+      }
+    }
+
+    const expectedWithoutSelection = createVtgBuilderDropPreview(playerRoot.value, selection, 1)
+    const firstDrop = createDataTransfer()
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('dragstart', {
+      dataTransfer: firstDrop,
+    })
+    await wrapper
+      .get('[data-role="vtg-transition-preview-drop-target"]')
+      .trigger('drop', { dataTransfer: firstDrop })
+    await flushPromises()
+    let previews = transitionAnimations.createVtgTransitionPreviewAnimations(playerRoot.value)
+
+    expect(previews).toHaveLength(2)
+    expect(previews?.[1]).toEqual(expectedWithoutSelection)
+
+    await wrapper.get('button[aria-label="Preview pattern 2"]').trigger('click')
+    await flushPromises()
+    const expectedWithSelection = createVtgBuilderDropPreview(playerRoot.value, selection, 1)
+    const selectedDrop = createDataTransfer()
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('dragstart', {
+      dataTransfer: selectedDrop,
+    })
+    await wrapper.get('[data-preview-index="1"]').trigger('drop', {
+      dataTransfer: selectedDrop,
+    })
+    await flushPromises()
+    previews = transitionAnimations.createVtgTransitionPreviewAnimations(playerRoot.value)
+
+    expect(previews).toHaveLength(3)
+    expect(previews?.[1]).toEqual(expectedWithSelection)
+    expect(wrapper.get('[data-preview-index="2"]').classes()).toContain(
+      'vtg-transition-previews__item--selected',
+    )
+
+    wrapper.unmount()
+  })
 
   it('reconstructs Builder portions after Rotate and retains a distinct extraction error', async () => {
     const pinia = createPinia().use(piniaPluginPersistedstate)

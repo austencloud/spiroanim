@@ -8,9 +8,10 @@ import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilder
 import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
-import type { VtgPatternSelection } from '@/features/vtg/types'
+import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
 
 const createTwoPortionPattern = () => {
   const first = createDefaultVtgAnimation({ reference: '5-6', speedRatio: '1:3' })
@@ -76,5 +77,25 @@ describe('createVtgBuilderDropPreview', () => {
     expect(describePatternRelationships(first).label).toBe('TS / TS')
     expect(describePatternRelationships(second).label).toBe('TS / SS')
     expect(describePatternRelationships(trailing).label).toBe('TS / SS')
+  })
+
+  it('builds Quarter previews for standalone and contextual insertion targets', () => {
+    const source = createTwoPortionPattern()
+    const quarterSelection = {
+      reference: '1-1',
+      speedRatio: '1:3',
+      quarters: 1,
+    } as const satisfies QtrPatternSelection
+    const standalone = createVtgBuilderDropPreview(source, quarterSelection, 0)
+    const contextual = createVtgBuilderDropPreview(source, quarterSelection, 1)
+    const expectedStandalone = createDefaultQtrAnimation(quarterSelection)
+    const inserted = insertVtgBuilderPattern(source, quarterSelection, 1)
+    const expectedContextual = inserted
+      ? createVtgTransitionPreviewAnimations(inserted)?.[1]
+      : undefined
+
+    expect(standalone).toEqual(expectedStandalone)
+    expect(contextual).toEqual(expectedContextual)
+    expect(contextual).toBeDefined()
   })
 })

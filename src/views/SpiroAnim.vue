@@ -129,7 +129,11 @@ import Timeline from '@/features/timeline/components/TimelinePane.vue'
 import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
 import BuilderPane from '@/features/builder/components/BuilderPane.vue'
 import { applyConceptPattern as createConceptPattern } from '@/features/concepts/applyConceptPattern'
-import { isVtgPatternSelection, type ConceptPatternSelection } from '@/features/concepts/types'
+import {
+  isQtrPatternSelection,
+  isVtgPatternSelection,
+  type ConceptPatternSelection,
+} from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
@@ -366,7 +370,8 @@ const applyConceptPattern = (selection: ConceptPatternSelection) => {
 const previewConceptPattern = (selection: ConceptPatternSelection) => {
   if (!paneStore.isPaneHijacked) return
   const animation =
-    isVtgPatternSelection(selection) && selectedBuilderPreviewIndex.value !== undefined
+    (isVtgPatternSelection(selection) || isQtrPatternSelection(selection)) &&
+    selectedBuilderPreviewIndex.value !== undefined
       ? createVtgBuilderDropPreview(ROOT.value, selection, selectedBuilderPreviewIndex.value)
       : createConceptPattern(ROOT.value, selection)
   if (!animation) return

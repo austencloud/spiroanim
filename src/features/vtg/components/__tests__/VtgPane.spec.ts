@@ -7,6 +7,7 @@ import { builderPatternPointerMoveEvent } from '@/features/builder/patternPointe
 import type { BuilderPatternPointerDetail } from '@/features/builder/patternPointerDrag'
 import { getCompiledVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import { appendVtgBuilderPattern } from '@/features/builder/appendVtgBuilderPattern'
+import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
@@ -3383,6 +3384,50 @@ describe('VtgPane', () => {
     await wrapper.setProps({ builderInsertionIndex: 2 })
     await settlePreviewRendering()
     expect(firstTileElements()).toEqual(['Earth', 'Water'])
+  })
+
+  it('updates Quarter Builder thumbnails for the selected insertion target', async () => {
+    const first = createDefaultVtgAnimation({ reference: '5-6', speedRatio: '1:3' })
+    const animation = first
+      ? appendVtgBuilderPattern(first, { reference: '2-3', speedRatio: '1:3' })
+      : undefined
+    if (!animation) throw new Error('Expected a two-portion Builder pattern')
+    const selection = {
+      reference: '1-1',
+      speedRatio: '1:3',
+      quarters: 1,
+    } as const satisfies QtrPatternSelection
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        builderActive: true,
+        builderInsertionIndex: 0,
+      },
+    })
+    useConceptsStore().qtrEnabled = true
+    await nextTick()
+    await settlePreviewRendering()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+    const previewAnimations = () =>
+      FakeWorker.instances[0]?.messages
+        .filter(({ type }) => type === 'data')
+        .map(({ data }) => data as RootDataFinal) ?? []
+    const expectedFirst = createVtgBuilderDropPreview(animation, selection, 0)
+    const expectedSecond = createVtgBuilderDropPreview(animation, selection, 1)
+    if (!expectedFirst || !expectedSecond) throw new Error('Expected contextual Quarter previews')
+
+    expect(describePatternRelationships(previewAnimations().at(-4)!).label).toBe(
+      describePatternRelationships(expectedFirst).label,
+    )
+    const previewsBeforeContextChange = previewAnimations().length
+    await wrapper.setProps({ builderInsertionIndex: 1 })
+    await settlePreviewRendering()
+
+    expect(previewAnimations()).toHaveLength(previewsBeforeContextChange + 4)
+    expect(describePatternRelationships(previewAnimations().at(-4)!).label).toBe(
+      describePatternRelationships(expectedSecond).label,
+    )
   })
 
   it('updates every Full Grid label without collapsing duplicate candidate cells', async () => {

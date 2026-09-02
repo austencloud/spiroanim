@@ -268,7 +268,7 @@ import {
 import { resolveVtgBuilderSelectionAfterDelete } from '@/features/builder/resolveVtgBuilderSelectionAfterDelete'
 import { resolveVtgBuilderSelectionAfterInsert } from '@/features/builder/resolveVtgBuilderSelectionAfterInsert'
 import { isVtgBuilderDropAllowed } from '@/features/builder/isVtgBuilderDropAllowed'
-import { isVtgPatternSelection } from '@/features/concepts/types'
+import { isQtrPatternSelection, isVtgPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
@@ -569,7 +569,11 @@ watch(historyApplied, (applied) => {
 
 const acceptPatternDrop = (drop: BuilderPatternDrop) => {
   const previewCount = resizedPreviewAnimations.value?.length
-  if (previewCount === undefined || !isVtgPatternSelection(drop.selection)) return
+  if (
+    previewCount === undefined ||
+    (!isVtgPatternSelection(drop.selection) && !isQtrPatternSelection(drop.selection))
+  )
+    return
   const dropAllowed = isVtgBuilderDropAllowed({
     portionCount: previewCount,
     selectedIndex: selectedPreviewIndex.value,

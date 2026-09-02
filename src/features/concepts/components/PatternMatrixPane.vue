@@ -940,15 +940,8 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
 
       const relationships = describePatternSelectionRelationshipsAcrossBeats(selection)
       const builderAnimation =
-        props.builderActive &&
-        !isQtr.value &&
-        props.builderInsertionIndex !== undefined &&
-        props.animation
-          ? createVtgBuilderDropPreview(
-              props.animation,
-              selection as VtgPatternSelection,
-              props.builderInsertionIndex,
-            )
+        props.builderActive && props.builderInsertionIndex !== undefined && props.animation
+          ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex)
           : undefined
       const displayedRelationships =
         builderAnimation && (props.builderInsertionIndex ?? 0) > 0
@@ -2019,7 +2012,9 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
     const animation =
       props.builderActive && props.builderInsertionIndex !== undefined && props.animation
         ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex)
-        : createDefaultVtgAnimation(selection)
+        : 'quarters' in selection
+          ? createDefaultQtrAnimation(selection)
+          : createDefaultVtgAnimation(selection)
     return animation ? toVtgPreviewAnimation(animation) : undefined
   },
 })
