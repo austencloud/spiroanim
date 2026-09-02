@@ -2,11 +2,13 @@
 
 ## Elemental icons
 
-The element artwork in `src/assets/icons/elements/` (Earth, Water, Air, Fire, Sun, Moon) was
-created by [Austen Cloud](https://tkaflowarts.com) for
-[The Kinetic Alphabet (TKA)](https://tkaflowarts.com). They are the same icons TKA renders on its
-pictographs and are used in SpiroAnim with permission. Keep this notice with the artwork if you copy
-it into another project.
+The element artwork (Earth, Water, Air, Fire, Sun, Moon) was created by
+[Austen Cloud](https://tkaflowarts.com) for [The Kinetic Alphabet (TKA)](https://tkaflowarts.com)
+and is licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). SpiroAnim does not vendor
+the files: `ElementalRelationshipIcons.vue` imports them from the
+[`@austencloud/tka-elements`](https://www.npmjs.com/package/@austencloud/tka-elements) npm package,
+which Austen maintains, so the icons here are always the ones TKA renders on its pictographs.
+Bumping that dependency picks up new artwork. Keep this notice if you copy the icons elsewhere.
 
 ## Elemental relationship terminology
 
