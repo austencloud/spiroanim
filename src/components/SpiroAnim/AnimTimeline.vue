@@ -4,7 +4,6 @@
       <QuickSlotsControl
         v-if="quickSlotCount > 0"
         class="timeline-quick-slots"
-        :class="{ 'timeline-quick-slots--floating': quickSlotsFloat }"
         @apply="emit('quickSlotApply', $event)"
         @save="emit('quickSlotSave', $event)"
       />
@@ -135,16 +134,7 @@ const props = withDefaults(
 )
 
 const { parents: mainViews } = storeToRefs(useMainPaneStore())
-const { quickSlotCount, quickSlotPaths, selectedQuickSlot } = storeToRefs(useConceptsStore())
-const quickSlotsFloat = computed(() => {
-  if (selectedQuickSlot.value === null) return false
-
-  const selectedPath = quickSlotPaths.value[selectedQuickSlot.value - 1]
-  if (!selectedPath) return true
-
-  const page = selectedPath.split(/[?#]/, 1)[0]?.replace(/^\//, '')
-  return page === 'timeline' || page?.split('-').includes('time') === true
-})
+const { quickSlotCount } = storeToRefs(useConceptsStore())
 const { pSELECTED, pFRAMES, showFullTimeline } = storeToRefs(usePropertiesStore(props.store))
 const { editorLoaded } = storeToRefs(useEditorAccessStore())
 const timelineSettingsStore = useTimelineSettingsStore()
@@ -796,11 +786,6 @@ const cursorStyle = computed<CSSProperties>(() => ({
 .timeline-quick-slots {
   max-inline-size: calc(100% - 2 * var(--space-2));
   margin-block: var(--space-1);
-}
-.timeline-quick-slots--floating {
-  position: sticky;
-  top: 0;
-  z-index: 1010;
 }
 .timeline-scroll-content {
   position: relative;
