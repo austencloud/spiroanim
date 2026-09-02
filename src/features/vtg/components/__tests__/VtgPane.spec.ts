@@ -6,7 +6,9 @@ import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { builderPatternPointerMoveEvent } from '@/features/builder/patternPointerDrag'
 import type { BuilderPatternPointerDetail } from '@/features/builder/patternPointerDrag'
 import { getCompiledVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
+import { appendVtgBuilderPattern } from '@/features/builder/appendVtgBuilderPattern'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
 import {
   createDefaultQtrAnimation,
@@ -3341,6 +3343,71 @@ describe('VtgPane', () => {
     expect(wrapper.emitted('customize')).toHaveLength(customizationsBeforeReset + 1)
     expect(wrapper.emitted('customize')?.at(-1)?.[0]).not.toHaveProperty('thick')
     expect(wrapper.emitted('patternPreview')).toHaveLength(previewsBeforeReset + 1)
+  })
+
+  it('updates Builder Elemental labels for the selected insertion target', async () => {
+    const first = createDefaultVtgAnimation({ reference: '5-6', speedRatio: '1:3' })
+    const animation = first
+      ? appendVtgBuilderPattern(first, { reference: '2-3', speedRatio: '1:3' })
+      : undefined
+    if (!animation) throw new Error('Expected a two-portion Builder pattern')
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        builderActive: true,
+        builderInsertionIndex: 0,
+      },
+    })
+    await settlePreviewRendering()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+    const previewAnimations = () =>
+      FakeWorker.instances[0]?.messages
+        .filter(({ type }) => type === 'data')
+        .map(({ data }) => data as RootDataFinal) ?? []
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]').setValue(true)
+    const firstTileElements = () =>
+      wrapper
+        .get('[data-cell-reference="1-1"]')
+        .findAll('.elemental-relationship-icons__icon')
+        .map((icon) => icon.attributes('data-element'))
+
+    expect(firstTileElements()).toEqual(['Earth', 'Earth'])
+    expect(describePatternRelationships(previewAnimations().at(-4)!).label).toBe('TS / TS')
+    const previewsBeforeContextChange = previewAnimations().length
+    await wrapper.setProps({ builderInsertionIndex: 1 })
+    await settlePreviewRendering()
+    expect(firstTileElements()).toEqual(['Earth', 'Water'])
+    expect(previewAnimations()).toHaveLength(previewsBeforeContextChange + 4)
+    expect(describePatternRelationships(previewAnimations().at(-4)!).label).toBe('TS / SS')
+    await wrapper.setProps({ builderInsertionIndex: 2 })
+    await settlePreviewRendering()
+    expect(firstTileElements()).toEqual(['Earth', 'Water'])
+  })
+
+  it('updates every Full Grid label without collapsing duplicate candidate cells', async () => {
+    const first = createDefaultVtgAnimation({ reference: '5-6', speedRatio: '1:3' })
+    const animation = first
+      ? appendVtgBuilderPattern(first, { reference: '2-3', speedRatio: '1:3' })
+      : undefined
+    if (!animation) throw new Error('Expected a two-portion Builder pattern')
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        builderActive: true,
+        builderFullCatalog: true,
+        builderInsertionIndex: 0,
+      },
+    })
+
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
+    expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text()).toBe('TS / TS')
+
+    await wrapper.setProps({ builderInsertionIndex: 1 })
+
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
+    expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text()).toBe('TS / SS')
+    expect(wrapper.get('[data-cell-reference="1-3"] .vtg-tile__label-text').text()).toBe('TS / SS')
   })
 
   it('uses a full-size copy of the VTG cell as the desktop Builder drag image', async () => {

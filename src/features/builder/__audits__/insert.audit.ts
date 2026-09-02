@@ -15,12 +15,12 @@ import {
   inputWasMutated,
   phasedCompactSelections,
   previewStates,
-  statesMatchAllSpinsAndDuration,
+  statesMatchAll,
 } from '@/features/builder/__audits__/vtgBuilderMutationAudit'
 
 describe('exhaustive VTG Builder insert audit', () => {
   it(
-    'inserts each junction pair while preserving survivor spins, durations, Axis, and suffixes',
+    'inserts each junction pair while preserving motion codes, durations, and suffixes',
     () => {
       expect.hasAssertions()
       const failures = createFailures()
@@ -68,8 +68,8 @@ describe('exhaustive VTG Builder insert audit', () => {
           expectedDrop,
           ...before.slice(targetIndex),
         ]
-        if (!after || !statesMatchAllSpinsAndDuration(after, expected)) {
-          fail(failures, context, 'inserted or preserved Anti/In spins or duration are incorrect')
+        if (!after || !statesMatchAll(after, expected)) {
+          fail(failures, context, 'inserted or preserved motion code or duration is incorrect')
         }
         if (result) {
           const sourceStarts = [
@@ -84,9 +84,6 @@ describe('exhaustive VTG Builder insert audit', () => {
           const resultTarget = resultStarts[targetIndex + 1]! + 1
           result.props.forEach((prop, propIndex) => {
             const sourceProp = source.props[propIndex]!
-            if (prop.anim[resultTarget]?.axis !== sourceProp.anim[sourceTarget]?.axis) {
-              fail(failures, context, `changed following prop ${propIndex + 1} Axis`)
-            }
             if (
               JSON.stringify(prop.anim.slice(resultTarget + 1)) !==
               JSON.stringify(sourceProp.anim.slice(sourceTarget + 1))

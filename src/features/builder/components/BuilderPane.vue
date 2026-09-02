@@ -105,7 +105,7 @@
                 :fold-span="builderFoldSpan"
                 :fold-mirror="builderFoldMirror"
                 :initial-yaw-values="builderInitialYawValues"
-                :first-editable-frame-index="selectedPreviewIndex === 0 ? 0 : 1"
+                :first-editable-frame-index="builderFirstEditableFrameIndex"
                 :active-property="builderActiveProperty"
                 :sliders="sliders"
                 allow-twist-zero
@@ -252,19 +252,22 @@ import {
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
-import { resolveVtgBuilderPreviewDetails } from '@/features/builder/resolveVtgBuilderPreviewRelationships'
+import { describeVtgBuilderPreviewRelationships } from '@/features/builder/describeVtgBuilderPreviewRelationships'
+import { resolveVtgBuilderInitialPropRotationOffsets } from '@/features/builder/resolveVtgBuilderInitialPropRotationOffsets'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useQSMainStore } from '@/stores/useQSMainStore'
 import type { BuilderPatternDrop } from '@/features/builder/types'
+import type { VtgPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import {
   appendVtgBuilderPattern,
   insertVtgBuilderPattern,
-  replaceFirstVtgBuilderPattern,
   swapVtgBuilderPatternProps,
 } from '@/features/builder/appendVtgBuilderPattern'
 import { resolveVtgBuilderSelectionAfterDelete } from '@/features/builder/resolveVtgBuilderSelectionAfterDelete'
+import { resolveVtgBuilderSelectionAfterInsert } from '@/features/builder/resolveVtgBuilderSelectionAfterInsert'
+import { isVtgBuilderDropAllowed } from '@/features/builder/isVtgBuilderDropAllowed'
 import { isVtgPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { rootCompile } from '@/math/animation/AnimFunc'
@@ -397,29 +400,27 @@ watch(
 )
 const resizedPreviewAnimations = previewAnimations
 const patternMatcher = usePatternMatchingClient(computed(() => true))
-const previewDetails = shallowRef<Awaited<ReturnType<typeof resolveVtgBuilderPreviewDetails>>>()
 const previewRelationships = computed(() =>
-  previewDetails.value?.map(({ relationships }) => relationships),
+  resizedPreviewAnimations.value
+    ? describeVtgBuilderPreviewRelationships(resizedPreviewAnimations.value)
+    : undefined,
 )
-let previewRelationshipRevision = 0
+const initialPropRotationOffsets = shallowRef<VtgPatternSelection['propRotationOffsets']>()
+let initialOffsetRevision = 0
 watchImmediate([resizedPreviewAnimations, qtrEnabled], async ([previews, isQtr]) => {
-  const revision = ++previewRelationshipRevision
-  if (!previews) {
-    previewDetails.value = undefined
+  const revision = ++initialOffsetRevision
+  const firstPreview = previews?.[0]
+  if (!firstPreview) {
+    initialPropRotationOffsets.value = undefined
     return
   }
 
-  const details = await resolveVtgBuilderPreviewDetails(
-    previews,
+  const offsets = await resolveVtgBuilderInitialPropRotationOffsets(
+    firstPreview,
     patternMatcher.matchVtg,
     isQtr ? 'qtr' : 'vtg',
   )
-  // Keep the mounted controls and their active pointer capture while a beat resize is rematched.
-  // Replacing the relationships only after they resolve prevents range input drags from being
-  // interrupted by an avoidable thumbnail-grid unmount.
-  if (revision === previewRelationshipRevision && details) {
-    previewDetails.value = details
-  }
+  if (revision === initialOffsetRevision) initialPropRotationOffsets.value = offsets
 })
 const quickSlotCreationError = ref<string>()
 const createBuilderQSlots = async () => {
@@ -524,6 +525,7 @@ const applyBuilderPatternUpdate = (
 }
 
 const {
+  firstEditableFrameIndex: builderFirstEditableFrameIndex,
   selectedControlAnimation,
   activeProperty: builderActiveProperty,
   offsetValues: builderOffsetValues,
@@ -553,7 +555,7 @@ const {
 } = useVtgBuilderPortionProperties({
   pattern: computed(() => preparedPattern.value.pattern),
   previews: resizedPreviewAnimations,
-  previewDetails,
+  initialPropRotationOffsets,
   selectedIndex: selectedPreviewIndex,
   commit: (updated) => applyBuilderPatternUpdate(updated, undefined, true),
 })
@@ -568,24 +570,29 @@ watch(historyApplied, (applied) => {
 const acceptPatternDrop = (drop: BuilderPatternDrop) => {
   const previewCount = resizedPreviewAnimations.value?.length
   if (previewCount === undefined || !isVtgPatternSelection(drop.selection)) return
-  const dropAllowed =
-    previewCount === 0 ||
-    props.allowFirstDrop ||
-    (selectedPreviewIndex.value === 0 ? drop.previewIndex === 0 : drop.previewIndex > 0)
+  const dropAllowed = isVtgBuilderDropAllowed({
+    portionCount: previewCount,
+    selectedIndex: selectedPreviewIndex.value,
+    targetIndex: drop.previewIndex,
+    allowFirstDrop: props.allowFirstDrop,
+  })
   if (!dropAllowed) return
 
-  const replacesFirst = selectedPreviewIndex.value === 0 && drop.previewIndex === 0
-  const generated = replacesFirst
-    ? replaceFirstVtgBuilderPattern(preparedPattern.value.pattern, drop.selection)
-    : drop.previewIndex === previewCount
+  const generated =
+    drop.previewIndex === previewCount
       ? appendVtgBuilderPattern(preparedPattern.value.pattern, drop.selection)
       : insertVtgBuilderPattern(preparedPattern.value.pattern, drop.selection, drop.previewIndex)
   if (!generated) return
-  const updated = replacesFirst ? preserveVtgBuilderScale(ROOT.value, generated) : generated
+  const selectedIndex = selectedPreviewIndex.value
+  const nextSelectedIndex = resolveVtgBuilderSelectionAfterInsert(selectedIndex, drop.previewIndex)
+  const currentIndex = nextSelectedIndex ?? drop.previewIndex
+  const current = getPreviewStartMS(generated, currentIndex)
 
-  const insertedStartMS = getPreviewStartMS(updated, drop.previewIndex)
-
-  applyBuilderPatternUpdate(updated, insertedStartMS, replacesFirst)
+  applyBuilderPatternUpdate(generated, current, nextSelectedIndex !== undefined)
+  if (nextSelectedIndex !== undefined && nextSelectedIndex !== selectedIndex) {
+    selectedPreviewIndex.value = nextSelectedIndex
+    emit('previewSelectionChange', nextSelectedIndex)
+  }
 }
 const updatePreviewBeatCount = (index: number, beatCount: number) => {
   const updated = resizeVtgTransitionPatternPreview(preparedPattern.value.pattern, index, beatCount)

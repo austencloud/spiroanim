@@ -14,7 +14,7 @@ import type {
   VtgTransitionInitialTurnsOffset,
 } from '@/features/vtg/types'
 import type { PatternPropColor } from '@/features/concepts/patternPropColors'
-import type { PropInd } from '@/types/AnimTypes'
+import type { PropInd, RootDataFinal } from '@/types/AnimTypes'
 
 interface UseVtgPreviewsOptions {
   dimensions: readonly ConceptPreviewDimensions[]
@@ -35,6 +35,8 @@ interface UseVtgPreviewsOptions {
   initialTurnsOffsetBeat: Ref<VtgBeat | undefined>
   activeReferences: Readonly<Ref<readonly VtgCellReference[]>>
   active?: Readonly<Ref<boolean>>
+  previewContext?: Readonly<Ref<unknown>>
+  createVtgPreview?: (selection: VtgPatternSelection) => RootDataFinal | undefined
 }
 
 export const pairedPatternPreviewReferences = [1, 2, 3, 4, 5, 6].flatMap((row) =>
@@ -77,6 +79,8 @@ export const usePatternPreviews = ({
   initialTurnsOffsetBeat,
   activeReferences,
   active,
+  previewContext,
+  createVtgPreview,
 }: UseVtgPreviewsOptions) => {
   const activePreviewIndexes = computed(() => {
     return activeReferences.value.map((reference) =>
@@ -124,7 +128,9 @@ export const usePatternPreviews = ({
       const selection = buildSelection(reference)
       return 'quarters' in selection
         ? createQtrPreviewAnimation(selection)
-        : createVtgPreviewAnimation(selection)
+        : createVtgPreview
+          ? createVtgPreview(selection)
+          : createVtgPreviewAnimation(selection)
     },
   })
 
@@ -146,6 +152,7 @@ export const usePatternPreviews = ({
       initialTurnsOffset,
       initialTurnsOffsetBeat,
       activeReferences,
+      ...(previewContext === undefined ? [] : [previewContext]),
     ],
     renderer.requestPreviews,
   )

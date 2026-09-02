@@ -307,28 +307,3 @@ export const insertVtgBuilderPattern = (
       )
     : undefined
 }
-
-/** Replaces the starting Builder piece without carrying its relationship into the new start. */
-export const replaceFirstVtgBuilderPattern = (
-  current: RootDataFinal,
-  selection: VtgPatternSelection,
-): RootDataFinal | undefined => {
-  const previews = createVtgTransitionPreviewAnimations(current)
-  const followingPreview = previews?.[1]
-  if (!followingPreview) return createVtgAnimation(current, selection)
-
-  const followingStart = findExplicitPlaneOrTurnsFrameIndices(current, 2)[0]
-  const candidate = createStartingVtgBuilderPattern(current, selection)
-  const replacementIntervalCount = getBuilderPieceIntervalCount(selection)
-  if (followingStart === undefined || !candidate) return undefined
-
-  // The old starting portion is omitted; the replacement prefix is joined directly to the
-  // untouched authored successor and suffix.
-  return rejoinVtgBuilderJunction(
-    candidate,
-    replacementIntervalCount,
-    current,
-    followingStart - 1,
-    getVtgBuilderMotion(followingPreview),
-  )
-}

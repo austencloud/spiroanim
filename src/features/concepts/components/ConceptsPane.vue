@@ -66,6 +66,7 @@
       :builder-full-catalog="builderFullCatalog"
       :builder-full-catalog-forced="builderFullCatalogForced"
       :builder-full-grid="builderFullGrid"
+      :builder-insertion-index="builderInsertionIndex"
       @pattern-select="emit('patternSelect', $event)"
       @pattern-preview="emit('patternPreview', $event)"
       @customize="emit('customize', $event)"
@@ -121,6 +122,7 @@ const props = defineProps<{
   builderFullCatalog?: boolean
   builderFullCatalogForced?: boolean
   builderFullGrid?: boolean
+  builderInsertionIndex?: number
   docsReturnPath?: string
   pane?: 'left' | 'right' | 'hidden'
 }>()

@@ -44,6 +44,7 @@
         :builder-full-catalog="builderFullCatalog"
         :builder-full-catalog-forced="builderFullCatalogForced"
         :builder-full-grid="builderFullGrid"
+        :builder-insertion-index="selectedBuilderPreviewIndex"
         :docs-return-path="currentRoute.fullPath"
         :pane="parents.concepts"
         data-type="concepts"
@@ -131,6 +132,7 @@ import { applyConceptPattern as createConceptPattern } from '@/features/concepts
 import { isVtgPatternSelection, type ConceptPatternSelection } from '@/features/concepts/types'
 import { toVtgBuilderDisplayAnimation } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
+import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
 import { usePaneSurface } from '@/composables/usePaneSurface'
@@ -363,7 +365,10 @@ const applyConceptPattern = (selection: ConceptPatternSelection) => {
 
 const previewConceptPattern = (selection: ConceptPatternSelection) => {
   if (!paneStore.isPaneHijacked) return
-  const animation = createConceptPattern(ROOT.value, selection)
+  const animation =
+    isVtgPatternSelection(selection) && selectedBuilderPreviewIndex.value !== undefined
+      ? createVtgBuilderDropPreview(ROOT.value, selection, selectedBuilderPreviewIndex.value)
+      : createConceptPattern(ROOT.value, selection)
   if (!animation) return
 
   playerStore.startPlaybackPreview(toVtgBuilderDisplayAnimation(animation, conceptsStore.scale))

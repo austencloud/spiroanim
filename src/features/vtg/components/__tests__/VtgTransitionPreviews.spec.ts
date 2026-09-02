@@ -114,7 +114,7 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.get('[data-test="selected-properties"]').text()).toBe('Properties')
   })
 
-  it('places selected properties after a placeholder that completes the final row', () => {
+  it('places selected properties after the final preview while hiding the placeholder', () => {
     const animations = Array.from({ length: 5 }, () => animation)
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
@@ -131,9 +131,37 @@ describe('VtgTransitionPreviews', () => {
     })
 
     const properties = wrapper.get('[data-role="vtg-transition-preview-properties"]').element
-    expect(properties.previousElementSibling?.getAttribute('data-role')).toBe(
-      'vtg-transition-preview-drop-target',
+    expect(properties.previousElementSibling?.getAttribute('data-preview-index')).toBe('4')
+    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
+  })
+
+  it('selects the empty drop slot without previewing an animation or showing properties', async () => {
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [relationship],
+        refreshKey: 'select-empty-slot',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        scale: 1,
+      },
+      slots: { 'selected-properties': '<div data-test="selected-properties">Properties</div>' },
+    })
+    const emptySlot = wrapper.get<HTMLButtonElement>(
+      '[data-role="vtg-transition-preview-drop-target"]',
     )
+
+    await emptySlot.trigger('click')
+    expect(wrapper.emitted('selectionChange')).toEqual([[1]])
+    expect(wrapper.emitted('patternPreview')).toBeUndefined()
+
+    await wrapper.setProps({ selectedIndex: 1 })
+    expect(emptySlot.classes()).toContain('vtg-transition-previews__item--selected')
+    expect(emptySlot.attributes('aria-pressed')).toBe('true')
+    expect(wrapper.find('[data-role="vtg-transition-preview-properties"]').exists()).toBe(false)
+
+    await emptySlot.trigger('click')
+    expect(wrapper.emitted('selectionChange')).toEqual([[1], [undefined]])
   })
 
   it('shows Sun and Moon icons for Quarter relationships in Elemental Builder thumbnails', () => {
@@ -291,6 +319,7 @@ describe('VtgTransitionPreviews', () => {
     await wrapper.setProps({ selectedIndex: 1 })
     expect(items[0]!.classes()).not.toContain('vtg-transition-previews__item--selected')
     expect(items[1]!.classes()).toContain('vtg-transition-previews__item--selected')
+    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
 
     await previews[1]!.trigger('click')
     expect(wrapper.emitted('selectionChange')).toEqual([[0], [1], [undefined]])
@@ -329,6 +358,13 @@ describe('VtgTransitionPreviews', () => {
     expect(items[1]!.classes()).toContain('vtg-transition-previews__item--drop-blocked')
     await items[1]!.trigger('drop', { dataTransfer })
     expect(wrapper.emitted('patternDrop')).toHaveLength(1)
+
+    await wrapper.setProps({ selectedIndex: 1 })
+    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
+    await items[0]!.trigger('drop', { dataTransfer })
+    expect(wrapper.emitted('patternDrop')).toHaveLength(1)
+    await items[1]!.trigger('drop', { dataTransfer })
+    expect(wrapper.emitted('patternDrop')).toHaveLength(2)
   })
 
   it('allows dropping on the first item while Full Grid is enabled', async () => {
@@ -355,6 +391,12 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.emitted('patternDrop')).toEqual([
       [{ previewIndex: 0, selection: { reference: '1-1', speedRatio: '1:3' } }],
     ])
+
+    await wrapper.setProps({ selectedIndex: 1 })
+    await firstItem.trigger('drop', { dataTransfer })
+    expect(wrapper.emitted('patternDrop')).toHaveLength(1)
+    await wrapper.findAll('.vtg-transition-previews__item')[1]!.trigger('drop', { dataTransfer })
+    expect(wrapper.emitted('patternDrop')).toHaveLength(2)
   })
 
   it('labels a half-beat thumbnail without changing the supplied animation', () => {

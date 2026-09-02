@@ -8,6 +8,7 @@
     :builder-full-catalog="builderFullCatalog"
     :builder-full-catalog-forced="builderFullCatalogForced"
     :builder-full-grid="builderFullGrid"
+    :builder-insertion-index="builderInsertionIndex"
     @pattern-select="forwardSelection"
     @pattern-preview="emit('patternPreview', $event)"
     @customize="emit('customize', $event)"
@@ -34,6 +35,7 @@ withDefaults(
     builderFullCatalog?: boolean
     builderFullCatalogForced?: boolean
     builderFullGrid?: boolean
+    builderInsertionIndex?: number
   }>(),
   {
     animationReady: true,

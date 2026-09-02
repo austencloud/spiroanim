@@ -220,44 +220,49 @@ describe('SpiroAnim view', () => {
     expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
       'vtg-transition-previews__item--selected',
     )
-    const replacementDragData = new Map<string, string>()
-    const replacementDataTransfer = {
+    const prependDragData = new Map<string, string>()
+    const prependDataTransfer = {
       effectAllowed: 'none',
       dropEffect: 'none',
-      setData: (type: string, value: string) => replacementDragData.set(type, value),
-      getData: (type: string) => replacementDragData.get(type) ?? '',
+      setData: (type: string, value: string) => prependDragData.set(type, value),
+      getData: (type: string) => prependDragData.get(type) ?? '',
     }
-    const rootBeforeReplacement = playerRoot.value
-    const routeBeforeReplacement = router.currentRoute.value.fullPath
+    const rootBeforePrepend = playerRoot.value
+    const routeBeforePrepend = router.currentRoute.value.fullPath
     await wrapper.get('[data-cell-reference="3-4"]').trigger('dragstart', {
-      dataTransfer: replacementDataTransfer,
+      dataTransfer: prependDataTransfer,
     })
     await wrapper.get('[data-preview-index="0"]').trigger('drop', {
-      dataTransfer: replacementDataTransfer,
+      dataTransfer: prependDataTransfer,
     })
     await flushPromises()
-    expect(playerRoot.value).not.toBe(rootBeforeReplacement)
-    const replacedFirstPreview = transitionAnimations.createVtgTransitionPreviewAnimations(
+    expect(playerRoot.value).not.toBe(rootBeforePrepend)
+    const prependedPreviews = transitionAnimations.createVtgTransitionPreviewAnimations(
       playerRoot.value,
-    )?.[0]
-    expect(replacedFirstPreview).toBeDefined()
-    expect(findVtgPatternMatch(replacedFirstPreview!)).toMatchObject({ reference: '3-4' })
-    expect(router.currentRoute.value.fullPath).not.toBe(routeBeforeReplacement)
-    expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
+    )
+    expect(prependedPreviews).toHaveLength(2)
+    expect(findVtgPatternMatch(prependedPreviews![0]!)).toMatchObject({ reference: '3-4' })
+    expect(findVtgPatternMatch(prependedPreviews![1]!)).toMatchObject({ reference: '1-1' })
+    expect(prependedPreviews![1]!.props[0]?.anim[1]?.twist).toBe(90)
+    expect(router.currentRoute.value.fullPath).not.toBe(routeBeforePrepend)
+    expect(wrapper.get('[data-preview-index="1"]').classes()).toContain(
       'vtg-transition-previews__item--selected',
     )
-    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
+    expect(wrapper.get('[data-preview-index="0"]').classes()).not.toContain(
+      'vtg-transition-previews__item--selected',
+    )
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(8)
     playerStore.raw().CURRENT.value = 500
     await wrapper.findAll('[data-role="vtg-transition-preview-reverse"]')[0]!.trigger('click')
     await flushPromises()
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     expect(playerStore.raw().CURRENT.value).toBe(500)
     expect(wrapper.find('[data-role="builder-preview-countdown"]').exists()).toBe(false)
-    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
-    expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
+    expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(8)
+    expect(wrapper.get('[data-preview-index="1"]').classes()).toContain(
       'vtg-transition-previews__item--selected',
     )
-    await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
+    await wrapper.get('button[aria-label="Preview pattern 2"]').trigger('click')
     await flushPromises()
     playerStore.setPlaybackOverride(playerRoot.value)
     playerStore.raw().CURRENT.value = 0
@@ -274,7 +279,7 @@ describe('SpiroAnim view', () => {
       getData: (type: string) => dragData.get(type) ?? '',
     }
     const frameCountBeforeDrop = playerRoot.value.props[0]!.anim.length
-    const insertedStartMS = playerStore.MAX
+    const appendedStartMS = playerStore.MAX
     playerStore.PLAYING = false
     await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
     await flushPromises()
@@ -288,7 +293,7 @@ describe('SpiroAnim view', () => {
     await flushPromises()
     expect(playerRoot.value.props[0]!.anim).toHaveLength(frameCountBeforeDrop + 8)
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
-    expect(playerStore.raw().CURRENT.value).toBe(insertedStartMS)
+    expect(playerStore.raw().CURRENT.value).toBe(appendedStartMS)
     expect(playerStore.PLAYING).toBe(false)
     await wrapper.get('button[aria-label="Preview pattern 2"]').trigger('click')
     await flushPromises()
@@ -300,17 +305,26 @@ describe('SpiroAnim view', () => {
     expect(laterPortionTwistControls.at(-1)?.attributes('data-role')).not.toBe('builder-twist-0-0')
     await wrapper.get('button[aria-label="Preview pattern 2"]').trigger('click')
     await flushPromises()
-    expect(playerStore.raw().CURRENT.value).toBe(insertedStartMS)
-    await wrapper.get('[data-cell-reference="1-2"]').trigger('dragstart', { dataTransfer })
-    await wrapper
-      .get('[data-role="vtg-transition-preview-drop-target"]')
-      .trigger('drop', { dataTransfer })
+    const preservedPortionStartMS = playerStore.raw().CURRENT.value
+    expect(preservedPortionStartMS).toBeLessThan(appendedStartMS)
+    const selectedTrailingSlot = wrapper.get('[data-role="vtg-transition-preview-drop-target"]')
+    const selectedTrailingIndex = Number(selectedTrailingSlot.attributes('data-preview-index'))
+    await selectedTrailingSlot.trigger('click')
     await flushPromises()
+    expect(selectedTrailingSlot.classes()).toContain('vtg-transition-previews__item--selected')
+    await wrapper.get('[data-cell-reference="1-2"]').trigger('dragstart', { dataTransfer })
+    await selectedTrailingSlot.trigger('drop', { dataTransfer })
+    await flushPromises()
+    const nextTrailingSlot = wrapper.get('[data-role="vtg-transition-preview-drop-target"]')
+    expect(Number(nextTrailingSlot.attributes('data-preview-index'))).toBe(
+      selectedTrailingIndex + 1,
+    )
+    expect(nextTrailingSlot.classes()).toContain('vtg-transition-previews__item--selected')
     await wrapper.get('button[aria-label="Preview pattern 2"]').trigger('click')
     await flushPromises()
     await wrapper.get('button[aria-label="Delete pattern 2"]').trigger('click')
     await flushPromises()
-    expect(playerStore.raw().CURRENT.value).toBe(insertedStartMS)
+    expect(playerStore.raw().CURRENT.value).toBe(preservedPortionStartMS)
     expect(wrapper.get('[aria-label="Builder Columns"] output').text()).toBe('4')
     wrapper.get('[data-role="builder-qslots"]')
     expect(wrapper.find('.builder-pane__development-warning').exists()).toBe(false)
@@ -403,6 +417,8 @@ describe('SpiroAnim view', () => {
       true,
     )
 
+    await wrapper.get('button[aria-label="Delete pattern 1"]').trigger('click')
+    await flushPromises()
     await wrapper.get('button[aria-label="Delete pattern 1"]').trigger('click')
     await flushPromises()
     expect(playerRoot.value.props).toHaveLength(0)

@@ -14,7 +14,7 @@ import {
   inputWasMutated,
   phasedCompactSelections,
   previewStates,
-  statesMatchAllSpinsAndDuration,
+  statesMatchAll,
 } from '@/features/builder/__audits__/vtgBuilderMutationAudit'
 
 describe('exhaustive VTG Builder append audit', () => {
@@ -45,23 +45,8 @@ describe('exhaustive VTG Builder append audit', () => {
         const before = previewStates(source)
         const result = appendVtgBuilderPattern(source, dropped)
         const after = result ? previewStates(result) : undefined
-        if (
-          !before ||
-          !after ||
-          !statesMatchAllSpinsAndDuration(after, [...before, expectedDrop])
-        ) {
-          fail(failures, context, 'existing or appended Anti/In spins or duration are incorrect')
-        }
-        const droppedSource = createInitial(dropped)
-        if (result && droppedSource) {
-          const targetFrameIndex = source.props[0]!.anim.length
-          result.props.forEach((prop, propIndex) => {
-            if (
-              prop.anim[targetFrameIndex]?.axis !== droppedSource.props[propIndex]!.anim[1]?.axis
-            ) {
-              fail(failures, context, `changed appended prop ${propIndex + 1} Axis`)
-            }
-          })
+        if (!before || !after || !statesMatchAll(after, [...before, expectedDrop])) {
+          fail(failures, context, 'existing or appended motion code or duration is incorrect')
         }
         if (inputWasMutated(beforeInput, source)) fail(failures, context, 'mutated its input')
       }
@@ -74,7 +59,7 @@ describe('exhaustive VTG Builder append audit', () => {
           const result = appendVtgBuilderPattern(empty, dropped)
           const after = result ? previewStates(result) : undefined
           const expected = expectedDroppedState(dropped)
-          if (!after || !expected || !statesMatchAllSpinsAndDuration(after, [expected])) {
+          if (!after || !expected || !statesMatchAll(after, [expected])) {
             fail(
               failures,
               `empty append ${describeSelection(dropped)}`,

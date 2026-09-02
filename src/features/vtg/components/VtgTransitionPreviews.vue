@@ -160,31 +160,28 @@
       </div>
     </template>
 
-    <div
-      v-if="selectedIndex !== 0"
+    <button
+      v-if="dropPlaceholderVisible"
+      type="button"
       class="vtg-transition-previews__item vtg-transition-previews__placeholder"
       :class="{
         'vtg-transition-previews__item--drag-over': dragOverIndex === previewUrls.length,
         'vtg-transition-previews__item--drop-blocked':
           dragOverIndex === previewUrls.length && !isDropAllowed(previewUrls.length),
+        'vtg-transition-previews__item--selected': selectedIndex === previewUrls.length,
       }"
+      aria-label="Select empty pattern slot"
+      :aria-pressed="selectedIndex === previewUrls.length"
       data-role="vtg-transition-preview-drop-target"
       :data-preview-index="previewUrls.length"
+      @click="previewPattern(previewUrls.length)"
       @dragenter.prevent="dragOverIndex = previewUrls.length"
       @dragover.prevent="allowPatternDrop(previewUrls.length, $event)"
       @dragleave="leavePatternDrop(previewUrls.length, $event)"
       @drop.prevent="dropPattern(previewUrls.length, $event)"
     >
       <span>Drag and drop a pattern here</span>
-    </div>
-
-    <div
-      v-if="propertiesAfterPlaceholder"
-      class="vtg-transition-previews__properties"
-      data-role="vtg-transition-preview-properties"
-    >
-      <slot name="selected-properties" />
-    </div>
+    </button>
 
     <Teleport to="body">
       <div
@@ -236,6 +233,7 @@ import { useConceptPreviewRenderer } from '@/features/concepts/composables/useCo
 import type { ConceptPreviewDimensions } from '@/features/concepts/composables/useConceptPreviewRenderer'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { builderPatternDragType } from '@/features/builder/types'
+import { isVtgBuilderDropAllowed } from '@/features/builder/isVtgBuilderDropAllowed'
 import type { BuilderPatternDrop } from '@/features/builder/types'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import {
@@ -298,22 +296,20 @@ const { protectTouchScrolling, beginPointerSlider, endPointerSlider, cancelPoint
 const previewRelationships = computed(() => props.relationships)
 const previewLabels = computed(() => previewRelationships.value.map(({ label }) => label))
 const previewRatios = computed(() => props.animations.map(inferVtgDoubledPortionSpeedRatio))
+const dropPlaceholderVisible = computed(
+  () => props.selectedIndex === undefined || props.selectedIndex >= props.animations.length,
+)
 const propertiesRowEndPosition = computed(() => {
-  if (props.selectedIndex === undefined) return undefined
+  if (props.selectedIndex === undefined || props.selectedIndex >= previewUrls.value.length) {
+    return undefined
+  }
   const rowStart = Math.floor(props.selectedIndex / props.columns) * props.columns
-  const itemCount = previewUrls.value.length + (props.selectedIndex === 0 ? 0 : 1)
-  return Math.min(rowStart + props.columns - 1, itemCount - 1)
+  return Math.min(rowStart + props.columns - 1, previewUrls.value.length - 1)
 })
 const propertiesAfterPreviewIndex = computed(() => {
   const rowEnd = propertiesRowEndPosition.value
   return rowEnd !== undefined && rowEnd < previewUrls.value.length ? rowEnd : undefined
 })
-const propertiesAfterPlaceholder = computed(
-  () =>
-    props.selectedIndex !== undefined &&
-    props.selectedIndex !== 0 &&
-    propertiesRowEndPosition.value === previewUrls.value.length,
-)
 const swappablePreviews = computed(() =>
   props.animations.map((animation) => {
     const { spins } = getVtgBuilderMotion(animation)
@@ -334,9 +330,12 @@ useEventListener(typeof document === 'undefined' ? null : document, 'drop', () =
 })
 const dragOverIndex = ref<number>()
 const isDropAllowed = (index: number) =>
-  props.animations.length === 0 ||
-  props.allowFirstDrop ||
-  (props.selectedIndex === 0 ? index === 0 : index > 0)
+  isVtgBuilderDropAllowed({
+    portionCount: props.animations.length,
+    selectedIndex: props.selectedIndex,
+    targetIndex: index,
+    allowFirstDrop: props.allowFirstDrop,
+  })
 const allowPatternDrop = (index: number, event: DragEvent) => {
   if (event.dataTransfer) event.dataTransfer.dropEffect = isDropAllowed(index) ? 'copy' : 'none'
 }
@@ -552,6 +551,8 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   border: 2px dashed var(--color-border);
   background: color-mix(in srgb, var(--color-surface) 32%, transparent);
   color: var(--color-text-muted);
+  cursor: pointer;
+  font-family: inherit;
   text-align: center;
   font-size: var(--font-size-concept-control);
   font-weight: 700;

@@ -6,7 +6,6 @@ import {
   getVtgBuilderPortionEffectiveValues,
   getVtgBuilderPortionRanges,
 } from '@/features/builder/editVtgBuilderPortionProperties'
-import type { VtgBuilderPreviewDetails } from '@/features/builder/resolveVtgBuilderPreviewRelationships'
 import type {
   VtgFoldMode,
   VtgFoldSideSettings,
@@ -24,13 +23,14 @@ import {
 } from '@/features/vtg/applyVtgFoldSettings'
 import { applyVtgTwistSettings, detectVtgTwistMode } from '@/features/vtg/applyVtgTwistSettings'
 import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
+import type { VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 interface UseVtgBuilderPortionPropertiesOptions {
   pattern: ComputedRef<RootDataFinal>
   previews: ComputedRef<readonly RootDataFinal[] | undefined>
-  previewDetails: Ref<readonly VtgBuilderPreviewDetails[] | undefined>
+  initialPropRotationOffsets: Ref<VtgPatternSelection['propRotationOffsets']>
   selectedIndex: Ref<number | undefined>
   commit: (updated: RootDataFinal) => void
 }
@@ -49,10 +49,11 @@ const copyFoldValues = (values: VtgFoldValues): VtgFoldValues => [
 export const useVtgBuilderPortionProperties = ({
   pattern,
   previews,
-  previewDetails,
+  initialPropRotationOffsets,
   selectedIndex,
   commit,
 }: UseVtgBuilderPortionPropertiesOptions) => {
+  const firstEditableFrameIndex = computed(() => (selectedIndex.value === 0 ? 0 : 1))
   const selectedControlAnimation = computed(() => {
     const index = selectedIndex.value
     return index === undefined ? undefined : previews.value?.[index]
@@ -152,7 +153,7 @@ export const useVtgBuilderPortionProperties = ({
       offsetValues.value = [0, 0]
       return
     }
-    offsetValues.value = previewDetails.value?.[index]?.match.propRotationOffsets ?? [0, 0]
+    offsetValues.value = initialPropRotationOffsets.value ?? [0, 0]
   }
 
   const hydrateModes = () => {
@@ -165,8 +166,7 @@ export const useVtgBuilderPortionProperties = ({
     foldMode.value = simpleFold ? 'simple' : 'advanced'
     if (!simpleFold) return
 
-    const firstEditableFrameIndex = selectedIndex.value === 0 ? 0 : 1
-    const firstEditableBeat = selectedLocalBeats.value[firstEditableFrameIndex] ?? 0
+    const firstEditableBeat = selectedLocalBeats.value[firstEditableFrameIndex.value] ?? 0
     const defaultBeat = selectedLocalBeats.value.includes(2) ? 2 : firstEditableBeat
     foldBeat.value = hasAuthoredFold ? [...simpleFold.beat] : [defaultBeat, defaultBeat]
     foldRepeat.value = [...simpleFold.repeat]
@@ -181,7 +181,7 @@ export const useVtgBuilderPortionProperties = ({
     syncOffsetValues()
     hydrateModes()
   })
-  watch(previewDetails, syncOffsetValues)
+  watch(initialPropRotationOffsets, syncOffsetValues)
 
   const commitWorkingProperties = (
     working: RootDataFinal,
@@ -198,7 +198,7 @@ export const useVtgBuilderPortionProperties = ({
     if (!animation) return
     commitWorkingProperties(
       applyVtgTwistSettings(animation, mode, values, {
-        firstEditableFrameIndex: selectedIndex.value === 0 ? 0 : 1,
+        firstEditableFrameIndex: firstEditableFrameIndex.value,
       }),
       ['twist'],
     )
@@ -222,16 +222,15 @@ export const useVtgBuilderPortionProperties = ({
     alternate: foldAlternate.value,
     span: foldSpan.value,
     mirror: foldMirror.value,
-    firstEditableFrameIndex: selectedIndex.value === 0 ? 0 : 1,
+    firstEditableFrameIndex: firstEditableFrameIndex.value,
   })
   const simpleFoldSources = (values = foldValues.value) => {
-    const firstEditableFrameIndex = selectedIndex.value === 0 ? 0 : 1
     return deriveVtgFoldSimpleSources(
       values,
       foldBeat.value,
       foldSpan.value,
       true,
-      selectedLocalBeats.value[firstEditableFrameIndex] ?? 0,
+      selectedLocalBeats.value[firstEditableFrameIndex.value] ?? 0,
     )
   }
   const applyFoldValues = (values: VtgFoldValues) => {
@@ -318,6 +317,7 @@ export const useVtgBuilderPortionProperties = ({
   }
 
   return {
+    firstEditableFrameIndex,
     selectedControlAnimation,
     activeProperty,
     offsetValues,

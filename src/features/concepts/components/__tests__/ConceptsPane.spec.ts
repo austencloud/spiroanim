@@ -6,6 +6,9 @@ import ConceptsPane from '@/features/concepts/components/ConceptsPane.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { createDefaultEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
 import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
+import { builderPatternPointerMoveEvent } from '@/features/builder/patternPointerDrag'
+import { builderPatternDragType } from '@/features/builder/types'
+import type { VtgPatternSelection } from '@/features/vtg/types'
 
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
 const scrollIntoView = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>()
@@ -70,6 +73,76 @@ describe('ConceptsPane', () => {
 
     expect(useConceptsStore().selectedConcept).toBe('8stp')
     expect(wrapper.find('[data-role="eight-step-pane"]').exists()).toBe(true)
+  })
+
+  it('drags the exact labeled cell from each half of a paired Builder thumbnail', async () => {
+    useConceptsStore().speedRatio = '1:2'
+    const wrapper = mount(ConceptsPane, {
+      props: { builderActive: true, builderFullCatalog: true },
+    })
+
+    const dragSelection = async (reference: string) => {
+      const setData = vi.fn<(format: string, data: string) => void>()
+      await wrapper.get(`[data-cell-reference="${reference}"]`).trigger('dragstart', {
+        dataTransfer: { effectAllowed: 'none', setData },
+      })
+      const payload = setData.mock.calls.find(([type]) => type === builderPatternDragType)?.[1]
+      if (typeof payload !== 'string') throw new Error(`Missing drag payload for ${reference}`)
+      return JSON.parse(payload) as VtgPatternSelection
+    }
+
+    await expect(dragSelection('1-1')).resolves.toMatchObject({ reference: '1-1' })
+    await expect(dragSelection('1-2')).resolves.toMatchObject({ reference: '1-2' })
+  })
+
+  it('pointer-drags the exact labeled cell from each half of a paired Builder thumbnail', async () => {
+    useConceptsStore().speedRatio = '1:2'
+    const wrapper = mount(ConceptsPane, {
+      props: { builderActive: true, builderFullCatalog: true },
+    })
+    const selections: VtgPatternSelection[] = []
+    const captureSelection = (event: Event) => {
+      const selection = (event as CustomEvent).detail.selection as VtgPatternSelection
+      selections.push(selection)
+    }
+    document.addEventListener(builderPatternPointerMoveEvent, captureSelection)
+
+    const dispatchPointerEvent = (
+      element: Element,
+      type: string,
+      properties: Readonly<Record<string, unknown>>,
+    ) => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      for (const [property, value] of Object.entries(properties)) {
+        Object.defineProperty(event, property, { value })
+      }
+      element.dispatchEvent(event)
+    }
+
+    try {
+      for (const [index, reference] of ['1-1', '1-2'].entries()) {
+        const pointerId = index + 1
+        const tile = wrapper.get(`[data-cell-reference="${reference}"]`)
+        dispatchPointerEvent(tile.element, 'pointerdown', {
+          pointerId,
+          pointerType: 'touch',
+          button: 0,
+          isPrimary: true,
+          clientX: 0,
+          clientY: 0,
+        })
+        dispatchPointerEvent(tile.element, 'pointermove', {
+          pointerId,
+          clientX: 20,
+          clientY: 0,
+        })
+        dispatchPointerEvent(tile.element, 'pointercancel', { pointerId })
+      }
+    } finally {
+      document.removeEventListener(builderPatternPointerMoveEvent, captureSelection)
+    }
+
+    expect(selections.map(({ reference }) => reference)).toEqual(['1-1', '1-2'])
   })
 
   it('requests the current pattern when an empty Quick Slot is selected', async () => {

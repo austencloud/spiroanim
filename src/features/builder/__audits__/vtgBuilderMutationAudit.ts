@@ -150,10 +150,5 @@ export const inputWasMutated = (before: string, animation: RootDataFinal): boole
 
 export const expectedDroppedState = (selection: VtgPatternSelection): PreviewState | undefined => {
   const animation = createDefaultVtgAnimation(selection)
-  return animation
-    ? {
-        motion: getVtgBuilderMotion(animation),
-        beatCount: 4,
-      }
-    : undefined
+  return animation ? previewStates(animation)?.[0] : undefined
 }

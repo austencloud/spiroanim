@@ -462,7 +462,9 @@ import {
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/vtg/qtr/data/qtrLabels'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { exactlyMatchesQtrSelection } from '@/features/vtg/qtr/matchQtrAnimation'
-import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { createDefaultVtgAnimation, toVtgPreviewAnimation } from '@/features/vtg/createVtgAnimation'
+import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
+import { describeVtgBuilderPreviewRelationship } from '@/features/builder/describeVtgBuilderPreviewRelationships'
 import { exactlyMatchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
 import { stripVtgPropertySettings } from '@/features/vtg/stripVtgPropertySettings'
 import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
@@ -551,6 +553,7 @@ const props = withDefaults(
     builderFullCatalog?: boolean
     builderFullCatalogForced?: boolean
     builderFullGrid?: boolean
+    builderInsertionIndex?: number
   }>(),
   {
     animationReady: true,
@@ -936,17 +939,32 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
         : baseSelection
 
       const relationships = describePatternSelectionRelationshipsAcrossBeats(selection)
-      if (!compactBuilder.value) return { ...address, ...relationships }
+      const builderAnimation =
+        props.builderActive &&
+        !isQtr.value &&
+        props.builderInsertionIndex !== undefined &&
+        props.animation
+          ? createVtgBuilderDropPreview(
+              props.animation,
+              selection as VtgPatternSelection,
+              props.builderInsertionIndex,
+            )
+          : undefined
+      const displayedRelationships =
+        builderAnimation && (props.builderInsertionIndex ?? 0) > 0
+          ? describeVtgBuilderPreviewRelationship(builderAnimation)
+          : relationships
+      if (!compactBuilder.value) return { ...address, ...displayedRelationships }
 
       const animation = isQtr.value
         ? createDefaultQtrAnimation(selection as QtrPatternSelection)
-        : createDefaultVtgAnimation(selection as VtgPatternSelection)
+        : (builderAnimation ?? createDefaultVtgAnimation(selection as VtgPatternSelection))
       if (!animation) throw new Error(`Missing Builder animation for ${selection.reference}`)
 
       const label = describeVtgBuilderMotion(animation)
       return {
         ...address,
-        ...relationships,
+        ...displayedRelationships,
         label,
         description: describeVtgBuilderMotionLabel(label),
       }
@@ -1085,18 +1103,15 @@ const isTileHighlighted = (tile: VtgMatrixTile) =>
 
 const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(reference)
 
-const createPatternSelection = (
-  tile: VtgMatrixTile,
-  reference: VtgCellReference = tile.reference,
-): VtgPatternSelection | QtrPatternSelection => {
+const createPatternSelection = (tile: VtgMatrixTile): VtgPatternSelection | QtrPatternSelection => {
   if (!suppressPatternEmit) hydrationVersion++
 
   const baseSelection: VtgPatternSelection = {
-    reference,
+    reference: tile.reference,
     speedRatio: speedRatio.value,
   }
   if (PROPSR[prop.value] !== vtgPlayerSettings.prop) baseSelection.prop = prop.value
-  if (isSpinToggleCell(reference)) baseSelection.isAnti = isAnti.value
+  if (isSpinToggleCell(tile.reference)) baseSelection.isAnti = isAnti.value
   if (swapProps.value) baseSelection.swapProps = true
   if (reversePlane.value) baseSelection.reversePlane = true
   if (beat.value !== 1) baseSelection.beat = beat.value
@@ -1156,16 +1171,6 @@ const emitPatternSelection = (tile: VtgMatrixTile) => {
   lastEmittedSelection = selection
   emit('patternSelect', selection)
 }
-
-const renderedReferenceForTile = (tile: VtgMatrixTile) =>
-  compactBuilder.value
-    ? tile.reference
-    : usesPairedPreviewLayout.value
-      ? createCellReference(
-          tile.row,
-          tile.column % 2 === 0 ? ((tile.column - 1) as VtgRuleNumber) : tile.column,
-        )
-      : tile.reference
 
 const emitBuilderPreview = (tile?: VtgMatrixTile) => {
   if (!props.builderActive) return
@@ -1259,13 +1264,10 @@ const setBuilderDragImage = (
 
 const startBuilderDrag = (tile: VtgMatrixTile, event: DragEvent) => {
   if (!props.builderActive || !event.dataTransfer) return
-  // Paired-ratio thumbnails span an odd/even cell pair. Dragging either half must send the odd
-  // reference whose animation is actually rendered across that thumbnail.
-  const renderedReference = renderedReferenceForTile(tile)
-  const selection = createPatternSelection(tile, renderedReference)
+  const selection = createPatternSelection(tile)
   event.dataTransfer.effectAllowed = 'copy'
   event.dataTransfer.setData(builderPatternDragType, JSON.stringify(selection))
-  event.dataTransfer.setData('text/plain', `VTG ${renderedReference}`)
+  event.dataTransfer.setData('text/plain', `VTG ${tile.reference}`)
   const source = event.currentTarget as HTMLElement | null
   if (source && typeof event.dataTransfer.setDragImage === 'function') {
     setBuilderDragImage(tile, source, event.dataTransfer)
@@ -1296,13 +1298,12 @@ const startBuilderPointerDrag = (tile: VtgMatrixTile, event: PointerEvent) => {
   )
     return
 
-  const renderedReference = renderedReferenceForTile(tile)
   const source = event.currentTarget as HTMLElement | null
   builderPointerDrag = {
     pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
-    selection: createPatternSelection(tile, renderedReference),
+    selection: createPatternSelection(tile),
     tile,
     source,
     active: false,
@@ -2013,6 +2014,14 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   initialTurnsOffsetBeat,
   activeReferences: computed(() => displayedPreviews.value.map(({ reference }) => reference)),
   active: previewsReady,
+  previewContext: computed(() => [props.animationRevision, props.builderInsertionIndex]),
+  createVtgPreview: (selection) => {
+    const animation =
+      props.builderActive && props.builderInsertionIndex !== undefined && props.animation
+        ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex)
+        : createDefaultVtgAnimation(selection)
+    return animation ? toVtgPreviewAnimation(animation) : undefined
+  },
 })
 
 let blankObserver: ResizeObserver | undefined

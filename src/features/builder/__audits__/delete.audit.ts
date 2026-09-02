@@ -15,8 +15,8 @@ import {
   inputWasMutated,
   phasedCompactSelections,
   previewStates,
-  statesMatchAllSpinsAndDuration,
-  statesMatchSpinsAndDuration,
+  statesMatch,
+  statesMatchAll,
 } from '@/features/builder/__audits__/vtgBuilderMutationAudit'
 
 describe('exhaustive VTG Builder delete audit', () => {
@@ -62,10 +62,9 @@ describe('exhaustive VTG Builder delete audit', () => {
         const result = removeVtgTransitionPatternPreview(source, targetIndex)
         const after = result ? previewStates(result) : undefined
         const expected = before.filter((_, index) => index !== targetIndex)
-        if (!after || !statesMatchAllSpinsAndDuration(after, expected)) {
+        if (!after || !statesMatchAll(after, expected)) {
           const mismatchIndex = after?.findIndex(
-            (state, index) =>
-              expected[index] === undefined || !statesMatchSpinsAndDuration(state, expected[index]),
+            (state, index) => expected[index] === undefined || !statesMatch(state, expected[index]),
           )
           fail(
             failures,
@@ -88,9 +87,6 @@ describe('exhaustive VTG Builder delete audit', () => {
           const resultTarget = resultStarts[targetIndex]! + 1
           result.props.forEach((prop, propIndex) => {
             const sourceProp = source.props[propIndex]!
-            if (prop.anim[resultTarget]?.axis !== sourceProp.anim[sourceTarget]?.axis) {
-              fail(failures, context, `changed following prop ${propIndex + 1} Axis`)
-            }
             if (
               JSON.stringify(prop.anim.slice(resultTarget + 1)) !==
               JSON.stringify(sourceProp.anim.slice(sourceTarget + 1))
