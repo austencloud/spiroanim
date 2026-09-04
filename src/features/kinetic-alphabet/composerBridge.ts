@@ -56,9 +56,7 @@ export const composerSpeedRatios = [
 export const isComposerSpeedRatio = (value: string): value is ComposerSpeedRatio =>
   (composerSpeedRatios as readonly string[]).includes(value)
 
-export const isComposerPatternOrientation = (
-  value: number,
-): value is ComposerPatternOrientation =>
+export const isComposerPatternOrientation = (value: number): value is ComposerPatternOrientation =>
   (composerPatternOrientations as readonly number[]).includes(value)
 
 export const buildComposerUrl = (cell: ComposerCell): string => {

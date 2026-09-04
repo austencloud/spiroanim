@@ -149,9 +149,9 @@ describe('buildComposerUrl', () => {
   })
 
   it('never emits an orientation for Eight Step, which has no orientation axis', () => {
-    expect(
-      buildComposerUrl({ concept: '8stp', reference: '1-AA', orientation: 90 }),
-    ).toBe(expectedUrl('8stp.1-aa.1x1.diamond.base'))
+    expect(buildComposerUrl({ concept: '8stp', reference: '1-AA', orientation: 90 })).toBe(
+      expectedUrl('8stp.1-aa.1x1.diamond.base'),
+    )
   })
 })
 
